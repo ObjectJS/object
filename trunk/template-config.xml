@@ -1,0 +1,20 @@
+<package>
+
+	<source dir=".">
+		<combine path="object.js">
+			<include path="index.js" />
+			<include path="ua.js" />
+			<include path="string.js" />
+			<include path="options.js" />
+			<include path="dom/index.js" />
+			<include path="dom/event.js" />
+			<include path="net.js" />
+			<include path="setGlobal.js" />
+			<include path="mvc.js" />
+			<include path="ui.js" />
+			<include path="attribute.js" />
+			<include path="urlparse.js" />
+		</combine>
+	</source>
+
+</package>
