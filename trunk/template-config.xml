@@ -1,8 +1,10 @@
 <package>
 
 	<source dir=".">
-		<combine path="object.js">
-			<include path="index.js" />
+		<combine path="object-all.js">
+			<include path="../../core/trunk/lib/jeresig-sizzle-68ff471/sizzle.js" />
+			<include path="../../core/trunk/lib/janl-mustache.js-d2feae3/mustache.js" />
+			<include path="object.js" />
 			<include path="ua.js" />
 			<include path="string.js" />
 			<include path="options.js" />
