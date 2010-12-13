@@ -23,7 +23,7 @@ this.Attribute = new Class(function() {
 		if (property && property.set) {
 			property.set.call(self, value);
 		} else {
-			throw 'not definedProperty';
+			throw 'set not definedProperty ' + prop;
 		}
 	};
 
@@ -32,7 +32,7 @@ this.Attribute = new Class(function() {
 		if (property && property.get) {
 			return property.get.apply(self);
 		} else {
-			throw 'not definedProperty';
+			throw 'get not definedProperty ' + prop;
 		}
 	};
 

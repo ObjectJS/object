@@ -16,7 +16,7 @@ var ajaxRequest = this.ajaxRequest = function(url, callback) {
 		else {
 			var iframe = document.createElement('iframe');
 			iframe.style.display = 'none';
-			XN.dom.ready(function() {
+			dom.ready(function() {
 				document.body.insertBefore(iframe, document.body.firstChild);
 				iframe.src = 'http://' + hostname + '/ajaxproxy.htm';
 				if (iframe.attachEvent) {
@@ -51,18 +51,6 @@ var Request = this.Request = new Class(function() {
 		self.onSuccess = options.onSuccess;
 		self.headers = {};
 		self._xhr = null;
-		self._params = null;
-		self._signal = {
-			send: false
-		};
-
-		ajaxRequest(self.url, function(xhr) {
-			self._xhr = xhr;
-
-			xhr.onreadystatechange = self.onStateChange.bind(self);
-
-			if (self._signal.send) self._send();
-		});
 	};
 
 	this.onStateChange = function(self) {
@@ -76,33 +64,37 @@ var Request = this.Request = new Class(function() {
 	};
 
 	this.send = function(self, params) {
-		self._params = params;
+		ajaxRequest(self.url, function(xhr) {
+			self._xhr = xhr;
 
-		if (self._xhr) {
-			self._send();
-		} else {
-			self._signal.send = true;
-		}
+			xhr.onreadystatechange = self.onStateChange.bind(self);
+
+			var xhr = self._xhr;
+			var url = self.url;
+
+			// 处理params
+			if (params && self.method == 'get') {
+				url += (url.indexOf('?') != -1 ? '&' : '?') + params;
+				params = null;
+			}
+
+			// open
+			xhr.open(self.method, url, true);
+
+			xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+			// headers
+			for (var name in self.headers) {
+				xhr.setRequestHeader(name, self.headers[name]);
+			}
+
+			self._xhr.send(params);
+		});
+
 	};
 
 	this.setHeader = function(self, name, value) {
 		self.headers[name] = value;
-	};
-
-	this._send = function(self) {
-		var xhr = self._xhr;
-
-		// open
-		xhr.open(self.method, self.url, true);
-
-		xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-
-		// headers
-		for (var name in self.headers) {
-			xhr.setRequestHeader(name, self.headers[name]);
-		}
-
-		self._xhr.send(self._params);
 	};
 
 });

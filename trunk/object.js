@@ -2,6 +2,9 @@ var object = new (function(globalHost) {
 
 var object = this;
 
+// 扩充原型
+expand();
+
 /**
  * 为obj增加properties中的成员
  * @param obj 源
@@ -66,14 +69,13 @@ var Class = this.$class = this.Class = function() {
 		var parent = parents[i];
 		var members = getMembers(parent);
 
-		for (var name in members) {
+		Object.keys(members).forEach(function(name) {
 			// 在Safari 5.0.2(7533.18.5)中，在这里用for in遍历members会将prototype属性遍历出来，导致原型被指向一个错误的对象，后面就错的一塌糊涂了
 			// 经过试验，在Safari下，仅仅通过 obj.prototype.xxx = xxx 这样的方式就会导致 prototype 变成自定义属性，会被 for in 出来
 			// 而其他浏览器仅仅是在重新指向prototype时，类似 obj.prototype = {} 这样的写法才会出现这个情况
-			if (name === 'prototype') continue;
+			if (name === 'prototype') return;
 
 			var member = members[name];
-
 			// 有 __self__ 说明 bound ，即为 classmethod
 			// 需要判断member，因为member有可能被设定成 null，为有效值，但不是对象
 			if (member !== null && member.__self__) {
@@ -82,7 +84,7 @@ var Class = this.$class = this.Class = function() {
 			} else {
 				Klass[name] = member;
 			}
-		}
+		});
 	}
 
 	// 支持两种写法，传入一个Hash或者function
@@ -96,7 +98,7 @@ var Class = this.$class = this.Class = function() {
 	// 生成所有的propertie
 	var allProperties = {};
 	// 将properties中的function进行一层wrapper，传入第一个 self 参数
-	for (i in Klass) {
+	Object.keys(Klass).forEach(function(i) {
 		if (typeof Klass[i] == 'function') {
 			if (Klass[i].__self__ === null) { // 如果是staticmethod，则不进行任何wrapper
 				allProperties[i] = Klass[i];
@@ -128,7 +130,7 @@ var Class = this.$class = this.Class = function() {
 
 			}
 		} else allProperties[i] = Klass[i];
-	}
+	});
 
 	object.extend(Klass.prototype, allProperties);
 
@@ -243,17 +245,35 @@ this.Loader = new Class(function() {
 	/**
 	 * 查找页面中的标记script标签，更新 _lib
 	 */
-	this.loadLib = function() {
+	this.loadLib = function(self) {
 		var scripts = document.getElementsByTagName('script');
 		for (var i = 0, script, module, l = scripts.length; i < l; i++) {
 			script = scripts[i];
-			module = script.getAttribute('module');
+			module = script.getAttribute('data-module');
 			if (!module) continue;
 			if (_lib[module]) continue;
 
-			_lib[module] = {file: script.getAttribute('dsrc'), name: module};
+			// 建立前缀package
+			self.makePrefixPackage(module);
+
+			_lib[module] = {file: script.getAttribute('data-src'), name: module};
 		}
 	};
+
+	/**
+	 * 建立前缀模块
+	 * 比如 a.b.c.d ，会建立 a/a.b/a.b.c 三个空模块，最后一个模块为目标模块，不为空，内容为context
+	 */
+	this.makePrefixPackage = function(self, name) {
+		var names = name.split('.');
+		for (var i = 0, prefix, l = names.length - 1; i < l; i++) {
+			prefix = names.slice(0, i + 1).join('.');
+			// 说明这个module是空的
+			if (_lib[prefix] == undefined) _lib[prefix] = {
+				name: prefix
+			};
+		}
+	}
 
 	/**
 	 * 加载一个script, 执行callback
@@ -291,7 +311,7 @@ this.Loader = new Class(function() {
 		ele.callbacks = [];
 
 		doCallback = function() {
-			console.log('load ' + src);
+			if (window.console) console.log('load ' + src);
 			delete ele.loading;
 			ele.callbacks.forEach(function(callback) {
 				callback();
@@ -592,16 +612,8 @@ this.Loader = new Class(function() {
 		uses = self.getUses(uses, name).concat(globalUses);
 		//uses = globalUses.concat(self.getUses(uses));
 
-		// 建立前缀模块
-		// 比如 a.b.c.d ，会建立 a/a.b/a.b.c 三个空模块，最后一个模块为目标模块，不为空，内容为context
-		var names = name.split('.');
-		for (var i = 0, prefix, l = names.length - 1; i < l; i++) {
-			prefix = names.slice(0, i + 1).join('.');
-			// 说明这个module是空的
-			if (_lib[prefix] == undefined) _lib[prefix] = {
-				name: prefix
-			};
-		}
+		// 建立前缀占位模块
+		self.makePrefixPackage(name);
 
 		// lib中存储的是function
 		// 注意别给覆盖了，有可能是有 file 成员的
@@ -672,62 +684,83 @@ this.add = function() {
 };
 
 // Expand
-//
-Array.isArray = Array.isArray || function(o) {
-	return Object.prototype.toString.call(o) === '[object Array]';
-};
+function expand() {
 
-Array.prototype.forEach = Array.prototype.forEach || function(fn, bind) {
-	for (var i = 0; i < this.length; i++) {
-		fn.call(bind, this[i], i, this);
-	}
-};
+	Object.keys = function(o) {
+		var result = [];
 
-Array.prototype.indexOf = Array.prototype.indexOf || function(str){
-	for (var i = 0; i < this.length; i++) {
-		if (str == this[i]) {
-			return i;
+		// 在IE下for in无法遍历出来修改过的call方法
+		// 为什么允许修改call方法？对于一个class来说，没有直接Class.call的应用场景，任何Class都应该是new出来的，因此可以修改这个方法
+		if (o.call !== undefined && o.call !== Function.prototype.call) {
+			result.push('call');
 		}
-	}
-	return -1;
-};
+		for (var name in o) {
+			if (name === 'call') continue;
+			if (o.hasOwnProperty(name)) {
+				result.push(name);
+			}
+		}
 
-Array.prototype.some = Array.prototype.some || function(fn, bind) {
-	for (var i = 0, l = this.length; i < l; i++){
-		if ((i in this) && fn.call(bind, this[i], i, this)) return true;
+		return result; 
 	}
-	return false;
-};
 
-Array.prototype.every = Array.prototype.every || function(fn, bind){
-	for (var i = 0, l = this.length; i < l; i++){
-		if ((i in this) && !fn.call(bind, this[i], i, this)) return false;
-	}
-	return true;
-};
-
-Array.prototype.map = Array.prototype.map || function (fn, bind) {
-	var results = [];
-	for (var i = 0, l = this.length; i < l; i++){
-		if (i in this) results[i] = fn.call(bind, this[i], i, this);
-	}
-	return results;
-};
-
-Array.prototype.filter = Array.prototype.filter || function(fn, bind){
-	var results = [];
-	for (var i = 0, l = this.length; i < l; i++){
-		if ((i in this) && fn.call(bind, this[i], i, this)) results.push(this[i]);
-	}
-	return results;
-};
-
-Function.prototype.bind = Function.prototype.bind || function(object) {
-	var method = this;
-	return function() {
-		method.apply(object , arguments); 
+	Array.isArray = Array.isArray || function(o) {
+		return Object.prototype.toString.call(o) === '[object Array]';
 	};
-};
+
+	Array.prototype.forEach = Array.prototype.forEach || function(fn, bind) {
+		for (var i = 0; i < this.length; i++) {
+			fn.call(bind, this[i], i, this);
+		}
+	};
+
+	Array.prototype.indexOf = Array.prototype.indexOf || function(str){
+		for (var i = 0; i < this.length; i++) {
+			if (str == this[i]) {
+				return i;
+			}
+		}
+		return -1;
+	};
+
+	Array.prototype.some = Array.prototype.some || function(fn, bind) {
+		for (var i = 0, l = this.length; i < l; i++){
+			if ((i in this) && fn.call(bind, this[i], i, this)) return true;
+		}
+		return false;
+	};
+
+	Array.prototype.every = Array.prototype.every || function(fn, bind){
+		for (var i = 0, l = this.length; i < l; i++){
+			if ((i in this) && !fn.call(bind, this[i], i, this)) return false;
+		}
+		return true;
+	};
+
+	Array.prototype.map = Array.prototype.map || function (fn, bind) {
+		var results = [];
+		for (var i = 0, l = this.length; i < l; i++){
+			if (i in this) results[i] = fn.call(bind, this[i], i, this);
+		}
+		return results;
+	};
+
+	Array.prototype.filter = Array.prototype.filter || function(fn, bind){
+		var results = [];
+		for (var i = 0, l = this.length; i < l; i++){
+			if ((i in this) && fn.call(bind, this[i], i, this)) results.push(this[i]);
+		}
+		return results;
+	};
+
+	Function.prototype.bind = Function.prototype.bind || function(object) {
+		var method = this;
+		return function() {
+			method.apply(object , arguments); 
+		};
+	};
+
+}
 
 
 

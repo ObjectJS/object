@@ -16,6 +16,60 @@ var $uid = this.$uid = (window.ActiveXObject) ? function(item){
 $uid(window);
 $uid(document);
 
+var domLoaded = false;
+var domloadHooks = [];
+
+function runHooks() {
+	if (!domloadHooks) return;
+
+	domloadHooks.forEach(function(f, i) {
+		try {
+			f();
+		} catch (e) {
+			if(true) throw e;
+		}
+	});
+
+	domloadHooks = [];
+}
+
+var timer = null;
+if (ua.ua.webkit && ua.ua.webkit < 525) {
+	timer = setInterval(function() {
+		if (/loaded|complete/.test(document.readyState)) {
+			domLoaded = true;
+			clearInterval(timer);
+			runHooks();
+		}
+	}, 10); 
+} else if (ua.ua.ie) {
+	timer = setInterval(function() {
+		try {
+			document.body.doScroll('left');
+			clearInterval(timer);
+			domLoaded = true;
+			runHooks();
+		} catch (e) {}
+	}, 20); 
+}
+
+this.ready = function(callback) {
+	if (document.body) {
+		callback();
+	} else {
+		if (ua.ua.webkit && ua.ua.webkit < 525) {
+			domLoaded = true;
+			domloadHooks.push(callback);
+		} if (document.addEventListener) {
+			document.addEventListener('DOMContentLoaded', callback, false);
+		} else {
+			domLoaded = true;
+			domloadHooks.push(callback);
+		}
+	}
+};
+
+
 /**
  * native node进行包装
  * @param ele
@@ -224,7 +278,9 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 		if (cap === null) cap = false;
 
 		// 存储此元素的事件
-		if (!self._eventListeners[type]) self._eventListeners[type] = [];
+		if (!self._eventListeners[type]) {
+			self._eventListeners[type] = [];
+		}
 		var funcs = self._eventListeners[type];
 
 		// 标准浏览器
@@ -359,15 +415,17 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 	/**
 	 * 根据选择器返回第一个
 	 * @param selector css选择符
+	 * @param cls 包装类型
 	 */
-	this.getElement = function(self, selector) {
-		return Element.wrap(Sizzle(selector, self)[0]);
+	this.getElement = function(self, selector, cls) {
+		var ele = Sizzle(selector, self)[0];
+		if (!cls) cls = Element;
+		return cls.wrap(ele);
 	};
 
 	/**
 	 * 根据选择器返回数组
 	 * @param selector css选择符
-	 * @param native 关闭wrap，返回原始Node
 	 * @param cls 包装类型
 	 */
 	this.getElements = function(self, selector, cls) {
@@ -384,6 +442,19 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 		self.style.display = self.oldDisplay || '';
 	};
 
+	this.toggle = function(self) {
+		if (self.style.display == 'none') self.show();
+		else self.hide();
+	};
+
+	// set('html')
+	attribute.defineProperty(this, 'html', {
+		set: function(html) {
+			this.innerHTML = html;
+		}
+	});
+
+	// set('sendOptions')
 	attribute.defineProperty(this, 'sendOptions', {
 		get: function() {
 			return this.retrieve('sendOptions');
@@ -404,10 +475,36 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 	});
 
 	this.send = function(self, params) {
+		if (!params) {
+			params = self.toQueryString();
+		}
 		var xhr = self.retrieve('send');
 		if (!xhr.method) xhr.method = self.method;
 		if (!xhr.url) xhr.url = self.action;
 		xhr.send(params);
+	};
+
+	this.toQueryString = function(self) {
+		var queryString = [];
+		self.getElements('input, select, textarea').forEach(function(el) {
+			var type = el.type;
+			if (!el.name || el.disabled || type == 'submit' || type == 'reset' || type == 'file' || type == 'image') return;
+
+			var value = (el.tagName.toLowerCase() == 'select') ? el.getSelected().map(function(opt) {
+				// IE
+				return document.id(opt).get('value');
+			}) : ((type == 'radio' || type == 'checkbox') && !el.checked) ? null : el.value;
+
+			if (typeof value != 'undefined') queryString.push(encodeURIComponent(el.name) + '=' + encodeURIComponent(value));
+		});
+		return queryString.join('&');
+	};
+
+	this.getSelected = function(self) {
+		self.selectedIndex; // Safari 3.2.1
+		return new Elements(self.options.filter(function(option) {
+			return option.selected;
+		}));
 	};
 
 	/**
@@ -531,59 +628,6 @@ this.bindPlaceholder = function(input) {
 		});
 	}
 	checkEmpty(input);
-};
-
-var domLoaded = false;
-var domloadHooks = [];
-
-function runHooks() {
-	if (!domloadHooks) return;
-
-	domloadHooks.forEach(function(f, i) {
-		try {
-			f();
-		} catch (e) {
-			if(true) throw e;
-		}
-	});
-
-	domloadHooks = [];
-}
-
-var timer = null;
-if (ua.ua.webkit && ua.ua.webkit < 525) {
-	timer = setInterval(function() {
-		if (/loaded|complete/.test(document.readyState)) {
-			domLoaded = true;
-			clearInterval(timer);
-			runHooks();
-		}
-	}, 10); 
-} else if (ua.ua.ie) {
-	timer = setInterval(function() {
-		try {
-			document.body.doScroll('left');
-			clearInterval(timer);
-			domLoaded = true;
-			runHooks();
-		} catch (e) {}
-	}, 20); 
-}
-
-this.ready = function(callback) {
-	if (document.body) {
-		callback();
-	} else {
-		if (ua.ua.webkit && ua.ua.webkit < 525) {
-			domLoaded = true;
-			domloadHooks.push(callback);
-		} if (document.addEventListener) {
-			document.addEventListener('DOMContentLoaded', callback, false);
-		} else {
-			domLoaded = true;
-			domloadHooks.push(callback);
-		}
-	}
 };
 
 });
