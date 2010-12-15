@@ -41,10 +41,10 @@ var Component = this.Component = new Class(function() {
 			if (!match) return;
 			var eventName = match[1];
 			if (one) {
-				eles.addEvent(eventName, component[key].bind(component));
+				eles.addEvent(eventName, component[key]);
 			} else {
 				eles.forEach(function(ele) {
-					ele.addEvent(eventName, component[key].bind(component));
+					ele.addEvent(eventName, component[key]);
 				});
 			}
 		});

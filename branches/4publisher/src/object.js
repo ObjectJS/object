@@ -21,7 +21,7 @@ this.extend = function(obj, properties, ov) {
 
 };
 
-// 获得一个Klass的所有成员，Klass有可能是native function比如Array, String
+// 获得一个cls的所有成员，cls有可能是native function比如Array, String
 function getMembers(source) {
 	if (source === Array || source === String) {
 		var methodNames = [];
@@ -50,14 +50,13 @@ var Class = this.$class = this.Class = function() {
 	// 从参数获取父类列表
 	var parents = ([].slice.call(arguments, 0, -1)).reverse();
 
-	// Klass
-	var Klass = function() {
-		var value = (this.__init__) ? this.__init__.apply(this, arguments) : this;
-		delete this.caller;
-		return value;
+	// cls
+	var cls = function() {
+		Class.inject(cls, this, arguments);
 	};
+	cls.__bases__  = parents;
 
-	// 继承，将parent的所有成员都放到Klass上
+	// 继承，将parent的所有成员都放到cls上
 	// 先做继承，后声明的成员覆盖先声明的
 	for (var i = 0; i < parents.length; i++) {
 		var parent = parents[i];
@@ -69,89 +68,88 @@ var Class = this.$class = this.Class = function() {
 			// 而其他浏览器仅仅是在重新指向prototype时，类似 obj.prototype = {} 这样的写法才会出现这个情况
 			if (name === 'prototype') return;
 
-			var member = members[name];
-			// 有 __self__ 说明 bound ，即为 classmethod
-			// 需要判断member，因为member有可能被设定成 null，为有效值，但不是对象
-			if (member !== null && member.__self__) {
-				Klass[name] = member.im_func;
-			// 没有 __self__ 为普通成员
+			if (parent[name].classmethod) {
+				cls[name] = members[name].im_func;
 			} else {
-				Klass[name] = member;
+				cls[name] = members[name];
 			}
 		});
 	}
 
 	// 支持两种写法，传入一个Hash或者function
-	// 将所有成员复制到Klass上
+	// 将所有成员复制到cls上
 	if (properties instanceof Function) {
-		properties.call(Klass);
+		properties.call(cls);
 	} else {
-		object.extend(Klass, properties);
+		object.extend(cls, properties);
 	}
 
-	// 生成所有的propertie
-	var allProperties = {};
-	// 将properties中的function进行一层wrapper，传入第一个 self 参数
-	Object.keys(Klass).forEach(function(name) {
-
-		// 如果是属性或者staticmethod，则不进行任何wrapper
-		if (typeof Klass[name] != 'function' || Klass[name].__self__ === null) {
-			allProperties[name] = Klass[name];
-			return;
+	// 处理 classmethod
+	Object.keys(cls).forEach(function(name) {
+		if (cls[name] && cls[name].classmethod) {
+			cls[name] = bindFunc(cls[name], cls);
+			cls[name].classmethod = true;
 		}
-
-		/*
-		 * 以下执行对方法进行wrap
-		 */
-		var method = Klass[name];
-
-		var wrapperFunc = function() {
-			var arg = method.classmethod? Klass : arguments.callee.__self__ || this;
-			var args = [].slice.call(arguments, 0);
-			args.unshift(arg);
-			// this 指向 window，强制使用 self
-			return method.apply(globalHost, args);
-		};
-		wrapperFunc.inner = method;
-
-		if (method.classmethod) {
-			wrapperFunc.__self__ = Klass;
-			// 存储一下原始定义的method，用来继承时进行重新定义binder
-			wrapperFunc.im_func = method;
-			// 如果是classmethod，allProperties中和Klass中的方法都需要wrapper第一个参数为Klass
-			Klass[name] = wrapperFunc;
-		}
-		allProperties[name] = wrapperFunc;
-
 	});
 
-	object.extend(Klass.prototype, allProperties);
+	cls.constructor = object.Class;
+	cls.prototype.constructor = cls;
 
-	Klass.constructor = object.Class;
-	Klass.__bases__  = parents;
-	Klass.prototype.constructor = Klass;
-
-	return Klass;
+	return cls;
 };
+
+// 将binder绑定至func的第一个参数
+function bindFunc(func, binder) {
+	var wrapper = function() {
+		var args = [].slice.call(arguments, 0);
+		args.unshift(arguments.callee.__self__);
+		return func.apply(globalHost, args);
+	};
+	wrapper.apply = funcApply;
+	wrapper.call = funcCall;
+	wrapper.__self__ = binder;
+	wrapper.im_func = func;
+
+	return wrapper;
+}
+
+// bindFunc的apply方法
+function funcApply(host, args) {
+	if (!args) args = [];
+	args = [].slice.call(args, 0);
+	args.unshift(this.__self__);
+	return this.im_func.apply(host, args);
+}
+
+// bindFunc的call方法
+function funcCall(host) {
+	var args = [].slice.call(arguments, 1);
+	args.unshift(this.__self__);
+	return this.im_func.apply(host, args);
+}
 
 /**
  * 将source注射进class，使其self指向source
  * @param cls 被注射的class
  * @param source 注射进去的对象
  */
-Class.inject = function(cls, source) {
-	// 注意classmethod，不要绑定prototype
-	// 1 classmethod可以动态获取当前类，不能绑定
-	// 2 IE下会报“无法得到xxx属性，参数无效”的错误
-	for (var i in cls.prototype) {
-		// 是一个classmethod
-		if (cls.prototype[i].im_func) {
-			source[i] = cls[i];
+Class.inject = function(cls, source, arguments) {
+
+	// 将properties中的function进行一层wrapper，传入第一个 self 参数
+	Object.keys(cls).forEach(function(name) {
+		// 如果是属性/staticmethod/classmethod，则不进行wrapper
+		if (typeof cls[name] != 'function' || cls[name].__self__ === null || cls[name].im_func) {
+			source[name] = cls[name];
 		} else {
-			source[i] = cls.prototype[i];
+			source[name] = bindFunc(cls[name], source);
 		}
-	}
-	cls.__init__(source);
+
+	});
+
+	var value = (cls.__init__) ? source.__init__.apply(source, arguments) : source;
+	delete source.caller;
+	return value;
+
 }
 
 // 声明类静态方法，在new Class(callback) 的callback中调用
