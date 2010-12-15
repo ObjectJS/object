@@ -367,6 +367,12 @@ this.Loader = new Class(function() {
 		var done = function() {
 			args.unshift(runtime);
 			pkg.fn.apply(host, args);
+			// 输出 __name__
+			Object.keys(host).forEach(function(key) {
+				if (typeof host[key] == 'function') {
+					host[key].__name__ = key;
+				}
+			});
 
 			if (callback) callback();
 		};

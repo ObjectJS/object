@@ -1,93 +1,98 @@
-object.add('ui', 'dom', function($, dom) {
+object.add('ui', 'string, dom, attribute', function($, string, dom, attribute) {
 
 /**
  * UI模块基类
  * @class
  */
-var Component = this.Component = new Class(dom.Element, function() {
+var Component = this.Component = new Class(function() {
 
 	this.__init__ = function(self) {
-		dom.Element.__init__(self);
+		self = $.wrap(self);
 	};
 
-	this._render1 = function(self, control, triggers) {
-		for (var i in triggers) {
-			control.addEvent(i, triggers[i]);
+	this._render = function(self, name, type, one) {
+		if (!type) type = $;
+
+		var methodName  = name + '_render';
+		var selector = self.selectors[name];
+		var eles;
+
+		if (self[methodName]) {
+			eles = self[methodName]();
+			eles = $.wrap(eles);
+		} else {
+			eles = self[one? 'getElement' : 'getElements'](selector);
 		}
+
+		if (one) {
+			eles = type.wrap(eles);
+		} else {
+			eles.forEach(function(ele) {
+				type.wrap(ele);
+			});
+		}
+
+		Object.keys(self).forEach(function(key) {
+			var match = key.match(new RegExp(name + '_' + '(\\w+)'));
+			if (!match) return;
+			var eventName = match[1];
+			if (['click', 'hover'].indexOf(eventName) != -1) {
+				self.delegate(selector, eventName, self[key].bind(self));
+			} else {
+				if (one) {
+					eles.addEvent(eventName, self[key].bind(self));
+				} else {
+					eles.forEach(function(ele) {
+						ele.addEvent(eventName, self[key].bind(self));
+					});
+				}
+			}
+		});
+
+		attribute.defineProperty(self, name, {
+			get: function() {
+				var eles = self[one? 'getElement' : 'getElements'](selector);
+				self[name] = eles;
+				return eles;
+			}
+		});
+
+		self[name] = eles;
+
 	};
 
-	// 将options参数转换成trigger
-	this._getTriggers = function(self, options) {
-		var triggers = {};
-		for (var i in options) {
-			var eventName = i.match(/^on(.+)/i);
-			if (eventName) triggers[eventName[1]] = options[i];
-		}
-
-		return triggers;
+	this.render1 = function(self, name, type) {
+		return self._render(name, type, 1);
 	};
 
-	/**
-	 * @param selector css选择符
-	 * @param options options
-	 */
-	this.render = function(self, selector, options) {
-		if (!options) options = {};
-		if (!options.type) options.type = dom.Element;
-
-		// selector 有可能只是一个name，通过self.selectors获取真正的selector
-		if (self.selectors && selector in self.selectors) {
-			name = selector;
-			selector = self.selectors[selector];
-		}
-
-		var eles = self.getElements(selector, options.type);
-		var triggers = self._getTriggers(options);
-
-		for (i = 0; i < eles.length; i++) {
-			self._render1(eles[i], triggers);
-		}
-
-		if (name) {
-			self[name] = eles;
-		}
-
-		return eles;
-	};
-
-	this.render1 = function(self, selector, options) {
-		if (!options) options = {};
-		if (!options.type) options.type = dom.Element;
-
-		// selector 有可能只是一个name，通过self.selectors获取真正的selector
-		if (self.selectors && selector in self.selectors) {
-			name = selector;
-			selector = self.selectors[selector];
-		}
-
-		var ele = self.getElement(selector, options.type);
-		var triggers = self._getTriggers(options);
-
-		self._render1(ele, triggers);
-
-		if (name) {
-			self[name] = ele;
-		}
-
-		return ele;
-		
+	this.render = function(self, name, type) {
+		return self._render(name, type);
 	};
 
 	this.bind = function(self, name) {
 		return function() {
-			self[name].apply(self, [].slice.call(arguments, 0));
-			self.fireEvent(name, arguments[0], self);
-		}
+			self.apply(name, [].slice.call(arguments, 0));
+		};
 	};
 
 	this.call = function(self, name) {
-		self[name].apply(self, [].slice.call(arguments, 0));
-		self.fireEvent(name, arguments[0], self);
+		self.fireEvent(name, null, self);
+		self[name].apply(self, [].slice.call(arguments, 2));
+	};
+
+	this.apply = function(self, name, args) {
+		self.fireEvent(name, null, self);
+		self[name].apply(self, args);
+	};
+
+	/**
+	 * add component
+	 */
+	this.add = function(self, name, selector, count, options) {
+		if (!options) options = {};
+		options.selector = selector;
+		options.count = count;
+		self.components[name] = options;
 	};
 
 	/**
@@ -106,6 +111,59 @@ var Component = this.Component = new Class(dom.Element, function() {
 
 		return value;
 	};
+
+	/**
+	 * ele有可能已经wrap过，要注意不要重新覆盖老的成员
+	 * 提供了包装机制不代表同一个元素可以进行多重包装，在相同的继承树上多次包装没有问题，如果将两个无关的类型包装至同一元素，则第二次包装报错
+	 * 如果 TabControl.wrap(ele) 后进行 List.wrap(ele) ，则List包装失效并且报错
+	 * 如果 TabControl.wrap(ele) 后进行 Component.wrap(ele) 由于TabControl继承于Component，则无需包装
+	 * 如果 Component.wrap(ele) 后进行 TabControl.wrap(ele) 由于TabControl继承于Component，则包装成功
+	 * @classmethod
+	 */
+	this.wrap = classmethod(function(cls, ele) {
+		if (!ele) return null;
+
+		// 获取class的所有继承关系，存成平面数组
+		// TODO: class 的 chain 机制
+		function getBases(m) {
+			var array = [];
+			for (var i = 0, l = m.length; i < l; i++){
+				array = array.concat((m[i].__bases__ && m[i].__bases__.length) ? arguments.callee(m[i].__bases__) : m);
+			}
+			return array;
+		}
+
+		if (ele._wrapper) {
+			if (ele._wrapper === cls) return ele; // 重复包装相同类
+
+			var wrapperBases = getBases([ele._wrapper]);
+
+			// 已经包装过子类了(包了TabControl再包装Component)，无需包装
+			if (wrapperBases.indexOf(cls) !== -1) {
+				return ele;
+			}
+
+			var classBases = getBases([cls]);
+
+			// 现有包装不在同一继承树上，报错
+			if (classBases.indexOf(ele._wrapper) === -1) {
+				throw '包装出错，一个元素只能有一个包装类';
+			}
+		}
+
+		// 对于classmethod，不做重新绑定
+		// 1 classmethod可以动态获取当前类，不需要重新绑定
+		// 2 IE下会报“无法得到xxx属性，参数无效”的错误
+		for (var i in cls.prototype) {
+			if (cls.prototype[i].im_func === undefined) {
+				ele[i] = cls.prototype[i];
+			}
+		}
+		cls.__init__(ele);
+
+		ele._wrapper = cls;
+		return ele;
+	});
 
 });
 
@@ -151,7 +209,7 @@ this.TabControl = new Class(Component, function() {
 /**
  * @class
  */
-this.ForeNextControl = new Class(Component, function() {
+var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
 
 	/**
 	 * @constructor
@@ -159,18 +217,25 @@ this.ForeNextControl = new Class(Component, function() {
 	this.__init__ = function(self) {
 		Component.__init__(self);
 
+		self.selectors = {
+			'nextButton': '.nextbutton',
+			'foreButton': '.forebutton'
+		};
+
 		self.total = parseInt(self.getData('total'));
 		self.start = parseInt(self.getData('start')) || 0;
 		self.position = self.start;
 
-		self.render('.nextbutton', {
-			onclick: self.bind('next')
-		});
+		self.render('nextButton');
+		self.render('foreButton');
+	};
 
-		self.render('.forebutton', {
-			onclick: self.bind('fore')
-		});
+	this.nextButton_click = function(self, event) {
+		self.call('next');
+	};
 
+	this.foreButton_click = function(self, event) {
+		self.call('fore');
 	};
 
 	this.next = function(self) {
@@ -189,7 +254,7 @@ this.ForeNextControl = new Class(Component, function() {
 	};
 
 	this.updatePosition = function(self) {
-		self.getElements('.current').set('html', self.position);
+		self.getElements('.current').set('html', self.position + 1); // position是从0开始滴～展示的时候+1
 	};
 
 	this.updateTotal = function(self) {

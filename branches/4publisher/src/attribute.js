@@ -8,7 +8,7 @@ this.defineProperty = function(object, prop, descriptor) {
 this.defineProperties = function(object, descriptors) {
 	for (var prop in descriptors) {
 		if (descriptors.hasOwnProperty(prop)) {
-			object._properties[prop] = descriptor[prop];
+			object._properties[prop] = descriptors[prop];
 		}
 	}
 };
@@ -39,4 +39,3 @@ this.Attribute = new Class(function() {
 });
 
 });
-
