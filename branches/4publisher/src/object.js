@@ -21,12 +21,6 @@ this.extend = function(obj, properties, ov) {
 
 };
 
-// super
-// TODO
-this.$super = function(klass, self) {
-	
-};
-
 // 获得一个Klass的所有成员，Klass有可能是native function比如Array, String
 function getMembers(source) {
 	if (source === Array || source === String) {
