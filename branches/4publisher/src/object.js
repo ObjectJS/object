@@ -98,38 +98,37 @@ var Class = this.$class = this.Class = function() {
 	// 生成所有的propertie
 	var allProperties = {};
 	// 将properties中的function进行一层wrapper，传入第一个 self 参数
-	Object.keys(Klass).forEach(function(i) {
-		if (typeof Klass[i] == 'function') {
-			if (Klass[i].__self__ === null) { // 如果是staticmethod，则不进行任何wrapper
-				allProperties[i] = Klass[i];
-			} else {
-				var method = Klass[i];
+	Object.keys(Klass).forEach(function(name) {
 
-				var wrapperFunc = (function(name) {
-					var method = Klass[name];
-					var a = function() {
-						var arg = method.classmethod? Klass : this;
-						arguments.callee.__self__ = arg;
-						var args = [].slice.call(arguments, 0);
-						args.unshift(arg);
-						// this 指向 window，强制使用 self
-						return method.apply(globalHost, args);
-					};
-					a.inner = method;
-					return a;
-				})(i);
+		// 如果是属性或者staticmethod，则不进行任何wrapper
+		if (typeof Klass[name] != 'function' || Klass[name].__self__ === null) {
+			allProperties[name] = Klass[name];
+			return;
+		}
 
-				if (method.classmethod) {
-					wrapperFunc.__self__ = Klass;
-					// 存储一下原始定义的method，用来继承时进行重新定义binder
-					wrapperFunc.im_func = method;
-					// 如果是classmethod，allProperties中和Klass中的方法都需要wrapper第一个参数为Klass
-					Klass[i] = wrapperFunc;
-				}
-				allProperties[i] = wrapperFunc;
+		/*
+		 * 以下执行对方法进行wrap
+		 */
+		var method = Klass[name];
 
-			}
-		} else allProperties[i] = Klass[i];
+		var wrapperFunc = function() {
+			var arg = method.classmethod? Klass : arguments.callee.__self__ || this;
+			var args = [].slice.call(arguments, 0);
+			args.unshift(arg);
+			// this 指向 window，强制使用 self
+			return method.apply(globalHost, args);
+		};
+		wrapperFunc.inner = method;
+
+		if (method.classmethod) {
+			wrapperFunc.__self__ = Klass;
+			// 存储一下原始定义的method，用来继承时进行重新定义binder
+			wrapperFunc.im_func = method;
+			// 如果是classmethod，allProperties中和Klass中的方法都需要wrapper第一个参数为Klass
+			Klass[name] = wrapperFunc;
+		}
+		allProperties[name] = wrapperFunc;
+
 	});
 
 	object.extend(Klass.prototype, allProperties);
@@ -140,6 +139,26 @@ var Class = this.$class = this.Class = function() {
 
 	return Klass;
 };
+
+/**
+ * 将source注射进class，使其self指向source
+ * @param cls 被注射的class
+ * @param source 注射进去的对象
+ */
+Class.inject = function(cls, source) {
+	// 注意classmethod，不要绑定prototype
+	// 1 classmethod可以动态获取当前类，不能绑定
+	// 2 IE下会报“无法得到xxx属性，参数无效”的错误
+	for (var i in cls.prototype) {
+		// 是一个classmethod
+		if (cls.prototype[i].im_func) {
+			source[i] = cls[i];
+		} else {
+			source[i] = cls.prototype[i];
+		}
+	}
+	cls.__init__(source);
+}
 
 // 声明类静态方法，在new Class(callback) 的callback中调用
 var staticmethod = this.staticmethod = function(func) {

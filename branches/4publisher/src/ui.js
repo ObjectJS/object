@@ -10,18 +10,21 @@ var Component = this.Component = new Class(function() {
 		self = $.wrap(self);
 	};
 
-	this._render = function(self, name, type, one) {
+	/**
+	 * @classmethod
+	 */
+	this._render = classmethod(function(cls, component, name, type, one) {
 		if (!type) type = $;
 
 		var methodName  = name + '_render';
-		var selector = self.selectors[name];
+		var selector = component.selectors[name];
 		var eles;
 
-		if (self[methodName]) {
-			eles = self[methodName]();
+		if (component[methodName]) {
+			eles = component[methodName]();
 			eles = $.wrap(eles);
 		} else {
-			eles = self[one? 'getElement' : 'getElements'](selector);
+			eles = component[one? 'getElement' : 'getElements'](selector);
 		}
 
 		if (one) {
@@ -32,41 +35,38 @@ var Component = this.Component = new Class(function() {
 			});
 		}
 
-		Object.keys(self).forEach(function(key) {
+		// 通过classmethod使自己能够获得到cls的引用，在给元素增加事件时方便进行遍历
+		Object.keys(cls).forEach(function(key) {
 			var match = key.match(new RegExp(name + '_' + '(\\w+)'));
 			if (!match) return;
 			var eventName = match[1];
-			if (['click', 'hover'].indexOf(eventName) != -1) {
-				self.delegate(selector, eventName, self[key].bind(self));
+			if (one) {
+				eles.addEvent(eventName, component[key].bind(component));
 			} else {
-				if (one) {
-					eles.addEvent(eventName, self[key].bind(self));
-				} else {
-					eles.forEach(function(ele) {
-						ele.addEvent(eventName, self[key].bind(self));
-					});
-				}
+				eles.forEach(function(ele) {
+					ele.addEvent(eventName, component[key].bind(component));
+				});
 			}
 		});
 
-		attribute.defineProperty(self, name, {
+		attribute.defineProperty(component, name, {
 			get: function() {
-				var eles = self[one? 'getElement' : 'getElements'](selector);
-				self[name] = eles;
+				var eles = component[one? 'getElement' : 'getElements'](selector);
+				component[name] = eles;
 				return eles;
 			}
 		});
 
-		self[name] = eles;
+		component[name] = eles;
 
-	};
+	});
 
 	this.render1 = function(self, name, type) {
-		return self._render(name, type, 1);
+		return self._render(self, name, type, 1);
 	};
 
 	this.render = function(self, name, type) {
-		return self._render(name, type);
+		return self._render(self, name, type);
 	};
 
 	this.bind = function(self, name) {
@@ -151,15 +151,8 @@ var Component = this.Component = new Class(function() {
 			}
 		}
 
-		// 对于classmethod，不做重新绑定
-		// 1 classmethod可以动态获取当前类，不需要重新绑定
-		// 2 IE下会报“无法得到xxx属性，参数无效”的错误
-		for (var i in cls.prototype) {
-			if (cls.prototype[i].im_func === undefined) {
-				ele[i] = cls.prototype[i];
-			}
-		}
-		cls.__init__(ele);
+		// 将ele注射进cls
+		Class.inject(cls, ele);
 
 		ele._wrapper = cls;
 		return ele;

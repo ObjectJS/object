@@ -82,23 +82,64 @@ var wrap = this.wrap = function(ele) {
 		// 已经wrap过了
 		if (ele._nativeWrapper) return ele;
 
-		var wrapper = getWrapper(ele);
+		var wrapper = getWrapper(ele.tagName);
 		$uid(ele);
-		wrapper.wrap(ele);
+
+		Class.inject(wrapper, ele);
 
 		ele._nativeWrapper = wrapper;
 		return ele;
 	}
 };
 
-var getElements = this.getElements = function() {
-	var eles = Sizzle.apply(null, arguments);
-	return new Elements(eles);
+var getElements = this.getElements = function(selector, context) {
+	if (!context) context = document;
+
+	// 解析成Slick Selector对象
+	var parsed = Slick.parse(selector);
+
+	var eles = Slick.search(context, parsed);
+
+	// 这里通过分析selector的最后一个部分的tagName，来确定这批eles的wrapper
+	// 例如selector是 div form.xxx 则wrapper是 FormElement
+	// 例如selector是 div .xxx 则wrapper是 Element
+	// 例如selector是 div select.xxx, div.input.xxx 则wrapper是 FormItemElement
+
+	var wrapper, part;
+	// 绝大部分情况都是length=0，只有1个selector，保证其性能
+	if (parsed.expressions.length == 1) {
+		part = parsed.expressions[0];
+		wrapper = getWrapper(part[part.length - 1].tag);
+
+	// 由多个selector组成，比如 div select.xxx, div.input.xxx，要保证这种能取到 FormItemElement
+	} else {
+		// 通过生成每个selector wrapper的继承链，不断的生成当前selector和上一个selector的继承链的相同部分
+		// 最后的chain的最后一个元素，既是公用wrapper
+		for (var i = 0, part, chain, previousChain; i < parsed.expressions.length; i++) {
+			part = parsed.expressions[i];
+			wrapper = getWrapper(part[part.length - 1].tag);
+
+			// 当前selector最后元素的wrapper chain
+			// slice(0, -1) 过滤掉Element继承的 Attribute 类
+			chain = getChain(wrapper).slice(0, -1).reverse();
+			if (previousChain) {
+				chain = getCommon(chain, previousChain);
+			}
+			// 如果相同部分length=1，则代表找到Element类了，可以停止继续搜索
+			if (chain.length == 1) break;
+			previousChain = chain;
+		}
+		wrapper = chain[chain.length - 1];
+	}
+
+	return new Elements(eles, wrapper);
 };
 
-this.getElement = function() {
-	var eles = Sizzle.apply(null, arguments);
-	return wrap(eles[0]);
+var getElement = this.getElement = function(selector, context) {
+	if (!context) context = document;
+
+	var ele = Slick.find(context, selector);
+	return wrap(ele);
 };
 
 this.id = function(id) {
@@ -392,7 +433,7 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 		self.addEvent(type, function(e) {
 			var ele = e.srcElement || e.target;
 			do {
-				if (ele && Element.matchesSelector(ele, selector)) callback.call(Element.wrap(ele), e);
+				if (ele && Element.matchesSelector(ele, selector)) callback.call(wrap(ele), e);
 			} while((ele = ele.parentNode));
 		});
 	};
@@ -403,7 +444,7 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 	 * @param selector css选择符
 	 */
 	this.matchesSelector = function(self, selector) {
-		return Sizzle.matches(selector, [self]).length > 0;
+		return Slick.match(self, selector);
 	};
 
 	/**
@@ -436,22 +477,17 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 	/**
 	 * 根据选择器返回第一个
 	 * @param selector css选择符
-	 * @param cls 包装类型
 	 */
-	this.getElement = function(self, selector, cls) {
-		var ele = Sizzle(selector, self)[0];
-		if (!cls) cls = Element;
-		return cls.wrap(ele);
+	this.getElement = function(self, selector) {
+		return getElement(selector, self);
 	};
 
 	/**
 	 * 根据选择器返回数组
 	 * @param selector css选择符
-	 * @param cls 包装类型
 	 */
 	this.getElements = function(self, selector) {
-		var eles = Sizzle(selector, self);
-		return new Elements(eles);
+		return getElements(selector, self);
 	};
 
 	var inserters = {
@@ -613,20 +649,6 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 		return result;
 	});
 
-	this.wrap = classmethod(function(cls, ele) {
-		if (!ele) return null;
-
-		for (var i in cls.prototype) {
-			if (cls.prototype[i].im_func === undefined) {
-				ele[i] = cls.prototype[i];
-			}
-		}
-		cls.__init__(ele);
-
-		return ele;
-	
-	});
-
 });
 
 /**
@@ -749,32 +771,20 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 
 /**
  * 一个包装类，实现Element方法的统一调用
- * 注意，这个包装仅仅包含Element的方法，并不包含其他扩展元素（form等）的方法
- * 但是其中的每个元素还是正确wrap的
- * 也就是说，Elements仅仅包含Element方法的统一调用，其他方法还是需要在循环中调用
  * @class Elements
  */
 var Elements = this.Elements = new Class(Array, function() {
 
-	// 所有Element相关类的方法名
-	var _allMethods = (function() {
-		var allMethods = [];
-		[Element, FormElement, FormItemElement].forEach(function(Klass) {
-			Object.keys(Klass.prototype).forEach(function(key) {
-				if (typeof Klass.prototype[key] == 'function' && allMethods.indexOf(key) == -1) allMethods.push(key);
-			});
-		});
-		return allMethods;
-	})();
-
 	/**
 	 * @constructor
 	 * @param elements native dom elements
+	 * @param wrapper 这批节点的共有类型，默认为Element
 	 */
-	this.__init__  = function(self, elements) {
+	this.__init__  = function(self, elements, wrapper) {
 		self.length = 0;
+		if (!wrapper) wrapper = Element;
 
-		_allMethods.forEach(function(name) {
+		Object.keys(wrapper).forEach(function(name) {
 			self[name] = function() {
 				var element;
 				for (var i = 0; i < elements.length; i++) {
@@ -804,11 +814,30 @@ var _tagMap = {
 };
 
 // 根据ele的tagName返回他所需要的wrapper class
-function getWrapper(ele) {
-	var tag = ele.tagName.toLowerCase();
+function getWrapper(tagName) {
+	var tag = tagName.toLowerCase();
 	var cls = _tagMap[tag];
 	if (cls) return cls;
 	else return Element;
+}
+
+// 获取一个class的继承链
+function getChain(cls) {
+	var result = [cls];
+	if (cls.__bases__.length) result = result.concat(getChain(cls.__bases__[0]));
+	return result;
+}
+
+// 比较两个数组，直到同位的成员不同，返回之前的部分
+// [1,2,3,4], [1,2,5,6] 返回 [1,2]
+function getCommon(arr1, arr2) {
+	var i;
+	for (i = 0, l = arr1.length; i < l; i++) {
+		if (!arr2[i] || arr2[i] !== arr1[i]) {
+			break;
+		}
+	}
+	return arr1.slice(0, i);
 }
 
 });
