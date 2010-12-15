@@ -2,8 +2,8 @@
 
 	<source dir="src">
 		<combine path="object-all.js">
-			<include path="../../../core/trunk/lib/jeresig-sizzle-68ff471/sizzle.js" />
-			<include path="../../../core/trunk/lib/janl-mustache.js-d2feae3/mustache.js" />
+			<include path="../../../../core/trunk/lib/jeresig-sizzle-68ff471/sizzle.js" />
+			<include path="../../../../core/trunk/lib/janl-mustache.js-d2feae3/mustache.js" />
 			<include path="../lib/json2.js" />
 			<include path="object.js" />
 			<include path="ua.js" />
