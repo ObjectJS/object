@@ -58,6 +58,7 @@ var Request = this.Request = new Class(function() {
 
 		if (xhr.readyState == 4) {
 			if (xhr.status === undefined || xhr.status === 0 || (xhr.status >= 200 && xhr.status < 300)) {
+				alert('1');
 				self.onSuccess(xhr);
 			}
 		}

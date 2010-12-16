@@ -68,7 +68,7 @@ var Class = this.$class = this.Class = function() {
 			// 而其他浏览器仅仅是在重新指向prototype时，类似 obj.prototype = {} 这样的写法才会出现这个情况
 			if (name === 'prototype') return;
 
-			if (parent[name].classmethod) {
+			if (members[name].classmethod) {
 				cls[name] = members[name].im_func;
 			} else {
 				cls[name] = members[name];
