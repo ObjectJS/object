@@ -29,7 +29,7 @@ var parse = function(expression, isReversed){
 	separatorIndex = -1;
 	while (expression != (expression = expression.replace(regexp, parser)));
 	parsed.length = parsed.expressions.length;
-	return currentCache[parsed.raw] = (reversed) ? reverse(parsed) : parsed;
+	return currentCache[expression] = (reversed) ? reverse(parsed) : parsed;
 };
 
 var reverseCombinator = function(combinator){
@@ -219,3 +219,4 @@ Slick.escapeRegExp = escapeRegExp;
 if (!this.Slick) this.Slick = Slick;
 
 }).apply(/*<CommonJS>*/(typeof exports != 'undefined') ? exports : /*</CommonJS>*/this);
+

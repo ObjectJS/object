@@ -147,7 +147,6 @@ Class.inject = function(cls, source, arguments) {
 	});
 
 	var value = (cls.__init__) ? source.__init__.apply(source, arguments) : source;
-	delete source.caller;
 	return value;
 
 }
@@ -323,11 +322,11 @@ this.Loader = new Class(function() {
 
 		doCallback = function() {
 			if (window.console) console.log('load ' + src);
-			delete ele.loading;
+			ele.loading = null;
 			ele.callbacks.forEach(function(callback) {
 				callback();
 			});
-			delete ele.callbacks;
+			ele.callbacks = null;
 		};
 
 		ele.callbacks.push(callback);
@@ -577,7 +576,7 @@ this.Loader = new Class(function() {
 				}
 				if (use.uses) {
 					// uses/as 互斥
-					delete use.as;
+					use.as = null;
 					if (use.uses == '*') continue; // 如果是 * 则保持字符串，不做处理
 					if (typeof use.uses == 'string') {
 						use.uses = use.uses.split(/\s*,\s*/ig);

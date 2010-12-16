@@ -98,7 +98,9 @@ var getElements = this.getElements = function(selector, context) {
 	// 解析成Slick Selector对象
 	var parsed = Slick.parse(selector);
 
-	var eles = Slick.search(context, parsed);
+	// 可能是Slick的bug，在IE下这里只能用字符串selector，用parsed结果不正确
+	// TODO
+	var eles = Slick.search(context, selector);
 
 	// 这里通过分析selector的最后一个部分的tagName，来确定这批eles的wrapper
 	// 例如selector是 div form.xxx 则wrapper是 FormElement
