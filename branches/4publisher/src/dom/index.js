@@ -644,7 +644,7 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 		}
 
 		tmp.innerHTML = str;
-		while (tmp.firstChild) result.appendChild(tmp.firstChild);
+		while (tmp.firstChild) result.appendChild(wrap(tmp.firstChild));
 
 		if (_needGetDom) tmp.parentNode.removeChild(tmp);
 
@@ -662,26 +662,6 @@ var FormElement = this.FormElement = new Class(Element, function() {
 		Element.__init__(self);
 	};
 
-	// set('sendOptions')
-	attribute.defineProperty(this, 'sendOptions', {
-		get: function() {
-			return this.retrieve('sendOptions');
-		},
-		set: function(options) {
-			var xhr = this.retrieve('send');
-			if (!xhr) {
-				var net = sys.modules['net'];
-				if (net) {
-					xhr = new net.Request(options);
-					this.store('send', xhr);
-				} else {
-					throw new ModuleRequiredError('net');
-				}
-			}
-			this.store('sendOptions', options);
-		}
-	});
-
 	/**
 	 * 用ajax发送一个表单
 	 */
@@ -689,7 +669,19 @@ var FormElement = this.FormElement = new Class(Element, function() {
 		if (!params) {
 			params = self.toQueryString();
 		}
-		var xhr = self.retrieve('send');
+		var net = sys.modules['net'];
+		if (net) {
+			xhr = new net.Request({
+				onSuccess: function(xhr) {
+					self.fireEvent('requestSuccess', xhr);
+				},
+				onError: function() {
+					self.fireEvent('requestError', xhr);
+				}
+			});
+		} else {
+			throw new ModuleRequiredError('net');
+		}
 		xhr.method = self.method;
 		xhr.url = self.action;
 		xhr.send(params);
@@ -727,6 +719,17 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 
 	this.__init__ = function(self) {
 		Element.__init__(self);
+
+		attribute.defineProperty(self, 'value', {
+			set: function(value) {
+				self.value = value;
+			},
+			get: function() {
+				// 如果是placeholder，则value为空
+				if (self.classList.contains("placeholder")) return '';
+				return self.value;
+			}
+		});
 
 		if (['input, textarea'].indexOf(self.get('tagName'))) {
 			self.bindPlaceholder(self);

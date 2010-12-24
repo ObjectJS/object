@@ -21,6 +21,12 @@ this.extend = function(obj, properties, ov) {
 
 };
 
+var clone = function(obj) {
+	var clone = {};
+	for (var key in obj) clone[key] = obj[key];
+	return clone;
+};
+
 // 获得一个cls的所有成员，cls有可能是native function比如Array, String
 function getMembers(source) {
 	if (source === Array || source === String) {
@@ -52,27 +58,35 @@ var Class = this.$class = this.Class = function() {
 
 	// cls
 	var cls = function() {
-		Class.inject(cls, this, arguments);
+		return Class.inject(arguments.callee, this, arguments, base);
 	};
-	cls.__bases__  = parents;
+
+	// base
+	var base = function() {
+		return Class.inject(arguments.callee, this, arguments);
+	};
 
 	// 继承，将parent的所有成员都放到cls上
 	// 先做继承，后声明的成员覆盖先声明的
 	for (var i = 0; i < parents.length; i++) {
-		var parent = parents[i];
-		var members = getMembers(parent);
+		var parent = getMembers(parents[i]);
 
-		Object.keys(members).forEach(function(name) {
-			// 在Safari 5.0.2(7533.18.5)中，在这里用for in遍历members会将prototype属性遍历出来，导致原型被指向一个错误的对象，后面就错的一塌糊涂了
+		Object.keys(parent).forEach(function(name) {
+			// 在Safari 5.0.2(7533.18.5)中，在这里用for in遍历parent会将prototype属性遍历出来，导致原型被指向一个错误的对象，后面就错的一塌糊涂了
 			// 经过试验，在Safari下，仅仅通过 obj.prototype.xxx = xxx 这样的方式就会导致 prototype 变成自定义属性，会被 for in 出来
 			// 而其他浏览器仅仅是在重新指向prototype时，类似 obj.prototype = {} 这样的写法才会出现这个情况
 			if (name === 'prototype') return;
 
-			if (members[name].classmethod) {
-				cls[name] = members[name].im_func;
+			// 如果是属性/staticmethod/classmethod，则不进行wrapper
+			if (typeof parent[name] === 'object') {
+				base[name] = cls[name] = clone(parent[name]);
+			} else if (typeof parent[name] == 'function' && parent[name].classmethod) {
+				cls[name] = parent[name].im_func;
+				base[name] = bindFunc(parent[name].im_func, base);
 			} else {
-				cls[name] = members[name];
+				base[name] = cls[name] = parent[name];
 			}
+
 		});
 	}
 
@@ -86,12 +100,17 @@ var Class = this.$class = this.Class = function() {
 
 	// 处理 classmethod
 	Object.keys(cls).forEach(function(name) {
-		if (cls[name] && cls[name].classmethod) {
-			cls[name] = bindFunc(cls[name], cls);
-			cls[name].classmethod = true;
+		if (typeof cls[name] == 'function') {
+			if (cls[name].classmethod) {
+				cls[name] = bindFunc(cls[name], cls, cls.__super__);
+				cls[name].classmethod = true;
+			}
+			cls[name].im_class = cls;
 		}
 	});
 
+	cls.__bases__  = parents;
+	cls.__super__ = base;
 	cls.constructor = object.Class;
 	cls.prototype.constructor = cls;
 
@@ -99,56 +118,62 @@ var Class = this.$class = this.Class = function() {
 };
 
 // 将binder绑定至func的第一个参数
-function bindFunc(func, binder) {
+function bindFunc(func, binder, base) {
 	var wrapper = function() {
 		var args = [].slice.call(arguments, 0);
 		args.unshift(arguments.callee.__self__);
-		return func.apply(globalHost, args);
+		return func.apply(base || globalHost, args);
 	};
-	wrapper.apply = funcApply;
-	wrapper.call = funcCall;
+	wrapper.apply = Class.apply;
+	wrapper.call = Class.call;
+	wrapper.__super__ = base;
 	wrapper.__self__ = binder;
 	wrapper.im_func = func;
 
 	return wrapper;
 }
 
-// bindFunc的apply方法
-function funcApply(host, args) {
+Class.apply = function(host, args) {
 	if (!args) args = [];
 	args = [].slice.call(args, 0);
 	args.unshift(this.__self__);
-	return this.im_func.apply(host, args);
-}
+	return this.im_func.apply(this.__super__ || globalHost, args);
+};
 
-// bindFunc的call方法
-function funcCall(host) {
+Class.call = function(host, args) {
 	var args = [].slice.call(arguments, 1);
 	args.unshift(this.__self__);
-	return this.im_func.apply(host, args);
-}
+	return this.im_func.apply(this.__super__ || globalHost, args);
+};
 
 /**
- * 将source注射进class，使其self指向source
+ * 将host注射进class，使其self指向host
  * @param cls 被注射的class
- * @param source 注射进去的对象
+ * @param host 注射进去的对象
  */
-Class.inject = function(cls, source, arguments) {
+Class.inject = function(cls, host, args) {
 
 	// 将properties中的function进行一层wrapper，传入第一个 self 参数
 	Object.keys(cls).forEach(function(name) {
+		if (name === 'prototype') return;
+
+		if (typeof cls[name] === 'object') {
+			host[name] = clone(cls[name]);
 		// 如果是属性/staticmethod/classmethod，则不进行wrapper
-		if (typeof cls[name] != 'function' || cls[name].__self__ === null || cls[name].im_func) {
-			source[name] = cls[name];
+		} if (typeof cls[name] != 'function' || cls[name].__self__ === null || cls[name].im_func) {
+			host[name] = cls[name];
 		} else {
-			source[name] = bindFunc(cls[name], source);
+			host[name] = bindFunc(cls[name], host, cls.__super__);
 		}
 
 	});
 
-	var value = (cls.__init__) ? source.__init__.apply(source, arguments) : source;
-	return value;
+	if (!args) args = [];
+	args = [].slice.call(args, 0);
+	args.unshift(host);
+	var value = (cls.__init__) ? cls.__init__.apply(cls.__super__, args) : host;
 
+	return value;
 }
 
 // 声明类静态方法，在new Class(callback) 的callback中调用
@@ -239,13 +264,9 @@ this.Loader = new Class(function() {
 	 * @constructor
 	 */
 	this.__init__ = function(self) {
-		// 系统内置模块
-		self._runtimeModules = [];
-
 		self.useCache = true;
 		// 所有use都会默认use的模块，需要注意循环引用问题
 		self.globalUses = [];
-		self.queue = [];
 		self.lib = {};
 		self.anonymousModuleCount = 0;
 
@@ -447,7 +468,7 @@ this.Loader = new Class(function() {
 	};
 
 	/**
-	 * 通过一个模块名，获得到相对应的模块对象并返回
+	 * 通过一个模块名，获得到相对应的模块对象并通过callback返回
 	 *
 	 * @param name pkg name
 	 * @param modules 已引入的module对象列表，会传递给 execute 方法，可以通过sys.modules获取
