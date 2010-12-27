@@ -157,15 +157,24 @@ Class.inject = function(cls, host, args) {
 	Object.keys(cls).forEach(function(name) {
 		if (name === 'prototype') return;
 
+		// object property
 		if (typeof cls[name] === 'object') {
 			host[name] = clone(cls[name]);
-		// 如果是属性/staticmethod/classmethod，则不进行wrapper
-		} if (typeof cls[name] != 'function' || cls[name].__self__ === null || cls[name].im_func) {
+		// property
+		} else if (typeof cls[name] != 'function') {
 			host[name] = cls[name];
+		// staticmethod
+		} else if (cls[name].__self__ === null) {
+			host[name] = cls[name];
+		// classmethod
+		} else if (cls[name].classmethod) {
+			// 在IE下textarea有一个wrap属性无法重新赋值，导致Component.wrap在Class.inject时报错。暂时使用这种方法避免一下
+			// TODO
+			if (host[name] === undefined) host[name] = cls[name];
+		// method
 		} else {
 			host[name] = bindFunc(cls[name], host, cls.__super__);
 		}
-
 	});
 
 	if (!args) args = [];

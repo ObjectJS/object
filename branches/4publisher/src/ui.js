@@ -38,6 +38,7 @@ var Component = this.Component = new Class(function() {
 				self.set(name, result);
 			}
 		}
+		self.get(name);
 	};
 
 	/**
@@ -89,22 +90,23 @@ var Component = this.Component = new Class(function() {
 
 		attribute.defineProperty(self, name, {
 			get: function() {
-				var eles = self[single? 'getElement' : 'getElements'](selector);
-				if (!eles) return;
-
 				if (single) {
+					var ele = self.getElement(selector);
+					if (!ele) return;
 					if (type) type.wrap(eles);
 					if (eles) self._addEventTo(name, eles);
+					self[name] = ele;
+					return ele;
 				} else {
+					var eles = self.getElements(selector);
+					if (!eles) return;
 					eles.forEach(function(ele) {
 						if (type) type.wrap(ele);
 						self._addEventTo(name, ele);
 					});
+					self[name] = eles;
+					return eles;
 				}
-
-				self[name] = eles;
-
-				return eles;
 			},
 			set: function(eles) {
 				if (single) {
@@ -152,7 +154,8 @@ var Component = this.Component = new Class(function() {
 			tdata = data;
 		}
 
-		var ele = dom.Element.fromString(string.substitute(template, tdata)).firstChild;
+		var str = string.substitute(template, tdata)
+		var ele = dom.Element.fromString(str).firstChild;
 		return cls.wrap(ele);
 	});
 
@@ -180,7 +183,7 @@ var Component = this.Component = new Class(function() {
 	 * 如果 Component.wrap(ele) 后进行 TabControl.wrap(ele) 由于TabControl继承于Component，则包装成功
 	 * @classmethod
 	 */
-	this.wrap = classmethod(function(cls, ele, test) {
+	this.wrap = classmethod(function(cls, ele) {
 		if (!ele) return null;
 
 		// 获取class的所有继承关系，存成平面数组
@@ -212,7 +215,7 @@ var Component = this.Component = new Class(function() {
 		}
 
 		// 将ele注射进cls
-		Class.inject(cls, ele);
+		Class.inject(cls, ele, []);
 
 		ele._wrapper = cls;
 		return ele;
@@ -236,7 +239,7 @@ this.TabControl = new Class(Component, function() {
 		self.selectedEle = null;
 
 		for (var i = 0; i < self.get('tabs').length; i++) {
-			if (dom.Element.wrap(self.tabs[i]).classList.contains('selected')) {
+			if (dom.wrap(self.tabs[i]).classList.contains('selected')) {
 				self.selectedEle = self.tabs[i];
 				break;
 			}

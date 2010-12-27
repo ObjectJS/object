@@ -340,9 +340,11 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 			// 包装Func，会被attachEvent
 			// 包装Func存储被包装的func，detach的时候，参数是innerFunc，需要通过innerFunc找到wrapperFunc进行detach
 			var wrapperFunc = function() {
-				var e = self.wrapEvent(window.event);
 				var args = [].slice.call(arguments, 0);
-				args[0] = e;
+				if (window.event) {
+					var e = self.wrapEvent(window.event);
+					args[0] = e;
+				}
 				func.apply(self, args);
 			};
 			wrapperFunc.innerFunc = func;
