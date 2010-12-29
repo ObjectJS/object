@@ -1,93 +1,124 @@
-object.add('ui', 'dom', function($, dom) {
+object.add('ui', 'string, dom, attribute', function($, string, dom, attribute) {
 
 /**
  * UI模块基类
  * @class
  */
-var Component = this.Component = new Class(dom.Element, function() {
+var Component = this.Component = new Class(function() {
+
+	this._templates = {};
 
 	this.__init__ = function(self) {
-		dom.Element.__init__(self);
+		self = $.wrap(self);
+		self._components = {};
+		self._rendered = [];
+
+		// 本class的所有event方法
+		self._events = self._getEvents(self);
 	};
 
-	this._render1 = function(self, control, triggers) {
-		for (var i in triggers) {
-			control.addEvent(i, triggers[i]);
-		}
+	this._addEventTo = function(self, name, ele) {
+		if (!self._events[name] || ele._eventAdded) return;
+
+		Object.keys(self._events[name]).forEach(function(eventName) {
+			ele.addEvent(eventName, self._events[name][eventName]);
+		});
+		ele._eventAdded = true;
 	};
 
-	// 将options参数转换成trigger
-	this._getTriggers = function(self, options) {
-		var triggers = {};
-		for (var i in options) {
-			var eventName = i.match(/^on(.+)/i);
-			if (eventName) triggers[eventName[1]] = options[i];
+	this.render = function(self, name, data) {
+		var methodName = 'render' + string.capitalize(name);
+		var result;
+		if (self[methodName]) {
+			result = self[methodName](data);
+			if (result) {
+				self._rendered.push(result);
+			}
 		}
-
-		return triggers;
+		self.get(name);
 	};
 
 	/**
-	 * @param selector css选择符
-	 * @param options options
-	 */
-	this.render = function(self, selector, options) {
-		if (!options) options = {};
-		if (!options.type) options.type = dom.Element;
-
-		// selector 有可能只是一个name，通过self.selectors获取真正的selector
-		if (self.selectors && selector in self.selectors) {
-			name = selector;
-			selector = self.selectors[selector];
-		}
-
-		var eles = self.getElements(selector, options.type);
-		var triggers = self._getTriggers(options);
-
-		for (i = 0; i < eles.length; i++) {
-			self._render1(eles[i], triggers);
-		}
-
-		if (name) {
-			self[name] = eles;
-		}
-
-		return eles;
-	};
-
-	this.render1 = function(self, selector, options) {
-		if (!options) options = {};
-		if (!options.type) options.type = dom.Element;
-
-		// selector 有可能只是一个name，通过self.selectors获取真正的selector
-		if (self.selectors && selector in self.selectors) {
-			name = selector;
-			selector = self.selectors[selector];
-		}
-
-		var ele = self.getElement(selector, options.type);
-		var triggers = self._getTriggers(options);
-
-		self._render1(ele, triggers);
-
-		if (name) {
-			self[name] = ele;
-		}
-
-		return ele;
-		
+	* 根据components的type创建一个component，这一般是在renderXXX方法中进行调用
+	* @param name
+	* @param data 模板数据
+	*/
+	this.make = function(self, name, data) {
+		var template = self._templates[name].template;
+		var secName = self._templates[name].secName;
+		return self._components[name].type.create(template, data, secName);
 	};
 
 	this.bind = function(self, name) {
 		return function() {
-			self[name].apply(self, [].slice.call(arguments, 0));
-			self.fireEvent(name, arguments[0], self);
-		}
+			self.apply(name, [].slice.call(arguments, 0));
+		};
 	};
 
 	this.call = function(self, name) {
-		self[name].apply(self, [].slice.call(arguments, 0));
-		self.fireEvent(name, arguments[0], self);
+		self.fireEvent(name, null, self);
+		if (!self[name]) throw 'no method named ' + name;
+		self[name].apply(self, [].slice.call(arguments, 2));
+	};
+
+	this.apply = function(self, name, args) {
+		self.fireEvent(name, null, self);
+		if (!self[name]) throw 'no method named ' + name;
+		self[name].apply(self, args);
+	};
+
+	this.setTemplate = classmethod(function(cls, name, template, secName) {
+		cls._templates[name] = {
+			template: template,
+			secName: secName
+		}
+	});
+
+	this.addComponent = function(self, name, selector, type) {
+		self.addComponents(name, selector, type, true);
+	};
+
+	this.addComponents = function(self, name, selector, type, single) {
+		if (!type) type = Component;
+
+		self._components[name] = {
+			selector: selector,
+			type: type,
+			single: single
+		};
+
+		attribute.defineProperty(self, name, {
+			get: function() {
+				if (single) {
+					var ele = self.getElement(selector);
+					if (!ele) return;
+					if (type) type.wrap(ele);
+					if (ele) self._addEventTo(name, ele);
+					self[name] = ele;
+					return ele;
+				} else {
+					var eles = self.getElements(selector);
+					if (!eles) return;
+					eles.forEach(function(ele) {
+						if (type) type.wrap(ele);
+						self._addEventTo(name, ele);
+					});
+					self[name] = eles;
+					return eles;
+				}
+			},
+			set: function(eles) {
+				if (single) {
+					self._addEventTo(name, eles);
+				} else {
+					eles.forEach(function(ele) {
+						self._addEventTo(name, ele);
+					});
+				}
+			}
+		});
+
+		self.get(name);
 	};
 
 	/**
@@ -107,6 +138,100 @@ var Component = this.Component = new Class(dom.Element, function() {
 		return value;
 	};
 
+	/**
+	 * 渲染一个新的控件
+	 * @param template 模板字符串
+	 * @param data 模板数据
+	 * @param secName 模板片段名称
+	 */
+	this.create = classmethod(function(cls, template, data, secName) {
+		if (!data) data = {};
+		var tdata = {};
+		if (secName) {
+			tdata[secName] = data;
+		} else {
+			tdata = data;
+		}
+
+		var str = string.substitute(template, tdata)
+		var ele = dom.Element.fromString(str).firstChild;
+		return cls.wrap(ele);
+	});
+
+	this._getEvents = classmethod(function(cls, self) {
+		var events = {};
+
+		Object.keys(cls).forEach(function(key) {
+			var match = key.match(/([a-zA-Z]+)_([a-zA-Z]+)/);
+			if (!match) return;
+			var name = match[1];
+			var eventName = match[2];
+
+			if (!events[name]) events[name] = {};
+			events[name][eventName] = self[key];
+		});
+
+		return events;
+	});
+
+	/**
+	 * ele有可能已经wrap过，要注意不要重新覆盖老的成员
+	 * 提供了包装机制不代表同一个元素可以进行多重包装，在相同的继承树上多次包装没有问题，如果将两个无关的类型包装至同一元素，则第二次包装报错
+	 * 如果 TabControl.wrap(ele) 后进行 List.wrap(ele) ，则List包装失效并且报错
+	 * 如果 TabControl.wrap(ele) 后进行 Component.wrap(ele) 由于TabControl继承于Component，则无需包装
+	 * 如果 Component.wrap(ele) 后进行 TabControl.wrap(ele) 由于TabControl继承于Component，则包装成功
+	 * @classmethod
+	 */
+	this.wrap = classmethod(function(cls, ele) {
+		if (!ele) return null;
+
+		// 获取class的所有继承关系，存成平面数组
+		// TODO: class 的 chain 机制
+		function getBases(m) {
+			var array = [];
+			for (var i = 0, l = m.length; i < l; i++){
+				array = array.concat((m[i].__bases__ && m[i].__bases__.length) ? arguments.callee(m[i].__bases__) : m);
+			}
+			return array;
+		}
+
+		if (ele._wrapper) {
+			if (ele._wrapper === cls) return ele; // 重复包装相同类
+
+			var wrapperBases = getBases([ele._wrapper]);
+
+			// 已经包装过子类了(包了TabControl再包装Component)，无需包装
+			if (wrapperBases.indexOf(cls) !== -1) {
+				return ele;
+			}
+
+			var classBases = getBases([cls]);
+
+			// 现有包装不在同一继承树上，报错
+			if (classBases.indexOf(ele._wrapper) === -1) {
+				throw '包装出错，一个元素只能有一个包装类';
+			}
+		}
+
+		// 将ele注射进cls
+		Class.inject(cls, ele, []);
+
+		ele._wrapper = cls;
+		return ele;
+	});
+
+	this.error = function(self, msg) {
+		if (!msg) msg = '出错啦！';
+		alert(msg);
+	};
+
+	// 清空所有render进来的新元素
+	this.reset = function(self) {
+		self._rendered.forEach(function(node) {
+			node.dispose();
+		});
+	};
+
 });
 
 /**
@@ -120,13 +245,14 @@ this.TabControl = new Class(Component, function() {
 	 * @constructor
 	 */
 	this.__init__ = function(self) {
-		Component.__init__(self);
+		this.__init__(self);
 
-		self.tabs = dom.getElements('li', self);
+		self.addComponents('tabs', 'li');
+
 		self.selectedEle = null;
 
-		for (var i = 0; i < self.tabs.length; i++) {
-			if (dom.Element.wrap(self.tabs[i]).classList.contains('selected')) {
+		for (var i = 0; i < self.get('tabs').length; i++) {
+			if (dom.wrap(self.tabs[i]).classList.contains('selected')) {
 				self.selectedEle = self.tabs[i];
 				break;
 			}
@@ -151,26 +277,28 @@ this.TabControl = new Class(Component, function() {
 /**
  * @class
  */
-this.ForeNextControl = new Class(Component, function() {
+var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
 
 	/**
 	 * @constructor
 	 */
 	this.__init__ = function(self) {
-		Component.__init__(self);
+		this.__init__(self);
+
+		self.addComponents('nextButton', '.nextbutton');
+		self.addComponents('foreButton', '.forebutton');
 
 		self.total = parseInt(self.getData('total'));
 		self.start = parseInt(self.getData('start')) || 0;
 		self.position = self.start;
+	};
 
-		self.render('.nextbutton', {
-			onclick: self.bind('next')
-		});
+	this.nextButton_click = function(self, event) {
+		self.call('next');
+	};
 
-		self.render('.forebutton', {
-			onclick: self.bind('fore')
-		});
-
+	this.foreButton_click = function(self, event) {
+		self.call('fore');
 	};
 
 	this.next = function(self) {
@@ -189,7 +317,7 @@ this.ForeNextControl = new Class(Component, function() {
 	};
 
 	this.updatePosition = function(self) {
-		self.getElements('.current').set('html', self.position);
+		self.getElements('.current').set('html', self.position + 1); // position是从0开始滴～展示的时候+1
 	};
 
 	this.updateTotal = function(self) {

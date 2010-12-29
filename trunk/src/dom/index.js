@@ -69,22 +69,86 @@ this.ready = function(callback) {
 	}
 };
 
-
 /**
  * native node进行包装
- * @param ele
+ * @param node
  */
-this.wrap = function(ele) {
-	if (ele) Element.wrap(ele);
-	return ele || null;
+var wrap = this.wrap = function(node) {
+	if (!node) return null;
+
+	if (Array.isArray(node)) {
+		return new Elements(node);
+	} else {
+		// 已经wrap过了
+		if (node._nativeWrapper) return node;
+
+		var wrapper;
+		if (node === window) {
+			wrapper = Window;
+		} else if (node === window.document) {
+			wrapper = Document;
+		} else {
+			wrapper = getWrapper(node.tagName);
+		}
+		$uid(node);
+
+		Class.inject(wrapper, node);
+
+		node._nativeWrapper = wrapper;
+		return node;
+	}
 };
 
-this.getElements = function() {
-	var eles = Sizzle.apply(null, arguments);
-	for (var i = 0; i < eles.length; i++) {
-		eles[i] = Element.wrap(eles[i]);
+var getElements = this.getElements = function(selector, context) {
+	if (!context) context = document;
+
+	// 解析成Slick Selector对象
+	var parsed = Slick.parse(selector);
+
+	// 可能是Slick的bug，在IE下这里只能用字符串selector，用parsed结果不正确
+	// TODO
+	var eles = Slick.search(context, selector);
+
+	// 这里通过分析selector的最后一个部分的tagName，来确定这批eles的wrapper
+	// 例如selector是 div form.xxx 则wrapper是 FormElement
+	// 例如selector是 div .xxx 则wrapper是 Element
+	// 例如selector是 div select.xxx, div.input.xxx 则wrapper是 FormItemElement
+
+	var wrapper, part;
+	// 绝大部分情况都是length=0，只有1个selector，保证其性能
+	if (parsed.expressions.length == 1) {
+		part = parsed.expressions[0];
+		wrapper = getWrapper(part[part.length - 1].tag);
+
+	// 由多个selector组成，比如 div select.xxx, div.input.xxx，要保证这种能取到 FormItemElement
+	} else {
+		// 通过生成每个selector wrapper的继承链，不断的生成当前selector和上一个selector的继承链的相同部分
+		// 最后的chain的最后一个元素，既是公用wrapper
+		for (var i = 0, part, chain, previousChain; i < parsed.expressions.length; i++) {
+			part = parsed.expressions[i];
+			wrapper = getWrapper(part[part.length - 1].tag);
+
+			// 当前selector最后元素的wrapper chain
+			// slice(0, -1) 过滤掉Element继承的 Attribute 类
+			chain = getChain(wrapper).slice(0, -1).reverse();
+			if (previousChain) {
+				chain = getCommon(chain, previousChain);
+			}
+			// 如果相同部分length=1，则代表找到Element类了，可以停止继续搜索
+			if (chain.length == 1) break;
+			previousChain = chain;
+		}
+		wrapper = chain[chain.length - 1];
 	}
-	return eles;
+
+	return new Elements(eles, wrapper);
+};
+
+var getElement = this.getElement = function(selector, context) {
+	if (!context) context = document;
+
+	var ele = Slick.find(context, selector);
+	return wrap(ele);
 };
 
 this.id = function(id) {
@@ -136,65 +200,41 @@ var eval_inner_JS = this.eval_inner_JS = function(ele) {
 
 /**
  * html5 classList api
- * @see http://eligrey.com
- * @class ElementClassList
  */
 var ElementClassList = this.ElementClassList = new Class(Array, function() {
-
-	this.checkAndGetIndex = staticmethod(function(classes, token) {
-        if (token === "") {
-            throw "SYNTAX_ERR";
-        }
-        if (/\s/.test(token)) {
-            throw "INVALID_CHARACTER_ERR";
-        }
- 
-        return classes.indexOf(token);
-	});
-
-	this.setClasses = staticmethod(function(ele, classes) {
-        ele.className = classes.join(" ");
-	});
 
 	this.__init__ = function(self, ele) {
 		self.length = 0; // for Array
 
-		var trim = /^\s+|\s+$/g;
 		self._ele = ele;
-        self._classes  = ele.className.replace(trim, "").split(/\s+/);
+		self._loadClasses();
+	};
+
+	this._loadClasses = function(self) {
+    	self._classes  = self._ele.className.replace(/^\s+|\s+$/g, '').split(/\s+/);
 	};
 
 	this.toggle = function(self, token) {
-		if (self.checkAndGetIndex(self._classes, token) === -1) {
-			self.add(token);
-		} else {
-			self.remove(token);
-		}
+		if (self.contains(token)) self.remove(token);
+		else self.add(token);
 	};
 
 	this.add = function(self, token) {
-		if (self.checkAndGetIndex(self._classes, token) === -1) {
-			self._classes.push(token);
-			self.length = self._classes.length;
-			self.setClasses(self._ele, self._classes);
-		}
+		self._ele.className += (' ' + token);
 	};
 
 	this.remove = function(self, token) {
-		var index = self.checkAndGetIndex(self._classes, token);
-		if (index !== -1) {
-			self._classes.splice(index, 1);
-			self.length = self._classes.length;
-			self.setClasses(self._ele, self._classes);
-		}
+		self._ele.className = self._ele.className.replace(new RegExp(token, 'i'), '');
 	};
 
 	this.contains = function(self, token) {
-        return self.checkAndGetIndex(self._classes, token) !== -1;
+		self._loadClasses();
+		if (self._classes.indexOf(token) != -1) return true;
+		else return false;
 	};
 
 	this.item = function(self, i) {
-        return self._classes[i] || null;
+		return self._classes[i] || null;
 	};
 
 	this.toString = function (self) {
@@ -204,65 +244,50 @@ var ElementClassList = this.ElementClassList = new Class(Array, function() {
 });
 
 /**
- * 一个包装类，实现被包装类型的统一调用
- * @class Elements
- */
-var Elements = this.Elements = new Class(Array, function() {
-
-	/**
-	 * @constructor
-	 * @param elements native dom elements
-	 * @param cls 包装类型
-	 */
-	this.__init__  = function(self, elements, cls) {
-		self.length = 0;
-		if (cls === undefined) cls = Element;
-
-		for (var name in cls) {
-			self[name] = (function(name) {
-				return function() {
-					for (var i = 0; i < this.length; i++) {
-						var ele = this[i] = cls.wrap(this[i]);
-						var args = [].slice.call(arguments, 0);
-						args.unshift(ele);
-						cls[name].apply(ele, args);
-					}
-				};
-			})(name);
-		}
-
-		for (var i = 0; i < elements.length; i++) self.push(cls.wrap(elements[i]));
-	};
-
-});
-
-/**
  * @class Element
  */
 var Element = this.Element = new Class(attribute.Attribute, function() {
 
-	// 检测浏览器是否支持通过innerHTML设置未知标签，典型的就是IE不支持
-	var t = document.createElement('div');
-	t.innerHTML = '<TEST_TAG></TEST_TAG>';
-	// IE 下无法获取到自定义的Element，其他浏览器会得到HTMLUnknownElement
-	var __needGetDom = t.firstChild === null;
+	var _needGetDom = (function() {
+		// 检测浏览器是否支持通过innerHTML设置未知标签，典型的就是IE不支持
+		var t = document.createElement('div');
+		t.innerHTML = '<TEST_TAG></TEST_TAG>';
+		// IE 下无法获取到自定义的Element，其他浏览器会得到HTMLUnknownElement
+		return (t.firstChild === null);
+	})();
+
 	this._eventListeners = {};
 
-	this.__init__ = function(self) {
-		attribute.Attribute.__init__(self);
-		self._eventListeners = {};
+	this.__init__ = function(self, tagName) {
 
+		// 直接new Element，用来生成一个新元素
+		if (tagName) {
+			self = document.createElement(tagName);
+			wrap(self);
+
+		// 包装现有元素
+		} else {
+			attribute.Attribute.__init__(self);
+		}
+
+		self._eventListeners = {};
 		if (self.classList === undefined && self !== document && self !== window) {
 			self.classList = new ElementClassList(self);
 		}
 	};
 
+	/*
+	 * 从dom读取数据
+	 */
 	this.retrieve = function(self, property, dflt){
 		var storage = get(self.uid), prop = storage[property];
-		if (dflt != null && prop == null) prop = storage[property] = dflt;
-		return prop != null ? prop : null;
+		if (dflt !== null && prop === null) prop = storage[property] = dflt;
+		return prop !== null ? prop : null;
 	};
 
+	/**
+	 * 存储数据至dom
+	 */
 	this.store = function(self, property, value){
 		var storage = get(self.uid);
 		storage[property] = value;
@@ -270,6 +295,7 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 	};
 
 	/**
+	 * 事件
 	 * @param type 事件名
 	 * @param func 事件回调
 	 * @param cap 冒泡
@@ -297,9 +323,11 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 			// 包装Func，会被attachEvent
 			// 包装Func存储被包装的func，detach的时候，参数是innerFunc，需要通过innerFunc找到wrapperFunc进行detach
 			var wrapperFunc = function() {
-				var e = self.wrapEvent(window.event);
 				var args = [].slice.call(arguments, 0);
-				args[0] = e;
+				if (window.event) {
+					var e = self.wrapEvent(window.event);
+					args[0] = e;
+				}
 				func.apply(self, args);
 			};
 			wrapperFunc.innerFunc = func;
@@ -307,6 +335,22 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 			funcs.push(wrapperFunc);
 
 			self.attachEvent('on' + type, wrapperFunc);
+		}
+	};
+
+	this._addEvent = function(self, type, func, cap) {
+		if (self.addEventListener) {
+			self.addEventListener(type, func, cap);
+		} else if (self.attachEvent) {
+			var propertyName = '_event_' + type;
+			if (self[propertyName] === undefined) {
+				self[propertyName] = 0;
+			}
+			self.attachEvent('onpropertychange', function(event) {
+				if (event.propertyName == propertyName) {
+					func();
+				}
+			});
 		}
 	};
 
@@ -332,6 +376,14 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 		else self.detachEvent('on' + type, wrapperFunc);
 	};
 
+	this._removeEvent = function(self, type, func, cap) {
+		if (self.removeEventListener) {
+			self.removeEventListener(type, func, cap);
+		} else if (self.detatchEvent) {
+			// TODO
+		}
+	};
+
 	/**
 	 * @param type 事件名
 	 */
@@ -348,13 +400,38 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 		}
 	};
 
+	this._fireEvent = function(self, type) {
+		if (document.createEvent) {
+			var event = document.createEvent('UIEvents');
+			event.initEvent(type, false, false);
+			self.dispatchEvent(event);
+		} else if (document.attachEvent) {
+			var propertyName = '_event_' + type;
+			self[propertyName]++;
+		}
+	};
+
+	/**
+	 * @param selector
+	 * @param type
+	 * @param callback
+	 */
+	this.delegate = function(self, selector, type, callback) {
+		self.addEvent(type, function(e) {
+			var ele = e.srcElement || e.target;
+			do {
+				if (ele && Element.matchesSelector(ele, selector)) callback.call(wrap(ele), e);
+			} while((ele = ele.parentNode));
+		});
+	};
+
 	/**
 	 * html5 matchesSelector api
 	 * 检测元素是否匹配selector
 	 * @param selector css选择符
 	 */
 	this.matchesSelector = function(self, selector) {
-		return Sizzle.matches(selector, [self]).length > 0;
+		return Slick.match(self, selector);
 	};
 
 	/**
@@ -371,9 +448,9 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 	 * @param str html代码
 	 */
 	this.setHTML = function(self, str) {
-		if (__needGetDom) {
+		if (_needGetDom) {
 			self.innerHTML = '';
-			var nodes = self.getDom(str);
+			var nodes = self.fromString(str);
 			while (nodes.firstChild) self.appendChild(nodes.firstChild);
 		} else {
 			self.innerHTML = str;
@@ -385,17 +462,71 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 	this.setContent = this.setHTML;
 
 	/**
-	 * @param selector
-	 * @param type
-	 * @param callback
+	 * 根据选择器返回第一个
+	 * @param selector css选择符
 	 */
-	this.delegate = function(self, selector, type, callback) {
-		self.addEvent(type, function(e) {
-			var ele = e.srcElement || e.target;
-			do {
-				if (ele && Element.matchesSelector(ele, selector)) callback.call(Element.wrap(ele), e);
-			} while((ele = ele.parentNode));
-		});
+	this.getElement = function(self, selector) {
+		return getElement(selector, self);
+	};
+
+	/**
+	 * 根据选择器返回数组
+	 * @param selector css选择符
+	 */
+	this.getElements = function(self, selector) {
+		return getElements(selector, self);
+	};
+
+	var inserters = {
+		before: function(context, element){
+			var parent = element.parentNode;
+			if (parent) parent.insertBefore(context, element);
+		},
+		after: function(context, element){
+			var parent = element.parentNode;
+			if (parent) parent.insertBefore(context, element.nextSibling);
+		},
+		bottom: function(context, element){
+			element.appendChild(context);
+		},
+		top: function(context, element){
+			element.insertBefore(context, element.firstChild);
+		}
+	};
+	inserters.inside = inserters.bottom;
+
+	this.grab = function(self, el, where) {
+		inserters[where || 'bottom'](el, self);
+		return self;
+	};
+
+	this.inject = function(self, el, where) {
+		inserters[where || 'bottom'](self, el);
+		return self;
+	};
+
+	this.getPrevious = function(expression) {
+		// TODO
+	};
+
+	this.getAllPrevious = function(expression) {
+		// TODO
+	};
+
+	this.getNext = function(expression) {
+		// TODO
+	};
+
+	this.getAllNext = function(expression) {
+		// TODO
+	};
+
+	this.getFirst = function(expression) {
+		// TODO
+	};
+
+	this.getLast = function(expression) {
+		// TODO
 	};
 
 	/**
@@ -403,45 +534,61 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 	 * @param selector css选择符
 	 */
 	this.getParent = function(self, selector) {
-		if (!selector) return Element.wrap(self.parentNode);
+		if (!selector) return wrap(self.parentNode);
 
 		var element = self;
 		do {
-			if (Element.matchesSelector(element, selector)) return Element.wrap(element);
+			if (Element.matchesSelector(element, selector)) return wrap(element);
 		} while ((element = element.parentNode));
 		return null;
 	};
 
-	/**
-	 * 根据选择器返回第一个
-	 * @param selector css选择符
-	 * @param cls 包装类型
-	 */
-	this.getElement = function(self, selector, cls) {
-		var ele = Sizzle(selector, self)[0];
-		if (!cls) cls = Element;
-		return cls.wrap(ele);
+	this.getParents = function(expression) {
+		// TODO
 	};
 
-	/**
-	 * 根据选择器返回数组
-	 * @param selector css选择符
-	 * @param cls 包装类型
-	 */
-	this.getElements = function(self, selector, cls) {
-		var eles = Sizzle(selector, self);
-		return new Elements(eles, cls);
+	this.getSiblings = function(expression) {
+		// TODO
 	};
 
+	this.getChildren = function(expression) {
+		// TODO
+	};
+
+	this.addClass = function(self, name) {
+		self.classList.add(name);
+	};
+
+	this.removeClass = function(self, name) {
+		self.classList.remove(name);
+	};
+
+	this.toggleClass = function(self, name) {
+		self.classList.toggle(name);
+	};
+
+	this.dispose = function(self) {
+		return (self.parentNode) ? self.parentNode.removeChild(self) : self;
+	};
+	
+	/**
+	 * 隐藏一个元素
+	 */
 	this.hide = function(self) {
 		if (self.style.display !== 'none') self.oldDisplay = self.style.display;
 		self.style.display = 'none';
 	};
 
+	/**
+	 * 显示一个元素
+	 */
 	this.show = function(self) {
 		self.style.display = self.oldDisplay || '';
 	};
 
+	/**
+	 * 切换显示
+	 */
 	this.toggle = function(self) {
 		if (self.style.display == 'none') self.show();
 		else self.hide();
@@ -453,59 +600,6 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 			this.innerHTML = html;
 		}
 	});
-
-	// set('sendOptions')
-	attribute.defineProperty(this, 'sendOptions', {
-		get: function() {
-			return this.retrieve('sendOptions');
-		},
-		set: function(options) {
-			var xhr = this.retrieve('send');
-			if (!xhr) {
-				var net = sys.modules['net'];
-				if (net) {
-					xhr = new net.Request(options);
-					this.store('send', xhr);
-				} else {
-					throw new ModuleRequiredError('net');
-				}
-			}
-			this.store('sendOptions', options);
-		}
-	});
-
-	this.send = function(self, params) {
-		if (!params) {
-			params = self.toQueryString();
-		}
-		var xhr = self.retrieve('send');
-		if (!xhr.method) xhr.method = self.method;
-		if (!xhr.url) xhr.url = self.action;
-		xhr.send(params);
-	};
-
-	this.toQueryString = function(self) {
-		var queryString = [];
-		self.getElements('input, select, textarea').forEach(function(el) {
-			var type = el.type;
-			if (!el.name || el.disabled || type == 'submit' || type == 'reset' || type == 'file' || type == 'image') return;
-
-			var value = (el.tagName.toLowerCase() == 'select') ? el.getSelected().map(function(opt) {
-				// IE
-				return document.id(opt).get('value');
-			}) : ((type == 'radio' || type == 'checkbox') && !el.checked) ? null : el.value;
-
-			if (typeof value != 'undefined') queryString.push(encodeURIComponent(el.name) + '=' + encodeURIComponent(value));
-		});
-		return queryString.join('&');
-	};
-
-	this.getSelected = function(self) {
-		self.selectedIndex; // Safari 3.2.1
-		return new Elements(self.options.filter(function(option) {
-			return option.selected;
-		}));
-	};
 
 	/**
 	 * 将IE中的window.event包装一下
@@ -531,104 +625,228 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 		return e;
 	});
 
-	/**
-	 * 将字符串转换成dom
-	 * for IE
-	 * @staticmethod
-	 */
-	this.getDom = staticmethod(function(str) {
-		var tmp = document.createElement('div');
-		tmp.style.display = 'none';
-		document.body.appendChild(tmp);
-
-		tmp.innerHTML = str;
-		var ele = document.createElement('div');
-		while (tmp.firstChild) ele.appendChild(tmp.firstChild);
-		tmp.parentNode.removeChild(tmp);
-		return ele;
+	attribute.defineProperty(this, 'tagName', {
+		get: function() {
+			return this.tagName.toLowerCase();
+		}
 	});
 
 	/**
-	 * ele有可能已经wrap过，要注意不要重新覆盖老的成员
-	 * 提供了包装机制不代表同一个元素可以进行多重包装，在相同的继承树上多次包装没有问题，如果将两个无关的类型包装至同一元素，则第一次包装失效
-	 * 比如 TabControl.wrap(ele) 后进行 List.wrap(ele) ，ele将不再具备 TabControl 的功能
-	 * 而 TabControl.wrap(ele) 后进行 Element.wrap(ele) 由于TabControl继承于Element，则包装成功
-	 * @classmethod
+	 * 将字符串转换成dom
+	 * @staticmethod
 	 */
-	this.wrap = classmethod(function(cls, ele) {
-		if (!ele) return null;
+	this.fromString = staticmethod(function(str) {
+		var tmp = document.createElement('div');
+		var result = document.createDocumentFragment();
 
-		$uid(ele);
-
-		// 判断已经包装过的对象取消包装
-		// 1 包装为现有包装的子类的，比如先包装 TabControl 再包装 Element
-		// 2 重复包装相同类的
-		if (ele.wrapper) {
-			if (ele.wrapper === cls) return ele;
-
-			// 获取cls的所有继承关系，存成平面数组
-			var allBases = (function(m) {
-				var array = [];
-				for (var i = 0, l = m.length; i < l; i++){
-					array = array.concat((m[i].__bases__ && m[i].__bases__.length) ? arguments.callee(m[i].__bases__) : m);
-				}
-				return array;
-			})([ele.wrapper]);
-
-			// 已包装过
-			if (allBases.indexOf(cls) !== -1) return ele;
+		if (_needGetDom) {
+			tmp.style.display = 'none';
+			document.body.appendChild(tmp);
 		}
 
-		// 对于classmethod，不做重新绑定
-		// 1是classmethod可以动态获取当前类，不需要重新绑定
-		// 2是IE下会报“无法得到xxx属性，参数无效”的错误
-		for (var i in cls.prototype) {
-			if (cls.prototype[i].im_func === undefined) ele[i] = cls.prototype[i];
-		}
-		cls.__init__(ele);
+		tmp.innerHTML = str;
+		while (tmp.firstChild) result.appendChild(wrap(tmp.firstChild));
 
-		ele.wrapper = cls;
-		return ele;
+		if (_needGetDom) tmp.parentNode.removeChild(tmp);
+
+		return result;
 	});
 
 });
 
 /**
- * bind一个input或者textarea，使其支持placeholder属性
+ * 表单
  */
-this.bindPlaceholder = function(input) {
+var FormElement = this.FormElement = new Class(Element, function() {
 
-	// 通过autocomplete=off避免浏览器记住placeholder
-	function checkEmpty(input, event) {
-		if (input.classList.contains("placeholder")) {
-			if (event.type == "focus") {
-				input.value = "";
-			}
-			input.classList.remove("placeholder");
-			input.removeAttribute("autocomplete");
-
-		// IE不支持autocomplete=off，刷新页面后value还是placeholder（其他浏览器为空，或者之前用户填写的值），只能通过判断是否相等来处理
-		} else if (!input.value || ((ua.ua.ie == 6 || ua.ua.ie == 7) && !event && input.value == input.getAttribute("placeholder"))) {
-			input.classList.add("placeholder");
-			input.value = input.getAttribute("placeholder");
-			input.setAttribute("autocomplete", "off");
+	/**
+	 * 用ajax发送一个表单
+	 */
+	this.send = function(self, params) {
+		if (!params) {
+			params = self.toQueryString();
 		}
-	}
-	input.addEvent("focus", function(event) {
-		return checkEmpty(event.target, event);
-	});
-	input.addEvent("blur", function(event) {
-		return checkEmpty(event.target, event);
-	});
-	if ($.wrap(input.form)) {
-		input.form.addEvent('submit', function() {
-			if (input.classList.contains('placeholder')) {
-				input.value = '';
+		var net = sys.modules['net'];
+		if (net) {
+			xhr = new net.Request({
+				onSuccess: function(xhr) {
+					self.fireEvent('requestSuccess', xhr);
+				},
+				onError: function() {
+					self.fireEvent('requestError', xhr);
+				}
+			});
+		} else {
+			throw new ModuleRequiredError('net');
+		}
+		xhr.method = self.method;
+		xhr.url = self.action;
+		xhr.send(params);
+	};
+
+	/**
+	 * 将一个表单转换成queryString
+	 */
+	this.toQueryString = function(self) {
+		var queryString = [];
+		self.getElements('input, select, textarea').forEach(function(el) {
+			var type = el.type;
+			if (!el.name || el.disabled || type == 'submit' || type == 'reset' || type == 'file' || type == 'image') return;
+
+			var value = (el.tagName.toLowerCase() == 'select') ? el.getSelected().map(function(opt) {
+				// IE
+				return document.id(opt).get('value');
+			}) : ((type == 'radio' || type == 'checkbox') && !el.checked) ? null : el.value;
+
+			if (typeof value != 'undefined') queryString.push(encodeURIComponent(el.name) + '=' + encodeURIComponent(value));
+		});
+		return queryString.join('&');
+	};
+
+	this.getSelected = function(self) {
+		self.selectedIndex; // Safari 3.2.1
+		return new Elements(self.options.filter(function(option) {
+			return option.selected;
+		}));
+	};
+
+});
+
+var FormItemElement = this.FormItemElement = new Class(Element, function() {
+
+	this.__init__ = function(self) {
+		Element.__init__(self);
+
+		attribute.defineProperty(self, 'value', {
+			set: function(value) {
+				self.value = value;
+			},
+			get: function() {
+				// 如果是placeholder，则value为空
+				if (self.classList.contains("placeholder")) return '';
+				return self.value;
 			}
 		});
-	}
-	checkEmpty(input);
+
+		if (['input, textarea'].indexOf(self.get('tagName'))) {
+			self.bindPlaceholder(self);
+		}
+	};
+
+	/**
+	 * bind一个input或者textarea，使其支持placeholder属性
+	 */
+	this.bindPlaceholder = staticmethod(function(input) {
+		// 通过autocomplete=off避免浏览器记住placeholder
+		function checkEmpty(input, event) {
+			if (input.classList.contains("placeholder")) {
+				if (event.type == "focus") {
+					input.value = "";
+				}
+				input.classList.remove("placeholder");
+				input.removeAttribute("autocomplete");
+
+			// IE不支持autocomplete=off，刷新页面后value还是placeholder（其他浏览器为空，或者之前用户填写的值），只能通过判断是否相等来处理
+			} else if (!input.value || ((ua.ua.ie == 6 || ua.ua.ie == 7) && !event && input.value == input.getAttribute("placeholder"))) {
+				input.classList.add("placeholder");
+				input.value = input.getAttribute("placeholder");
+				input.setAttribute("autocomplete", "off");
+			}
+		}
+		input.addEvent("focus", function(event) {
+			return checkEmpty(event.target, event);
+		});
+		input.addEvent("blur", function(event) {
+			return checkEmpty(event.target, event);
+		});
+		if (input.form) {
+			wrap(input.form).addEvent('submit', function() {
+				if (input.classList.contains('placeholder')) {
+					input.value = '';
+				}
+			});
+		}
+		checkEmpty(input);
+	});
+
+});
+
+var Window = this.Window = new Class(Element, function() {
+});
+
+var Document = this.Document = new Class(Element, function() {
+});
+
+/**
+ * 一个包装类，实现Element方法的统一调用
+ * @class Elements
+ */
+var Elements = this.Elements = new Class(Array, function() {
+
+	/**
+	 * @constructor
+	 * @param elements native dom elements
+	 * @param wrapper 这批节点的共有类型，默认为Element
+	 */
+	this.__init__  = function(self, elements, wrapper) {
+		self.length = 0;
+		if (!wrapper) wrapper = Element;
+
+		Object.keys(wrapper).forEach(function(name) {
+			self[name] = function() {
+				var element;
+				for (var i = 0; i < elements.length; i++) {
+					element = elements[i];
+					if (typeof element[name] == 'function') {
+						element[name].apply(elements[i], [].slice.call(arguments, 0));
+					}
+				}
+			};
+		});
+
+		for (var i = 0; i < elements.length; i++) {
+			self.push(wrap(elements[i]));
+		}
+	};
+
+});
+
+var _tagMap = {
+	'form': FormElement,
+	'input': FormItemElement,
+	'textarea': FormItemElement,
+	'output': FormItemElement,
+	'select': FormItemElement,
+	'option': FormItemElement,
+	'button': FormItemElement
 };
+
+// 根据ele的tagName返回他所需要的wrapper class
+function getWrapper(tagName) {
+	var tag = tagName.toLowerCase();
+	var cls = _tagMap[tag];
+	if (cls) return cls;
+	else return Element;
+}
+
+// 获取一个class的继承链
+function getChain(cls) {
+	var result = [cls];
+	if (cls.__bases__.length) result = result.concat(getChain(cls.__bases__[0]));
+	return result;
+}
+
+// 比较两个数组，直到同位的成员不同，返回之前的部分
+// [1,2,3,4], [1,2,5,6] 返回 [1,2]
+function getCommon(arr1, arr2) {
+	var i;
+	for (i = 0, l = arr1.length; i < l; i++) {
+		if (!arr2[i] || arr2[i] !== arr1[i]) {
+			break;
+		}
+	}
+	return arr1.slice(0, i);
+}
 
 });
 

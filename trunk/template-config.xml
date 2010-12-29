@@ -2,8 +2,10 @@
 
 	<source dir="src">
 		<combine path="object-all.js">
-			<include path="../../../core/trunk/lib/jeresig-sizzle-68ff471/sizzle.js" />
-			<include path="../../../core/trunk/lib/janl-mustache.js-d2feae3/mustache.js" />
+			<include path="../lib/slick/Slick.Parser.js" />
+			<include path="../lib/slick/Slick.Finder.js" />
+			<include path="../../../../core/trunk/lib/janl-mustache.js-d2feae3/mustache.js" />
+			<include path="../lib/json2.js" />
 			<include path="object.js" />
 			<include path="ua.js" />
 			<include path="string.js" />
@@ -16,6 +18,9 @@
 			<include path="ui.js" />
 			<include path="attribute.js" />
 			<include path="urlparse.js" />
+			<include path="validator.js" />
+			<include path="html5/index.js" />
+			<include path="html5/forms.js" />
 		</combine>
 	</source>
 
