@@ -689,7 +689,7 @@ var FormElement = this.FormElement = new Class(Element, function() {
 	 */
 	this.toQueryString = function(self) {
 		var queryString = [];
-		self.getElements('input, select, textarea').forEach(function(el) {
+		self.getElements('input, select, textarea, output').forEach(function(el) {
 			var type = el.type;
 			if (!el.name || el.disabled || type == 'submit' || type == 'reset' || type == 'file' || type == 'image') return;
 

@@ -28,11 +28,16 @@ var Component = this.Component = new Class(function() {
 
 	this.render = function(self, name, data) {
 		var methodName = 'render' + string.capitalize(name);
+		var single = self._components[name].single;
 		var result;
 		if (self[methodName]) {
 			result = self[methodName](data);
 			if (result) {
-				self._rendered.push(result);
+				if (single || !Array.isArray(result)) {
+					self._rendered.push(result);
+				} else {
+					self._rendered = self._rendered.concat(result);
+				}
 			}
 		}
 		self.get(name);
