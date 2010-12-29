@@ -11,13 +11,10 @@ var Component = this.Component = new Class(function() {
 	this.__init__ = function(self) {
 		self = $.wrap(self);
 		self._components = {};
+		self._rendered = [];
 
 		// 本class的所有event方法
 		self._events = self._getEvents(self);
-		self.call('load');
-	};
-
-	this.load = function(self) {
 	};
 
 	this._addEventTo = function(self, name, ele) {
@@ -35,7 +32,7 @@ var Component = this.Component = new Class(function() {
 		if (self[methodName]) {
 			result = self[methodName](data);
 			if (result) {
-				self.set(name, result);
+				self._rendered.push(result);
 			}
 		}
 		self.get(name);
@@ -60,11 +57,13 @@ var Component = this.Component = new Class(function() {
 
 	this.call = function(self, name) {
 		self.fireEvent(name, null, self);
+		if (!self[name]) throw 'no method named ' + name;
 		self[name].apply(self, [].slice.call(arguments, 2));
 	};
 
 	this.apply = function(self, name, args) {
 		self.fireEvent(name, null, self);
+		if (!self[name]) throw 'no method named ' + name;
 		self[name].apply(self, args);
 	};
 
@@ -93,8 +92,8 @@ var Component = this.Component = new Class(function() {
 				if (single) {
 					var ele = self.getElement(selector);
 					if (!ele) return;
-					if (type) type.wrap(eles);
-					if (eles) self._addEventTo(name, eles);
+					if (type) type.wrap(ele);
+					if (ele) self._addEventTo(name, ele);
 					self[name] = ele;
 					return ele;
 				} else {
@@ -221,6 +220,18 @@ var Component = this.Component = new Class(function() {
 		return ele;
 	});
 
+	this.error = function(self, msg) {
+		if (!msg) msg = '出错啦！';
+		alert(msg);
+	};
+
+	// 清空所有render进来的新元素
+	this.reset = function(self) {
+		self._rendered.forEach(function(node) {
+			node.dispose();
+		});
+	};
+
 });
 
 /**
@@ -235,6 +246,8 @@ this.TabControl = new Class(Component, function() {
 	 */
 	this.__init__ = function(self) {
 		this.__init__(self);
+
+		self.addComponents('tabs', 'li');
 
 		self.selectedEle = null;
 
@@ -259,10 +272,6 @@ this.TabControl = new Class(Component, function() {
 		});
 	};
 
-	this.load = function(self) {
-		self.addComponents('tabs', 'li');
-	};
-
 });
 
 /**
@@ -276,14 +285,12 @@ var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
 	this.__init__ = function(self) {
 		this.__init__(self);
 
+		self.addComponents('nextButton', '.nextbutton');
+		self.addComponents('foreButton', '.forebutton');
+
 		self.total = parseInt(self.getData('total'));
 		self.start = parseInt(self.getData('start')) || 0;
 		self.position = self.start;
-	};
-
-	this.load = function(self) {
-		self.addComponents('nextButton', '.nextbutton');
-		self.addComponents('foreButton', '.forebutton');
 	};
 
 	this.nextButton_click = function(self, event) {
