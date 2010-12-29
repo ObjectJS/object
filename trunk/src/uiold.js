@@ -33,7 +33,6 @@ var Component = this.Component = new Class(dom.Element, function() {
 	 */
 	this.render = function(self, selector, options) {
 		if (!options) options = {};
-		if (!options.type) options.type = dom.Element;
 
 		// selector 有可能只是一个name，通过self.selectors获取真正的selector
 		if (self.selectors && selector in self.selectors) {
@@ -41,7 +40,10 @@ var Component = this.Component = new Class(dom.Element, function() {
 			selector = self.selectors[selector];
 		}
 
-		var eles = self.getElements(selector, options.type);
+		var eles = self.getElements(selector);
+		eles.forEach(function(ele) {
+			if (options.type) options.type.wrap(ele);
+		});
 		var triggers = self._getTriggers(options);
 
 		for (i = 0; i < eles.length; i++) {
@@ -57,7 +59,6 @@ var Component = this.Component = new Class(dom.Element, function() {
 
 	this.render1 = function(self, selector, options) {
 		if (!options) options = {};
-		if (!options.type) options.type = dom.Element;
 
 		// selector 有可能只是一个name，通过self.selectors获取真正的selector
 		if (self.selectors && selector in self.selectors) {
@@ -65,7 +66,8 @@ var Component = this.Component = new Class(dom.Element, function() {
 			selector = self.selectors[selector];
 		}
 
-		var ele = self.getElement(selector, options.type);
+		var ele = self.getElement(selector);
+		if (options.type) options.type.wrap(ele);
 		var triggers = self._getTriggers(options);
 
 		self._render1(ele, triggers);
