@@ -1,0 +1,203 @@
+object.add('ui', 'dom', function($, dom) {
+
+/**
+ * UI模块基类
+ * @class
+ */
+var Component = this.Component = new Class(dom.Element, function() {
+
+	this.__init__ = function(self) {
+		dom.Element.__init__(self);
+	};
+
+	this._render1 = function(self, control, triggers) {
+		for (var i in triggers) {
+			control.addEvent(i, triggers[i]);
+		}
+	};
+
+	// 将options参数转换成trigger
+	this._getTriggers = function(self, options) {
+		var triggers = {};
+		for (var i in options) {
+			var eventName = i.match(/^on(.+)/i);
+			if (eventName) triggers[eventName[1]] = options[i];
+		}
+
+		return triggers;
+	};
+
+	/**
+	 * @param selector css选择符
+	 * @param options options
+	 */
+	this.render = function(self, selector, options) {
+		if (!options) options = {};
+		if (!options.type) options.type = dom.Element;
+
+		// selector 有可能只是一个name，通过self.selectors获取真正的selector
+		if (self.selectors && selector in self.selectors) {
+			name = selector;
+			selector = self.selectors[selector];
+		}
+
+		var eles = self.getElements(selector, options.type);
+		var triggers = self._getTriggers(options);
+
+		for (i = 0; i < eles.length; i++) {
+			self._render1(eles[i], triggers);
+		}
+
+		if (name) {
+			self[name] = eles;
+		}
+
+		return eles;
+	};
+
+	this.render1 = function(self, selector, options) {
+		if (!options) options = {};
+		if (!options.type) options.type = dom.Element;
+
+		// selector 有可能只是一个name，通过self.selectors获取真正的selector
+		if (self.selectors && selector in self.selectors) {
+			name = selector;
+			selector = self.selectors[selector];
+		}
+
+		var ele = self.getElement(selector, options.type);
+		var triggers = self._getTriggers(options);
+
+		self._render1(ele, triggers);
+
+		if (name) {
+			self[name] = ele;
+		}
+
+		return ele;
+		
+	};
+
+	this.bind = function(self, name) {
+		return function() {
+			self[name].apply(self, [].slice.call(arguments, 0));
+			self.fireEvent(name, arguments[0], self);
+		}
+	};
+
+	this.call = function(self, name) {
+		self[name].apply(self, [].slice.call(arguments, 0));
+		self.fireEvent(name, arguments[0], self);
+	};
+
+	/**
+	 * makeOption
+	 */
+	this.makeOption = function(self, name, type) {
+		name = name.toLowerCase();
+		var value = self.getData(name);
+		if (type === Boolean) {
+			value = (value === 'true');
+		} else if (type === Number) {
+			value = Number(value);
+		}
+
+		if (value === null || value === undefined || value === NaN) return null;
+
+		return value;
+	};
+
+});
+
+/**
+ * Tab UI
+ * @class
+ * @event change
+ */
+this.TabControl = new Class(Component, function() {
+
+	/**
+	 * @constructor
+	 */
+	this.__init__ = function(self) {
+		Component.__init__(self);
+
+		self.tabs = dom.getElements('li', self);
+		self.selectedEle = null;
+
+		for (var i = 0; i < self.tabs.length; i++) {
+			if (dom.Element.wrap(self.tabs[i]).classList.contains('selected')) {
+				self.selectedEle = self.tabs[i];
+				break;
+			}
+		}
+
+		self.tabs.forEach(function(ele, i) {
+			ele = dom.wrap(ele);
+
+			ele.addEvent('click', function() {
+				self.tabs.forEach(function(tab, i) {
+					dom.wrap(tab).classList.remove('selected');
+				});
+				self.selectedEle = ele;
+				ele.classList.add('selected');
+				self.fireEvent('change', null, self);
+			});
+		});
+	};
+
+});
+
+/**
+ * @class
+ */
+this.ForeNextControl = new Class(Component, function() {
+
+	/**
+	 * @constructor
+	 */
+	this.__init__ = function(self) {
+		Component.__init__(self);
+
+		self.total = parseInt(self.getData('total'));
+		self.start = parseInt(self.getData('start')) || 0;
+		self.position = self.start;
+
+		self.render('.nextbutton', {
+			onclick: self.bind('next')
+		});
+
+		self.render('.forebutton', {
+			onclick: self.bind('fore')
+		});
+
+	};
+
+	this.next = function(self) {
+		self.position++;
+		self.call('change');
+	};
+
+	this.fore = function(self) {
+		self.position--;
+		self.call('change');
+	};
+
+	this.change = function(self) {
+		self.call('updateTotal');
+		self.call('updatePosition');
+	};
+
+	this.updatePosition = function(self) {
+		self.getElements('.current').set('html', self.position);
+	};
+
+	this.updateTotal = function(self) {
+		self.getElements('.total').set('html', self.total);
+	};
+
+});
+
+});
+
+

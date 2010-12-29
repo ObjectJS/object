@@ -193,65 +193,41 @@ var eval_inner_JS = this.eval_inner_JS = function(ele) {
 
 /**
  * html5 classList api
- * @see http://eligrey.com
- * @class ElementClassList
  */
 var ElementClassList = this.ElementClassList = new Class(Array, function() {
-
-	this.checkAndGetIndex = staticmethod(function(classes, token) {
-        if (token === "") {
-            throw "SYNTAX_ERR";
-        }
-        if (/\s/.test(token)) {
-            throw "INVALID_CHARACTER_ERR";
-        }
- 
-        return classes.indexOf(token);
-	});
-
-	this.setClasses = staticmethod(function(ele, classes) {
-        ele.className = classes.join(" ");
-	});
 
 	this.__init__ = function(self, ele) {
 		self.length = 0; // for Array
 
-		var trim = /^\s+|\s+$/g;
 		self._ele = ele;
-        self._classes  = ele.className.replace(trim, "").split(/\s+/);
+		self._loadClasses();
+	};
+
+	this._loadClasses = function(self) {
+    	self._classes  = self._ele.className.replace(/^\s+|\s+$/g, '').split(/\s+/);
 	};
 
 	this.toggle = function(self, token) {
-		if (self.checkAndGetIndex(self._classes, token) === -1) {
-			self.add(token);
-		} else {
-			self.remove(token);
-		}
+		if (self.contains(token)) self.remove(token);
+		else self.add(token);
 	};
 
 	this.add = function(self, token) {
-		if (self.checkAndGetIndex(self._classes, token) === -1) {
-			self._classes.push(token);
-			self.length = self._classes.length;
-			self.setClasses(self._ele, self._classes);
-		}
+		self._ele.className += (' ' + token);
 	};
 
 	this.remove = function(self, token) {
-		var index = self.checkAndGetIndex(self._classes, token);
-		if (index !== -1) {
-			self._classes.splice(index, 1);
-			self.length = self._classes.length;
-			self.setClasses(self._ele, self._classes);
-		}
+		self._ele.className = self._ele.className.replace(new RegExp(token, 'i'), '');
 	};
 
 	this.contains = function(self, token) {
-        return self.checkAndGetIndex(self._classes, token) !== -1;
+		self._loadClasses();
+		if (self._classes.indexOf(token) != -1) return true;
+		else return false;
 	};
 
 	this.item = function(self, i) {
-        return self._classes[i] || null;
+		return self._classes[i] || null;
 	};
 
 	this.toString = function (self) {
@@ -572,6 +548,22 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 		// TODO
 	};
 
+	this.addClass = function(self, name) {
+		self.classList.add(name);
+	};
+
+	this.removeClass = function(self, name) {
+		self.classList.remove(name);
+	};
+
+	this.toggleClass = function(self, name) {
+		self.classList.toggle(name);
+	};
+
+	this.dispose = function(self) {
+		return (self.parentNode) ? self.parentNode.removeChild(self) : self;
+	};
+	
 	/**
 	 * 隐藏一个元素
 	 */
