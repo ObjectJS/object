@@ -71,24 +71,31 @@ this.ready = function(callback) {
 
 /**
  * native node进行包装
- * @param ele
+ * @param node
  */
-var wrap = this.wrap = function(ele) {
-	if (!ele) return null;
+var wrap = this.wrap = function(node) {
+	if (!node) return null;
 
-	if (Array.isArray(ele)) {
-		return new Elements(ele);
+	if (Array.isArray(node)) {
+		return new Elements(node);
 	} else {
 		// 已经wrap过了
-		if (ele._nativeWrapper) return ele;
+		if (node._nativeWrapper) return node;
 
-		var wrapper = getWrapper(ele.tagName);
-		$uid(ele);
+		var wrapper;
+		if (node === window) {
+			wrapper = Window;
+		} else if (node === window.document) {
+			wrapper = Document;
+		} else {
+			wrapper = getWrapper(node.tagName);
+		}
+		$uid(node);
 
-		Class.inject(wrapper, ele);
+		Class.inject(wrapper, node);
 
-		ele._nativeWrapper = wrapper;
-		return ele;
+		node._nativeWrapper = wrapper;
+		return node;
 	}
 };
 
@@ -527,11 +534,11 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 	 * @param selector css选择符
 	 */
 	this.getParent = function(self, selector) {
-		if (!selector) return Element.wrap(self.parentNode);
+		if (!selector) return wrap(self.parentNode);
 
 		var element = self;
 		do {
-			if (Element.matchesSelector(element, selector)) return Element.wrap(element);
+			if (Element.matchesSelector(element, selector)) return wrap(element);
 		} while ((element = element.parentNode));
 		return null;
 	};
@@ -652,10 +659,6 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
  */
 var FormElement = this.FormElement = new Class(Element, function() {
 
-	this.__init__ = function(self) {
-		Element.__init__(self);
-	};
-
 	/**
 	 * 用ajax发送一个表单
 	 */
@@ -766,6 +769,12 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 		checkEmpty(input);
 	});
 
+});
+
+var Window = this.Window = new Class(Element, function() {
+});
+
+var Document = this.Document = new Class(Element, function() {
 });
 
 /**

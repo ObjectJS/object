@@ -1,4 +1,4 @@
-object.add('ui', 'dom', function($, dom) {
+object.add('uiold', 'dom', function($, dom) {
 
 /**
  * UI模块基类
@@ -107,6 +107,44 @@ var Component = this.Component = new Class(dom.Element, function() {
 		return value;
 	};
 
+	this.wrap = classmethod(function(cls, ele) {
+		if (!ele) return null;
+
+		// 获取class的所有继承关系，存成平面数组
+		// TODO: class 的 chain 机制
+		function getBases(m) {
+			var array = [];
+			for (var i = 0, l = m.length; i < l; i++){
+				array = array.concat((m[i].__bases__ && m[i].__bases__.length) ? arguments.callee(m[i].__bases__) : m);
+			}
+			return array;
+		}
+
+		if (ele._wrapper) {
+			if (ele._wrapper === cls) return ele; // 重复包装相同类
+
+			var wrapperBases = getBases([ele._wrapper]);
+
+			// 已经包装过子类了(包了TabControl再包装Component)，无需包装
+			if (wrapperBases.indexOf(cls) !== -1) {
+				return ele;
+			}
+
+			var classBases = getBases([cls]);
+
+			// 现有包装不在同一继承树上，报错
+			if (classBases.indexOf(ele._wrapper) === -1) {
+				throw '包装出错，一个元素只能有一个包装类';
+			}
+		}
+
+		// 将ele注射进cls
+		Class.inject(cls, ele, []);
+
+		ele._wrapper = cls;
+		return ele;
+	});
+
 });
 
 /**
@@ -126,7 +164,7 @@ this.TabControl = new Class(Component, function() {
 		self.selectedEle = null;
 
 		for (var i = 0; i < self.tabs.length; i++) {
-			if (dom.Element.wrap(self.tabs[i]).classList.contains('selected')) {
+			if (dom.wrap(self.tabs[i]).classList.contains('selected')) {
 				self.selectedEle = self.tabs[i];
 				break;
 			}
