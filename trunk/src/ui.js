@@ -6,25 +6,15 @@ object.add('ui', 'string, dom, attribute', function($, string, dom, attribute) {
  */
 var Component = this.Component = new Class(function() {
 
-	this._templates = {};
-
 	this.__init__ = function(self, node) {
 		self._properties = {};
-		self._node = node;
 		self._componentDescriptors = {};
 		self._components = [];
 		self._rendered = [];
 		// 本class的所有event方法
 		self._events = self._getEvents(self);
 
-		if (node._nativeWrapper) {
-			Object.keys(node._nativeWrapper).forEach(function(name) {
-				var property = node._nativeWrapper[name];
-				if (typeof property === 'function' && !property.classmethod && property.__self__ !== null) {
-					if (self[name] === undefined) self[name] = node[name];
-				}
-			});
-		}
+		self.node = node;
 	};
 
 	this.set = function(self, prop, value) {
@@ -32,7 +22,7 @@ var Component = this.Component = new Class(function() {
 		if (property && property.set) {
 			property.set.call(self, value);
 		} else {
-			self._node.set(prop, value);
+			self.node.set(prop, value);
 		}
 	};
 
@@ -41,7 +31,7 @@ var Component = this.Component = new Class(function() {
 		if (property && property.get) {
 			return property.get.apply(self);
 		} else {
-			return self._node.get(prop);
+			return self.node.get(prop);
 		}
 	};
 
@@ -63,11 +53,10 @@ var Component = this.Component = new Class(function() {
 			result = self[methodName](data);
 			if (result) {
 				if (single || !Array.isArray(result)) {
-					result = new type(result);
 					self._rendered.push(result);
 				} else {
 					result.forEach(function(ele) {
-						self._rendered.push(new type(ele));
+						self._rendered.push(ele);
 					});
 				}
 			}
@@ -81,8 +70,8 @@ var Component = this.Component = new Class(function() {
 	* @param data 模板数据
 	*/
 	this.make = function(self, name, data) {
-		var template = self._templates[name].template;
-		var secName = self._templates[name].secName;
+		var template = self._componentDescriptors[name].template;
+		var secName = self._componentDescriptors[name].secName;
 
 		if (!data) data = {};
 		var tdata = {};
@@ -92,7 +81,7 @@ var Component = this.Component = new Class(function() {
 			tdata = data;
 		}
 
-		var str = string.substitute(template, tdata)
+		var str = string.substitute(template, tdata);
 		var ele = dom.Element.fromString(str).firstChild;
 
 		return ele;
@@ -106,23 +95,21 @@ var Component = this.Component = new Class(function() {
 	};
 
 	this.call = function(self, name) {
-		self._node.fireEvent(name, null, self);
+		self.node.fireEvent(name, null, self);
 		if (!self[name]) throw 'no method named ' + name;
 		self[name].apply(self, [].slice.call(arguments, 2));
 	};
 
 	this.apply = function(self, name, args) {
-		self._node.fireEvent(name, null, self);
+		self.node.fireEvent(name, null, self);
 		if (!self[name]) throw 'no method named ' + name;
 		self[name].apply(self, args);
 	};
 
-	this.setTemplate = classmethod(function(cls, name, template, secName) {
-		cls._templates[name] = {
-			template: template,
-			secName: secName
-		}
-	});
+	this.setTemplate = function(self, name, template, secName) {
+		self._componentDescriptors[name].template = template;
+		self._componentDescriptors[name].secName = secName;
+	};
 
 	this.addComponent = function(self, name, selector, type) {
 		self.addComponents(name, selector, type, true);
@@ -140,16 +127,16 @@ var Component = this.Component = new Class(function() {
 		attribute.defineProperty(self, name, {
 			get: function() {
 				if (single) {
-					var ele = self._node.getElement(selector);
-					if (!ele) return;
+					var ele = self.node.getElement(selector);
+					if (!ele) return null;
 					var component = new type(ele);
 					if (ele) self._addEventTo(name, ele);
 					self['_' + name] = ele;
 					self[name] = component;
 					return component;
 				} else {
-					var eles = self._node.getElements(selector);
-					if (!eles) return;
+					var eles = self.node.getElements(selector);
+					if (!eles) return null;
 					eles.forEach(function(ele, i) {
 						eles[i] = new type(ele);
 						self._addEventTo(name, ele);
@@ -178,7 +165,7 @@ var Component = this.Component = new Class(function() {
 	 */
 	this.makeOption = function(self, name, type) {
 		name = name.toLowerCase();
-		var value = self._node.getData(name);
+		var value = self.node.getData(name);
 		if (type === Boolean) {
 			value = (value === 'true');
 		} else if (type === Number) {
@@ -205,7 +192,7 @@ var Component = this.Component = new Class(function() {
 			tdata = data;
 		}
 
-		var str = string.substitute(template, tdata)
+		var str = string.substitute(template, tdata);
 		var ele = dom.Element.fromString(str).firstChild;
 		return new cls(ele);
 	});
@@ -271,6 +258,14 @@ var Component = this.Component = new Class(function() {
 		ele._wrapper = cls;
 		return ele;
 	});
+
+	this.load = function(self) {
+	};
+
+	this.reload = function(self) {
+		self.call('reset');
+		self.call('load');
+	};
 
 	this.error = function(self, msg) {
 		if (!msg) msg = '出错啦！';
@@ -353,8 +348,8 @@ var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
 		self.addComponents('nextButton', '.nextbutton');
 		self.addComponents('foreButton', '.forebutton');
 
-		self.total = parseInt(self.getData('total'));
-		self.start = parseInt(self.getData('start')) || 0;
+		self.total = parseInt(self.node.getData('total'), 10);
+		self.start = parseInt(self.node.getData('start'), 10) || 0;
 		self.position = self.start;
 	};
 
@@ -382,11 +377,11 @@ var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
 	};
 
 	this.updatePosition = function(self) {
-		self.getElements('.current').set('html', self.position + 1); // position是从0开始滴～展示的时候+1
+		self.node.getElements('.current').set('html', self.position + 1); // position是从0开始滴～展示的时候+1
 	};
 
 	this.updateTotal = function(self) {
-		self.getElements('.total').set('html', self.total);
+		self.node.getElements('.total').set('html', self.total);
 	};
 
 });

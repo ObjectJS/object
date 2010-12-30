@@ -79,7 +79,7 @@ var Class = this.$class = this.Class = function() {
 
 			// 如果是属性/staticmethod/classmethod，则不进行wrapper
 			if (typeof parent[name] === 'object') {
-				base[name] = cls[name] = clone(parent[name]);
+				base[name] = cls[name] = parent[name];
 			} else if (typeof parent[name] == 'function' && parent[name].classmethod) {
 				cls[name] = parent[name].im_func;
 				base[name] = bindFunc(parent[name].im_func, base);
@@ -159,7 +159,7 @@ Class.inject = function(cls, host, args) {
 
 		// object property
 		if (typeof cls[name] === 'object') {
-			host[name] = clone(cls[name]);
+			host[name] = cls[name];
 		// property
 		} else if (typeof cls[name] != 'function') {
 			host[name] = cls[name];

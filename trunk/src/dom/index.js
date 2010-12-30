@@ -718,6 +718,12 @@ var FormElement = this.FormElement = new Class(Element, function() {
 		}));
 	};
 
+	this.checkValidity = function(self) {
+		return self.getElements('input, select, textarea, output').every(function(el) {
+			return el.checkValidity();
+		});
+	};
+
 });
 
 var FormItemElement = this.FormItemElement = new Class(Element, function() {
@@ -736,9 +742,56 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 			}
 		});
 
+		attribute.defineProperty(self, 'validity', {
+			get: function() {
+				self.checkValidity();
+				return self.validity;
+			}
+		});
+
 		if (['input, textarea'].indexOf(self.get('tagName'))) {
 			self.bindPlaceholder(self);
 		}
+	};
+
+	this.checkValidity = function(self) {
+		/*
+		 * required
+		 * pattern
+		 * min
+		 * max
+		 * step
+		 */
+		/*
+		 * text
+		 * search
+		 * url
+		 * tel
+		 * email
+		 * password
+		 */
+
+		var value = self.value;
+		
+		self.validity = {
+			valueMissing: self.getAttribute('required') && !Boolean(value),
+			typeMismatch: (function(type) {
+				if (type == 'url') return /^(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i.test(value);
+				if (type == 'tel') return /[^\r\n]/i.test(value);
+				if (type == 'email') return /^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/i.test(value);
+			})(self.getAttribute('type')),
+			patternMismatch: value.match(self.getAttribute('pattern')),
+			tooLong: false,
+			rangeUnderflow: false,
+			rangeOverflow: false,
+			stepMismatch: false,
+			customError: false
+		};
+		self.validity.valid = ['valueMissing', 'typeMismatch', 'patternMismatch', 'tooLong', 'rangeUnderflow', 'rangeOverflow', 'stepMismatch', 'customError'].every(function(name) {
+			return self.validity[name] === true;
+		});
+
+		return self.validity.valid;
 	};
 
 	/**
