@@ -1,4 +1,4 @@
-object.add('dom', 'ua, attribute, sys', function($, ua, attribute, sys) {
+object.add('dom', 'ua, attribute, string, sys', function($, ua, attribute, string, sys) {
 
 var UID = 1;
 var storage = {};
@@ -267,7 +267,6 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 
 		// 包装现有元素
 		} else {
-			attribute.Attribute.__init__(self);
 		}
 
 		self._eventListeners = {};
@@ -565,6 +564,15 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 
 	this.toggleClass = function(self, name) {
 		self.classList.toggle(name);
+	};
+
+	this.setStyle = function(self, property, value) {
+		switch (property){
+			case 'opacity': return self.set('opacity', parseFloat(value));
+			case 'float': property = floatName;
+		}
+		property = string.camelCase(property);
+		self.style[property] = value;
 	};
 
 	this.dispose = function(self) {

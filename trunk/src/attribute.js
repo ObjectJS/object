@@ -14,10 +14,11 @@ this.defineProperties = function(object, descriptors) {
 };
 
 this.Attribute = new Class(function() {
-	
-	this.__init__ = function(self) {
-	};
 
+	this.__init__ = function(self) {
+		self._properties = {};
+	};
+	
 	this.set = function(self, prop, value) {
 		var property = self._properties[prop];
 		if (property && property.set) {
@@ -27,7 +28,7 @@ this.Attribute = new Class(function() {
 		}
 	};
 
-	this.get = function(self, prop, value) {
+	this.get = function(self, prop) {
 		var property = self._properties[prop];
 		if (property && property.get) {
 			return property.get.apply(self);

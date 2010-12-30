@@ -8,13 +8,41 @@ var Component = this.Component = new Class(function() {
 
 	this._templates = {};
 
-	this.__init__ = function(self) {
-		self = $.wrap(self);
-		self._components = {};
+	this.__init__ = function(self, node) {
+		self._properties = {};
+		self._node = node;
+		self._componentDescriptors = {};
+		self._components = [];
 		self._rendered = [];
-
 		// 本class的所有event方法
 		self._events = self._getEvents(self);
+
+		if (node._nativeWrapper) {
+			Object.keys(node._nativeWrapper).forEach(function(name) {
+				var property = node._nativeWrapper[name];
+				if (typeof property === 'function' && !property.classmethod && property.__self__ !== null) {
+					if (self[name] === undefined) self[name] = node[name];
+				}
+			});
+		}
+	};
+
+	this.set = function(self, prop, value) {
+		var property = self._properties[prop];
+		if (property && property.set) {
+			property.set.call(self, value);
+		} else {
+			self._node.set(prop, value);
+		}
+	};
+
+	this.get = function(self, prop) {
+		var property = self._properties[prop];
+		if (property && property.get) {
+			return property.get.apply(self);
+		} else {
+			return self._node.get(prop);
+		}
 	};
 
 	this._addEventTo = function(self, name, ele) {
@@ -28,15 +56,19 @@ var Component = this.Component = new Class(function() {
 
 	this.render = function(self, name, data) {
 		var methodName = 'render' + string.capitalize(name);
-		var single = self._components[name].single;
+		var single = self._componentDescriptors[name].single;
+		var type = self._componentDescriptors[name].type;
 		var result;
 		if (self[methodName]) {
 			result = self[methodName](data);
 			if (result) {
 				if (single || !Array.isArray(result)) {
+					result = new type(result);
 					self._rendered.push(result);
 				} else {
-					self._rendered = self._rendered.concat(result);
+					result.forEach(function(ele) {
+						self._rendered.push(new type(ele));
+					});
 				}
 			}
 		}
@@ -44,14 +76,27 @@ var Component = this.Component = new Class(function() {
 	};
 
 	/**
-	* 根据components的type创建一个component，这一般是在renderXXX方法中进行调用
+	* 根据componentDescriptors的type创建一个component，这一般是在renderXXX方法中进行调用
 	* @param name
 	* @param data 模板数据
 	*/
 	this.make = function(self, name, data) {
 		var template = self._templates[name].template;
 		var secName = self._templates[name].secName;
-		return self._components[name].type.create(template, data, secName);
+
+		if (!data) data = {};
+		var tdata = {};
+		if (secName) {
+			tdata[secName] = data;
+		} else {
+			tdata = data;
+		}
+
+		var str = string.substitute(template, tdata)
+		var ele = dom.Element.fromString(str).firstChild;
+
+		return ele;
+		//return self._componentDescriptors[name].type.create(template, data, secName);
 	};
 
 	this.bind = function(self, name) {
@@ -61,13 +106,13 @@ var Component = this.Component = new Class(function() {
 	};
 
 	this.call = function(self, name) {
-		self.fireEvent(name, null, self);
+		self._node.fireEvent(name, null, self);
 		if (!self[name]) throw 'no method named ' + name;
 		self[name].apply(self, [].slice.call(arguments, 2));
 	};
 
 	this.apply = function(self, name, args) {
-		self.fireEvent(name, null, self);
+		self._node.fireEvent(name, null, self);
 		if (!self[name]) throw 'no method named ' + name;
 		self[name].apply(self, args);
 	};
@@ -86,7 +131,7 @@ var Component = this.Component = new Class(function() {
 	this.addComponents = function(self, name, selector, type, single) {
 		if (!type) type = Component;
 
-		self._components[name] = {
+		self._componentDescriptors[name] = {
 			selector: selector,
 			type: type,
 			single: single
@@ -95,19 +140,21 @@ var Component = this.Component = new Class(function() {
 		attribute.defineProperty(self, name, {
 			get: function() {
 				if (single) {
-					var ele = self.getElement(selector);
+					var ele = self._node.getElement(selector);
 					if (!ele) return;
-					if (type) type.wrap(ele);
+					var component = new type(ele);
 					if (ele) self._addEventTo(name, ele);
-					self[name] = ele;
-					return ele;
+					self['_' + name] = ele;
+					self[name] = component;
+					return component;
 				} else {
-					var eles = self.getElements(selector);
+					var eles = self._node.getElements(selector);
 					if (!eles) return;
-					eles.forEach(function(ele) {
-						if (type) type.wrap(ele);
+					eles.forEach(function(ele, i) {
+						eles[i] = new type(ele);
 						self._addEventTo(name, ele);
 					});
+					self['_' + name] = eles;
 					self[name] = eles;
 					return eles;
 				}
@@ -131,7 +178,7 @@ var Component = this.Component = new Class(function() {
 	 */
 	this.makeOption = function(self, name, type) {
 		name = name.toLowerCase();
-		var value = self.getData(name);
+		var value = self._node.getData(name);
 		if (type === Boolean) {
 			value = (value === 'true');
 		} else if (type === Number) {
@@ -160,7 +207,7 @@ var Component = this.Component = new Class(function() {
 
 		var str = string.substitute(template, tdata)
 		var ele = dom.Element.fromString(str).firstChild;
-		return cls.wrap(ele);
+		return new cls(ele);
 	});
 
 	this._getEvents = classmethod(function(cls, self) {
@@ -230,10 +277,23 @@ var Component = this.Component = new Class(function() {
 		alert(msg);
 	};
 
-	// 清空所有render进来的新元素
 	this.reset = function(self) {
+		// 清空所有render进来的新元素
 		self._rendered.forEach(function(node) {
 			node.dispose();
+		});
+		// 所有子component reset
+		self._components.forEach(function(name) {
+			var single = self._componentDescriptors[name].single;
+			if (single) {
+				if (self[name] && self[name].reset) self[name].reset();
+			} else {
+				if (self[name]) {
+					self[name].forEach(function(component) {
+						component.reset();
+					});
+				}
+			}
 		});
 	};
 
@@ -268,7 +328,7 @@ this.TabControl = new Class(Component, function() {
 
 			ele.addEvent('click', function() {
 				self.tabs.forEach(function(tab, i) {
-					dom.wrap(tab).classList.remove('selected');
+					tab.classList.remove('selected');
 				});
 				self.selectedEle = ele;
 				ele.classList.add('selected');
@@ -287,8 +347,8 @@ var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
 	/**
 	 * @constructor
 	 */
-	this.__init__ = function(self) {
-		this.__init__(self);
+	this.__init__ = function(self, node) {
+		this.__init__(self, node);
 
 		self.addComponents('nextButton', '.nextbutton');
 		self.addComponents('foreButton', '.forebutton');
