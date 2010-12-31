@@ -28,10 +28,12 @@ var Class = this.Class = function() {
 	var properties = arguments[arguments.length - 1];
 	// 从参数获取父类
 	var parent = arguments.length === 2? arguments[0] : null;
+	var name;
 
 	// cls
 	var cls = function() {
-		return Class.inject(arguments.callee, this, arguments);
+		if (this.initialize) this.initialize.apply(this, arguments);
+		else if (this.__init__) this.__init__.apply(this, arguments);
 	};
 
 	// 继承，将parent的所有成员都放到cls上
@@ -39,20 +41,21 @@ var Class = this.Class = function() {
 	if (parent) {
 		parent = Class.getMembers(parent);
 
-		Object.keys(parent).forEach(function(name) {
+		for (name in parent) {
 			// 在Safari 5.0.2(7533.18.5)中，在这里用for in遍历parent会将prototype属性遍历出来，导致原型被指向一个错误的对象，后面就错的一塌糊涂了
 			// 经过试验，在Safari下，仅仅通过 obj.prototype.xxx = xxx 这样的方式就会导致 prototype 变成自定义属性，会被 for in 出来
 			// 而其他浏览器仅仅是在重新指向prototype时，类似 obj.prototype = {} 这样的写法才会出现这个情况
 			if (name === 'prototype') return;
 
 			// classmethod
-			if (typeof parent[name] == 'function' && parent[name].classmethod) {
+			if (typeof parent[name] == 'function' && parent[name].im_self) {
 				cls[name] = parent[name].im_func;
 			} else {
 				cls[name] = parent[name];
 			}
+		}
 
-		});
+		cls.__base__ = parent;
 	}
 
 	// 支持两种写法，传入一个Hash或者function
@@ -63,17 +66,7 @@ var Class = this.Class = function() {
 		object.extend(cls, properties);
 	}
 
-	// 处理 classmethod
-	Object.keys(cls).forEach(function(name) {
-		if (typeof cls[name] == 'function') {
-			if (cls[name].classmethod) {
-				cls[name] = Class.bindFunc(cls[name], cls);
-				cls[name].classmethod = true;
-			}
-		}
-	});
-
-	cls.__base__ = parent;
+	Class.build(cls, cls.prototype);
 
 	return cls;
 };
@@ -82,13 +75,32 @@ var Class = this.Class = function() {
 Class.bindFunc = function(func, binder) {
 	var wrapper = function() {
 		var args = [].slice.call(arguments, 0);
-		args.unshift(arguments.callee.__self__);
+		args.unshift(binder || this);
 		return func.apply(globalHost, args);
 	};
-	wrapper.__self__ = binder;
 	wrapper.im_func = func;
 
 	return wrapper;
+};
+
+Class.build = function(cls, host) {
+	var member;
+	for (var name in cls) {
+		if (name === 'prototype') return;
+		member = cls[name];
+
+		// classmethod
+		if (typeof member === 'function' && member.classmethod) {
+			host[name] = Class.bindFunc(member, cls);
+			host[name].im_self = cls;
+		// 普通method
+		} else if (typeof member === 'function' && member.__self__ !== null) {
+			host[name] = Class.bindFunc(member);
+		// staticmethod / 属性
+		} else {
+			host[name] = member;
+		}
+	}
 };
 
 /**
@@ -97,24 +109,7 @@ Class.bindFunc = function(func, binder) {
  * @param host 注射进去的对象
  */
 Class.inject = function(cls, host, args) {
-
-	// 将properties中的function进行一层wrapper，传入第一个 self 参数
-	Object.keys(cls).forEach(function(name) {
-		if (name === 'prototype') return;
-
-		// classmethod
-		if (typeof cls[name] === 'function' && cls[name].classmethod) {
-			// 在IE下textarea有一个wrap属性无法重新赋值，导致Component.wrap在Class.inject时报错。暂时使用这种方法避免一下
-			if (host[name] === undefined) host[name] = cls[name];
-		// 普通method
-		} else if (typeof cls[name] === 'function' && cls[name].__self__ !== null) {
-			host[name] = Class.bindFunc(cls[name], host);
-		// staticmethod / 属性
-		} else {
-			host[name] = cls[name];
-		}
-
-	});
+	Class.build(cls, host);
 
 	if (!args) args = [];
 	args = [].slice.call(args, 0);

@@ -130,7 +130,7 @@ var getElements = this.getElements = function(selector, context) {
 
 			// 当前selector最后元素的wrapper chain
 			// slice(0, -1) 过滤掉Element继承的 Attribute 类
-			chain = getChain(wrapper).slice(0, -1).reverse();
+			chain = Class.getChain(wrapper).slice(0, -1).reverse();
 			if (previousChain) {
 				chain = getCommon(chain, previousChain);
 			}
@@ -899,13 +899,6 @@ function getWrapper(tagName) {
 	var cls = _tagMap[tag];
 	if (cls) return cls;
 	else return Element;
-}
-
-// 获取一个class的继承链
-function getChain(cls) {
-	var result = [cls];
-	if (cls.__base__) result = result.concat(getChain(cls.__base__));
-	return result;
 }
 
 // 比较两个数组，直到同位的成员不同，返回之前的部分

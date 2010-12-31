@@ -67,7 +67,7 @@ var Request = this.Request = new Class(function() {
 		ajaxRequest(self.url, function(xhr) {
 			self._xhr = xhr;
 
-			xhr.onreadystatechange = self.onStateChange;
+			xhr.onreadystatechange = self.onStateChange.bind(self);
 
 			var xhr = self._xhr;
 			var url = self.url;

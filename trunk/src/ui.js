@@ -229,7 +229,7 @@ var Component = this.Component = new Class(Events, function() {
 			if (!events[name]) events[name] = [];
 			events[name].push({
 				name: eventName,
-				func: self[key]
+				func: self[key].bind(self)
 			});
 		});
 
