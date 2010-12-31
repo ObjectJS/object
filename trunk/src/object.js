@@ -69,7 +69,7 @@ var Class = this.Class = function() {
 	Object.keys(cls).forEach(function(name) {
 		if (typeof cls[name] == 'function') {
 			if (cls[name].classmethod) {
-				cls[name] = bindFunc(cls[name], cls);
+				cls[name] = Class.bindFunc(cls[name], cls);
 				cls[name].classmethod = true;
 			}
 			cls[name].im_class = cls;
@@ -104,9 +104,8 @@ Class.getMembers = function(source) {
 	}
 }
 
-
 // 将binder绑定至func的第一个参数
-function bindFunc(func, binder) {
+Class.bindFunc = function(func, binder) {
 	var wrapper = function() {
 		var args = [].slice.call(arguments, 0);
 		args.unshift(arguments.callee.__self__);
@@ -145,7 +144,7 @@ Class.inject = function(cls, host, args) {
 			if (host[name] === undefined) host[name] = cls[name];
 		// method
 		} else {
-			host[name] = bindFunc(cls[name], host);
+			host[name] = Class.bindFunc(cls[name], host);
 		}
 	});
 
