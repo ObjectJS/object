@@ -70,7 +70,6 @@ var Class = this.Class = function() {
 				cls[name] = Class.bindFunc(cls[name], cls);
 				cls[name].classmethod = true;
 			}
-			cls[name].im_class = cls;
 		}
 	});
 
@@ -103,30 +102,24 @@ Class.inject = function(cls, host, args) {
 	Object.keys(cls).forEach(function(name) {
 		if (name === 'prototype') return;
 
-		// object property
-		if (typeof cls[name] === 'object') {
-			host[name] = cls[name];
-		// property
-		} else if (typeof cls[name] != 'function') {
-			host[name] = cls[name];
-		// staticmethod
-		} else if (cls[name].__self__ === null) {
-			host[name] = cls[name];
 		// classmethod
-		} else if (cls[name].classmethod) {
+		if (typeof cls[name] === 'function' && cls[name].classmethod) {
 			// 在IE下textarea有一个wrap属性无法重新赋值，导致Component.wrap在Class.inject时报错。暂时使用这种方法避免一下
-			// TODO
 			if (host[name] === undefined) host[name] = cls[name];
-		// method
-		} else {
+		// 普通method
+		} else if (typeof cls[name] === 'function' && cls[name].__self__ !== null) {
 			host[name] = Class.bindFunc(cls[name], host);
+		// staticmethod / 属性
+		} else {
+			host[name] = cls[name];
 		}
+
 	});
 
 	if (!args) args = [];
 	args = [].slice.call(args, 0);
 	args.unshift(host);
-	var value = (cls.__init__) ? cls.__init__.apply(cls.__super__, args) : host;
+	var value = (cls.__init__) ? cls.__init__.apply(globalHost, args) : host;
 
 	return value;
 };
