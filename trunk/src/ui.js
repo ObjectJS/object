@@ -307,7 +307,7 @@ this.TabControl = new Class(Component, function() {
 	 * @constructor
 	 */
 	this.__init__ = function(self) {
-		this.__init__(self);
+		Component.__init__(self);
 
 		self.addComponents('tabs', 'li');
 
@@ -345,7 +345,7 @@ var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
 	 * @constructor
 	 */
 	this.__init__ = function(self, node) {
-		this.__init__(self, node);
+		Component.__init__(self, node);
 
 		self.addComponents('nextButton', '.nextbutton');
 		self.addComponents('foreButton', '.forebutton');
