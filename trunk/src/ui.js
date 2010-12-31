@@ -9,12 +9,11 @@ var Component = this.Component = new Class(Events, function() {
 	this.__init__ = function(self, node) {
 		Events.__init__(self);
 
-		self._properties = {};
-		self._componentDescriptors = {};
-		self._components = [];
-		self._rendered = [];
-		// 本class的所有event方法
-		self._events = self._getEvents(self);
+		self._properties = {}; // set/get
+		self._componentDescriptors = {}; // component描述
+		self._components = []; // 建立出来的所有子component的引用
+		self._rendered = []; // render出来的新元素，会在reset时清空
+		self._events = self._getEvents(self); // 本class的所有event方法
 
 		self.node = node;
 	};
@@ -37,13 +36,37 @@ var Component = this.Component = new Class(Events, function() {
 		}
 	};
 
-	this._addEventTo = function(self, name, ele) {
-		if (!self._events[name] || ele._eventAdded) return;
+	this._addEvents = function(self, name) {
+		var single = self._componentDescriptors[name].single;
 
-		Object.keys(self._events[name]).forEach(function(eventName) {
-			ele.addEvent(eventName, self._events[name][eventName]);
+		if (single) {
+			self._addEventTo(name, self[name]);
+		} else {
+			self[name].forEach(function(com) {
+				self._addEventTo(name, com);
+			});
+		}
+	};
+
+	this._addEventTo = function(self, name, com) {
+		var events = self._events[name];
+		var pevents = self._events['_' + name];
+		if (!events && !pevents) return;
+		var ele = com.node;
+
+		if (com._eventAdded) return;
+
+		if (events) events.forEach(function(event) {
+			com.addEvent(event.name, event.func);
+			ele.addEvent(event.name, event.func);
 		});
-		ele._eventAdded = true;
+
+		if (pevents) pevents.forEach(function(event) {
+			ele.addEvent(event.name, event.func);
+		});
+
+		com._eventAdded = true;
+
 	};
 
 	this.render = function(self, name, data) {
@@ -131,30 +154,25 @@ var Component = this.Component = new Class(Events, function() {
 				if (single) {
 					var ele = self.node.getElement(selector);
 					if (!ele) return null;
-					var component = new type(ele);
-					if (ele) self._addEventTo(name, ele);
 					self['_' + name] = ele;
+					var component = new type(ele);
 					self[name] = component;
+
+					self._addEvents(name);
 					return component;
 				} else {
 					var eles = self.node.getElements(selector);
 					if (!eles) return null;
-					eles.forEach(function(ele, i) {
-						eles[i] = new type(ele);
-						self._addEventTo(name, ele);
-					});
 					self['_' + name] = eles;
-					self[name] = eles;
-					return eles;
-				}
-			},
-			set: function(eles) {
-				if (single) {
-					self._addEventTo(name, eles);
-				} else {
+					var components = [];
+					components.node = eles;
 					eles.forEach(function(ele) {
-						self._addEventTo(name, ele);
+						components.push(new type(ele));
 					});
+					self[name] = components;
+
+					self._addEvents(name);
+					return components;
 				}
 			}
 		});
@@ -203,13 +221,16 @@ var Component = this.Component = new Class(Events, function() {
 		var events = {};
 
 		Object.keys(cls).forEach(function(key) {
-			var match = key.match(/([a-zA-Z]+)_([a-zA-Z]+)/);
+			var match = key.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/);
 			if (!match) return;
 			var name = match[1];
 			var eventName = match[2];
 
-			if (!events[name]) events[name] = {};
-			events[name][eventName] = self[key];
+			if (!events[name]) events[name] = [];
+			events[name].push({
+				name: eventName,
+				func: self[key]
+			});
 		});
 
 		return events;
@@ -350,16 +371,16 @@ var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
 		self.addComponents('nextButton', '.nextbutton');
 		self.addComponents('foreButton', '.forebutton');
 
-		self.total = parseInt(self.node.getData('total'), 10);
-		self.start = parseInt(self.node.getData('start'), 10) || 0;
+		self.total = parseInt(self.node.getData('total'));
+		self.start = parseInt(self.node.getData('start')) || 0;
 		self.position = self.start;
 	};
 
-	this.nextButton_click = function(self, event) {
+	this._nextButton_click = function(self, event) {
 		self.call('next');
 	};
 
-	this.foreButton_click = function(self, event) {
+	this._foreButton_click = function(self, event) {
 		self.call('fore');
 	};
 

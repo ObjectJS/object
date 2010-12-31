@@ -124,7 +124,7 @@ var getElements = this.getElements = function(selector, context) {
 	} else {
 		// 通过生成每个selector wrapper的继承链，不断的生成当前selector和上一个selector的继承链的相同部分
 		// 最后的chain的最后一个元素，既是公用wrapper
-		for (var i = 0, part, chain, previousChain; i < parsed.expressions.length; i++) {
+		for (var i = 0, chain, previousChain; i < parsed.expressions.length; i++) {
 			part = parsed.expressions[i];
 			wrapper = getWrapper(part[part.length - 1].tag);
 
@@ -568,11 +568,18 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 
 	this.setStyle = function(self, property, value) {
 		switch (property){
-			case 'opacity': return self.set('opacity', parseFloat(value));
-			case 'float': property = floatName;
+			case 'opacity':
+				return self.set('opacity', parseFloat(value));
+			case 'float':
+				property = floatName;
+				break;
+			default:
+				break;
 		}
 		property = string.camelCase(property);
 		self.style[property] = value;
+
+		return null;
 	};
 
 	this.dispose = function(self) {
@@ -776,11 +783,15 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 		self.validity = {
 			valueMissing: self.getAttribute('required') && !Boolean(value),
 			typeMismatch: (function(type) {
-				if (type == 'url') return !/^(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i.test(value);
-				if (type == 'tel') return !/[^\r\n]/i.test(value);
-				if (type == 'email') return !/^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/i.test(value);
+				if (type == 'url') return !(/^(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i).test(value);
+				if (type == 'tel') return !(/[^\r\n]/i).test(value);
+				if (type == 'email') return !(/^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/i).test(value);
 			})(self.getAttribute('type')),
-			patternMismatch: new RegExp(self.getAttribute('pattern')).test(value),
+			patternMismatch: (function() {
+				var pattern = self.getAttribute('pattern');
+				if (pattern) return (new RegExp(pattern)).test(value)
+				return false;
+			})(),
 			tooLong: false,
 			rangeUnderflow: false,
 			rangeOverflow: false,
@@ -790,7 +801,6 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 		self.validity.valid = ['valueMissing', 'typeMismatch', 'patternMismatch', 'tooLong', 'rangeUnderflow', 'rangeOverflow', 'stepMismatch', 'customError'].every(function(name) {
 			return self.validity[name] === false;
 		});
-		console.log(self.validity)
 
 		return self.validity.valid;
 	};

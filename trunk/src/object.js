@@ -21,35 +21,8 @@ this.extend = function(obj, properties, ov) {
 
 };
 
-var clone = function(obj) {
-	var clone = {};
-	for (var key in obj) clone[key] = obj[key];
-	return clone;
-};
-
-// 获得一个cls的所有成员，cls有可能是native function比如Array, String
-function getMembers(source) {
-	if (source === Array || source === String) {
-		var methodNames = [];
-		if (source === Array) methodNames = ["concat", "indexOf", "join", "lastIndexOf", "pop", "push", "reverse", "shift", "slice", "sort", "splice", "toString", "unshift", "valueOf", "forEach"];
-		if (source === String) methodNames = ["charAt", "charCodeAt", "concat", "indexOf", "lastIndexOf", "match", "replace", "search", "slice", "split", "substr", "substring", "toLowerCase", "toUpperCase", "valueOf"];
-		var members = {};
-		for (var i = 0; i < methodNames.length; i++) {
-			members[methodNames[i]] = (function(name) {
-				return function() {
-					return source.prototype[name].apply(arguments[0], [].slice.call(arguments, 1));
-				};
-			})(methodNames[i]);
-		}
-		return members;
-
-	} else {
-		return source;
-	}
-}
-
 // 类
-var Class = this.$class = this.Class = function() {
+var Class = this.Class = function() {
 	if (arguments.length < 1) throw new Error('bad arguments');
 
 	var properties = arguments[arguments.length - 1];
@@ -64,7 +37,7 @@ var Class = this.$class = this.Class = function() {
 	// 继承，将parent的所有成员都放到cls上
 	// 先做继承，后声明的成员覆盖先声明的
 	if (parent) {
-		parent = getMembers(parent);
+		parent = Class.getMembers(parent);
 
 		Object.keys(parent).forEach(function(name) {
 			// 在Safari 5.0.2(7533.18.5)中，在这里用for in遍历parent会将prototype属性遍历出来，导致原型被指向一个错误的对象，后面就错的一塌糊涂了
@@ -110,6 +83,28 @@ var Class = this.$class = this.Class = function() {
 	return cls;
 };
 
+// 获得一个cls的所有成员，cls有可能是native function比如Array, String
+Class.getMembers = function(source) {
+	if (source === Array || source === String) {
+		var methodNames = [];
+		if (source === Array) methodNames = ["concat", "indexOf", "join", "lastIndexOf", "pop", "push", "reverse", "shift", "slice", "sort", "splice", "toString", "unshift", "valueOf", "forEach"];
+		if (source === String) methodNames = ["charAt", "charCodeAt", "concat", "indexOf", "lastIndexOf", "match", "replace", "search", "slice", "split", "substr", "substring", "toLowerCase", "toUpperCase", "valueOf"];
+		var members = {};
+		for (var i = 0; i < methodNames.length; i++) {
+			members[methodNames[i]] = (function(name) {
+				return function() {
+					return source.prototype[name].apply(arguments[0], [].slice.call(arguments, 1));
+				};
+			})(methodNames[i]);
+		}
+		return members;
+
+	} else {
+		return source;
+	}
+}
+
+
 // 将binder绑定至func的第一个参数
 function bindFunc(func, binder) {
 	var wrapper = function() {
@@ -117,26 +112,11 @@ function bindFunc(func, binder) {
 		args.unshift(arguments.callee.__self__);
 		return func.apply(globalHost, args);
 	};
-	wrapper.apply = Class.apply;
-	wrapper.call = Class.call;
 	wrapper.__self__ = binder;
 	wrapper.im_func = func;
 
 	return wrapper;
 }
-
-Class.apply = function(host, args) {
-	if (!args) args = [];
-	args = [].slice.call(args, 0);
-	args.unshift(this.__self__);
-	return this.im_func.apply(this.__super__ || globalHost, args);
-};
-
-Class.call = function(host, args) {
-	var args = [].slice.call(arguments, 1);
-	args.unshift(this.__self__);
-	return this.im_func.apply(this.__super__ || globalHost, args);
-};
 
 /**
  * 将host注射进class，使其self指向host
