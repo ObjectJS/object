@@ -4,9 +4,11 @@ object.add('ui', 'string, dom, attribute', function($, string, dom, attribute) {
  * UI模块基类
  * @class
  */
-var Component = this.Component = new Class(function() {
+var Component = this.Component = new Class(Events, function() {
 
 	this.__init__ = function(self, node) {
+		Events.__init__(self);
+
 		self._properties = {};
 		self._componentDescriptors = {};
 		self._components = [];
@@ -95,13 +97,13 @@ var Component = this.Component = new Class(function() {
 	};
 
 	this.call = function(self, name) {
-		self.node.fireEvent(name, null, self);
+		self.fireEvent(name, null, self);
 		if (!self[name]) throw 'no method named ' + name;
 		self[name].apply(self, [].slice.call(arguments, 2));
 	};
 
 	this.apply = function(self, name, args) {
-		self.node.fireEvent(name, null, self);
+		self.fireEvent(name, null, self);
 		if (!self[name]) throw 'no method named ' + name;
 		self[name].apply(self, args);
 	};
@@ -253,7 +255,7 @@ var Component = this.Component = new Class(function() {
 		}
 
 		// 将ele注射进cls
-		Class.inject(cls, ele, []);
+		Class.inject(cls, ele);
 
 		ele._wrapper = cls;
 		return ele;

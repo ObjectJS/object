@@ -53,23 +53,18 @@ var Class = this.$class = this.Class = function() {
 	if (arguments.length < 1) throw new Error('bad arguments');
 
 	var properties = arguments[arguments.length - 1];
-	// 从参数获取父类列表
-	var parents = ([].slice.call(arguments, 0, -1)).reverse();
+	// 从参数获取父类
+	var parent = arguments.length === 2? arguments[0] : null;
 
 	// cls
 	var cls = function() {
-		return Class.inject(arguments.callee, this, arguments, base);
-	};
-
-	// base
-	var base = function() {
 		return Class.inject(arguments.callee, this, arguments);
 	};
 
 	// 继承，将parent的所有成员都放到cls上
 	// 先做继承，后声明的成员覆盖先声明的
-	for (var i = 0; i < parents.length; i++) {
-		var parent = getMembers(parents[i]);
+	if (parent) {
+		parent = getMembers(parent);
 
 		Object.keys(parent).forEach(function(name) {
 			// 在Safari 5.0.2(7533.18.5)中，在这里用for in遍历parent会将prototype属性遍历出来，导致原型被指向一个错误的对象，后面就错的一塌糊涂了
@@ -79,12 +74,11 @@ var Class = this.$class = this.Class = function() {
 
 			// 如果是属性/staticmethod/classmethod，则不进行wrapper
 			if (typeof parent[name] === 'object') {
-				base[name] = cls[name] = parent[name];
+				cls[name] = parent[name];
 			} else if (typeof parent[name] == 'function' && parent[name].classmethod) {
 				cls[name] = parent[name].im_func;
-				base[name] = bindFunc(parent[name].im_func, base);
 			} else {
-				base[name] = cls[name] = parent[name];
+				cls[name] = parent[name];
 			}
 
 		});
@@ -102,15 +96,14 @@ var Class = this.$class = this.Class = function() {
 	Object.keys(cls).forEach(function(name) {
 		if (typeof cls[name] == 'function') {
 			if (cls[name].classmethod) {
-				cls[name] = bindFunc(cls[name], cls, cls.__super__);
+				cls[name] = bindFunc(cls[name], cls);
 				cls[name].classmethod = true;
 			}
 			cls[name].im_class = cls;
 		}
 	});
 
-	cls.__bases__  = parents;
-	cls.__super__ = base;
+	cls.__base__ = parent;
 	cls.constructor = object.Class;
 	cls.prototype.constructor = cls;
 
@@ -118,15 +111,14 @@ var Class = this.$class = this.Class = function() {
 };
 
 // 将binder绑定至func的第一个参数
-function bindFunc(func, binder, base) {
+function bindFunc(func, binder) {
 	var wrapper = function() {
 		var args = [].slice.call(arguments, 0);
 		args.unshift(arguments.callee.__self__);
-		return func.apply(base || globalHost, args);
+		return func.apply(globalHost, args);
 	};
 	wrapper.apply = Class.apply;
 	wrapper.call = Class.call;
-	wrapper.__super__ = base;
 	wrapper.__self__ = binder;
 	wrapper.im_func = func;
 
@@ -173,7 +165,7 @@ Class.inject = function(cls, host, args) {
 			if (host[name] === undefined) host[name] = cls[name];
 		// method
 		} else {
-			host[name] = bindFunc(cls[name], host, cls.__super__);
+			host[name] = bindFunc(cls[name], host);
 		}
 	});
 

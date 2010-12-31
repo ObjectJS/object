@@ -82,6 +82,7 @@ var wrap = this.wrap = function(node) {
 		// 已经wrap过了
 		if (node._nativeWrapper) return node;
 
+
 		var wrapper;
 		if (node === window) {
 			wrapper = Window;
@@ -105,9 +106,8 @@ var getElements = this.getElements = function(selector, context) {
 	// 解析成Slick Selector对象
 	var parsed = Slick.parse(selector);
 
-	// 可能是Slick的bug，在IE下这里只能用字符串selector，用parsed结果不正确
-	// TODO
-	var eles = Slick.search(context, selector);
+	// Slick在面对自定义标签时各种不靠谱，换用sizzle
+	var eles = Sizzle(selector, context);
 
 	// 这里通过分析selector的最后一个部分的tagName，来确定这批eles的wrapper
 	// 例如selector是 div form.xxx 则wrapper是 FormElement
@@ -147,7 +147,7 @@ var getElements = this.getElements = function(selector, context) {
 var getElement = this.getElement = function(selector, context) {
 	if (!context) context = document;
 
-	var ele = Slick.find(context, selector);
+	var ele = Sizzle(selector, context)[0];
 	return wrap(ele);
 };
 
@@ -776,11 +776,11 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 		self.validity = {
 			valueMissing: self.getAttribute('required') && !Boolean(value),
 			typeMismatch: (function(type) {
-				if (type == 'url') return /^(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i.test(value);
-				if (type == 'tel') return /[^\r\n]/i.test(value);
-				if (type == 'email') return /^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/i.test(value);
+				if (type == 'url') return !/^(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i.test(value);
+				if (type == 'tel') return !/[^\r\n]/i.test(value);
+				if (type == 'email') return !/^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/i.test(value);
 			})(self.getAttribute('type')),
-			patternMismatch: value.match(self.getAttribute('pattern')),
+			patternMismatch: new RegExp(self.getAttribute('pattern')).test(value),
 			tooLong: false,
 			rangeUnderflow: false,
 			rangeOverflow: false,
@@ -788,8 +788,9 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 			customError: false
 		};
 		self.validity.valid = ['valueMissing', 'typeMismatch', 'patternMismatch', 'tooLong', 'rangeUnderflow', 'rangeOverflow', 'stepMismatch', 'customError'].every(function(name) {
-			return self.validity[name] === true;
+			return self.validity[name] === false;
 		});
+		console.log(self.validity)
 
 		return self.validity.valid;
 	};
@@ -893,7 +894,7 @@ function getWrapper(tagName) {
 // 获取一个class的继承链
 function getChain(cls) {
 	var result = [cls];
-	if (cls.__bases__.length) result = result.concat(getChain(cls.__bases__[0]));
+	if (cls.__base__) result = result.concat(getChain(cls.__base__));
 	return result;
 }
 
