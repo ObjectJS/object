@@ -77,10 +77,21 @@ var Class = this.Class = function() {
 	});
 
 	cls.__base__ = parent;
-	cls.constructor = object.Class;
-	cls.prototype.constructor = cls;
 
 	return cls;
+};
+
+// 将binder绑定至func的第一个参数
+Class.bindFunc = function(func, binder) {
+	var wrapper = function() {
+		var args = [].slice.call(arguments, 0);
+		args.unshift(arguments.callee.__self__);
+		return func.apply(globalHost, args);
+	};
+	wrapper.__self__ = binder;
+	wrapper.im_func = func;
+
+	return wrapper;
 };
 
 // 获得一个cls的所有成员，cls有可能是native function比如Array, String
@@ -102,20 +113,7 @@ Class.getMembers = function(source) {
 	} else {
 		return source;
 	}
-}
-
-// 将binder绑定至func的第一个参数
-Class.bindFunc = function(func, binder) {
-	var wrapper = function() {
-		var args = [].slice.call(arguments, 0);
-		args.unshift(arguments.callee.__self__);
-		return func.apply(globalHost, args);
-	};
-	wrapper.__self__ = binder;
-	wrapper.im_func = func;
-
-	return wrapper;
-}
+};
 
 /**
  * 将host注射进class，使其self指向host
@@ -154,7 +152,17 @@ Class.inject = function(cls, host, args) {
 	var value = (cls.__init__) ? cls.__init__.apply(cls.__super__, args) : host;
 
 	return value;
-}
+};
+
+// 获取一个class的继承链
+Class.getChain = function(cls) {
+	var result = [cls];
+	while (cls.__base__) {
+		result.push(cls.__base__);
+		cls = cls.__base__;
+	}
+	return result;
+};
 
 // 声明类静态方法，在new Class(callback) 的callback中调用
 var staticmethod = this.staticmethod = function(func) {
@@ -706,14 +714,10 @@ function expand() {
 	Object.keys = function(o) {
 		var result = [];
 
-		// 在IE下for in无法遍历出来修改过的call方法
-		// 为什么允许修改call方法？对于一个class来说，没有直接Class.call的应用场景，任何Class都应该是new出来的，因此可以修改这个方法
-		if (o.call !== undefined && o.call !== Function.prototype.call) {
-			result.push('call');
-		}
 		for (var name in o) {
-			if (name === 'call') continue;
-			if (o.hasOwnProperty(name)) {
+			// 在IE下for in无法遍历出来修改过的call方法
+			// 为什么允许修改call方法？对于一个class来说，没有直接Class.call的应用场景，任何Class都应该是new出来的，因此可以修改这个方法
+			if (o.hasOwnProperty(name) || (name === 'call' && o.call !== undefined && o.call !== Function.prototype.call)) {
 				result.push(name);
 			}
 		}
