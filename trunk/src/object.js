@@ -45,10 +45,8 @@ var Class = this.Class = function() {
 			// 而其他浏览器仅仅是在重新指向prototype时，类似 obj.prototype = {} 这样的写法才会出现这个情况
 			if (name === 'prototype') return;
 
-			// 如果是属性/staticmethod/classmethod，则不进行wrapper
-			if (typeof parent[name] === 'object') {
-				cls[name] = parent[name];
-			} else if (typeof parent[name] == 'function' && parent[name].classmethod) {
+			// classmethod
+			if (typeof parent[name] == 'function' && parent[name].classmethod) {
 				cls[name] = parent[name].im_func;
 			} else {
 				cls[name] = parent[name];
@@ -94,27 +92,6 @@ Class.bindFunc = function(func, binder) {
 	return wrapper;
 };
 
-// 获得一个cls的所有成员，cls有可能是native function比如Array, String
-Class.getMembers = function(source) {
-	if (source === Array || source === String) {
-		var methodNames = [];
-		if (source === Array) methodNames = ["concat", "indexOf", "join", "lastIndexOf", "pop", "push", "reverse", "shift", "slice", "sort", "splice", "toString", "unshift", "valueOf", "forEach"];
-		if (source === String) methodNames = ["charAt", "charCodeAt", "concat", "indexOf", "lastIndexOf", "match", "replace", "search", "slice", "split", "substr", "substring", "toLowerCase", "toUpperCase", "valueOf"];
-		var members = {};
-		for (var i = 0; i < methodNames.length; i++) {
-			members[methodNames[i]] = (function(name) {
-				return function() {
-					return source.prototype[name].apply(arguments[0], [].slice.call(arguments, 1));
-				};
-			})(methodNames[i]);
-		}
-		return members;
-
-	} else {
-		return source;
-	}
-};
-
 /**
  * 将host注射进class，使其self指向host
  * @param cls 被注射的class
@@ -152,6 +129,27 @@ Class.inject = function(cls, host, args) {
 	var value = (cls.__init__) ? cls.__init__.apply(cls.__super__, args) : host;
 
 	return value;
+};
+
+// 获得一个cls的所有成员，cls有可能是native function比如Array, String
+Class.getMembers = function(source) {
+	if (source === Array || source === String) {
+		var methodNames = [];
+		if (source === Array) methodNames = ["concat", "indexOf", "join", "lastIndexOf", "pop", "push", "reverse", "shift", "slice", "sort", "splice", "toString", "unshift", "valueOf", "forEach"];
+		if (source === String) methodNames = ["charAt", "charCodeAt", "concat", "indexOf", "lastIndexOf", "match", "replace", "search", "slice", "split", "substr", "substring", "toLowerCase", "toUpperCase", "valueOf"];
+		var members = {};
+		for (var i = 0; i < methodNames.length; i++) {
+			members[methodNames[i]] = (function(name) {
+				return function() {
+					return source.prototype[name].apply(arguments[0], [].slice.call(arguments, 1));
+				};
+			})(methodNames[i]);
+		}
+		return members;
+
+	} else {
+		return source;
+	}
 };
 
 // 获取一个class的继承链
