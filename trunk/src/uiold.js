@@ -112,27 +112,17 @@ var Component = this.Component = new Class(dom.Element, function() {
 	this.wrap = classmethod(function(cls, ele) {
 		if (!ele) return null;
 
-		// 获取class的所有继承关系，存成平面数组
-		// TODO: class 的 chain 机制
-		function getBases(m) {
-			var array = [];
-			for (var i = 0, l = m.length; i < l; i++){
-				array = array.concat((m[i].__bases__ && m[i].__bases__.length) ? arguments.callee(m[i].__bases__) : m);
-			}
-			return array;
-		}
-
 		if (ele._wrapper) {
 			if (ele._wrapper === cls) return ele; // 重复包装相同类
 
-			var wrapperBases = getBases([ele._wrapper]);
+			var wrapperBases = Classs.getChain(ele._wrapper);
 
 			// 已经包装过子类了(包了TabControl再包装Component)，无需包装
 			if (wrapperBases.indexOf(cls) !== -1) {
 				return ele;
 			}
 
-			var classBases = getBases([cls]);
+			var classBases = Class.getChain(cls);
 
 			// 现有包装不在同一继承树上，报错
 			if (classBases.indexOf(ele._wrapper) === -1) {
@@ -141,7 +131,7 @@ var Component = this.Component = new Class(dom.Element, function() {
 		}
 
 		// 将ele注射进cls
-		Class.inject(cls, ele, []);
+		Class.inject(cls, ele);
 
 		ele._wrapper = cls;
 		return ele;
