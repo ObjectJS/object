@@ -41,7 +41,7 @@ var Class = this.Class = function() {
 	if (parent) {
 		parent = Class.getMembers(parent);
 
-		for (name in parent) {
+		Object.keys(parent).forEach(function(name) {
 			// 在Safari 5.0.2(7533.18.5)中，在这里用for in遍历parent会将prototype属性遍历出来，导致原型被指向一个错误的对象，后面就错的一塌糊涂了
 			// 经过试验，在Safari下，仅仅通过 obj.prototype.xxx = xxx 这样的方式就会导致 prototype 变成自定义属性，会被 for in 出来
 			// 而其他浏览器仅仅是在重新指向prototype时，类似 obj.prototype = {} 这样的写法才会出现这个情况
@@ -53,7 +53,7 @@ var Class = this.Class = function() {
 			} else {
 				cls[name] = parent[name];
 			}
-		}
+		});
 
 		cls.__base__ = parent;
 	}
@@ -85,10 +85,9 @@ Class.bindFunc = function(func, binder) {
 };
 
 Class.build = function(cls, host) {
-	var member;
-	for (var name in cls) {
+	Object.keys(cls).forEach(function(name) {
 		if (name === 'prototype') return;
-		member = cls[name];
+		var member = cls[name];
 
 		// classmethod
 		if (typeof member === 'function' && member.classmethod) {
@@ -103,7 +102,7 @@ Class.build = function(cls, host) {
 		} else {
 			host[name] = member;
 		}
-	}
+	});
 };
 
 /**
@@ -704,12 +703,15 @@ function expand() {
 		var result = [];
 
 		for (var name in o) {
-			// 在IE下for in无法遍历出来修改过的call方法
-			// 为什么允许修改call方法？对于一个class来说，没有直接Class.call的应用场景，任何Class都应该是new出来的，因此可以修改这个方法
-			if (o.hasOwnProperty(name) || (name === 'call' && o.call !== undefined && o.call !== Function.prototype.call)) {
+			if (o.hasOwnProperty(name)) {
 				result.push(name);
 			}
 		}
+
+		// for IE
+		// 在IE下for in无法遍历出来修改过的call方法
+		// 为什么允许修改call方法？对于一个class来说，没有直接Class.call的应用场景，任何Class都应该是new出来的，因此可以修改这个方法
+		if (o.call !== undefined && o.call !== Function.prototype.call && result.indexOf('call') === -1) result.push('call');
 
 		return result; 
 	}
