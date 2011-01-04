@@ -79,6 +79,7 @@ Class.bindFunc = function(func, binder) {
 		return func.apply(globalHost, args);
 	};
 	wrapper.im_func = func;
+	wrapper.im_self = binder;
 
 	return wrapper;
 };
@@ -91,8 +92,10 @@ Class.build = function(cls, host) {
 
 		// classmethod
 		if (typeof member === 'function' && member.classmethod) {
-			host[name] = Class.bindFunc(member, cls);
-			host[name].im_self = cls;
+			cls[name] = host[name] = Class.bindFunc(member, cls);
+		// classmethod
+		} else if (typeof member === 'function' && member.im_self) {
+			cls[name] = host[name] = Class.bindFunc(member.im_func, cls);
 		// 普通method
 		} else if (typeof member === 'function' && member.__self__ !== null) {
 			host[name] = Class.bindFunc(member);
