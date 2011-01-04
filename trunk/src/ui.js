@@ -1,10 +1,22 @@
 object.add('ui', 'string, dom, attribute', function($, string, dom, attribute) {
 
+var mixin = function(host, cls) {
+	Object.keys(cls).forEach(function(name) {
+		if (this[name] === undefined) {
+			this[name] = function(self) {
+				var args = [].slice.call(arguments, 0);
+				args[0] = self._node;
+				return cls[name].apply(null, args);
+			};
+		}
+	}, host);
+};
+
 /**
  * UI模块基类
  * @class
  */
-var Component = this.Component = new Class(Events, function() {
+var ComponentBase = this.ComponentBase = new Class(Events, function() {
 
 	this.__init__ = function(self, node) {
 		Events.__init__(self);
@@ -16,6 +28,7 @@ var Component = this.Component = new Class(Events, function() {
 		self._events = self._getEvents(self); // 本class的所有event方法
 
 		self.node = node;
+		self._node = node;
 	};
 
 	this.set = function(self, prop, value) {
@@ -39,13 +52,7 @@ var Component = this.Component = new Class(Events, function() {
 	this._addEvents = function(self, name) {
 		var single = self._componentDescriptors[name].single;
 
-		if (single) {
-			self._addEventTo(name, self[name]);
-		} else {
-			self[name].forEach(function(com) {
-				self._addEventTo(name, com);
-			});
-		}
+		self._addEventTo(name, self[name]);
 	};
 
 	this._addEventTo = function(self, name, com) {
@@ -120,13 +127,13 @@ var Component = this.Component = new Class(Events, function() {
 	};
 
 	this.call = function(self, name) {
-		self.fireEvent(name, null, self);
+		self._node.fireEvent(name, null, self);
 		if (!self[name]) throw 'no method named ' + name;
 		self[name].apply(self, [].slice.call(arguments, 2));
 	};
 
 	this.apply = function(self, name, args) {
-		self.fireEvent(name, null, self);
+		self._node.fireEvent(name, null, self);
 		if (!self[name]) throw 'no method named ' + name;
 		self[name].apply(self, args);
 	};
@@ -141,7 +148,7 @@ var Component = this.Component = new Class(Events, function() {
 	};
 
 	this.addComponents = function(self, name, selector, type, single) {
-		if (!type) type = BaseComponent;
+		if (!type) type = Component;
 
 		self._componentDescriptors[name] = {
 			selector: selector,
@@ -164,15 +171,14 @@ var Component = this.Component = new Class(Events, function() {
 					var eles = self.node.getElements(selector);
 					if (!eles) return null;
 					self['_' + name] = eles;
-					var components = [];
-					components.node = eles;
-					eles.forEach(function(ele) {
-						components.push(new type(ele));
+					eles.forEach(function(ele, i) {
+						eles[i] = new type(ele);
 					});
-					self[name] = components;
+					eles.node = eles;
+					self[name] = eles;
 
 					self._addEvents(name);
-					return components;
+					return eles;
 				}
 			}
 		});
@@ -317,11 +323,23 @@ var Component = this.Component = new Class(Events, function() {
 
 });
 
-var BaseComponent = this.BaseComponent = new Class(Component, function() {
+var Component = this.Component = new Class(ComponentBase, function() {
 
 	this.__init__ = function(self, node) {
-		Component.__init__(self, node);
+		ComponentBase.__init__(self, node);
 	};
+
+	mixin(this, dom.Element);
+
+});
+
+var FormComponent = this.FormComponent = new Class(ComponentBase, function() {
+	
+	this.__init__ = function(self, node) {
+		ComponentBase.__init__(self, node);
+	};
+
+	mixin(this, dom.FormElement);
 
 });
 
@@ -379,16 +397,16 @@ var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
 		self.addComponents('nextButton', '.nextbutton');
 		self.addComponents('foreButton', '.forebutton');
 
-		self.total = parseInt(self.node.getData('total'));
-		self.start = parseInt(self.node.getData('start')) || 0;
+		self.total = parseInt(self._node.getData('total'));
+		self.start = parseInt(self._node.getData('start')) || 0;
 		self.position = self.start;
 	};
 
-	this._nextButton_click = function(self, event) {
+	this.nextButton_click = function(self, event) {
 		self.call('next');
 	};
 
-	this._foreButton_click = function(self, event) {
+	this.foreButton_click = function(self, event) {
 		self.call('fore');
 	};
 
@@ -408,11 +426,11 @@ var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
 	};
 
 	this.updatePosition = function(self) {
-		self.node.getElements('.current').set('html', self.position + 1); // position是从0开始滴～展示的时候+1
+		self._node.getElements('.current').set('html', self.position + 1); // position是从0开始滴～展示的时候+1
 	};
 
 	this.updateTotal = function(self) {
-		self.node.getElements('.total').set('html', self.total);
+		self._node.getElements('.total').set('html', self.total);
 	};
 
 });
