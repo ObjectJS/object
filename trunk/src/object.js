@@ -19,6 +19,7 @@ this.extend = function(obj, properties, ov) {
 		if (ov || obj[property] === undefined) obj[property] = properties[property];
 	}
 
+	return obj;
 };
 
 // 类
