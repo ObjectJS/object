@@ -1,6 +1,11 @@
 object.add('ui', 'string, dom, attribute', function($, string, dom, attribute) {
 
-var mixin = function(host, cls) {
+/**
+ * 将dom下的Element类mixin到Component上
+ * @param host Component
+ * @param cls Element
+ */
+var mixin = this.mixin = function(host, cls) {
 	Object.keys(cls).forEach(function(name) {
 		if (this[name] === undefined) {
 			this[name] = function(self) {
@@ -57,18 +62,12 @@ var ComponentBase = this.ComponentBase = new Class(Events, function() {
 
 	this._addEventTo = function(self, name, com) {
 		var events = self._events[name];
-		var pevents = self._events['_' + name];
-		if (!events && !pevents) return;
+		if (!events) return;
 		var ele = com.node;
 
 		if (com._eventAdded) return;
 
 		if (events) events.forEach(function(event) {
-			com.addEvent(event.name, event.func);
-			ele.addEvent(event.name, event.func);
-		});
-
-		if (pevents) pevents.forEach(function(event) {
 			ele.addEvent(event.name, event.func);
 		});
 
@@ -397,16 +396,25 @@ var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
 		self.addComponents('nextButton', '.nextbutton');
 		self.addComponents('foreButton', '.forebutton');
 
+		self.loop = false; // 是否循环
 		self.total = parseInt(self._node.getData('total'));
 		self.start = parseInt(self._node.getData('start')) || 0;
 		self.position = self.start;
 	};
 
 	this.nextButton_click = function(self, event) {
+		if (self.position >= self.total - 1) {
+			if (self.loop) self.position = -1;
+			else return;
+		}
 		self.call('next');
 	};
 
 	this.foreButton_click = function(self, event) {
+		if (self.position <= 0) {
+			if (self.loop) self.position = self.total;
+			else return;
+		}
 		self.call('fore');
 	};
 
