@@ -141,7 +141,7 @@ var Component = this.Component = new Class(Events, function() {
 	};
 
 	this.addComponents = function(self, name, selector, type, single) {
-		if (!type) type = Component;
+		if (!type) type = BaseComponent;
 
 		self._componentDescriptors[name] = {
 			selector: selector,
@@ -313,6 +313,14 @@ var Component = this.Component = new Class(Events, function() {
 				}
 			}
 		});
+	};
+
+});
+
+var BaseComponent = this.BaseComponent = new Class(Component, function() {
+
+	this.__init__ = function(self, node) {
+		Component.__init__(self, node);
 	};
 
 });
