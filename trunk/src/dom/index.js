@@ -203,7 +203,7 @@ var eval_inner_JS = this.eval_inner_JS = function(ele) {
  */
 var ElementClassList = this.ElementClassList = new Class(Array, function() {
 
-	this.__init__ = function(self, ele) {
+	this.initialize = function(self, ele) {
 		self.length = 0; // for Array
 
 		self._ele = ele;
@@ -258,7 +258,7 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 
 	this._eventListeners = {};
 
-	this.__init__ = function(self, tagName) {
+	this.initialize = function(self, tagName) {
 
 		// 直接new Element，用来生成一个新元素
 		if (tagName) {
@@ -735,8 +735,8 @@ var FormElement = this.FormElement = new Class(Element, function() {
 
 var FormItemElement = this.FormItemElement = new Class(Element, function() {
 
-	this.__init__ = function(self) {
-		Element.__init__(self);
+	this.initialize = function(self) {
+		Element.initialize(self);
 
 		attribute.defineProperty(self, 'value', {
 			set: function(value) {
@@ -860,7 +860,7 @@ var Elements = this.Elements = new Class(Array, function() {
 	 * @param elements native dom elements
 	 * @param wrapper 这批节点的共有类型，默认为Element
 	 */
-	this.__init__  = function(self, elements, wrapper) {
+	this.initialize  = function(self, elements, wrapper) {
 		self.length = 0;
 		if (!wrapper) wrapper = Element;
 

@@ -15,7 +15,7 @@ this.defineProperties = function(object, descriptors) {
 
 this.Attribute = new Class(function() {
 
-	this.__init__ = function(self) {
+	this.initialize = function(self) {
 		self._properties = {};
 	};
 	

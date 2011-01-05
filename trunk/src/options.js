@@ -21,7 +21,7 @@ this.Arguments = new Class(function() {
 	 * @param defaults 默认值列表
 	 * @param opts 参数列表
 	 */
-	this.__init__ = function(self, defaults, opts) {
+	this.initialize = function(self, defaults, opts) {
 		if (opts == undefined) opts = {};
 
 		var output = {};
@@ -43,7 +43,7 @@ this.Options = new Class({
 	 * 提供一个实现了 makeOption 接口的“提供者”参数，这样，在 setOption 时会自动根据name获取value，不用手工调用
 	 * @constructor
 	 */
-	__init__: function(self, provider) {
+	initialize: function(self, provider) {
 		if (provider) self._provider = provider;
 		self._options = {};
 	},

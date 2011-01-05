@@ -23,8 +23,8 @@ var mixin = this.mixin = function(host, cls) {
  */
 var ComponentBase = this.ComponentBase = new Class(Events, function() {
 
-	this.__init__ = function(self, node) {
-		Events.__init__(self);
+	this.initialize = function(self, node) {
+		Events.initialize(self);
 
 		self._properties = {}; // set/get
 		self._componentDescriptors = {}; // component描述
@@ -324,8 +324,8 @@ var ComponentBase = this.ComponentBase = new Class(Events, function() {
 
 var Component = this.Component = new Class(ComponentBase, function() {
 
-	this.__init__ = function(self, node) {
-		ComponentBase.__init__(self, node);
+	this.initialize = function(self, node) {
+		ComponentBase.initialize(self, node);
 	};
 
 	mixin(this, dom.Element);
@@ -334,8 +334,8 @@ var Component = this.Component = new Class(ComponentBase, function() {
 
 var FormComponent = this.FormComponent = new Class(ComponentBase, function() {
 	
-	this.__init__ = function(self, node) {
-		ComponentBase.__init__(self, node);
+	this.initialize = function(self, node) {
+		ComponentBase.initialize(self, node);
 	};
 
 	mixin(this, dom.FormElement);
@@ -352,8 +352,8 @@ this.TabControl = new Class(Component, function() {
 	/**
 	 * @constructor
 	 */
-	this.__init__ = function(self) {
-		Component.__init__(self);
+	this.initialize = function(self) {
+		Component.initialize(self);
 
 		self.addComponents('tabs', 'li');
 
@@ -390,8 +390,8 @@ var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
 	/**
 	 * @constructor
 	 */
-	this.__init__ = function(self, node) {
-		Component.__init__(self, node);
+	this.initialize = function(self, node) {
+		Component.initialize(self, node);
 
 		self.addComponents('nextButton', '.nextbutton');
 		self.addComponents('foreButton', '.forebutton');

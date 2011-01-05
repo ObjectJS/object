@@ -6,8 +6,8 @@ object.add('uiold', 'dom', function($, dom) {
  */
 var Component = this.Component = new Class(dom.Element, function() {
 
-	this.__init__ = function(self) {
-		dom.Element.__init__(self);
+	this.initialize = function(self) {
+		dom.Element.initialize(self);
 	};
 
 	this._render1 = function(self, control, triggers) {
@@ -149,8 +149,8 @@ this.TabControl = new Class(Component, function() {
 	/**
 	 * @constructor
 	 */
-	this.__init__ = function(self) {
-		Component.__init__(self);
+	this.initialize = function(self) {
+		Component.initialize(self);
 
 		self.tabs = dom.getElements('li', self);
 		self.selectedEle = null;
@@ -186,8 +186,8 @@ this.ForeNextControl = new Class(Component, function() {
 	/**
 	 * @constructor
 	 */
-	this.__init__ = function(self) {
-		Component.__init__(self);
+	this.initialize = function(self) {
+		Component.initialize(self);
 
 		self.total = parseInt(self.getData('total'));
 		self.start = parseInt(self.getData('start')) || 0;

@@ -45,7 +45,7 @@ var ajaxRequest = this.ajaxRequest = function(url, callback) {
 
 var Request = this.Request = new Class(function() {
 
-	this.__init__ = function(self, options) {
+	this.initialize = function(self, options) {
 		self.url = options.url || '';
 		self.method = options.method || 'get';
 		self.onSuccess = options.onSuccess;

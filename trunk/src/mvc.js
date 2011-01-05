@@ -6,8 +6,8 @@ object.add('mvc', function($) {
  */
 var Action = this.Action = new Class(Events, function() {
 
-	this.__init__ = function(self) {
-		Events.__init__(self);
+	this.initialize = function(self) {
+		Events.initialize(self);
 
 		self.view = null;
 	};

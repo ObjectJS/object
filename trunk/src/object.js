@@ -34,7 +34,6 @@ var Class = this.Class = function() {
 	// cls
 	var cls = function() {
 		if (this.initialize) this.initialize.apply(this, arguments);
-		else if (this.__init__) this.__init__.apply(this, arguments);
 	};
 
 	// 继承，将parent的所有成员都放到cls上
@@ -117,7 +116,7 @@ Class.inject = function(cls, host, args) {
 	if (!args) args = [];
 	args = [].slice.call(args, 0);
 	args.unshift(host);
-	var value = (cls.__init__) ? cls.__init__.apply(globalHost, args) : host;
+	var value = (cls.initialize) ? cls.initialize.apply(globalHost, args) : host;
 
 	return value;
 };
@@ -173,7 +172,7 @@ this.bind = function(host) {
 // 事件
 this.Events = new Class({
 
-	__init__ : function(self) {
+	initialize : function(self) {
 		self._eventListeners = {};
 	},
 
@@ -240,7 +239,7 @@ this.Loader = new Class(function() {
 	/**
 	 * @constructor
 	 */
-	this.__init__ = function(self) {
+	this.initialize = function(self) {
 		self.useCache = true;
 		// 所有use都会默认use的模块，需要注意循环引用问题
 		self.globalUses = [];
