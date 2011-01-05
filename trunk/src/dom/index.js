@@ -82,7 +82,6 @@ var wrap = this.wrap = function(node) {
 		// 已经wrap过了
 		if (node._nativeWrapper) return node;
 
-
 		var wrapper;
 		if (node === window) {
 			wrapper = Window;
@@ -91,11 +90,13 @@ var wrap = this.wrap = function(node) {
 		} else {
 			wrapper = getWrapper(node.tagName);
 		}
+		// 尽早的设置_nativeWrapper，因为在wrapper的initialize中可能出现递归调用（FormElement/FormItemElement）
+		node._nativeWrapper = wrapper;
+
 		$uid(node);
 
 		Class.inject(wrapper, node);
 
-		node._nativeWrapper = wrapper;
 		return node;
 	}
 };
@@ -674,6 +675,16 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
  */
 var FormElement = this.FormElement = new Class(Element, function() {
 
+	this.initialize = function(self) {
+		Element.initialize(self);
+
+		if (self.elements) {
+			for (var i = 0; i < self.elements.length; i++) {
+				wrap(self.elements[i]);
+			}
+		}
+	};
+
 	/**
 	 * 用ajax发送一个表单
 	 */
@@ -738,28 +749,29 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 	this.initialize = function(self) {
 		Element.initialize(self);
 
-		attribute.defineProperty(self, 'value', {
-			set: function(value) {
-				self.value = value;
-			},
-			get: function() {
-				// 如果是placeholder，则value为空
-				if (self.classList.contains("placeholder")) return '';
-				return self.value;
-			}
-		});
-
-		attribute.defineProperty(self, 'validity', {
-			get: function() {
-				self.checkValidity();
-				return self.validity;
-			}
-		});
-
 		if (['input, textarea'].indexOf(self.get('tagName'))) {
 			self.bindPlaceholder(self);
 		}
 	};
+
+	attribute.defineProperty(this, 'value', {
+		set: function(value) {
+			this.value = value;
+			this.checkValidity();
+		},
+		get: function() {
+			// 如果是placeholder，则value为空
+			if (this.classList.contains("placeholder")) return '';
+			return this.value;
+		}
+	});
+
+	attribute.defineProperty(this, 'validity', {
+		get: function() {
+			this.checkValidity();
+			return this.validity;
+		}
+	});
 
 	this.checkValidity = function(self) {
 		/*
@@ -778,14 +790,15 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 		 * password
 		 */
 
-		var value = self.value;
+		var value = self.get('value');
 		
-		self.validity = {
+		var validity = {
 			valueMissing: self.getAttribute('required') && !Boolean(value),
 			typeMismatch: (function(type) {
 				if (type == 'url') return !(/^(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i).test(value);
 				if (type == 'tel') return !(/[^\r\n]/i).test(value);
 				if (type == 'email') return !(/^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/i).test(value);
+				return false;
 			})(self.getAttribute('type')),
 			patternMismatch: (function() {
 				var pattern = self.getAttribute('pattern');
@@ -798,11 +811,13 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 			stepMismatch: false,
 			customError: false
 		};
-		self.validity.valid = ['valueMissing', 'typeMismatch', 'patternMismatch', 'tooLong', 'rangeUnderflow', 'rangeOverflow', 'stepMismatch', 'customError'].every(function(name) {
-			return self.validity[name] === false;
+		validity.valid = ['valueMissing', 'typeMismatch', 'patternMismatch', 'tooLong', 'rangeUnderflow', 'rangeOverflow', 'stepMismatch', 'customError'].every(function(name) {
+			return validity[name] === false;
 		});
 
-		return self.validity.valid;
+		self.validity = validity;
+
+		return validity.valid;
 	};
 
 	/**

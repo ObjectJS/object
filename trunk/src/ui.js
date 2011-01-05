@@ -21,7 +21,7 @@ var mixin = this.mixin = function(host, cls) {
  * UI模块基类
  * @class
  */
-var ComponentBase = this.ComponentBase = new Class(Events, function() {
+var ComponentBase = this.ComponentBase = new Class(function() {
 
 	this.initialize = function(self, node) {
 		Events.initialize(self);
@@ -287,14 +287,6 @@ var ComponentBase = this.ComponentBase = new Class(Events, function() {
 		return ele;
 	});
 
-	this.load = function(self) {
-	};
-
-	this.reload = function(self) {
-		self.call('reset');
-		self.call('load');
-	};
-
 	this.error = function(self, msg) {
 		if (!msg) msg = '出错啦！';
 		alert(msg);
@@ -336,6 +328,11 @@ var FormComponent = this.FormComponent = new Class(ComponentBase, function() {
 	
 	this.initialize = function(self, node) {
 		ComponentBase.initialize(self, node);
+	};
+
+	this.invalid = function(self, msg) {
+		if (!msg) msg = '出错啦！';
+		alert(msg);
 	};
 
 	mixin(this, dom.FormElement);
