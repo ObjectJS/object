@@ -19,6 +19,14 @@ var mixin = this.mixin = function(host, cls) {
 	}, host);
 };
 
+var Element = this.Element = new Class(function() {
+	mixin(this, dom.Element);
+});
+
+var FormElement = this.FormElement = new Class(function() {
+	mixin(this, dom.FormElement);
+});
+
 /**
  * UI模块基类
  * @class
@@ -316,17 +324,19 @@ var Component = this.Component = new Class(function() {
 
 });
 
-var ElementComponent = this.ElementComponent = new Class(Component, function() {
+var ElementComponent = this.ElementComponent = new Class(Component, {
+	mixins: [Element]
+}, function() {
 
 	this.initialize = function(self, node) {
 		Component.initialize(self, node);
 	};
 
-	mixin(this, dom.Element);
-
 });
 
-var FormElementComponent = this.FormElementComponent = new Class(Component, function() {
+var FormElementComponent = this.FormElementComponent = new Class(Component, {
+	mixins: [FormElement]
+}, function() {
 	
 	this.initialize = function(self, node) {
 		Component.initialize(self, node);
@@ -336,8 +346,6 @@ var FormElementComponent = this.FormElementComponent = new Class(Component, func
 		if (!msg) msg = '出错啦！';
 		alert(msg);
 	};
-
-	mixin(this, dom.FormElement);
 
 });
 

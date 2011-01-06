@@ -28,10 +28,12 @@ this.extend = function(obj, properties, ov) {
 var Class = this.Class = function() {
 	if (arguments.length < 1) throw new Error('bad arguments');
 
+	// 构造器
 	var properties = arguments[arguments.length - 1];
-	// 从参数获取父类
-	var parent = arguments.length === 2? arguments[0] : null;
-	var name;
+	// 父类
+	var parent = arguments.length > 1? arguments[0] : null;
+	// 描述
+	var mutators = arguments.length > 1? (parent? (arguments.length !== 2? arguments[1] : null) : arguments[0]) : null;
 
 	// cls
 	var cls = function() {
@@ -84,9 +86,26 @@ var Class = this.Class = function() {
 		object.extend(cls, properties);
 	}
 
+	if (mutators) {
+		Object.keys(mutators).forEach(function(name) {
+			if (Class.Mutators[name]) Class.Mutators[name].call(cls, mutators[name]);
+		});
+	}
+
 	Class.build(cls, cls.prototype);
 
 	return cls;
+};
+
+Class.Mutators = {};
+Class.Mutators.mixins = function(mixins) {
+	mixins.forEach(function(mixin) {
+		Object.keys(mixin).forEach(function(name) {
+			if (typeof mixin[name] === 'function') {
+				this[name] = mixin[name];
+			}
+		}, this);
+	}, this);
 };
 
 // 将binder绑定至func的第一个参数
