@@ -810,9 +810,10 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 				return false;
 			})(),
 			tooLong: (function() {
-				var maxlength = parseInt(self.getAttribute('maxlength'));
-				if (maxlength === NaN) return false;
-				return value.length <= maxlength;
+				var maxlength = self.getAttribute('maxlength');
+				var n = Number(maxlength);
+				if (n != maxlength) return false;
+				return value.length > n;
 			})(),
 			// 以下四个 firefox 4 beta 也不支持，暂时不支持
 			rangeUnderflow: false,
