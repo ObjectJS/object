@@ -746,10 +746,14 @@ var FormElement = this.FormElement = new Class(Element, function() {
 
 var FormItemElement = this.FormItemElement = new Class(Element, function() {
 
+	var needBindPlaceholder = (function() {
+		return !('placeholder' in document.createElement('input'));
+	})();
+
 	this.initialize = function(self) {
 		Element.initialize(self);
 
-		if (['input, textarea'].indexOf(self.get('tagName'))) {
+		if (needBindPlaceholder && ['input, textarea'].indexOf(self.get('tagName'))) {
 			self.bindPlaceholder(self);
 		}
 	};
@@ -832,7 +836,7 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 		// 通过autocomplete=off避免浏览器记住placeholder
 		function checkEmpty(input, event) {
 			if (input.classList.contains('placeholder')) {
-				if (event.type == 'focus') {
+				if (event.type == 'focus' && input.value === input.getAttribute('placeholder')) {
 					input.value = '';
 				}
 				input.classList.remove('placeholder');
