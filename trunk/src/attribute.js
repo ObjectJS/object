@@ -6,6 +6,7 @@ this.defineProperty = function(object, prop, descriptor) {
 };
 
 this.defineProperties = function(object, descriptors) {
+	if (!object._properties) object._properties = {};
 	for (var prop in descriptors) {
 		if (descriptors.hasOwnProperty(prop)) {
 			object._properties[prop] = descriptors[prop];

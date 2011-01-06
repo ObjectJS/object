@@ -16,7 +16,9 @@ this.extend = function(obj, properties, ov) {
 	if (ov !== false) ov = true;
 
 	for (var property in properties) {
-		if (ov || obj[property] === undefined) obj[property] = properties[property];
+		if (ov || obj[property] === undefined) {
+			obj[property] = properties[property];
+		}
 	}
 
 	return obj;
@@ -35,11 +37,14 @@ var Class = this.Class = function() {
 	var cls = function() {
 		if (this.initialize) this.initialize.apply(this, arguments);
 	};
+	cls.__haha__ = properties;
 
 	// 继承，将parent的所有成员都放到cls上
-	// 先做继承，后声明的成员覆盖先声明的
 	if (parent) {
 		parent = Class.getMembers(parent);
+
+		if (false && parent.__haha__) {
+		} else {
 
 		Object.keys(parent).forEach(function(name) {
 			// 在Safari 5.0.2(7533.18.5)中，在这里用for in遍历parent会将prototype属性遍历出来，导致原型被指向一个错误的对象，后面就错的一塌糊涂了
@@ -47,19 +52,32 @@ var Class = this.Class = function() {
 			// 而其他浏览器仅仅是在重新指向prototype时，类似 obj.prototype = {} 这样的写法才会出现这个情况
 			if (name === 'prototype') return;
 
-			// classmethod
-			if (typeof parent[name] == 'function' && parent[name].im_self) {
-				cls[name] = parent[name].im_func;
+			if (false && typeof parent[name] === 'function') {
+				cls[name] = function() {
+					return parent[name].apply(this, arguments);
+				};
+				cls[name].im_func = parent[name].im_func;
+				cls[name].im_self = parent[name].im_self;
 			} else {
 				cls[name] = parent[name];
 			}
 		});
+
+		}
 
 		cls.__base__ = parent;
 	}
 
 	// 支持两种写法，传入一个Hash或者function
 	// 将所有成员复制到cls上
+
+	//if (properties instanceof Function) {
+		//var func = properties;
+		//properties = {};
+		//func.call(properties);
+	//}
+	//object.extend(cls, properties);
+
 	if (properties instanceof Function) {
 		properties.call(cls);
 	} else {
@@ -90,10 +108,7 @@ Class.build = function(cls, host) {
 		var member = cls[name];
 
 		// classmethod
-		if (typeof member === 'function' && member.classmethod) {
-			cls[name] = host[name] = Class.bindFunc(member, cls);
-		// classmethod
-		} else if (typeof member === 'function' && member.im_self) {
+		if (typeof member === 'function' && member.im_self) {
 			cls[name] = host[name] = Class.bindFunc(member.im_func, cls);
 		// 普通method
 		} else if (typeof member === 'function' && member.__self__ !== null) {
@@ -160,8 +175,8 @@ var staticmethod = this.staticmethod = function(func) {
 
 // 声明类方法，在new Class(callback) 的callback中调用
 var classmethod = this.classmethod = function(func) {
-	func.classmethod = true;
-	return func;
+	// binder 传 true，做一个标记，在Class.build方法中会重新bindFunc
+	return Class.bindFunc(func, true);
 };
 
 // 将成员放到window上
@@ -768,7 +783,7 @@ function expand() {
 	Function.prototype.bind = Function.prototype.bind || function(object) {
 		var method = this;
 		return function() {
-			method.apply(object , arguments); 
+			method.apply(object, arguments); 
 		};
 	};
 

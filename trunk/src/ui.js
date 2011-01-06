@@ -7,7 +7,9 @@ object.add('ui', 'string, dom, attribute', function($, string, dom, attribute) {
  */
 var mixin = this.mixin = function(host, cls) {
 	Object.keys(cls).forEach(function(name) {
-		if (this[name] === undefined) {
+		if (typeof cls[name] === 'function') {
+			if (['initialize', 'get', 'set'].indexOf(name) != -1) return;
+
 			this[name] = function(self) {
 				var args = [].slice.call(arguments, 0);
 				args[0] = self._node;
@@ -21,36 +23,37 @@ var mixin = this.mixin = function(host, cls) {
  * UI模块基类
  * @class
  */
-var ComponentBase = this.ComponentBase = new Class(function() {
+var Component = this.Component = new Class(function() {
 
 	this.initialize = function(self, node) {
-		Events.initialize(self);
-
-		self._properties = {}; // set/get
-		self._componentDescriptors = {}; // component描述
 		self._components = []; // 建立出来的所有子component的引用
 		self._rendered = []; // render出来的新元素，会在reset时清空
 		self._events = self._getEvents(self); // 本class的所有event方法
 
 		self.node = node;
 		self._node = node;
+
+		// 有可能有没有sub component的compoennt
+		if (self._componentDescriptors) {
+			Object.keys(self._componentDescriptors).forEach(function(name) {
+				self.get(name);
+			});
+		}
 	};
 
 	this.set = function(self, prop, value) {
-		var property = self._properties[prop];
-		if (property && property.set) {
-			property.set.call(self, value);
+		if (self._properties && self._properties[prop] && self._properties[prop].set) {
+			self._properties[prop].set.call(self, value);
 		} else {
-			self.node.set(prop, value);
+			self._node.set(prop, value);
 		}
 	};
 
 	this.get = function(self, prop) {
-		var property = self._properties[prop];
-		if (property && property.get) {
-			return property.get.apply(self);
+		if (self._properties && self._properties[prop] && self._properties[prop].get) {
+			return self._properties[prop].get.apply(self);
 		} else {
-			return self.node.get(prop);
+			return self._node.get(prop);
 		}
 	};
 
@@ -142,55 +145,12 @@ var ComponentBase = this.ComponentBase = new Class(function() {
 		self._componentDescriptors[name].secName = secName;
 	};
 
-	this.addComponent = function(self, name, selector, type) {
-		self.addComponents(name, selector, type, true);
-	};
-
-	this.addComponents = function(self, name, selector, type, single) {
-		if (!type) type = Component;
-
-		self._componentDescriptors[name] = {
-			selector: selector,
-			type: type,
-			single: single
-		};
-
-		attribute.defineProperty(self, name, {
-			get: function() {
-				if (single) {
-					var ele = self.node.getElement(selector);
-					if (!ele) return null;
-					self['_' + name] = ele;
-					var component = new type(ele);
-					self[name] = component;
-
-					self._addEvents(name);
-					return component;
-				} else {
-					var eles = self.node.getElements(selector);
-					if (!eles) return null;
-					self['_' + name] = eles;
-					eles.forEach(function(ele, i) {
-						eles[i] = new type(ele);
-					});
-					eles.node = eles;
-					self[name] = eles;
-
-					self._addEvents(name);
-					return eles;
-				}
-			}
-		});
-
-		self.get(name);
-	};
-
 	/**
 	 * makeOption
 	 */
 	this.makeOption = function(self, name, type) {
 		name = name.toLowerCase();
-		var value = self.node.getData(name);
+		var value = self._node.getData(name);
 		if (type === Boolean) {
 			value = (value === 'true');
 		} else if (type === Number) {
@@ -312,22 +272,64 @@ var ComponentBase = this.ComponentBase = new Class(function() {
 		});
 	};
 
+	var define = this.define = staticmethod(function(cls, name, selector, type, single) {
+		if (!cls._componentDescriptors) cls._componentDescriptors = {}; // component描述
+		if (!type) type = ElementComponent;
+
+		cls._componentDescriptors[name] = {
+			selector: selector,
+			type: type,
+			single: single
+		};
+
+		attribute.defineProperty(cls, name, {
+			get: function() {
+				if (single) {
+					var ele = this._node.getElement(selector);
+					if (!ele) return null;
+					this['_' + name] = ele;
+					var component = new type(ele);
+					this[name] = component;
+
+					this._addEvents(name);
+					return component;
+				} else {
+					var eles = this._node.getElements(selector);
+					if (!eles) return null;
+					this['_' + name] = eles;
+					eles.forEach(function(ele, i) {
+						eles[i] = new type(ele);
+					});
+					eles.node = eles;
+					this[name] = eles;
+
+					this._addEvents(name);
+					return eles;
+				}
+			}
+		});
+	});
+
+	this.define1 = staticmethod(function(cls, name, selector, type) {
+		define(cls, name, selector, type, true);
+	});
+
 });
 
-var Component = this.Component = new Class(ComponentBase, function() {
+var ElementComponent = this.ElementComponent = new Class(Component, function() {
 
 	this.initialize = function(self, node) {
-		ComponentBase.initialize(self, node);
+		Component.initialize(self, node);
 	};
 
 	mixin(this, dom.Element);
 
 });
 
-var FormComponent = this.FormComponent = new Class(ComponentBase, function() {
+var FormElementComponent = this.FormElementComponent = new Class(Component, function() {
 	
 	this.initialize = function(self, node) {
-		ComponentBase.initialize(self, node);
+		Component.initialize(self, node);
 	};
 
 	this.invalid = function(self, msg) {
@@ -344,15 +346,15 @@ var FormComponent = this.FormComponent = new Class(ComponentBase, function() {
  * @class
  * @event change
  */
-this.TabControl = new Class(Component, function() {
+this.TabControl = new Class(ElementComponent, function() {
+
+	Component.define(this, 'tabs', 'li');
 
 	/**
 	 * @constructor
 	 */
 	this.initialize = function(self) {
 		Component.initialize(self);
-
-		self.addComponents('tabs', 'li');
 
 		self.selectedEle = null;
 
@@ -382,16 +384,16 @@ this.TabControl = new Class(Component, function() {
 /**
  * @class
  */
-var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
+var ForeNextControl = this.ForeNextControl = new Class(ElementComponent, function() {
+
+	Component.define(this, 'nextButton', '.nextbutton');
+	Component.define(this, 'foreButton', '.forebutton');
 
 	/**
 	 * @constructor
 	 */
 	this.initialize = function(self, node) {
 		Component.initialize(self, node);
-
-		self.addComponents('nextButton', '.nextbutton');
-		self.addComponents('foreButton', '.forebutton');
 
 		self.loop = false; // 是否循环
 		self.total = parseInt(self._node.getData('total'));

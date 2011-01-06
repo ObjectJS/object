@@ -621,7 +621,7 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 	 * 将IE中的window.event包装一下
 	 * @staticmethod
 	 */
-	this.wrapEvent = staticmethod(function(e) {
+	this.wrapEvent = staticmethod(function(e, a) {
 
 		e.target = e.srcElement;
 
@@ -761,7 +761,7 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 		},
 		get: function() {
 			// 如果是placeholder，则value为空
-			if (this.classList.contains("placeholder")) return '';
+			if (this.classList.contains('placeholder')) return '';
 			return this.value;
 		}
 	});
@@ -793,7 +793,7 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 		var value = self.get('value');
 		
 		var validity = {
-			valueMissing: self.getAttribute('required') && !Boolean(value),
+			valueMissing: self.getAttribute('required') && !value? true : false,
 			typeMismatch: (function(type) {
 				if (type == 'url') return !(/^(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i).test(value);
 				if (type == 'tel') return !(/[^\r\n]/i).test(value);
@@ -805,7 +805,12 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 				if (pattern) return (new RegExp(pattern)).test(value)
 				return false;
 			})(),
-			tooLong: false,
+			tooLong: (function() {
+				var maxlength = parseInt(self.getAttribute('maxlength'));
+				if (maxlength === NaN) return false;
+				return value.length <= maxlength;
+			})(),
+			// 以下四个 firefox 4 beta 也不支持，暂时不支持
 			rangeUnderflow: false,
 			rangeOverflow: false,
 			stepMismatch: false,
@@ -826,24 +831,24 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 	this.bindPlaceholder = staticmethod(function(input) {
 		// 通过autocomplete=off避免浏览器记住placeholder
 		function checkEmpty(input, event) {
-			if (input.classList.contains("placeholder")) {
-				if (event.type == "focus") {
-					input.value = "";
+			if (input.classList.contains('placeholder')) {
+				if (event.type == 'focus') {
+					input.value = '';
 				}
-				input.classList.remove("placeholder");
-				input.removeAttribute("autocomplete");
+				input.classList.remove('placeholder');
+				input.removeAttribute('autocomplete');
 
 			// IE不支持autocomplete=off，刷新页面后value还是placeholder（其他浏览器为空，或者之前用户填写的值），只能通过判断是否相等来处理
-			} else if (!input.value || ((ua.ua.ie == 6 || ua.ua.ie == 7) && !event && input.value == input.getAttribute("placeholder"))) {
-				input.classList.add("placeholder");
-				input.value = input.getAttribute("placeholder");
-				input.setAttribute("autocomplete", "off");
+			} else if (!input.value || ((ua.ua.ie == 6 || ua.ua.ie == 7) && !event && input.value == input.getAttribute('placeholder'))) {
+				input.classList.add('placeholder');
+				input.value = input.getAttribute('placeholder');
+				input.setAttribute('autocomplete', 'off');
 			}
 		}
-		input.addEvent("focus", function(event) {
+		input.addEvent('focus', function(event) {
 			return checkEmpty(event.target, event);
 		});
-		input.addEvent("blur", function(event) {
+		input.addEvent('blur', function(event) {
 			return checkEmpty(event.target, event);
 		});
 		if (input.form) {
