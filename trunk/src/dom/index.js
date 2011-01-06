@@ -431,7 +431,7 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 	 * @param selector css选择符
 	 */
 	this.matchesSelector = function(self, selector) {
-		return Slick.match(self, selector);
+		return Sizzle.matches(selector, [self]).length > 0;
 	};
 
 	/**
