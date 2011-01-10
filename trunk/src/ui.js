@@ -1,33 +1,6 @@
 object.add('ui', 'string, dom, attribute', function($, string, dom, attribute) {
 
 /**
- * 将dom下的Element类mixin到Component上
- * @param host Component
- * @param cls Element
- */
-var mixin = this.mixin = function(host, cls) {
-	Object.keys(cls).forEach(function(name) {
-		if (typeof cls[name] === 'function') {
-			if (['initialize', 'get', 'set'].indexOf(name) != -1) return;
-
-			this[name] = function(self) {
-				var args = [].slice.call(arguments, 0);
-				args[0] = self._node;
-				return cls[name].apply(null, args);
-			};
-		}
-	}, host);
-};
-
-var Element = this.Element = new Class(function() {
-	mixin(this, dom.Element);
-});
-
-var FormElement = this.FormElement = new Class(function() {
-	mixin(this, dom.FormElement);
-});
-
-/**
  * UI模块基类
  * @class
  */
@@ -255,6 +228,11 @@ var Component = this.Component = new Class(function() {
 		return ele;
 	});
 
+	this.invalid = function(self, msg) {
+		if (!msg) msg = '输入错误';
+		alert(msg);
+	};
+
 	this.error = function(self, msg) {
 		if (!msg) msg = '出错啦！';
 		alert(msg);
@@ -282,7 +260,7 @@ var Component = this.Component = new Class(function() {
 
 	var define = this.define = staticmethod(function(cls, name, selector, type, single) {
 		if (!cls._componentDescriptors) cls._componentDescriptors = {}; // component描述
-		if (!type) type = ElementComponent;
+		if (!type) type = Component;
 
 		cls._componentDescriptors[name] = {
 			selector: selector,
@@ -322,30 +300,17 @@ var Component = this.Component = new Class(function() {
 		define(cls, name, selector, type, true);
 	});
 
-});
+	Object.keys(dom.Element).forEach(function(name) {
+		if (typeof dom.Element[name] === 'function') {
+			if (['initialize', 'get', 'set'].indexOf(name) != -1) return;
 
-var ElementComponent = this.ElementComponent = new Class(Component, {
-	mixins: [Element]
-}, function() {
-
-	this.initialize = function(self, node) {
-		Component.initialize(self, node);
-	};
-
-});
-
-var FormElementComponent = this.FormElementComponent = new Class(Component, {
-	mixins: [FormElement]
-}, function() {
-	
-	this.initialize = function(self, node) {
-		Component.initialize(self, node);
-	};
-
-	this.invalid = function(self, msg) {
-		if (!msg) msg = '出错啦！';
-		alert(msg);
-	};
+			this[name] = function(self) {
+				var args = [].slice.call(arguments, 0);
+				args[0] = self._node;
+				return dom.Element[name].apply(null, args);
+			};
+		}
+	}, this);
 
 });
 
@@ -354,7 +319,7 @@ var FormElementComponent = this.FormElementComponent = new Class(Component, {
  * @class
  * @event change
  */
-this.TabControl = new Class(ElementComponent, function() {
+this.TabControl = new Class(Component, function() {
 
 	Component.define(this, 'tabs', 'li');
 
@@ -392,7 +357,7 @@ this.TabControl = new Class(ElementComponent, function() {
 /**
  * @class
  */
-var ForeNextControl = this.ForeNextControl = new Class(ElementComponent, function() {
+var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
 
 	Component.define(this, 'nextButton', '.nextbutton');
 	Component.define(this, 'foreButton', '.forebutton');
