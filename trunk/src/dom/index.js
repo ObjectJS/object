@@ -443,18 +443,10 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 	};
 
 	/**
-	 * 通过字符串设置此元素的内容
-	 * 为兼容HTML5标签，IE下无法直接使用innerHTML
 	 * @param str html代码
 	 */
 	this.setHTML = function(self, str) {
-		if (_needGetDom) {
-			self.innerHTML = '';
-			var nodes = self.fromString(str);
-			while (nodes.firstChild) self.appendChild(nodes.firstChild);
-		} else {
-			self.innerHTML = str;
-		}
+		self.set('innerHTML', str);
 	};
 
 	/**
@@ -610,10 +602,19 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 		else self.hide();
 	};
 
-	// set('html')
-	attribute.defineProperty(this, 'html', {
+	/**
+	 * 通过字符串设置此元素的内容
+	 * 为兼容HTML5标签，IE下无法直接使用innerHTML
+	 */
+	attribute.defineProperty(this, 'innerHTML', {
 		set: function(html) {
-			this.innerHTML = html;
+			if (_needGetDom) {
+				var nodes = this.fromString(html);
+				this.innerHTML = '';
+				while (nodes.firstChild) this.appendChild(nodes.firstChild);
+			} else {
+				this.innerHTML = html;
+			}
 		}
 	});
 

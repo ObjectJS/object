@@ -39,14 +39,10 @@ var Class = this.Class = function() {
 	var cls = function() {
 		if (this.initialize) this.initialize.apply(this, arguments);
 	};
-	cls.__haha__ = properties;
 
 	// 继承，将parent的所有成员都放到cls上
 	if (parent) {
 		parent = Class.getMembers(parent);
-
-		if (false && parent.__haha__) {
-		} else {
 
 		Object.keys(parent).forEach(function(name) {
 			// 在Safari 5.0.2(7533.18.5)中，在这里用for in遍历parent会将prototype属性遍历出来，导致原型被指向一个错误的对象，后面就错的一塌糊涂了
@@ -65,18 +61,19 @@ var Class = this.Class = function() {
 			}
 		});
 
-		}
-
 		cls.__base__ = parent;
 	}
 
-	// 支持两种写法，传入一个Hash或者function
-	// 将所有成员复制到cls上
+	if (mutators) {
+		Object.keys(mutators).forEach(function(name) {
+			if (Class.Mutators[name]) Class.Mutators[name].call(cls, mutators[name]);
+		});
+	}
 
 	//if (properties instanceof Function) {
-		//var func = properties;
+		//var p = properties;
 		//properties = {};
-		//func.call(properties);
+		//p.call(properties);
 	//}
 	//object.extend(cls, properties);
 
@@ -84,12 +81,6 @@ var Class = this.Class = function() {
 		properties.call(cls);
 	} else {
 		object.extend(cls, properties);
-	}
-
-	if (mutators) {
-		Object.keys(mutators).forEach(function(name) {
-			if (Class.Mutators[name]) Class.Mutators[name].call(cls, mutators[name]);
-		});
 	}
 
 	Class.build(cls, cls.prototype);
@@ -112,7 +103,7 @@ Class.Mutators.mixins = function(mixins) {
 Class.bindFunc = function(func, binder) {
 	var wrapper = function() {
 		var args = [].slice.call(arguments, 0);
-		args.unshift(binder || this);
+		args.unshift(arguments.callee.im_self || this);
 		return func.apply(globalHost, args);
 	};
 	wrapper.im_func = func;
@@ -432,7 +423,12 @@ this.Loader = new Class(function() {
 		// 主递归函数
 		function loadNext(i) {
 
-			var use = pkg.uses[i];
+			/*
+			 * 从后向前load，这样就可以不用传入一些用于预处理的module的引用变量了，比如：
+			 * object.add('test', 'dom, ui, preprocessing', function($, dom, ui) {})
+			 * 其中，preprocessing为必须引入的module用于预处理，但是test包并不需要这个module的引用，就可以不用在回调function中写引用变量了
+			 */
+			var use = pkg.uses[pkg.uses.length - 1 - i];
 
 			self.getModule(use.name, modules, function(useModule) {
 				var names, root, member;
@@ -440,7 +436,7 @@ this.Loader = new Class(function() {
 				// 有别名
 				if (use.as) {
 					runtime[use.as] = useModule;
-					if (args.indexOf(useModule) == -1) args.push(useModule);
+					if (args.indexOf(useModule) == -1) args.unshift(useModule);
 
 				// 是一个from import
 				} else if (use.uses) {
@@ -460,7 +456,7 @@ this.Loader = new Class(function() {
 					names = use.name.split('.');
 					root = runtime[names[0]] = modules[names[0]];
 
-					if (args.indexOf(root) == -1) args.push(root);
+					if (args.indexOf(root) == -1) args.unshift(root);
 				}
 
 				if (i < pkg.uses.length - 1) {

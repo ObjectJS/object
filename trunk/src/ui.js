@@ -342,11 +342,11 @@ var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
 	};
 
 	this.updatePosition = function(self) {
-		self._node.getElements('.current').set('html', self.position + 1); // position是从0开始滴～展示的时候+1
+		self._node.getElements('.current').set('innerHTML', self.position + 1); // position是从0开始滴～展示的时候+1
 	};
 
 	this.updateTotal = function(self) {
-		self._node.getElements('.total').set('html', self.total);
+		self._node.getElements('.total').set('innerHTML', self.total);
 	};
 
 });
