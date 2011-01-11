@@ -744,6 +744,10 @@ var FormElement = this.FormElement = new Class(Element, function() {
 
 });
 
+/**
+ * textarea / input / textarea / select / option
+ * @class
+ */
 var FormItemElement = this.FormItemElement = new Class(Element, function() {
 
 	var needBindPlaceholder = (function() {
@@ -833,6 +837,9 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 		}
 	});
 
+	/**
+	 * html5 forms checkValidity
+	 */
 	this.checkValidity = function(self) {
 		/*
 		 * required
@@ -885,6 +892,10 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 
 		return validity.valid;
 	};
+
+	/**
+	 * focus，并且将光标定位到指定的位置上
+	 */
 	this.focusToPosition = function(self, position) {
 		if (position === undefined) {
 			position = self.get('value').length;
