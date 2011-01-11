@@ -885,6 +885,24 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 
 		return validity.valid;
 	};
+	this.focusToPosition = function(self, position) {
+		if (position === undefined) {
+			position = self.get('value').length;
+		}
+
+		if (self.setSelectionRange) {
+			self.focus();
+			self.setSelectionRange(self.get('value').length, position);
+		} else if (self.createTextRange) {
+			var range = self.createTextRange();
+			range.moveStart('character', position);
+			range.collapse(true);
+			range.select();
+			self.focus();
+		} else {
+			self.focus();
+		}
+	}
 
 	/**
 	 * bind一个input或者textarea，使其支持placeholder属性
