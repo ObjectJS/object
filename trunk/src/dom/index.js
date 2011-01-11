@@ -758,6 +758,62 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 		}
 	};
 
+	attribute.defineProperty(this, 'selectionStart', {
+		get: function() {
+			if (typeof this.selectionStart == 'number') {
+				return this.selectionStart;
+			}
+			// IE
+			else if (document.selection) {
+				this.focus();
+
+				var range = document.selection.createRange();
+				var start = 0;
+				if (range.parentElement() == this) {
+					var range_all = document.body.createTextRange();
+					range_all.moveToElementText(this);
+					
+					for (start = 0; range_all.compareEndPoints('StartToStart', range) < 0; start++) {
+						range_all.moveStart('character', 1);
+					}
+					
+					for (var i = 0; i <= start; i++) {
+						if (this.get('value').charAt(i) == '\n') start++;
+					}
+				}
+				return start;
+			}
+		}
+	});
+        
+	attribute.defineProperty(this, 'selectionEnd', {
+		get: function() {
+			if (typeof this.selectionEnd == 'number') {
+				return this.selectionEnd;
+			}
+			// IE
+			else if (document.selection) {
+				this.focus();
+
+				var range = document.selection.createRange();
+				var end = 0;
+				if (range.parentElement() == this) {
+					var range_all = document.body.createTextRange();
+					range_all.moveToElementText(this);
+					
+					for (end = 0; range_all.compareEndPoints('StartToEnd', range) < 0; end++) {
+						range_all.moveStart('character', 1);
+					}
+					
+					for (var i = 0; i <= end; i++) {
+						if (this.get('value').charAt(i) == '\n') end++;
+					}
+				}
+				return end;
+			}
+		}
+	});
+
 	attribute.defineProperty(this, 'value', {
 		set: function(value) {
 			this.value = value;

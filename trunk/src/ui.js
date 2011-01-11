@@ -11,7 +11,6 @@ var Component = this.Component = new Class(function() {
 		self._rendered = []; // render出来的新元素，会在reset时清空
 		self._events = self._getEvents(self); // 本class的所有event方法
 
-		self.node = node;
 		self._node = node;
 
 		// 有可能有没有sub component的compoennt
@@ -47,7 +46,7 @@ var Component = this.Component = new Class(function() {
 	this._addEventTo = function(self, name, com) {
 		var events = self._events[name];
 		if (!events) return;
-		var ele = com.node;
+		var ele = com._node;
 
 		if (com._eventAdded) return;
 
@@ -127,23 +126,6 @@ var Component = this.Component = new Class(function() {
 	};
 
 	/**
-	 * makeOption
-	 */
-	this.makeOption = function(self, name, type) {
-		name = name.toLowerCase();
-		var value = self._node.getData(name);
-		if (type === Boolean) {
-			value = (value === 'true');
-		} else if (type === Number) {
-			value = Number(value);
-		}
-
-		if (value === null || value === undefined || value === NaN) return null;
-
-		return value;
-	};
-
-	/**
 	 * 渲染一个新的控件
 	 * @param template 模板字符串
 	 * @param data 模板数据
@@ -180,52 +162,6 @@ var Component = this.Component = new Class(function() {
 		});
 
 		return events;
-	});
-
-	/**
-	 * ele有可能已经wrap过，要注意不要重新覆盖老的成员
-	 * 提供了包装机制不代表同一个元素可以进行多重包装，在相同的继承树上多次包装没有问题，如果将两个无关的类型包装至同一元素，则第二次包装报错
-	 * 如果 TabControl.wrap(ele) 后进行 List.wrap(ele) ，则List包装失效并且报错
-	 * 如果 TabControl.wrap(ele) 后进行 Component.wrap(ele) 由于TabControl继承于Component，则无需包装
-	 * 如果 Component.wrap(ele) 后进行 TabControl.wrap(ele) 由于TabControl继承于Component，则包装成功
-	 * @classmethod
-	 */
-	this.wrap = classmethod(function(cls, ele) {
-		if (!ele) return null;
-
-		// 获取class的所有继承关系，存成平面数组
-		// TODO: class 的 chain 机制
-		function getBases(m) {
-			var array = [];
-			for (var i = 0, l = m.length; i < l; i++){
-				array = array.concat((m[i].__bases__ && m[i].__bases__.length) ? arguments.callee(m[i].__bases__) : m);
-			}
-			return array;
-		}
-
-		if (ele._wrapper) {
-			if (ele._wrapper === cls) return ele; // 重复包装相同类
-
-			var wrapperBases = getBases([ele._wrapper]);
-
-			// 已经包装过子类了(包了TabControl再包装Component)，无需包装
-			if (wrapperBases.indexOf(cls) !== -1) {
-				return ele;
-			}
-
-			var classBases = getBases([cls]);
-
-			// 现有包装不在同一继承树上，报错
-			if (classBases.indexOf(ele._wrapper) === -1) {
-				throw '包装出错，一个元素只能有一个包装类';
-			}
-		}
-
-		// 将ele注射进cls
-		Class.inject(cls, ele);
-
-		ele._wrapper = cls;
-		return ele;
 	});
 
 	this.invalid = function(self, msg) {
@@ -274,7 +210,7 @@ var Component = this.Component = new Class(function() {
 					var ele = this._node.getElement(selector);
 					if (!ele) return null;
 					this['_' + name] = ele;
-					var component = new type(ele);
+					var component = new type(ele, this);
 					this[name] = component;
 
 					this._addEvents(name);
@@ -284,9 +220,9 @@ var Component = this.Component = new Class(function() {
 					if (!eles) return null;
 					this['_' + name] = eles;
 					eles.forEach(function(ele, i) {
-						eles[i] = new type(ele);
+						eles[i] = new type(ele, this);
 					});
-					eles.node = eles;
+					eles._node = eles;
 					this[name] = eles;
 
 					this._addEvents(name);
