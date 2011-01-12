@@ -1,4 +1,4 @@
-object.add('dom', 'ua, attribute, string, sys', function($, ua, attribute, string, sys) {
+object.add('dom', 'ua, string, sys', function($, ua, string, sys) {
 
 var UID = 1;
 var storage = {};
@@ -251,7 +251,7 @@ var ElementClassList = this.ElementClassList = new Class(Array, function() {
 /**
  * @class Element
  */
-var Element = this.Element = new Class(attribute.Attribute, function() {
+var Element = this.Element = new Class(function() {
 
 	var _needGetDom = (function() {
 		// 检测浏览器是否支持通过innerHTML设置未知标签，典型的就是IE不支持
@@ -262,6 +262,24 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 	})();
 
 	this._eventListeners = {};
+
+	this.get = function(self, prop) {
+		var property = self.__properties__[prop];
+		if (property && property.fget) {
+			return property.fget.call(window, self);
+		} else {
+			throw 'get not definedProperty ' + prop;
+		}
+	};
+
+	this.set = function(self, prop, value) {
+		var property = self.__properties__[prop];
+		if (property && property.fset) {
+			property.fset.call(window, self, value);
+		} else {
+			throw 'set not definedProperty ' + prop;
+		}
+	};
 
 	this.initialize = function(self, tagName) {
 
@@ -610,15 +628,13 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 	 * 通过字符串设置此元素的内容
 	 * 为兼容HTML5标签，IE下无法直接使用innerHTML
 	 */
-	attribute.defineProperty(this, 'innerHTML', {
-		set: function(html) {
-			if (_needGetDom) {
-				var nodes = this.fromString(html);
-				this.innerHTML = '';
-				while (nodes.firstChild) this.appendChild(nodes.firstChild);
-			} else {
-				this.innerHTML = html;
-			}
+	this.innerHTML = property(null, function(self, html) {
+		if (_needGetDom) {
+			var nodes = self.fromString(html);
+			self.innerHTML = '';
+			while (nodes.firstChild) self.appendChild(nodes.firstChild);
+		} else {
+			self.innerHTML = html;
 		}
 	});
 
@@ -646,10 +662,8 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 		return e;
 	});
 
-	attribute.defineProperty(this, 'tagName', {
-		get: function() {
-			return this.tagName.toLowerCase();
-		}
+	this.tagName = property(function(self) {
+		return self.tagName.toLowerCase();
 	});
 
 	/**
@@ -769,79 +783,70 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 		}
 	};
 
-	attribute.defineProperty(this, 'selectionStart', {
-		get: function() {
-			if (typeof this.selectionStart == 'number') {
-				return this.selectionStart;
-			}
-			// IE
-			else if (document.selection) {
-				this.focus();
+	this.selectionStart = property(function(self) {
+		if (typeof self.selectionStart == 'number') {
+			return self.selectionStart;
+		}
+		// IE
+		else if (document.selection) {
+			self.focus();
 
-				var range = document.selection.createRange();
-				var start = 0;
-				if (range.parentElement() == this) {
-					var range_all = document.body.createTextRange();
-					range_all.moveToElementText(this);
-					
-					for (start = 0; range_all.compareEndPoints('StartToStart', range) < 0; start++) {
-						range_all.moveStart('character', 1);
-					}
-					
-					for (var i = 0; i <= start; i++) {
-						if (this.get('value').charAt(i) == '\n') start++;
-					}
+			var range = document.selection.createRange();
+			var start = 0;
+			if (range.parentElement() == self) {
+				var range_all = document.body.createTextRange();
+				range_all.moveToElementText(self);
+				
+				for (start = 0; range_all.compareEndPoints('StartToStart', range) < 0; start++) {
+					range_all.moveStart('character', 1);
 				}
-				return start;
+				
+				for (var i = 0; i <= start; i++) {
+					if (self.get('value').charAt(i) == '\n') start++;
+				}
 			}
+			return start;
 		}
 	});
         
-	attribute.defineProperty(this, 'selectionEnd', {
-		get: function() {
-			if (typeof this.selectionEnd == 'number') {
-				return this.selectionEnd;
-			}
-			// IE
-			else if (document.selection) {
-				this.focus();
+	this.selectionEnd = property(function(self) {
+		if (typeof self.selectionEnd == 'number') {
+			return self.selectionEnd;
+		}
+		// IE
+		else if (document.selection) {
+			self.focus();
 
-				var range = document.selection.createRange();
-				var end = 0;
-				if (range.parentElement() == this) {
-					var range_all = document.body.createTextRange();
-					range_all.moveToElementText(this);
-					
-					for (end = 0; range_all.compareEndPoints('StartToEnd', range) < 0; end++) {
-						range_all.moveStart('character', 1);
-					}
-					
-					for (var i = 0; i <= end; i++) {
-						if (this.get('value').charAt(i) == '\n') end++;
-					}
+			var range = document.selection.createRange();
+			var end = 0;
+			if (range.parentElement() == self) {
+				var range_all = document.body.createTextRange();
+				range_all.moveToElementText(self);
+				
+				for (end = 0; range_all.compareEndPoints('StartToEnd', range) < 0; end++) {
+					range_all.moveStart('character', 1);
 				}
-				return end;
+				
+				for (var i = 0; i <= end; i++) {
+					if (self.get('value').charAt(i) == '\n') end++;
+				}
 			}
+			return end;
 		}
 	});
 
-	attribute.defineProperty(this, 'value', {
-		set: function(value) {
-			this.value = value;
-			this.checkValidity();
-		},
-		get: function() {
-			// 如果是placeholder，则value为空
-			if (this.classList.contains('placeholder')) return '';
-			return this.value;
-		}
+	this.value = property(function(self) {
+		// 如果是placeholder，则value为空
+		if (self.classList.contains('placeholder')) return '';
+		return self.value;
+	}, function(self, value) {
+		self.value = value;
+		self.checkValidity();
 	});
 
-	attribute.defineProperty(this, 'validity', {
-		get: function() {
-			this.checkValidity();
-			return this.validity;
-		}
+	this.validity = property(function(self) {
+		self.checkValidity();
+		return self.validity;
 	});
 
 	/**

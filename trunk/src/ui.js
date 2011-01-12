@@ -1,4 +1,4 @@
-object.add('ui', 'string, dom, attribute', function($, string, dom, attribute) {
+object.add('ui', 'string, dom', function($, string, dom) {
 
 /**
  * UI模块基类
@@ -21,19 +21,21 @@ var Component = this.Component = new Class(function() {
 		}
 	};
 
-	this.set = function(self, prop, value) {
-		if (self._properties && self._properties[prop] && self._properties[prop].set) {
-			self._properties[prop].set.call(self, value);
+	this.get = function(self, prop) {
+		var property = self.__properties__[prop];
+		if (property && property.fget) {
+			return property.fget.call(window, self);
 		} else {
-			self._node.set(prop, value);
+			throw 'get not definedProperty ' + prop;
 		}
 	};
 
-	this.get = function(self, prop) {
-		if (self._properties && self._properties[prop] && self._properties[prop].get) {
-			return self._properties[prop].get.apply(self);
+	this.set = function(self, prop, value) {
+		var property = self.__properties__[prop];
+		if (property && property.fset) {
+			property.fset.call(window, self, value);
 		} else {
-			return self._node.get(prop);
+			throw 'set not definedProperty ' + prop;
 		}
 	};
 
@@ -204,30 +206,28 @@ var Component = this.Component = new Class(function() {
 			single: single
 		};
 
-		attribute.defineProperty(cls, name, {
-			get: function() {
-				if (single) {
-					var ele = this._node.getElement(selector);
-					if (!ele) return null;
-					this['_' + name] = ele;
-					var component = new type(ele, this);
-					this[name] = component;
+		cls[name] = property(function(self) {
+			if (single) {
+				var ele = self._node.getElement(selector);
+				if (!ele) return null;
+				self['_' + name] = ele;
+				var component = new type(ele, self);
+				self[name] = component;
 
-					this._addEvents(name);
-					return component;
-				} else {
-					var eles = this._node.getElements(selector);
-					if (!eles) return null;
-					this['_' + name] = eles;
-					eles.forEach(function(ele, i) {
-						eles[i] = new type(ele, this);
-					});
-					eles._node = eles;
-					this[name] = eles;
+				self._addEvents(name);
+				return component;
+			} else {
+				var eles = self._node.getElements(selector);
+				if (!eles) return null;
+				self['_' + name] = eles;
+				eles.forEach(function(ele, i) {
+					eles[i] = new type(ele, self);
+				});
+				eles._node = eles;
+				self[name] = eles;
 
-					this._addEvents(name);
-					return eles;
-				}
+				self._addEvents(name);
+				return eles;
 			}
 		});
 	});

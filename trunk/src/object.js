@@ -18,7 +18,7 @@ Object.keys = function(o) {
 	if (o.call !== undefined && o.call !== Function.prototype.call && result.indexOf('call') === -1) result.push('call');
 
 	return result; 
-}
+};
 
 Array.isArray = Array.isArray || function(o) {
 	return Object.prototype.toString.call(o) === '[object Array]';
@@ -177,6 +177,8 @@ function bindFunc(func, binder) {
 
 // buildClass
 function buildClass(cls, host) {
+	host.__properties__ = {};
+
 	Object.keys(cls).forEach(function(name) {
 		if (name === 'prototype') return;
 		buildMember(cls, host, name);
@@ -196,8 +198,8 @@ function buildMember(cls, host, name) {
 
 	// prototype
 	} else if (member.__class__ === property) {
+		host.__properties__[name] = member;
 
-	// staticmethod / 属性
 	} else {
 		host[name] = member;
 	}
@@ -219,7 +221,8 @@ var Class = this.Class = function() {
 	// cls
 	var cls = function(prototyping) {
 		if (prototyping === PROTOTYPING) return this;
-		if (this.initialize) this.initialize.apply(this, arguments);
+		var value = this.initialize? this.initialize.apply(this, arguments) : null;
+		return value;
 	};
 
 	// 继承，将parent的所有成员都放到cls上
@@ -232,11 +235,7 @@ var Class = this.Class = function() {
 			// 而其他浏览器仅仅是在重新指向prototype时，类似 obj.prototype = {} 这样的写法才会出现这个情况
 			if (name === 'prototype') return;
 
-			if (typeof parent[name] === 'function') {
-				cls[name] = parent[name];
-			} else {
-				cls[name] = object.clone(parent[name]);
-			}
+			cls[name] = parent[name];
 		});
 
 		cls.__base__ = parent;
@@ -301,8 +300,12 @@ var classmethod = this.classmethod = function(func) {
 	return bindFunc(func, true);
 };
 
-var property = this.property = function(fget, fset, fdel) {
-	func.__class__ = arguments.callee;
+var property = this.property = function(fget, fset) {
+	var p = {};
+	p.__class__ = arguments.callee;
+	p.fget = fget;
+	p.fset = fset;
+	return p;
 };
 
 })();
@@ -379,7 +382,7 @@ this.Loader = new Class(function() {
 				name: prefix
 			};
 		}
-	}
+	};
 
 	/**
 	 * 加载一个script, 执行callback
@@ -714,7 +717,7 @@ this.Loader = new Class(function() {
 	this.add = function(self, name, uses, context) {
 
 		// 不允许重复添加。
-		if (_lib[name] && _lib[name].fn) return;
+		if (_lib[name] && _lib[name].fn) return null;
 
 		// uses 参数是可选的
 		if (typeof uses == 'function') {
