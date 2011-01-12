@@ -189,9 +189,14 @@ function buildMember(cls, host, name) {
 	// classmethod
 	if (typeof member === 'function' && member.im_self) {
 		cls[name] = host[name] = bindFunc(member.im_func, cls);
+
 	// 普通method
 	} else if (typeof member === 'function' && member.__self__ !== null) {
 		host[name] = bindFunc(member);
+
+	// prototype
+	} else if (member.__class__ === property) {
+
 	// staticmethod / 属性
 	} else {
 		host[name] = member;
@@ -280,6 +285,8 @@ Class.getChain = function(cls) {
  * 声明类静态方法，在new Class(callback) 的callback中调用
  */
 var staticmethod = this.staticmethod = function(func) {
+	func.__class__ = arguments.callee;
+
 	func.__self__ = null;
 	return func;
 };
@@ -288,8 +295,14 @@ var staticmethod = this.staticmethod = function(func) {
  * 声明类方法，在new Class(callback) 的callback中调用
  */
 var classmethod = this.classmethod = function(func) {
+	func.__class__ = arguments.callee;
+
 	// binder 传 true，做一个标记，在build方法中会重新bindFunc
 	return bindFunc(func, true);
+};
+
+var property = this.property = function(fget, fset, fdel) {
+	func.__class__ = arguments.callee;
 };
 
 })();
