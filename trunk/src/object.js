@@ -159,10 +159,7 @@ function getMembers(source) {
 
 // 获取父类的实例，用于 cls.prototype = new parent
 function getInstance(cls) {
-	cls.$prototyping = true;
-	var proto = new cls;
-	delete cls.$prototyping;
-	return proto;
+	return new cls(PROTOTYPING);
 }
 
 // 将binder绑定至func的第一个参数
@@ -201,6 +198,7 @@ function buildMember(cls, host, name) {
 	}
 }
 
+var PROTOTYPING = {PROTOTYPING: true};
 var ArrayMembers = getNativeMembers(Array, ["concat", "indexOf", "join", "lastIndexOf", "pop", "push", "reverse", "shift", "slice", "sort", "splice", "toString", "unshift", "valueOf", "forEach"]);
 var StringMembers = getNativeMembers(String, ["charAt", "charCodeAt", "concat", "indexOf", "lastIndexOf", "match", "replace", "search", "slice", "split", "substr", "substring", "toLowerCase", "toUpperCase", "valueOf"]);
 
@@ -214,8 +212,8 @@ var Class = this.Class = function() {
 	var parent = arguments.length > 1? arguments[0] : null;
 
 	// cls
-	var cls = function() {
-		if (cls.$prototyping) return this;
+	var cls = function(prototyping) {
+		if (prototyping === PROTOTYPING) return this;
 		if (this.initialize) this.initialize.apply(this, arguments);
 	};
 
