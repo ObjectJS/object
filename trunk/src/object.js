@@ -178,8 +178,8 @@ function bindFunc(func, binder) {
 	return wrapper;
 }
 
-// build
-function build(cls, host) {
+// buildClass
+function buildClass(cls, host) {
 	Object.keys(cls).forEach(function(name) {
 		if (name === 'prototype') return;
 		buildMember(cls, host, name);
@@ -245,7 +245,7 @@ var Class = this.Class = function() {
 		object.extend(cls, properties);
 	}
 
-	build(cls, cls.prototype);
+	buildClass(cls, cls.prototype);
 
 	return cls;
 };
@@ -256,7 +256,7 @@ var Class = this.Class = function() {
  * @param host 注射进去的对象
  */
 Class.inject = function(cls, host, args) {
-	build(cls, host);
+	buildClass(cls, host);
 
 	if (!args) args = [];
 	args = [].slice.call(args, 0);
