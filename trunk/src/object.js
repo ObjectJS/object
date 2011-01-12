@@ -242,10 +242,12 @@ var Class = this.Class = function() {
 	}
 
 	if (properties instanceof Function) {
-		properties.call(cls);
-	} else {
-		object.extend(cls, properties);
+		var p = properties;
+		properties = {};
+		p.call(properties);
 	}
+
+	object.extend(cls, properties);
 
 	buildClass(cls, cls.prototype);
 

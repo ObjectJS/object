@@ -7,18 +7,19 @@ object.add('ui', 'string, dom', function($, string, dom) {
 var Component = this.Component = new Class(function() {
 
 	this.initialize = function(self, node) {
+		self._descriptors = {};
 		self._components = []; // 建立出来的所有子component的引用
 		self._rendered = []; // render出来的新元素，会在reset时清空
 		self._events = self._getEvents(self); // 本class的所有event方法
 
 		self._node = node;
 
-		// 有可能有没有sub component的compoennt
-		if (self._componentDescriptors) {
-			Object.keys(self._componentDescriptors).forEach(function(name) {
-				self.get(name);
-			});
-		}
+		Object.keys(self.__properties__).forEach(function(name) {
+			var property = self.__properties__[name];
+			if (property.fget && property.fget.isComponent) {
+				property.fget.call(window, self);
+			}
+		});
 	};
 
 	this.get = function(self, prop) {
@@ -40,7 +41,7 @@ var Component = this.Component = new Class(function() {
 	};
 
 	this._addEvents = function(self, name) {
-		var single = self._componentDescriptors[name].single;
+		var single = self._descriptors[name].single;
 
 		self._addEventTo(name, self[name]);
 	};
@@ -62,8 +63,8 @@ var Component = this.Component = new Class(function() {
 
 	this.render = function(self, name, data) {
 		var methodName = 'render' + string.capitalize(name);
-		var single = self._componentDescriptors[name].single;
-		var type = self._componentDescriptors[name].type;
+		var single = self._descriptors[name].single;
+		var type = self._descriptors[name].type;
 		var result;
 		if (self[methodName]) {
 			result = self[methodName](data);
@@ -81,13 +82,13 @@ var Component = this.Component = new Class(function() {
 	};
 
 	/**
-	* 根据componentDescriptors的type创建一个component，这一般是在renderXXX方法中进行调用
+	* 根据descriptors的type创建一个component，这一般是在renderXXX方法中进行调用
 	* @param name
 	* @param data 模板数据
 	*/
 	this.make = function(self, name, data) {
-		var template = self._componentDescriptors[name].template;
-		var secName = self._componentDescriptors[name].secName;
+		var template = self._descriptors[name].template;
+		var secName = self._descriptors[name].secName;
 
 		if (!data) data = {};
 		var tdata = {};
@@ -101,7 +102,7 @@ var Component = this.Component = new Class(function() {
 		var ele = dom.Element.fromString(str).firstChild;
 
 		return ele;
-		//return self._componentDescriptors[name].type.create(template, data, secName);
+		//return self._descriptors[name].type.create(template, data, secName);
 	};
 
 	this.bind = function(self, name) {
@@ -123,8 +124,8 @@ var Component = this.Component = new Class(function() {
 	};
 
 	this.setTemplate = function(self, name, template, secName) {
-		self._componentDescriptors[name].template = template;
-		self._componentDescriptors[name].secName = secName;
+		self._descriptors[name].template = template;
+		self._descriptors[name].secName = secName;
 	};
 
 	/**
@@ -183,7 +184,7 @@ var Component = this.Component = new Class(function() {
 		});
 		// 所有子component reset
 		self._components.forEach(function(name) {
-			var single = self._componentDescriptors[name].single;
+			var single = self._descriptors[name].single;
 			if (single) {
 				if (self[name] && self[name].reset) self[name].reset();
 			} else {
@@ -197,16 +198,16 @@ var Component = this.Component = new Class(function() {
 	};
 
 	var define = this.define = staticmethod(function(cls, name, selector, type, single) {
-		if (!cls._componentDescriptors) cls._componentDescriptors = {}; // component描述
-		if (!type) type = Component;
 
-		cls._componentDescriptors[name] = {
-			selector: selector,
-			type: type,
-			single: single
-		};
+		var getter = function(self) {
+			if (!type) type = Component;
 
-		cls[name] = property(function(self) {
+			if (!self._descriptors[name]) self._descriptors[name] = {
+				selector: selector,
+				type: type,
+				single: single
+			};
+
 			if (single) {
 				var ele = self._node.getElement(selector);
 				if (!ele) return null;
@@ -229,7 +230,11 @@ var Component = this.Component = new Class(function() {
 				self._addEvents(name);
 				return eles;
 			}
-		});
+
+		};
+		getter.isComponent = true;
+
+		cls[name] = property(getter);
 	});
 
 	this.define1 = staticmethod(function(cls, name, selector, type) {
@@ -247,46 +252,6 @@ var Component = this.Component = new Class(function() {
 			};
 		}
 	}, this);
-
-});
-
-/**
- * Tab UI
- * @class
- * @event change
- */
-this.TabControl = new Class(Component, function() {
-
-	Component.define(this, 'tabs', 'li');
-
-	/**
-	 * @constructor
-	 */
-	this.initialize = function(self) {
-		Component.initialize(self);
-
-		self.selectedEle = null;
-
-		for (var i = 0; i < self.get('tabs').length; i++) {
-			if (dom.wrap(self.tabs[i]).classList.contains('selected')) {
-				self.selectedEle = self.tabs[i];
-				break;
-			}
-		}
-
-		self.tabs.forEach(function(ele, i) {
-			ele = dom.wrap(ele);
-
-			ele.addEvent('click', function() {
-				self.tabs.forEach(function(tab, i) {
-					tab.classList.remove('selected');
-				});
-				self.selectedEle = ele;
-				ele.classList.add('selected');
-				self.fireEvent('change', null, self);
-			});
-		});
-	};
 
 });
 
