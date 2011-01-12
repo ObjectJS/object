@@ -87,9 +87,12 @@ var wrap = this.wrap = function(node) {
 			wrapper = Window;
 		} else if (node === window.document) {
 			wrapper = Document;
-		} else {
+		} else if (node.nodeType === 1) {
 			wrapper = getWrapper(node.tagName);
+		} else {
+			return node;
 		}
+
 		// 尽早的设置_nativeWrapper，因为在wrapper的initialize中可能出现递归调用（FormElement/FormItemElement）
 		node._nativeWrapper = wrapper;
 
@@ -149,7 +152,8 @@ var getElement = this.getElement = function(selector, context) {
 	if (!context) context = document;
 
 	var ele = Sizzle(selector, context)[0];
-	return wrap(ele);
+	ele = wrap(ele);
+	return ele;
 };
 
 this.id = function(id) {
@@ -662,7 +666,9 @@ var Element = this.Element = new Class(attribute.Attribute, function() {
 		}
 
 		tmp.innerHTML = str;
-		while (tmp.firstChild) result.appendChild(wrap(tmp.firstChild));
+		while (tmp.firstChild) {
+			result.appendChild(wrap(tmp.firstChild));
+		}
 
 		if (_needGetDom) tmp.parentNode.removeChild(tmp);
 
@@ -751,14 +757,14 @@ var FormElement = this.FormElement = new Class(Element, function() {
  */
 var FormItemElement = this.FormItemElement = new Class(Element, function() {
 
-	var needBindPlaceholder = (function() {
+	var _needBindPlaceholder = (function() {
 		return !('placeholder' in document.createElement('input'));
 	})();
 
 	this.initialize = function(self) {
 		Element.initialize(self);
 
-		if (needBindPlaceholder && ['input, textarea'].indexOf(self.get('tagName'))) {
+		if (_needBindPlaceholder && ['input', 'textarea'].indexOf(self.get('tagName')) !== -1) {
 			self.bindPlaceholder(self);
 		}
 	};

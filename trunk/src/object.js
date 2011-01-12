@@ -3,7 +3,78 @@ var object = new (function(globalHost) {
 var object = this;
 
 // 扩充原型
-expand();
+Object.keys = function(o) {
+	var result = [];
+
+	for (var name in o) {
+		if (o.hasOwnProperty(name)) {
+			result.push(name);
+		}
+	}
+
+	// for IE
+	// 在IE下for in无法遍历出来修改过的call方法
+	// 为什么允许修改call方法？对于一个class来说，没有直接Class.call的应用场景，任何Class都应该是new出来的，因此可以修改这个方法
+	if (o.call !== undefined && o.call !== Function.prototype.call && result.indexOf('call') === -1) result.push('call');
+
+	return result; 
+}
+
+Array.isArray = Array.isArray || function(o) {
+	return Object.prototype.toString.call(o) === '[object Array]';
+};
+
+Array.prototype.forEach = Array.prototype.forEach || function(fn, bind) {
+	for (var i = 0; i < this.length; i++) {
+		fn.call(bind, this[i], i, this);
+	}
+};
+
+Array.prototype.indexOf = Array.prototype.indexOf || function(str){
+	for (var i = 0; i < this.length; i++) {
+		if (str == this[i]) {
+			return i;
+		}
+	}
+	return -1;
+};
+
+Array.prototype.some = Array.prototype.some || function(fn, bind) {
+	for (var i = 0, l = this.length; i < l; i++){
+		if ((i in this) && fn.call(bind, this[i], i, this)) return true;
+	}
+	return false;
+};
+
+Array.prototype.every = Array.prototype.every || function(fn, bind){
+	for (var i = 0, l = this.length; i < l; i++){
+		if ((i in this) && !fn.call(bind, this[i], i, this)) return false;
+	}
+	return true;
+};
+
+Array.prototype.map = Array.prototype.map || function (fn, bind) {
+	var results = [];
+	for (var i = 0, l = this.length; i < l; i++){
+		if (i in this) results[i] = fn.call(bind, this[i], i, this);
+	}
+	return results;
+};
+
+Array.prototype.filter = Array.prototype.filter || function(fn, bind){
+	var results = [];
+	for (var i = 0, l = this.length; i < l; i++){
+		if ((i in this) && fn.call(bind, this[i], i, this)) results.push(this[i]);
+	}
+	return results;
+};
+
+Function.prototype.bind = Function.prototype.bind || function(object) {
+	var method = this;
+	return function() {
+		method.apply(object, arguments); 
+	};
+};
 
 /**
  * 为obj增加properties中的成员
@@ -24,6 +95,115 @@ this.extend = function(obj, properties, ov) {
 	return obj;
 };
 
+this.clone = function(obj) {
+	var clone = {};
+	for (var key in obj) clone[key] = obj[key];
+	return clone;
+};
+
+// 将成员放到window上
+this.bind = function(host) {
+	object.extend(host, object);
+};
+
+
+this._loader = null;
+
+this.setGlobalUses = function(arr) {
+	if (!object._loader) object._loader = new Loader();
+	object._loader.globalUses = arr;
+};
+
+this.use = function() {
+	if (!object._loader) object._loader = new Loader();
+	object._loader.use.apply(object._loader, arguments);
+};
+
+this.execute = function() {
+	if (!object._loader) object._loader = new Loader();
+	object._loader.execute.apply(object._loader, arguments);
+};
+
+this.add = function() {
+	if (!object._loader) object._loader = new Loader();
+	object._loader.add.apply(object._loader, arguments);
+};
+
+})(window);
+
+(function() {
+
+// 获取一个native function的class形式用于继承
+function getNativeMembers(source, methodNames) {
+	var members = {};
+	for (var i = 0; i < methodNames.length; i++) {
+		members[methodNames[i]] = (function(name) {
+			return function() {
+				return source.prototype[name].apply(arguments[0], [].slice.call(arguments, 1));
+			};
+		})(methodNames[i]);
+	}
+	return members;
+};
+
+// 获得一个cls的所有成员，cls有可能是native function比如Array, String
+function getMembers(source) {
+	if (source === Array) {
+		return ArrayMembers;
+	} else if (source === String) {
+		return StringMembers;
+	} else {
+		return source;
+	}
+}
+
+// 获取父类的实例，用于 cls.prototype = new parent
+function getInstance(cls) {
+	cls.$prototyping = true;
+	var proto = new cls;
+	delete cls.$prototyping;
+	return proto;
+}
+
+// 将binder绑定至func的第一个参数
+function bindFunc(func, binder) {
+	var wrapper = function() {
+		var args = [].slice.call(arguments, 0);
+		args.unshift(arguments.callee.im_self || this);
+		return func.apply(window, args);
+	};
+	wrapper.im_func = func;
+	wrapper.im_self = binder;
+
+	return wrapper;
+}
+
+// build
+function build(cls, host) {
+	Object.keys(cls).forEach(function(name) {
+		if (name === 'prototype') return;
+		buildMember(cls, host, name);
+	});
+}
+
+function buildMember(cls, host, name) {
+	var member = cls[name];
+
+	// classmethod
+	if (typeof member === 'function' && member.im_self) {
+		cls[name] = host[name] = bindFunc(member.im_func, cls);
+	// 普通method
+	} else if (typeof member === 'function' && member.__self__ !== null) {
+		host[name] = bindFunc(member);
+	// staticmethod / 属性
+	} else {
+		host[name] = member;
+	}
+}
+
+var ArrayMembers = getNativeMembers(Array, ["concat", "indexOf", "join", "lastIndexOf", "pop", "push", "reverse", "shift", "slice", "sort", "splice", "toString", "unshift", "valueOf", "forEach"]);
+var StringMembers = getNativeMembers(String, ["charAt", "charCodeAt", "concat", "indexOf", "lastIndexOf", "match", "replace", "search", "slice", "split", "substr", "substring", "toLowerCase", "toUpperCase", "valueOf"]);
+
 // 类
 var Class = this.Class = function() {
 	if (arguments.length < 1) throw new Error('bad arguments');
@@ -32,17 +212,16 @@ var Class = this.Class = function() {
 	var properties = arguments[arguments.length - 1];
 	// 父类
 	var parent = arguments.length > 1? arguments[0] : null;
-	// 描述
-	var mutators = arguments.length > 1? (parent? (arguments.length !== 2? arguments[1] : null) : arguments[0]) : null;
 
 	// cls
 	var cls = function() {
+		if (cls.$prototyping) return this;
 		if (this.initialize) this.initialize.apply(this, arguments);
 	};
 
 	// 继承，将parent的所有成员都放到cls上
 	if (parent) {
-		parent = Class.getMembers(parent);
+		parent = getMembers(parent);
 
 		Object.keys(parent).forEach(function(name) {
 			// 在Safari 5.0.2(7533.18.5)中，在这里用for in遍历parent会将prototype属性遍历出来，导致原型被指向一个错误的对象，后面就错的一塌糊涂了
@@ -50,32 +229,15 @@ var Class = this.Class = function() {
 			// 而其他浏览器仅仅是在重新指向prototype时，类似 obj.prototype = {} 这样的写法才会出现这个情况
 			if (name === 'prototype') return;
 
-			if (false && typeof parent[name] === 'function') {
-				cls[name] = function() {
-					return parent[name].apply(this, arguments);
-				};
-				cls[name].im_func = parent[name].im_func;
-				cls[name].im_self = parent[name].im_self;
-			} else {
+			if (typeof parent[name] === 'function') {
 				cls[name] = parent[name];
+			} else {
+				cls[name] = object.clone(parent[name]);
 			}
 		});
 
 		cls.__base__ = parent;
 	}
-
-	if (mutators) {
-		Object.keys(mutators).forEach(function(name) {
-			if (Class.Mutators[name]) Class.Mutators[name].call(cls, mutators[name]);
-		});
-	}
-
-	//if (properties instanceof Function) {
-		//var p = properties;
-		//properties = {};
-		//p.call(properties);
-	//}
-	//object.extend(cls, properties);
 
 	if (properties instanceof Function) {
 		properties.call(cls);
@@ -83,51 +245,9 @@ var Class = this.Class = function() {
 		object.extend(cls, properties);
 	}
 
-	Class.build(cls, cls.prototype);
+	build(cls, cls.prototype);
 
 	return cls;
-};
-
-Class.Mutators = {};
-Class.Mutators.mixins = function(mixins) {
-	mixins.forEach(function(mixin) {
-		Object.keys(mixin).forEach(function(name) {
-			if (typeof mixin[name] === 'function') {
-				this[name] = mixin[name];
-			}
-		}, this);
-	}, this);
-};
-
-// 将binder绑定至func的第一个参数
-Class.bindFunc = function(func, binder) {
-	var wrapper = function() {
-		var args = [].slice.call(arguments, 0);
-		args.unshift(arguments.callee.im_self || this);
-		return func.apply(globalHost, args);
-	};
-	wrapper.im_func = func;
-	wrapper.im_self = binder;
-
-	return wrapper;
-};
-
-Class.build = function(cls, host) {
-	Object.keys(cls).forEach(function(name) {
-		if (name === 'prototype') return;
-		var member = cls[name];
-
-		// classmethod
-		if (typeof member === 'function' && member.im_self) {
-			cls[name] = host[name] = Class.bindFunc(member.im_func, cls);
-		// 普通method
-		} else if (typeof member === 'function' && member.__self__ !== null) {
-			host[name] = Class.bindFunc(member);
-		// staticmethod / 属性
-		} else {
-			host[name] = member;
-		}
-	});
 };
 
 /**
@@ -136,38 +256,19 @@ Class.build = function(cls, host) {
  * @param host 注射进去的对象
  */
 Class.inject = function(cls, host, args) {
-	Class.build(cls, host);
+	build(cls, host);
 
 	if (!args) args = [];
 	args = [].slice.call(args, 0);
 	args.unshift(host);
-	var value = (cls.initialize) ? cls.initialize.apply(globalHost, args) : host;
+	var value = (cls.initialize) ? cls.initialize.apply(window, args) : host;
 
 	return value;
 };
 
-// 获得一个cls的所有成员，cls有可能是native function比如Array, String
-Class.getMembers = function(source) {
-	if (source === Array || source === String) {
-		var methodNames = [];
-		if (source === Array) methodNames = ["concat", "indexOf", "join", "lastIndexOf", "pop", "push", "reverse", "shift", "slice", "sort", "splice", "toString", "unshift", "valueOf", "forEach"];
-		if (source === String) methodNames = ["charAt", "charCodeAt", "concat", "indexOf", "lastIndexOf", "match", "replace", "search", "slice", "split", "substr", "substring", "toLowerCase", "toUpperCase", "valueOf"];
-		var members = {};
-		for (var i = 0; i < methodNames.length; i++) {
-			members[methodNames[i]] = (function(name) {
-				return function() {
-					return source.prototype[name].apply(arguments[0], [].slice.call(arguments, 1));
-				};
-			})(methodNames[i]);
-		}
-		return members;
-
-	} else {
-		return source;
-	}
-};
-
-// 获取一个class的继承链
+/**
+ * 获取一个class的继承链
+ */
 Class.getChain = function(cls) {
 	var result = [cls];
 	while (cls.__base__) {
@@ -177,66 +278,25 @@ Class.getChain = function(cls) {
 	return result;
 };
 
-// 声明类静态方法，在new Class(callback) 的callback中调用
+/**
+ * 声明类静态方法，在new Class(callback) 的callback中调用
+ */
 var staticmethod = this.staticmethod = function(func) {
 	func.__self__ = null;
 	return func;
 };
 
-// 声明类方法，在new Class(callback) 的callback中调用
+/**
+ * 声明类方法，在new Class(callback) 的callback中调用
+ */
 var classmethod = this.classmethod = function(func) {
-	// binder 传 true，做一个标记，在Class.build方法中会重新bindFunc
-	return Class.bindFunc(func, true);
+	// binder 传 true，做一个标记，在build方法中会重新bindFunc
+	return bindFunc(func, true);
 };
 
-// 将成员放到window上
-this.bind = function(host) {
-	object.extend(host, object);
-};
+})();
 
-// 事件
-this.Events = new Class({
-
-	initialize : function(self) {
-		self._eventListeners = {};
-	},
-
-	addEvent : function(self, type, func) {
-		var funcs = self._eventListeners;
-		if (!funcs[type]) funcs[type] = [];
-		// 不允许重复添加同一个事件
-		else if (funcs[type].indexOf(func) != -1) return self;
-		funcs[type].push(func);
-		return null;
-	},
-
-	removeEvent : function(self, type, func) {
-		var funcs = self._eventListeners[type];
-		if (funcs) {
-			for (var i = funcs.length - 1; i >= 0; i--) {
-				if (funcs[i] === func) {
-					funcs.splice(i, 1);
-					break;
-				}
-			}
-		}
-		return self;
-	},
-
-	fireEvent : function(self, type) {
-		if (!self._eventListeners[type]) return;
-
-		var funcs = self._eventListeners[type];
-		var args = Array.prototype.slice.call(arguments, 0);
-		args.shift();
-		args.shift();
-		for (var i = 0, j = funcs.length; i < j; i++) {
-			if (funcs[i]) {
-				funcs[i].apply(self, args);
-			}
-		}
-	}
-});
+(function() {
 
 /**
  * object的包管理器
@@ -272,6 +332,9 @@ this.Loader = new Class(function() {
 		self.anonymousModuleCount = 0;
 
 		_lib = self.lib;
+
+		self.add('sys', function($) {
+		});
 	};
 
 	/**
@@ -703,113 +766,55 @@ this.Loader = new Class(function() {
 
 });
 
+})();
 
-this._loader = null;
+(function() {
 
-this.setGlobalUses = function(arr) {
-	if (!object._loader) object._loader = new object.Loader();
-	object._loader.globalUses = arr;
-};
+// 事件
+this.Events = new Class({
 
-this.use = function() {
-	if (!object._loader) object._loader = new object.Loader();
-	object._loader.use.apply(object._loader, arguments);
-};
+	initialize : function(self) {
+		self._eventListeners = {};
+	},
 
-this.execute = function() {
-	if (!object._loader) object._loader = new object.Loader();
-	object._loader.execute.apply(object._loader, arguments);
-};
+	addEvent : function(self, type, func) {
+		var funcs = self._eventListeners;
+		if (!funcs[type]) funcs[type] = [];
+		// 不允许重复添加同一个事件
+		else if (funcs[type].indexOf(func) != -1) return self;
+		funcs[type].push(func);
+		return null;
+	},
 
-this.add = function() {
-	if (!object._loader) object._loader = new object.Loader();
-	object._loader.add.apply(object._loader, arguments);
-};
-
-// Expand
-function expand() {
-
-	Object.keys = function(o) {
-		var result = [];
-
-		for (var name in o) {
-			if (o.hasOwnProperty(name)) {
-				result.push(name);
+	removeEvent : function(self, type, func) {
+		var funcs = self._eventListeners[type];
+		if (funcs) {
+			for (var i = funcs.length - 1; i >= 0; i--) {
+				if (funcs[i] === func) {
+					funcs.splice(i, 1);
+					break;
+				}
 			}
 		}
+		return self;
+	},
 
-		// for IE
-		// 在IE下for in无法遍历出来修改过的call方法
-		// 为什么允许修改call方法？对于一个class来说，没有直接Class.call的应用场景，任何Class都应该是new出来的，因此可以修改这个方法
-		if (o.call !== undefined && o.call !== Function.prototype.call && result.indexOf('call') === -1) result.push('call');
+	fireEvent : function(self, type) {
+		if (!self._eventListeners[type]) return;
 
-		return result; 
+		var funcs = self._eventListeners[type];
+		var args = Array.prototype.slice.call(arguments, 0);
+		args.shift();
+		args.shift();
+		for (var i = 0, j = funcs.length; i < j; i++) {
+			if (funcs[i]) {
+				funcs[i].apply(self, args);
+			}
+		}
 	}
+});
 
-	Array.isArray = Array.isArray || function(o) {
-		return Object.prototype.toString.call(o) === '[object Array]';
-	};
-
-	Array.prototype.forEach = Array.prototype.forEach || function(fn, bind) {
-		for (var i = 0; i < this.length; i++) {
-			fn.call(bind, this[i], i, this);
-		}
-	};
-
-	Array.prototype.indexOf = Array.prototype.indexOf || function(str){
-		for (var i = 0; i < this.length; i++) {
-			if (str == this[i]) {
-				return i;
-			}
-		}
-		return -1;
-	};
-
-	Array.prototype.some = Array.prototype.some || function(fn, bind) {
-		for (var i = 0, l = this.length; i < l; i++){
-			if ((i in this) && fn.call(bind, this[i], i, this)) return true;
-		}
-		return false;
-	};
-
-	Array.prototype.every = Array.prototype.every || function(fn, bind){
-		for (var i = 0, l = this.length; i < l; i++){
-			if ((i in this) && !fn.call(bind, this[i], i, this)) return false;
-		}
-		return true;
-	};
-
-	Array.prototype.map = Array.prototype.map || function (fn, bind) {
-		var results = [];
-		for (var i = 0, l = this.length; i < l; i++){
-			if (i in this) results[i] = fn.call(bind, this[i], i, this);
-		}
-		return results;
-	};
-
-	Array.prototype.filter = Array.prototype.filter || function(fn, bind){
-		var results = [];
-		for (var i = 0, l = this.length; i < l; i++){
-			if ((i in this) && fn.call(bind, this[i], i, this)) results.push(this[i]);
-		}
-		return results;
-	};
-
-	Function.prototype.bind = Function.prototype.bind || function(object) {
-		var method = this;
-		return function() {
-			method.apply(object, arguments); 
-		};
-	};
-
-}
-
-
-
-})(window);
+})();
 
 object.bind(window);
-
-object.add('sys', function($) {
-});
 
