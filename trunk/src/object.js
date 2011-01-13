@@ -147,19 +147,6 @@ function getInstance(cls) {
 	return new cls(PROTOTYPING);
 }
 
-// 将binder绑定至func的第一个参数
-function bindFunc(func, binder) {
-	var wrapper = function() {
-		var args = [].slice.call(arguments, 0);
-		args.unshift(arguments.callee.im_self || this);
-		return func.apply(window, args);
-	};
-	wrapper.im_func = func;
-	wrapper.im_self = binder;
-
-	return wrapper;
-}
-
 // property getter
 var getter = function(self, prop) {
 	var property = self.__properties__[prop];
