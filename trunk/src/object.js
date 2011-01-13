@@ -244,12 +244,11 @@ var Class = this.Class = function() {
 		} else if (member.__class__ === classmethod) {
 			prototype[name] = function() {
 				var args = [].slice.call(arguments, 0);
-				return this.__class__[name].apply(this.__class__, args);
+				args.unshift(this.__class__);
+				return cls[name].apply(window, args);
 			};
 			cls[name] = function() {
-				var args = [].slice.call(arguments, 0);
-				args.unshift(this);
-				return member.im_func.apply(window, args);
+				return member.im_func.apply(window, arguments);
 			};
 
 		} else if (member.__class__ === property) {
@@ -262,7 +261,7 @@ var Class = this.Class = function() {
 				return cls[name].apply(window, args);
 			};
 			cls[name] = function() {
-				return member.apply(this, arguments);
+				return member.apply(window, arguments);
 			};
 
 		} else {
