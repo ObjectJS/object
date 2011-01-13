@@ -581,6 +581,10 @@ var Element = this.Element = new Class(function() {
 		self.classList.toggle(name);
 	};
 
+	this.hasClass = function(self, name) {
+		return self.classList.contains(name);
+	};
+
 	this.setStyle = function(self, property, value) {
 		switch (property){
 			case 'opacity':
