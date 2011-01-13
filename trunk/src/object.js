@@ -523,12 +523,7 @@ this.Loader = new Class(function() {
 		// 主递归函数
 		function loadNext(i) {
 
-			/*
-			 * 从后向前load，这样就可以不用传入一些用于预处理的module的引用变量了，比如：
-			 * object.add('test', 'dom, ui, preprocessing', function($, dom, ui) {})
-			 * 其中，preprocessing为必须引入的module用于预处理，但是test包并不需要这个module的引用，就可以不用在回调function中写引用变量了
-			 */
-			var use = pkg.uses[pkg.uses.length - 1 - i];
+			var use = pkg.uses[i];
 
 			self.getModule(use.name, modules, function(useModule) {
 				var names, root, member;
@@ -536,7 +531,7 @@ this.Loader = new Class(function() {
 				// 有别名
 				if (use.as) {
 					runtime[use.as] = useModule;
-					if (args.indexOf(useModule) == -1) args.unshift(useModule);
+					if (args.indexOf(useModule) == -1) args.push(useModule);
 
 				// 是一个from import
 				} else if (use.uses) {
@@ -556,7 +551,7 @@ this.Loader = new Class(function() {
 					names = use.name.split('.');
 					root = runtime[names[0]] = modules[names[0]];
 
-					if (args.indexOf(root) == -1) args.unshift(root);
+					if (args.indexOf(root) == -1) args.push(root);
 				}
 
 				if (i < pkg.uses.length - 1) {
