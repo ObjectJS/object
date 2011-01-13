@@ -4,6 +4,11 @@ var object = this;
 
 // 扩充原型
 Object.keys = function(o) {
+	// 在Safari 5.0.2(7533.18.5)中，在这里用for in遍历parent会将prototype属性遍历出来，导致原型被指向一个错误的对象
+	// 经过试验，在Safari下，仅仅通过 obj.prototype.xxx = xxx 这样的方式就会导致 prototype 变成自定义属性，会被 for in 出来
+	// 而其他浏览器仅仅是在重新指向prototype时，类似 obj.prototype = {} 这样的写法才会出现这个情况
+	// 因此，在使用时一定要注意
+
 	var result = [];
 
 	for (var name in o) {
@@ -91,6 +96,9 @@ this.extend = function(obj, properties, ov) {
 			obj[property] = properties[property];
 		}
 	}
+	if (properties && (obj.call === Function.prototype.call && properties.call !== Function.prototype.call)) {
+		obj.call = properties.call;
+	}
 
 	return obj;
 };
@@ -133,32 +141,9 @@ this.add = function() {
 
 (function() {
 
-// 获取一个native function的class形式用于继承
-function getNativeMembers(source, methodNames) {
-	var members = {};
-	for (var i = 0; i < methodNames.length; i++) {
-		members[methodNames[i]] = (function(name) {
-			return function() {
-				return source.prototype[name].apply(arguments[0], [].slice.call(arguments, 1));
-			};
-		})(methodNames[i]);
-	}
-	return members;
-};
-
-// 获得一个cls的所有成员，cls有可能是native function比如Array, String
-function getMembers(source) {
-	if (source === Array) {
-		return ArrayMembers;
-	} else if (source === String) {
-		return StringMembers;
-	} else {
-		return source;
-	}
-}
-
 // 获取父类的实例，用于 cls.prototype = new parent
 function getInstance(cls) {
+	if (cls === Array || cls === String) return new cls;
 	return new cls(PROTOTYPING);
 }
 
@@ -175,39 +160,16 @@ function bindFunc(func, binder) {
 	return wrapper;
 }
 
-// buildClass
-function buildClass(cls, host) {
-	host.__properties__ = {};
-
-	Object.keys(cls).forEach(function(name) {
-		if (name === 'prototype') return;
-		buildMember(cls, host, name);
-	});
-}
-
-function buildMember(cls, host, name) {
-	var member = cls[name];
-
-	// classmethod
-	if (typeof member === 'function' && member.im_self) {
-		cls[name] = host[name] = bindFunc(member.im_func, cls);
-
-	// 普通method
-	} else if (typeof member === 'function' && member.__self__ !== null) {
-		host[name] = bindFunc(member);
-
-	// prototype
-	} else if (member.__class__ === property) {
-		host.__properties__[name] = member;
-
-	} else {
-		host[name] = member;
-	}
-}
-
 var PROTOTYPING = {PROTOTYPING: true};
-var ArrayMembers = getNativeMembers(Array, ["concat", "indexOf", "join", "lastIndexOf", "pop", "push", "reverse", "shift", "slice", "sort", "splice", "toString", "unshift", "valueOf", "forEach"]);
-var StringMembers = getNativeMembers(String, ["charAt", "charCodeAt", "concat", "indexOf", "lastIndexOf", "match", "replace", "search", "slice", "split", "substr", "substring", "toLowerCase", "toUpperCase", "valueOf"]);
+
+// IE不可以通过prototype = new Array的方式使function获得数组功能。
+var _nativeExtendable = (function() {
+	var a = function() {};
+	a.prototype = new Array;
+	var b = new a;
+	b.push(null);
+	return !!b.length;
+})();
 
 // 类
 var Class = this.Class = function() {
@@ -215,41 +177,75 @@ var Class = this.Class = function() {
 
 	// 构造器
 	var properties = arguments[arguments.length - 1];
+	if (properties instanceof Function) {
+		var p = properties;
+		properties = {};
+		p.call(properties);
+	}
 	// 父类
 	var parent = arguments.length > 1? arguments[0] : null;
 
 	// cls
 	var cls = function(prototyping) {
 		if (prototyping === PROTOTYPING) return this;
+		this.__class__ = arguments.callee;
 		var value = this.initialize? this.initialize.apply(this, arguments) : null;
 		return value;
 	};
 
 	// 继承，将parent的所有成员都放到cls上
 	if (parent) {
-		parent = getMembers(parent);
+		if (!_nativeExtendable) {
+			if (parent === Array) {
+				parent = ArrayClass;
+			} else if (parent === String) {
+				parent = StringClass;
+			}
+		}
 
-		Object.keys(parent).forEach(function(name) {
-			// 在Safari 5.0.2(7533.18.5)中，在这里用for in遍历parent会将prototype属性遍历出来，导致原型被指向一个错误的对象，后面就错的一塌糊涂了
-			// 经过试验，在Safari下，仅仅通过 obj.prototype.xxx = xxx 这样的方式就会导致 prototype 变成自定义属性，会被 for in 出来
-			// 而其他浏览器仅仅是在重新指向prototype时，类似 obj.prototype = {} 这样的写法才会出现这个情况
-			if (name === 'prototype') return;
-
-			cls[name] = parent[name];
-		});
-
+		cls.prototype = getInstance(parent);
 		cls.__base__ = parent;
 	}
+	var prototype = cls.prototype;
+	// 有可能已经继承了parent的__properties__了
+	var parentProperties = prototype.__properties__ || {};
+	prototype.__properties__ = object.extend({}, parentProperties);
 
-	if (properties instanceof Function) {
-		var p = properties;
-		properties = {};
-		p.call(properties);
-	}
+	Object.keys(properties).forEach(function(name) {
+		var member = properties[name];
 
-	object.extend(cls, properties);
+		if (member.__class__ === staticmethod) {
+			cls[name] = prototype[name] = member.im_func;
 
-	buildClass(cls, cls.prototype);
+		} else if (member.__class__ === classmethod) {
+			prototype[name] = function() {
+				var args = [].slice.call(arguments, 0);
+				return this.__class__[name].apply(this.__class__, args);
+			};
+			cls[name] = function() {
+				var args = [].slice.call(arguments, 0);
+				args.unshift(this);
+				return member.im_func.apply(window, args);
+			};
+
+		} else if (member.__class__ === property) {
+			prototype.__properties__[name] = member;
+			
+		} else if (typeof member === 'function') {
+			prototype[name] = function() {
+				var args = [].slice.call(arguments, 0);
+				args.unshift(this);
+				return this.__class__[name].apply(window, args);
+			};
+			cls[name] = function() {
+				return member.apply(this, arguments);
+			};
+
+		} else {
+			cls[name] = prototype[name] = member;
+		}
+	});
+	object.extend(cls, parent, false);
 
 	return cls;
 };
@@ -258,16 +254,16 @@ var Class = this.Class = function() {
  * 将host注射进class，使其self指向host
  * @param cls 被注射的class
  * @param host 注射进去的对象
+ * @param args 构造的参数
  */
 Class.inject = function(cls, host, args) {
-	buildClass(cls, host);
-
 	if (!args) args = [];
-	args = [].slice.call(args, 0);
+	host.__class__ = cls;
+	host.__properties__ = cls.prototype.__properties__;
+	var p = getInstance(cls);
+	object.extend(host, p);
 	args.unshift(host);
-	var value = (cls.initialize) ? cls.initialize.apply(window, args) : host;
-
-	return value;
+	cls.initialize.apply(window, args);
 };
 
 /**
@@ -282,24 +278,21 @@ Class.getChain = function(cls) {
 	return result;
 };
 
-/**
- * 声明类静态方法，在new Class(callback) 的callback中调用
- */
 var staticmethod = this.staticmethod = function(func) {
-	func.__class__ = arguments.callee;
-
-	func.__self__ = null;
-	return func;
+	var wrapper = function() {
+		return func.apply(null, arguments);
+	};
+	wrapper.__class__ = arguments.callee;
+	wrapper.im_func = func;
+	return wrapper;
 };
 
-/**
- * 声明类方法，在new Class(callback) 的callback中调用
- */
 var classmethod = this.classmethod = function(func) {
-	func.__class__ = arguments.callee;
-
-	// binder 传 true，做一个标记，在build方法中会重新bindFunc
-	return bindFunc(func, true);
+	var wrapper = function() {
+	};
+	wrapper.__class__ = arguments.callee;
+	wrapper.im_func = func;
+	return wrapper;
 };
 
 var property = this.property = function(fget, fset) {
@@ -309,6 +302,24 @@ var property = this.property = function(fget, fset) {
 	p.fset = fset;
 	return p;
 };
+
+// 获取一个native function的class形式用于继承
+var createNativeClass = function(source, methodNames) {
+	var cls = new Class(function() {
+		for (var i = 0; i < methodNames.length; i++) {
+			this[methodNames[i]] = (function(name) {
+				return function() {
+					return source.prototype[name].apply(arguments[0], [].slice.call(arguments, 1));
+				};
+			})(methodNames[i]);
+		}
+	});
+	return cls;
+};
+
+var ArrayClass = createNativeClass(Array, ["concat", "indexOf", "join", "lastIndexOf", "pop", "push", "reverse", "shift", "slice", "sort", "splice", "toString", "unshift", "valueOf", "forEach"]);
+ArrayClass.prototype.length = 0;
+var StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "indexOf", "lastIndexOf", "match", "replace", "search", "slice", "split", "substr", "substring", "toLowerCase", "toUpperCase", "valueOf"]);
 
 })();
 

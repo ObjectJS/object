@@ -646,7 +646,7 @@ var Element = this.Element = new Class(function() {
 	 * 将IE中的window.event包装一下
 	 * @staticmethod
 	 */
-	this.wrapEvent = staticmethod(function(e, a) {
+	this.wrapEvent = staticmethod(function(e) {
 
 		e.target = e.srcElement;
 
@@ -878,7 +878,7 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 		var validity = {
 			valueMissing: self.getAttribute('required') && !value? true : false,
 			typeMismatch: (function(type) {
-				if (type == 'url') return !(/^(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i).test(value);
+				if (type == 'url') return !(/^\s*(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i).test(value);
 				if (type == 'tel') return !(/[^\r\n]/i).test(value);
 				if (type == 'email') return !(/^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/i).test(value);
 				return false;
@@ -987,7 +987,6 @@ var Elements = this.Elements = new Class(Array, function() {
 	 * @param wrapper 这批节点的共有类型，默认为Element
 	 */
 	this.initialize  = function(self, elements, wrapper) {
-		self.length = 0;
 		if (!wrapper) wrapper = Element;
 
 		Object.keys(wrapper).forEach(function(name) {

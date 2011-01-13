@@ -197,16 +197,18 @@ var Component = this.Component = new Class(function() {
 		});
 	};
 
-	var define = this.define = staticmethod(function(cls, name, selector, type, single) {
+	var define = function(cls, name, selector, type, single) {
 
 		var getter = function(self) {
 			if (!type) type = Component;
 
-			if (!self._descriptors[name]) self._descriptors[name] = {
-				selector: selector,
-				type: type,
-				single: single
-			};
+			if (!self._descriptors[name]) {
+				self._descriptors[name] = {
+					selector: selector,
+					type: type,
+					single: single
+				};
+			}
 
 			if (single) {
 				var ele = self._node.getElement(selector);
@@ -235,7 +237,9 @@ var Component = this.Component = new Class(function() {
 		getter.isComponent = true;
 
 		cls[name] = property(getter);
-	});
+	};
+
+	this.define = staticmethod(define);
 
 	this.define1 = staticmethod(function(cls, name, selector, type) {
 		define(cls, name, selector, type, true);
