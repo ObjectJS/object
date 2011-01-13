@@ -115,7 +115,7 @@ var Component = this.Component = new Class(dom.Element, function() {
 		if (ele._wrapper) {
 			if (ele._wrapper === cls) return ele; // 重复包装相同类
 
-			var wrapperBases = Classs.getChain(ele._wrapper);
+			var wrapperBases = Class.getChain(ele._wrapper);
 
 			// 已经包装过子类了(包了TabControl再包装Component)，无需包装
 			if (wrapperBases.indexOf(cls) !== -1) {
