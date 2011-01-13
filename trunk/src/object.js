@@ -160,6 +160,26 @@ function bindFunc(func, binder) {
 	return wrapper;
 }
 
+// property getter
+var getter = function(self, prop) {
+	var property = self.__properties__[prop];
+	if (property && property.fget) {
+		return property.fget.call(window, self);
+	} else {
+		throw 'get not definedProperty ' + prop;
+	}
+};
+
+// property setter
+var setter = function(self, prop, value) {
+	var property = self.__properties__[prop];
+	if (property && property.fset) {
+		property.fset.call(window, self, value);
+	} else {
+		throw 'set not definedProperty ' + prop;
+	}
+};
+
 var PROTOTYPING = {PROTOTYPING: true};
 
 // IE不可以通过prototype = new Array的方式使function获得数组功能。
@@ -176,12 +196,15 @@ var Class = this.Class = function() {
 	if (arguments.length < 1) throw new Error('bad arguments');
 
 	// 构造器
-	var properties = arguments[arguments.length - 1];
-	if (properties instanceof Function) {
-		var p = properties;
-		properties = {};
-		p.call(properties);
+	var members = arguments[arguments.length - 1];
+	if (members instanceof Function) {
+		var p = members;
+		members = {};
+		p.call(members);
 	}
+	members.get = getter;
+	members.set = setter;
+
 	// 父类
 	var parent = arguments.length > 1? arguments[0] : null;
 
@@ -193,7 +216,7 @@ var Class = this.Class = function() {
 		return value;
 	};
 
-	// 继承，将parent的所有成员都放到cls上
+	// 继承
 	if (parent) {
 		if (!_nativeExtendable) {
 			if (parent === Array) {
@@ -211,11 +234,12 @@ var Class = this.Class = function() {
 	var parentProperties = prototype.__properties__ || {};
 	prototype.__properties__ = object.extend({}, parentProperties);
 
-	Object.keys(properties).forEach(function(name) {
-		var member = properties[name];
+	Object.keys(members).forEach(function(name) {
+		var member = members[name];
 
 		if (member.__class__ === staticmethod) {
-			cls[name] = prototype[name] = member.im_func;
+			prototype[name] = member.im_func;
+			cls[name] = member.im_func;
 
 		} else if (member.__class__ === classmethod) {
 			prototype[name] = function() {
@@ -235,7 +259,7 @@ var Class = this.Class = function() {
 			prototype[name] = function() {
 				var args = [].slice.call(arguments, 0);
 				args.unshift(this);
-				return this.__class__[name].apply(window, args);
+				return cls[name].apply(window, args);
 			};
 			cls[name] = function() {
 				return member.apply(this, arguments);
