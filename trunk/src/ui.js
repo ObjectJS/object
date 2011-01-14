@@ -196,23 +196,16 @@ var Component = this.Component = new Class(function() {
 				var ele = self._node.getElement(selector);
 				if (!ele) return null;
 				self['_' + name] = ele;
-				var component = new type(ele, self);
-				self[name] = component;
-
+				self[name] = new type(ele, self);
 				self._addEvents(name);
-				return component;
+				return self[name];
 			} else {
 				var eles = self._node.getElements(selector);
 				if (!eles) return null;
 				self['_' + name] = eles;
-				eles.forEach(function(ele, i) {
-					eles[i] = new type(ele, self);
-				});
-				eles._node = eles;
-				self[name] = eles;
-
+				self[name] = new Components(eles, type);
 				self._addEvents(name);
-				return eles;
+				return self[name];
 			}
 
 		};
@@ -234,10 +227,55 @@ var Component = this.Component = new Class(function() {
 			this[name] = function(self) {
 				var args = [].slice.call(arguments, 0);
 				args[0] = self._node;
-				return dom.Element[name].apply(null, args);
+				return dom.Element[name].apply(dom.Element, args);
 			};
 		}
 	}, this);
+
+});
+
+var Components = this.Components = new Class(Array, function() {
+
+	/**
+	 * @constructor
+	 * @param elements wrapped dom elements
+	 * @param wrapper 这批节点的共有Component类型，默认为Component
+	 */
+	this.initialize  = function(self, elements, wrapper) {
+		if (!wrapper) wrapper = Component;
+
+		self._node = elements;
+
+		Object.keys(wrapper).forEach(function(name) {
+			self[name] = function() {
+				var element;
+				for (var i = 0; i < elements.length; i++) {
+					element = elements[i];
+					if (typeof element[name] == 'function') {
+						element[name].apply(elements[i], [].slice.call(arguments, 0));
+					}
+				}
+			};
+		});
+
+		self.set = function(key, value) {
+			for (var i = 0; i < elements.length; i++) {
+				elements[i].set(key, value);
+			}
+		};
+
+		self.get = function(key) {
+			var result = [];
+			for (var i = 0; i < elements.length; i++) {
+				result.push(elements[i].get(key));
+			}
+			return result;
+		}
+
+		for (var i = 0; i < elements.length; i++) {
+			self.push(new wrapper(elements[i]));
+		}
+	};
 
 });
 

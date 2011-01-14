@@ -148,22 +148,92 @@ function getInstance(cls) {
 }
 
 // property getter
-var getter = function(self, prop) {
-	var property = self.__properties__[prop];
+var getter = function(prop) {
+	var property = this.__properties__[prop];
 	if (property && property.fget) {
-		return property.fget.call(window, self);
+		return property.fget.call(null, this);
 	} else {
 		throw 'get not definedProperty ' + prop;
 	}
 };
 
 // property setter
-var setter = function(self, prop, value) {
-	var property = self.__properties__[prop];
+var setter = function(prop, value) {
+	var property = this.__properties__[prop];
 	if (property && property.fset) {
-		property.fset.call(window, self, value);
+		property.fset.call(null, this, value);
 	} else {
 		throw 'set not definedProperty ' + prop;
+	}
+};
+
+// 仿照 mootools 的overloadSetter，返回一个 key/value 这种形式的function参数的包装，使其支持{key1: value1, key2: value2} 这种形式
+var enumerables = true;
+for (var i in {toString: 1}) enumerables = null;
+if (enumerables) enumerables = ['hasOwnProperty', 'valueOf', 'isPrototypeOf', 'propertyIsEnumerable', 'toLocaleString', 'toString', 'constructor'];
+var overloadSetter = function(func, usePlural) {
+	return function(a, b) {
+		if (a == null) return this;
+		if (usePlural || typeof a != 'string'){
+			for (var k in a) func.call(this, k, a[k]);
+			if (enumerables) for (var i = enumerables.length; i--;){
+				k = enumerables[i];
+				if (a.hasOwnProperty(k)) func.call(this, k, a[k]);
+			}
+		} else {
+			func.call(this, a, b);
+		}
+		return this;
+	};
+};
+
+var getMethodCaller = function(name) {
+	return function(self) {
+		var proto = this.prototype[name];
+		if (proto.instancemethod) {
+			return this.prototype[name].apply(self, [].slice.call(arguments, 1));
+
+		} else if (proto.staticmethod) {
+			return this.prototype[name].apply(null, arguments);
+
+		} else if (proto.classmethod) {
+			return this.prototype[name].apply({
+				__class__: this
+			}, arguments);
+
+		}
+	}
+}
+
+var buildProperty = function(prototype, name, member) {
+
+	if (member.__class__ === staticmethod) {
+		prototype[name] = function() {
+			return member.im_func.apply(null, arguments);
+		};
+		prototype[name].staticmethod = 1;
+
+	} else if (member.__class__ === classmethod) {
+		prototype[name] = function() {
+			var args = [].slice.call(arguments, 0);
+			args.unshift(this.__class__);
+			return member.im_func.apply(null, args);
+		};
+		prototype[name].classmethod = 1;
+
+	} else if (member.__class__ === property) {
+		prototype.__properties__[name] = member;
+		
+	} else if (typeof member === 'function') {
+		prototype[name] = function() {
+			var args = [].slice.call(arguments, 0);
+			args.unshift(this);
+			return member.apply(null, args);
+		};
+		prototype[name].instancemethod = 1;
+
+	} else {
+		prototype[name] = member;
 	}
 };
 
@@ -185,12 +255,10 @@ var Class = this.Class = function() {
 	// 构造器
 	var members = arguments[arguments.length - 1];
 	if (members instanceof Function) {
-		var p = members;
+		var f = members;
 		members = {};
-		p.call(members);
+		f.call(members);
 	}
-	members.get = getter;
-	members.set = setter;
 
 	// 父类
 	var parent = arguments.length > 1? arguments[0] : null;
@@ -215,49 +283,52 @@ var Class = this.Class = function() {
 
 		cls.prototype = getInstance(parent);
 		cls.__base__ = parent;
+		if (cls.__subs__) parent.__subs__.push(cls);
+	} else {
+		cls.__subs__ = [];
 	}
+
 	var prototype = cls.prototype;
 	// 有可能已经继承了parent的__properties__了
 	var parentProperties = prototype.__properties__ || {};
 	prototype.__properties__ = object.extend({}, parentProperties);
 
 	Object.keys(members).forEach(function(name) {
+
 		var member = members[name];
+		buildProperty(cls.prototype, name, member);
 
-		if (member.__class__ === staticmethod) {
-			prototype[name] = member.im_func;
-			cls[name] = member.im_func;
-
-		} else if (member.__class__ === classmethod) {
-			prototype[name] = function() {
-				return cls[name].apply(this.__class__, arguments);
-			};
-			cls[name] = function() {
-				var args = [].slice.call(arguments, 0);
-				args.unshift(this);
-				return member.im_func.apply(window, args);
-			};
-
-		} else if (member.__class__ === property) {
-			prototype.__properties__[name] = member;
-			
-		} else if (typeof member === 'function') {
-			prototype[name] = function() {
-				var args = [].slice.call(arguments, 0);
-				args.unshift(this);
-				return cls[name].apply(window, args);
-			};
-			cls[name] = function() {
-				return member.apply(window, arguments);
-			};
+		if (typeof member === 'function') {
+			cls[name] = getMethodCaller(name);
 
 		} else {
-			cls[name] = prototype[name] = member;
+			cls[name] = member;
 		}
+
 	});
 	object.extend(cls, parent, false);
 
+	cls.mixin = overloadSetter(function(name, value) {
+		// 通过mixin创建新的成员，需要在继承链上所有的class实现
+		if (!(name in this.prototype)) {
+			this[name] = getMethodCaller(name);
+			this.__subs__.forEach(function(sub) {
+				sub[name] = getMethodCaller(name);
+			});
+		}
+		buildProperty(this.prototype, name, value);
+	});
+	cls.prototype.get = getter;
+	cls.prototype.set = setter;
 	return cls;
+};
+
+Class.mixin = function(members, cls) {
+	Object.keys(cls).forEach(function(key) {
+		if (['mixin', '__subs__'].indexOf(key) === -1) {
+			members[key] = cls[key].bind(cls);
+		}
+	})
 };
 
 /**
@@ -273,7 +344,7 @@ Class.inject = function(cls, host, args) {
 	var p = getInstance(cls);
 	object.extend(host, p);
 	args.unshift(host);
-	cls.initialize.apply(window, args);
+	cls.initialize.apply(cls, args);
 };
 
 /**
@@ -290,7 +361,6 @@ Class.getChain = function(cls) {
 
 var staticmethod = this.staticmethod = function(func) {
 	var wrapper = function() {
-		return func.apply(null, arguments);
 	};
 	wrapper.__class__ = arguments.callee;
 	wrapper.im_func = func;
@@ -835,16 +905,14 @@ this.Events = new Class({
 		if (!self._eventListeners[type]) return;
 
 		var funcs = self._eventListeners[type];
-		var args = Array.prototype.slice.call(arguments, 0);
-		args.shift();
-		args.shift();
 		for (var i = 0, j = funcs.length; i < j; i++) {
 			if (funcs[i]) {
-				funcs[i].apply(self, args);
+				funcs[i].apply(self, Array.prototype.slice.call(arguments, 2));
 			}
 		}
 	}
 });
+
 
 })();
 

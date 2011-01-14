@@ -394,12 +394,9 @@ var Element = this.Element = new Class(function() {
 	this.fireEvent = function(self, type) {
 		if (!self._eventListeners[type]) return;
 		var funcs = self._eventListeners[type];
-		var args = Array.prototype.slice.call(arguments, 0);
-		args.shift();
-		args.shift();
 		for (var i = 0, j = funcs.length; i < j; i++) {
 			if (funcs[i]) {
-				funcs[i].apply(self, args);
+				funcs[i].apply(self, Array.prototype.slice.call(arguments, 2));
 			}
 		}
 	};
@@ -982,6 +979,20 @@ var Elements = this.Elements = new Class(Array, function() {
 				}
 			};
 		});
+
+		self.set = function(key, value) {
+			for (var i = 0; i < elements.length; i++) {
+				elements[i].set(key, value);
+			}
+		};
+
+		self.get = function(key) {
+			var result = [];
+			for (var i = 0; i < elements.length; i++) {
+				result.push(elements[i].get(key));
+			}
+			return result;
+		}
 
 		for (var i = 0; i < elements.length; i++) {
 			self.push(wrap(elements[i]));

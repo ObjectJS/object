@@ -1,0 +1,52 @@
+<html>
+<head>
+<script type="text/javascript" src="../src/object.js"></script>
+<script>
+	object.add('test', function() {
+
+		var A = new Class(function() {
+			this.a = function(self) {
+				alert('a');
+			};
+		});
+		A._name = 'A';
+
+		var B = new Class(A, function() {
+			this.b = function(self) {
+				alert('b');
+			};
+		});
+		B._name = 'B';
+
+		var C = new Class(B, function() {
+			this.c = function(self) {
+				alert('c');
+			};
+		});
+		C._name = 'C';
+
+		var D = new Class(C, function() {
+
+		});
+		D._name = 'D';
+
+
+
+
+
+		var c = new C();
+
+		A.mixin('f', classmethod(function(cls) {
+			alert(cls._name);
+		}));
+
+		A.f();
+
+	});
+	object.execute('test');
+</script>
+</head>
+<body>
+
+</body>
+</html>
