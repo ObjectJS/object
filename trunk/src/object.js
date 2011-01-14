@@ -230,12 +230,12 @@ var Class = this.Class = function() {
 
 		} else if (member.__class__ === classmethod) {
 			prototype[name] = function() {
-				var args = [].slice.call(arguments, 0);
-				args.unshift(this.__class__);
-				return cls[name].apply(window, args);
+				return cls[name].apply(this.__class__, arguments);
 			};
 			cls[name] = function() {
-				return member.im_func.apply(window, arguments);
+				var args = [].slice.call(arguments, 0);
+				args.unshift(this);
+				return member.im_func.apply(window, args);
 			};
 
 		} else if (member.__class__ === property) {
