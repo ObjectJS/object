@@ -22,24 +22,6 @@ var Component = this.Component = new Class(function() {
 		});
 	};
 
-	this.get = function(self, prop) {
-		var property = self.__properties__[prop];
-		if (property && property.fget) {
-			return property.fget.call(window, self);
-		} else {
-			throw 'get not definedProperty ' + prop;
-		}
-	};
-
-	this.set = function(self, prop, value) {
-		var property = self.__properties__[prop];
-		if (property && property.fset) {
-			property.fset.call(window, self, value);
-		} else {
-			throw 'set not definedProperty ' + prop;
-		}
-	};
-
 	this._addEvents = function(self, name) {
 		var single = self._descriptors[name].single;
 

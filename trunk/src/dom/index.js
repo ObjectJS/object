@@ -263,24 +263,6 @@ var Element = this.Element = new Class(function() {
 
 	this._eventListeners = {};
 
-	this.get = function(self, prop) {
-		var property = self.__properties__[prop];
-		if (property && property.fget) {
-			return property.fget.call(window, self);
-		} else {
-			throw 'get not definedProperty ' + prop;
-		}
-	};
-
-	this.set = function(self, prop, value) {
-		var property = self.__properties__[prop];
-		if (property && property.fset) {
-			property.fset.call(window, self, value);
-		} else {
-			throw 'set not definedProperty ' + prop;
-		}
-	};
-
 	this.initialize = function(self, tagName) {
 
 		// 直接new Element，用来生成一个新元素
