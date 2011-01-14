@@ -80,7 +80,7 @@ var wrap = this.wrap = function(node) {
 		return new Elements(node);
 	} else {
 		// 已经wrap过了
-		if (node._nativeWrapper) return node;
+		if (node._wrapped) return node;
 
 		var wrapper;
 		if (node === window) {
@@ -93,8 +93,8 @@ var wrap = this.wrap = function(node) {
 			return node;
 		}
 
-		// 尽早的设置_nativeWrapper，因为在wrapper的initialize中可能出现递归调用（FormElement/FormItemElement）
-		node._nativeWrapper = wrapper;
+		// 尽早的设置_wrapped，因为在wrapper的initialize中可能出现递归调用（FormElement/FormItemElement）
+		node._wrapped = true;
 
 		$uid(node);
 
