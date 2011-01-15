@@ -141,8 +141,33 @@ this.add = function() {
 
 (function() {
 
+// prototyping标识符，有此标识符标识则代表new一个类时是为了继承而new的
+var PROTOTYPING = {anything: true};
+
+// 仿照 mootools 的overloadSetter，返回一个 key/value 这种形式的function参数的包装，使其支持{key1: value1, key2: value2} 这种形式
+var enumerables = true;
+for (var i in {toString: 1}) enumerables = null;
+if (enumerables) enumerables = ['hasOwnProperty', 'valueOf', 'isPrototypeOf', 'propertyIsEnumerable', 'toLocaleString', 'toString', 'constructor'];
+var overloadSetter = function(func, usePlural) {
+	return function(a, b) {
+		if (a === null) return this;
+		if (usePlural || typeof a != 'string'){
+			for (var k in a) func.call(this, k, a[k]);
+			if (enumerables) {
+				for (var i = enumerables.length; i > 0; i--) {
+					k = enumerables[i];
+					if (a.hasOwnProperty(k)) func.call(this, k, a[k]);
+				}
+			}
+		} else {
+			func.call(this, a, b);
+		}
+		return this;
+	};
+};
+
 // 获取父类的实例，用于 cls.prototype = new parent
-function getInstance(cls) {
+var getInstance = function(cls) {
 	if (cls === Array || cls === String) return new cls;
 	return new cls(PROTOTYPING);
 }
@@ -167,77 +192,79 @@ var setter = function(prop, value) {
 	}
 };
 
-// 仿照 mootools 的overloadSetter，返回一个 key/value 这种形式的function参数的包装，使其支持{key1: value1, key2: value2} 这种形式
-var enumerables = true;
-for (var i in {toString: 1}) enumerables = null;
-if (enumerables) enumerables = ['hasOwnProperty', 'valueOf', 'isPrototypeOf', 'propertyIsEnumerable', 'toLocaleString', 'toString', 'constructor'];
-var overloadSetter = function(func, usePlural) {
-	return function(a, b) {
-		if (a == null) return this;
-		if (usePlural || typeof a != 'string'){
-			for (var k in a) func.call(this, k, a[k]);
-			if (enumerables) for (var i = enumerables.length; i--;){
-				k = enumerables[i];
-				if (a.hasOwnProperty(k)) func.call(this, k, a[k]);
+/**
+ * 动态mixin的方法。可以通过任意class的mixin调用
+ * MyClass.mixin(name, value);
+ * MyClass.mixin({name1: value1, name2: value2})
+ */
+var mixiner = overloadSetter(function(name, member) {
+	// 通过mixin创建新的成员，需要在继承链上所有的class实现
+	if (!(name in this.prototype)) {
+		var classes = getAllSubClasses(this); 
+		classes.unshift(this) // 包括自己也需要加上
+		classes.forEach(function(one) {
+			if (typeof member === 'function') {
+				one[name] = getMethodCaller(name);
+			} else {
+				one[name] = member;
 			}
-		} else {
-			func.call(this, a, b);
-		}
-		return this;
-	};
+		});
+	}
+	buildPrototype(this.prototype, name, member);
+});
+
+var getSubClasses = function() {
+	return this.__subclassesarray__;
+};
+
+var getAllSubClasses = function(cls, array) {
+	if (!array) array = [];
+	else array.push(cls);
+	var subs = cls.__subclassesarray__;
+	for (var i = 0, l = subs.length; i < l; i++) arguments.callee(subs[i], array);
+	return array;
 };
 
 var getMethodCaller = function(name) {
+
 	return function(self) {
-		var proto = this.prototype[name];
-		if (proto.instancemethod) {
-			return this.prototype[name].apply(self, [].slice.call(arguments, 1));
+		var member = this.prototype[name];
+		var func = member.im_func;
+		var args;
 
-		} else if (proto.staticmethod) {
-			return this.prototype[name].apply(null, arguments);
+		if (member.__class__ === instancemethod) {
+			return func.apply(null, arguments);
 
-		} else if (proto.classmethod) {
-			return this.prototype[name].apply({
-				__class__: this
-			}, arguments);
+		} else if (member.__class__ === classmethod) {
+			args = [].slice.call(arguments, 0);
+			args.unshift(this);
+			return func.apply(null, args);
 
+		} else {
+			return member.apply(null, arguments);
 		}
-	}
-}
+	};
+};
 
-var buildProperty = function(prototype, name, member) {
+var buildPrototype = function(prototype, name, member) {
 
 	if (member.__class__ === staticmethod) {
-		prototype[name] = function() {
-			return member.im_func.apply(null, arguments);
-		};
-		prototype[name].staticmethod = 1;
+		prototype[name] = member.im_func;
 
 	} else if (member.__class__ === classmethod) {
-		prototype[name] = function() {
-			var args = [].slice.call(arguments, 0);
-			args.unshift(this.__class__);
-			return member.im_func.apply(null, args);
-		};
-		prototype[name].classmethod = 1;
+		prototype[name] = member;
 
 	} else if (member.__class__ === property) {
 		prototype.__properties__[name] = member;
 		
 	} else if (typeof member === 'function') {
-		prototype[name] = function() {
-			var args = [].slice.call(arguments, 0);
-			args.unshift(this);
-			return member.apply(null, args);
-		};
-		prototype[name].instancemethod = 1;
+		prototype[name] = instancemethod(member);
 
 	} else {
 		prototype[name] = member;
 	}
-};
 
-var PROTOTYPING = {PROTOTYPING: true};
+};
 
 // IE不可以通过prototype = new Array的方式使function获得数组功能。
 var _nativeExtendable = (function() {
@@ -283,9 +310,8 @@ var Class = this.Class = function() {
 
 		cls.prototype = getInstance(parent);
 		cls.__base__ = parent;
-		if (cls.__subs__) parent.__subs__.push(cls);
-	} else {
-		cls.__subs__ = [];
+		// Array / String 没有 subclass
+		if (parent.__subclassesarray__) parent.__subclassesarray__.push(cls);
 	}
 
 	var prototype = cls.prototype;
@@ -296,7 +322,7 @@ var Class = this.Class = function() {
 	Object.keys(members).forEach(function(name) {
 
 		var member = members[name];
-		buildProperty(cls.prototype, name, member);
+		buildPrototype(cls.prototype, name, member);
 
 		if (typeof member === 'function') {
 			cls[name] = getMethodCaller(name);
@@ -306,30 +332,44 @@ var Class = this.Class = function() {
 		}
 
 	});
+
 	object.extend(cls, parent, false);
 
-	cls.mixin = overloadSetter(function(name, value) {
-		// 通过mixin创建新的成员，需要在继承链上所有的class实现
-		if (!(name in this.prototype)) {
-			this[name] = getMethodCaller(name);
-			this.__subs__.forEach(function(sub) {
-				sub[name] = getMethodCaller(name);
-			});
-		}
-		buildProperty(this.prototype, name, value);
-	});
+	cls.__subclassesarray__ = [];
+	cls.__subclasses__ = getSubClasses;
+	cls.mixin = mixiner;
 	cls.prototype.get = getter;
 	cls.prototype.set = setter;
 	return cls;
 };
 
+// 在new Class的callback中mixin
 Class.mixin = function(members, cls) {
-	Object.keys(cls).forEach(function(key) {
-		if (['mixin', '__subs__'].indexOf(key) === -1) {
-			members[key] = cls[key].bind(cls);
+	var instance = new cls();
+	var member, func;
+
+	Object.keys(cls.prototype).forEach(function(name) {
+
+		if (['get', 'set', '__properties__'].indexOf(name) !== -1) return;
+
+		var member = instance[name];
+		var func = member.im_func;
+
+		if (typeof member === 'function') {
+			if (member.__class__ === instancemethod) {
+				members[name] = func;
+			} else if (member.__class__ === classmethod) {
+				members[name] = member;
+			} else {
+				members[name] = staticmethod(member);
+			}
+		} else {
+			members[name] = member;
 		}
 	})
+
 };
+
 
 /**
  * 将host注射进class，使其self指向host
@@ -359,8 +399,20 @@ Class.getChain = function(cls) {
 	return result;
 };
 
+var instancemethod = function(func) {
+	var wrapper = function() {
+		var args = [].slice.call(arguments, 0);
+		args.unshift(this);
+		return func.apply(null, args);
+	};
+	wrapper.__class__ = arguments.callee;
+	wrapper.im_func = func;
+	return wrapper;
+};
+
 var staticmethod = this.staticmethod = function(func) {
 	var wrapper = function() {
+		return func.apply(null, arguments);
 	};
 	wrapper.__class__ = arguments.callee;
 	wrapper.im_func = func;
@@ -369,6 +421,9 @@ var staticmethod = this.staticmethod = function(func) {
 
 var classmethod = this.classmethod = function(func) {
 	var wrapper = function() {
+		var args = [].slice.call(arguments, 0);
+		args.unshift(this.__class__);
+		return func.apply(null, args);
 	};
 	wrapper.__class__ = arguments.callee;
 	wrapper.im_func = func;
