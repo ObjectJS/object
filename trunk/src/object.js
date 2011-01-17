@@ -153,7 +153,7 @@ if (enumerables) enumerables = ['hasOwnProperty', 'valueOf', 'isPrototypeOf', 'p
 var overloadSetter = function(func, usePlural) {
 	return function(a, b) {
 		if (a === null) return this;
-		if (usePlural || typeof a != 'string'){
+		if (usePlural || typeof a != 'string') {
 			for (var k in a) func.call(this, k, a[k]);
 			if (enumerables) {
 				for (var i = enumerables.length; i > 0; i--) {
