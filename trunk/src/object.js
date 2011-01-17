@@ -324,7 +324,6 @@ var Class = this.Class = function() {
 		var value = this.initialize? this.initialize.apply(this, arguments) : null;
 		return value;
 	};
-	var prototype = cls.prototype;
 
 	// 继承
 	if (parent) {
@@ -344,6 +343,7 @@ var Class = this.Class = function() {
 		if (parent.__subclassesarray__) parent.__subclassesarray__.push(cls);
 	}
 
+	var prototype = cls.prototype;
 	// 有可能已经继承了parent的__properties__了
 	var parentProperties = prototype.__properties__ || {};
 	prototype.__properties__ = object.extend({}, parentProperties);
