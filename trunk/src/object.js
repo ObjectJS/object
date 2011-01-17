@@ -172,7 +172,7 @@ var overloadSetter = function(func, usePlural) {
 var getInstance = function(cls) {
 	if (cls === Array || cls === String) return new cls;
 	return new cls(PROTOTYPING);
-}
+};
 
 /**
  * propery 特性支持getter函数，用法：
@@ -209,19 +209,18 @@ var setter = function(prop, value) {
  * 会被放到 cls.__mixin__
  */
 var mixiner = overloadSetter(function(name, member) {
-	// 通过mixin创建新的成员，需要在继承链上所有的class实现
+	// 通过mixin创建新的成员，而不是修改已存在的成员，需要在继承链上所有的class实现
+	// 由于ie没有 __proto__ 属性，因此需要遍历，否则可以通过
+	// SubClass.__proto__ = Parent
+	// 实现自动的继承机制
 	if (!(name in this.prototype)) {
 		var classes = getAllSubClasses(this); 
-		classes.unshift(this) // 包括自己也需要加上
+		classes.unshift(this); // 包括自己也需要加上
 		classes.forEach(function(one) {
-			if (typeof member === 'function') {
-				one[name] = getMethodCaller(name);
-			} else {
-				one[name] = member;
-			}
+			buildMember(one, name, member);
 		});
 	}
-	buildPrototype(this.prototype, name, member);
+	buildPrototype(this, name, member);
 });
 
 /**
@@ -245,35 +244,40 @@ var getAllSubClasses = function(cls, array) {
 };
 
 /**
- * 所有的class对应到prototype上的方法都是通过这个方法获得的
+ * 生成类的所有class成员
+ * 所有的class对应到prototype上的method都是通过这个方法获得的
  * 可以动态根据prototype中方法的类型传递不同参数
  * 用一个统一的方法虽然会在调用的时候影响效率，但是提高了mixin时的效率，使得通过AClass.__mixin__覆盖某已存在方法时不需要修改所有subclasses的对应方法了
  */
-var getMethodCaller = function(name) {
+var buildMember = function(cls, name, member) {
+	if (typeof member === 'function') {
+		cls[name] = function(self) {
+			var member = this.prototype[name];
+			var func = member.im_func;
+			var args;
 
-	return function(self) {
-		var member = this.prototype[name];
-		var func = member.im_func;
-		var args;
+			if (member.__class__ === instancemethod) {
+				return func.apply(null, arguments);
 
-		if (member.__class__ === instancemethod) {
-			return func.apply(null, arguments);
+			} else if (member.__class__ === classmethod) {
+				args = [].slice.call(arguments, 0);
+				args.unshift(this); // 第一个参数是cls
+				return func.apply(null, args);
 
-		} else if (member.__class__ === classmethod) {
-			args = [].slice.call(arguments, 0);
-			args.unshift(this); // 第一个参数是cls
-			return func.apply(null, args);
-
-		} else { // staticmethod
-			return member.apply(null, arguments);
+			} else { // staticmethod
+				return member.apply(null, arguments);
+			}
 		}
-	};
+	} else {
+		cls[name] = member;
+	}
 };
 
 /**
  * 在创建类的过程中生成类的所有prototype
  */
-var buildPrototype = function(prototype, name, member) {
+var buildPrototype = function(cls, name, member) {
+	var prototype = cls.prototype;
 
 	// 这里的member指向new Class参数的书写的对象/函数
 
@@ -351,17 +355,9 @@ var Class = this.Class = function() {
 	prototype.__properties__ = object.extend({}, parentProperties);
 
 	Object.keys(members).forEach(function(name) {
-
 		var member = members[name];
-		buildPrototype(cls.prototype, name, member);
-
-		if (typeof member === 'function') {
-			cls[name] = getMethodCaller(name);
-
-		} else {
-			cls[name] = member;
-		}
-
+		buildPrototype(cls, name, member);
+		buildMember(cls, name, member);
 	});
 
 	object.extend(cls, parent, false);
@@ -406,7 +402,7 @@ Class.mixin = function(members, cls) {
 		} else {
 			members[name] = member;
 		}
-	})
+	});
 
 };
 

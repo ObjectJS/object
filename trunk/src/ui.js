@@ -87,12 +87,6 @@ var Component = this.Component = new Class(function() {
 		//return self._descriptors[name].type.create(template, data, secName);
 	};
 
-	this.bind = function(self, name) {
-		return function() {
-			self.apply(name, [].slice.call(arguments, 0));
-		};
-	};
-
 	this.call = function(self, name) {
 		self._node.fireEvent(name, null, self);
 		if (!self[name]) throw 'no method named ' + name;
