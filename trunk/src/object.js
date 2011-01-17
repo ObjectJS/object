@@ -20,7 +20,9 @@ Object.keys = function(o) {
 	// for IE
 	// 在IE下for in无法遍历出来修改过的call方法
 	// 为什么允许修改call方法？对于一个class来说，没有直接Class.call的应用场景，任何Class都应该是new出来的，因此可以修改这个方法
-	if (o.call !== undefined && o.call !== Function.prototype.call && result.indexOf('call') === -1) result.push('call');
+	if (o.call !== undefined && o.call !== Function.prototype.call && result.indexOf('call') === -1) {
+		result.push('call');
+	}
 
 	return result; 
 };
@@ -96,7 +98,7 @@ this.extend = function(obj, properties, ov) {
 			obj[property] = properties[property];
 		}
 	}
-	if (properties && (obj.call === Function.prototype.call && properties.call !== Function.prototype.call)) {
+	if (properties && properties.hasOwnProperty('call')) {
 		obj.call = properties.call;
 	}
 
