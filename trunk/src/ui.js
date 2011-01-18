@@ -1,10 +1,34 @@
 object.add('ui', 'string, dom', function($, string, dom) {
 
+
+var Element = new Class(function() {
+
+	Object.keys(dom.Element).forEach(function(name) {
+		if (typeof dom.Element[name] === 'function') {
+			if (['initialize'].indexOf(name) != -1) return;
+
+			this[name] = function(self) {
+				var args = [self._node];
+				var arg;
+				for (var i = 1; i < arguments.length; i++) {
+					arg = arguments[i];
+					args.push(arg._node? arg._node : arg);
+				}
+				return dom.Element[name].apply(dom.Element, args);
+			};
+		}
+	}, this);
+
+});
+
+
 /**
  * UI模块基类
  * @class
  */
 var Component = this.Component = new Class(function() {
+
+	Class.mixin(this, Element);
 
 	this.initialize = function(self, node) {
 		self._descriptors = {};
@@ -69,8 +93,10 @@ var Component = this.Component = new Class(function() {
 	* @param data 模板数据
 	*/
 	this.make = function(self, name, data) {
-		var template = self._descriptors[name].template;
-		var secName = self._descriptors[name].secName;
+		var descriptor = self._descriptors[name];
+		var template = descriptor.template;
+		var secName = descriptor.secName;
+		var type = descriptor.type;
 
 		if (!data) data = {};
 		var tdata = {};
@@ -82,9 +108,9 @@ var Component = this.Component = new Class(function() {
 
 		var str = string.substitute(template, tdata);
 		var ele = dom.Element.fromString(str).firstChild;
+		var comp = new type(ele);
 
-		return ele;
-		//return self._descriptors[name].type.create(template, data, secName);
+		return comp;
 	};
 
 	this.call = function(self, name) {
@@ -214,18 +240,6 @@ var Component = this.Component = new Class(function() {
 		define(cls, name, selector, type, true);
 	});
 
-	Object.keys(dom.Element).forEach(function(name) {
-		if (typeof dom.Element[name] === 'function') {
-			if (['initialize', 'get', 'set'].indexOf(name) != -1) return;
-
-			this[name] = function(self) {
-				var args = [].slice.call(arguments, 0);
-				args[0] = self._node;
-				return dom.Element[name].apply(dom.Element, args);
-			};
-		}
-	}, this);
-
 });
 
 var Components = this.Components = new Class(Array, function() {
@@ -243,10 +257,15 @@ var Components = this.Components = new Class(Array, function() {
 		Object.keys(wrapper).forEach(function(name) {
 			self[name] = function() {
 				var element;
-				for (var i = 0; i < elements.length; i++) {
+				var i, arg, args = [];
+				for (i = 0; i < arguments.length; i++) {
+					arg = arguments[i];
+					args.push(arg._node? arg._node : arg);
+				}
+				for (i = 0; i < elements.length; i++) {
 					element = elements[i];
 					if (typeof element[name] == 'function') {
-						element[name].apply(elements[i], [].slice.call(arguments, 0));
+						element[name].apply(elements[i], args);
 					}
 				}
 			};
