@@ -864,7 +864,7 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 			})(self.getAttribute('type')),
 			patternMismatch: (function() {
 				var pattern = self.getAttribute('pattern');
-				if (pattern) return (new RegExp(pattern)).test(value)
+				if (pattern) return (new RegExp(pattern)).test(value);
 				return false;
 			})(),
 			tooLong: (function() {
@@ -908,7 +908,7 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 		} else {
 			self.focus();
 		}
-	}
+	};
 
 	/**
 	 * bind一个input或者textarea，使其支持placeholder属性
@@ -992,7 +992,7 @@ var Elements = this.Elements = new Class(Array, function() {
 				result.push(elements[i].get(key));
 			}
 			return result;
-		}
+		};
 
 		for (var i = 0; i < elements.length; i++) {
 			self.push(wrap(elements[i]));

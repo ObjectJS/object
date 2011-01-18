@@ -328,6 +328,12 @@ var Class = this.Class = function() {
 		if (prototyping === PROTOTYPING) return this;
 		this.__class__ = arguments.callee;
 		var value = this.initialize? this.initialize.apply(this, arguments) : null;
+		Object.keys(this.__properties__).forEach(function(name) {
+			var property = this.__properties__[name];
+			if (property.fget) {
+				this[name] = property.fget.call(null, this);
+			}
+		}, this);
 		return value;
 	};
 
@@ -404,6 +410,12 @@ Class.mixin = function(members, cls) {
 		}
 	});
 
+};
+
+/**
+ */
+Class.hasProperty = function(obj, name) {
+	return (name in obj.__properties__);
 };
 
 /**
