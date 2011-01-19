@@ -308,6 +308,24 @@ var _nativeExtendable = (function() {
 	return !!b.length;
 })();
 
+// 获取一个native function的class形式用于继承
+var createNativeClass = function(source, methodNames) {
+	var cls = new Class(function() {
+		for (var i = 0; i < methodNames.length; i++) {
+			this[methodNames[i]] = (function(name) {
+				return function() {
+					return source.prototype[name].apply(arguments[0], [].slice.call(arguments, 1));
+				};
+			})(methodNames[i]);
+		}
+	});
+	return cls;
+};
+
+var ArrayClass = createNativeClass(Array, ["concat", "indexOf", "join", "lastIndexOf", "pop", "push", "reverse", "shift", "slice", "sort", "splice", "toString", "unshift", "valueOf", "forEach"]);
+ArrayClass.prototype.length = 0;
+var StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "indexOf", "lastIndexOf", "match", "replace", "search", "slice", "split", "substr", "substring", "toLowerCase", "toUpperCase", "valueOf"]);
+
 // 类
 var Class = this.Class = function() {
 	if (arguments.length < 1) throw new Error('bad arguments');
@@ -484,24 +502,6 @@ var property = this.property = function(fget, fset) {
 	p.fset = fset;
 	return p;
 };
-
-// 获取一个native function的class形式用于继承
-var createNativeClass = function(source, methodNames) {
-	var cls = new Class(function() {
-		for (var i = 0; i < methodNames.length; i++) {
-			this[methodNames[i]] = (function(name) {
-				return function() {
-					return source.prototype[name].apply(arguments[0], [].slice.call(arguments, 1));
-				};
-			})(methodNames[i]);
-		}
-	});
-	return cls;
-};
-
-var ArrayClass = createNativeClass(Array, ["concat", "indexOf", "join", "lastIndexOf", "pop", "push", "reverse", "shift", "slice", "sort", "splice", "toString", "unshift", "valueOf", "forEach"]);
-ArrayClass.prototype.length = 0;
-var StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "indexOf", "lastIndexOf", "match", "replace", "search", "slice", "split", "substr", "substring", "toLowerCase", "toUpperCase", "valueOf"]);
 
 })();
 
