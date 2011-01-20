@@ -12,7 +12,7 @@ var Element = new Class(function() {
 				// 代理方法支持Component参数
 				for (var i = 1; i < arguments.length; i++) {
 					arg = arguments[i];
-					args.push(arg._node? arg._node : arg);
+					args.push((arg && arg._node)? arg._node : arg);
 				}
 				return dom.Element[name].apply(dom.Element, args);
 			};
@@ -307,7 +307,7 @@ var Components = this.Components = new Class(Array, function() {
 				// 代理方法支持Component参数
 				for (i = 0; i < arguments.length; i++) {
 					arg = arguments[i];
-					args.push(arg._node? arg._node : arg);
+					args.push((arg && arg._node)? arg._node : arg);
 				}
 				for (i = 0; i < self.length; i++) {
 					element = self[i];
