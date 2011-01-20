@@ -22,6 +22,56 @@ var Element = new Class(function() {
 });
 
 
+var Components = this.Components = new Class(Array, function() {
+
+	/**
+	 * @constructor
+	 * @param elements wrapped dom elements
+	 * @param wrapper 这批节点的共有Component类型，默认为Component
+	 */
+	this.initialize  = function(self, elements, wrapper) {
+		if (!wrapper) wrapper = Component;
+
+		for (var i = 0; i < elements.length; i++) {
+			self.push(new wrapper(elements[i]));
+		}
+
+		Object.keys(wrapper).forEach(function(name) {
+			self[name] = function() {
+				var element;
+				var i, arg, args = [];
+				// 代理方法支持Component参数
+				for (i = 0; i < arguments.length; i++) {
+					arg = arguments[i];
+					args.push((arg && arg._node)? arg._node : arg);
+				}
+				for (i = 0; i < self.length; i++) {
+					element = self[i];
+					if (typeof element[name] == 'function') {
+						element[name].apply(self[i], args);
+					}
+				}
+			};
+		});
+
+		self.set = function(key, value) {
+			for (var i = 0; i < self.length; i++) {
+				self[i].set(key, value);
+			}
+		};
+
+		self.get = function(key) {
+			var result = [];
+			for (var i = 0; i < self.length; i++) {
+				result.push(self[i].get(key));
+			}
+			return result;
+		};
+	};
+
+});
+
+
 /**
  * UI模块基类
  * @class
@@ -283,55 +333,6 @@ var Component = this.Component = new Class(function() {
 			});
 		});
 	});
-
-});
-
-var Components = this.Components = new Class(Array, function() {
-
-	/**
-	 * @constructor
-	 * @param elements wrapped dom elements
-	 * @param wrapper 这批节点的共有Component类型，默认为Component
-	 */
-	this.initialize  = function(self, elements, wrapper) {
-		if (!wrapper) wrapper = Component;
-
-		for (var i = 0; i < elements.length; i++) {
-			self.push(new wrapper(elements[i]));
-		}
-
-		Object.keys(wrapper).forEach(function(name) {
-			self[name] = function() {
-				var element;
-				var i, arg, args = [];
-				// 代理方法支持Component参数
-				for (i = 0; i < arguments.length; i++) {
-					arg = arguments[i];
-					args.push((arg && arg._node)? arg._node : arg);
-				}
-				for (i = 0; i < self.length; i++) {
-					element = self[i];
-					if (typeof element[name] == 'function') {
-						element[name].apply(self[i], args);
-					}
-				}
-			};
-		});
-
-		self.set = function(key, value) {
-			for (var i = 0; i < self.length; i++) {
-				self[i].set(key, value);
-			}
-		};
-
-		self.get = function(key) {
-			var result = [];
-			for (var i = 0; i < self.length; i++) {
-				result.push(self[i].get(key));
-			}
-			return result;
-		};
-	};
 
 });
 
