@@ -43,34 +43,27 @@ var Component = this.Component = new Class(function() {
 		var events = self._events[name];
 		if (!events) return;
 
-		if (node._eventAdded) return;
-
 		if (events) events.forEach(function(event) {
 			node.addEvent(event.name, event.func);
 		});
-
-		node._eventAdded = true;
 	};
 
 	this.render = function(self, name, data) {
 		var methodName = 'render' + string.capitalize(name);
 		var descriptor = self._descriptors[name];
-		var single = descriptor.single;
 		var type = descriptor.type;
-		var result;
-		if (self[methodName]) {
-			result = self[methodName](data);
-			if (result) {
-				if (single || !Array.isArray(result)) {
-					self._rendered.push(result._node);
-				} else {
-					result.forEach(function(comp) {
-						self._rendered.push(comp._node);
-					});
-				}
+		if (!self[methodName]) return;
+		var result = self[methodName](data);
+		// 如果有返回结果，说明没有使用self.make，而是自己生成了需要的普通node元素，则对返回结果进行一次包装
+		if (result) {
+			if (Array.isArray(result)) {
+				result.forEach(function(node) {
+					self.registerComponent(name, node, data);
+				});
+			} else {
+				self.registerComponent(name, result, data);
 			}
 		}
-		self[name] = self.get(name);
 	};
 
 	/**
@@ -82,7 +75,6 @@ var Component = this.Component = new Class(function() {
 		var descriptor = self._descriptors[name];
 		var template = descriptor.template;
 		var secName = descriptor.secName;
-		var type = descriptor.type;
 
 		if (!data) data = {};
 		var tdata = {};
@@ -93,13 +85,41 @@ var Component = this.Component = new Class(function() {
 		}
 
 		var str = string.substitute(template, tdata);
-		var ele = dom.Element.fromString(str).firstChild;
-		var comp = new type(ele);
-		Object.keys(data).forEach(function(name) {
-			if (Class.hasProperty(comp, name)) {
-				comp.set(name, data[name]);
-			}
-		});
+		var node = dom.Element.fromString(str).firstChild;
+		var comp = self.registerComponent(name, node, data);
+
+		return comp;
+	};
+
+	/**
+	 * 根据节点初始化一个component，并放到相应的引用上去。
+	 */
+	this.registerComponent = function(self, name, node, data) {
+		var descriptor = self._descriptors[name];
+		var type = descriptor.type;
+		var single = descriptor.single;
+		var pname = '_' + name;
+
+		var comp = new type(node);
+		if (data) {
+			Object.keys(data).forEach(function(name) {
+				if (Class.hasProperty(comp, name)) {
+					comp.set(name, data[name]);
+				}
+			});
+		}
+
+		if (single) {
+			self[name] = comp;
+			self[pname] = node;
+			self._addEventTo(name, node);
+			self._rendered.push(node);
+		} else {
+			self[name].push(comp);
+			self[pname].push(node);
+			self._addEventTo(name, node);
+			self._rendered.push(node);
+		}
 
 		return comp;
 	};
@@ -182,8 +202,8 @@ var Component = this.Component = new Class(function() {
 				if (self[name] && self[name].reset) self[name].reset();
 			} else {
 				if (self[name]) {
-					self[name].forEach(function(component) {
-						component.reset();
+					self[name].forEach(function(comp) {
+						comp.reset();
 					});
 				}
 			}
@@ -211,22 +231,27 @@ var Component = this.Component = new Class(function() {
 
 				self._addEventTo(name, ele);
 				self[pname] = ele;
-				var comp = new type(ele, self);
+				self[name] = new type(ele, self);
 
-				return comp;
+				return self[name];
 			} else {
 				var eles = self._node.getElements(selector);
-				if (!eles) return null;
+				if (!eles) {
+					self[pname] = new dom.Elements([]);
+					self[name] = new Components([], type);
+					return self[name];
+				}
 
 				// 如果已经初始化过，则要确保不会对之前取到过得元素重新执行添加事件
 				eles.forEach(function(ele) {
-					// TODO
-					self._addEventTo(name, ele);
+					if (!self[pname] || self[pname].indexOf(ele) === -1) {
+						self._addEventTo(name, ele);
+					}
 				});
 				self[pname] = eles;
-				var comps = new Components(eles, type);
+				self[name] = new Components(eles, type);
 
-				return comps;
+				return self[name];
 			}
 		};
 		getter.isComponent = true;
@@ -234,8 +259,14 @@ var Component = this.Component = new Class(function() {
 		cls[name] = property(getter);
 	};
 
+	/**
+	 * 定义sub components
+	 */
 	this.define = staticmethod(define);
 
+	/**
+	 * 定义一个sub component
+	 */
 	this.define1 = staticmethod(function(cls, name, selector, type) {
 		define(cls, name, selector, type, true);
 	});
@@ -244,7 +275,7 @@ var Component = this.Component = new Class(function() {
 		Object.keys(options).forEach(function(name) {
 			cls[name] = property(function(self) {
 				if (self[name] === undefined) {
-					return options[name];
+					self[name] = options[name];
 				}
 				return self[name];
 			}, function(self, value) {
@@ -265,7 +296,9 @@ var Components = this.Components = new Class(Array, function() {
 	this.initialize  = function(self, elements, wrapper) {
 		if (!wrapper) wrapper = Component;
 
-		self._node = elements;
+		for (var i = 0; i < elements.length; i++) {
+			self.push(new wrapper(elements[i]));
+		}
 
 		Object.keys(wrapper).forEach(function(name) {
 			self[name] = function() {
@@ -276,32 +309,28 @@ var Components = this.Components = new Class(Array, function() {
 					arg = arguments[i];
 					args.push(arg._node? arg._node : arg);
 				}
-				for (i = 0; i < elements.length; i++) {
-					element = elements[i];
+				for (i = 0; i < self.length; i++) {
+					element = self[i];
 					if (typeof element[name] == 'function') {
-						element[name].apply(elements[i], args);
+						element[name].apply(self[i], args);
 					}
 				}
 			};
 		});
 
 		self.set = function(key, value) {
-			for (var i = 0; i < elements.length; i++) {
-				elements[i].set(key, value);
+			for (var i = 0; i < self.length; i++) {
+				self[i].set(key, value);
 			}
 		};
 
 		self.get = function(key) {
 			var result = [];
-			for (var i = 0; i < elements.length; i++) {
-				result.push(elements[i].get(key));
+			for (var i = 0; i < self.length; i++) {
+				result.push(self[i].get(key));
 			}
 			return result;
 		};
-
-		for (var i = 0; i < elements.length; i++) {
-			self.push(new wrapper(elements[i]));
-		}
 	};
 
 });

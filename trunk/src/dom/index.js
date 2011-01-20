@@ -968,35 +968,35 @@ var Elements = this.Elements = new Class(Array, function() {
 	this.initialize  = function(self, elements, wrapper) {
 		if (!wrapper) wrapper = Element;
 
+		for (var i = 0; i < elements.length; i++) {
+			self.push(wrap(elements[i]));
+		}
+
 		Object.keys(wrapper).forEach(function(name) {
 			self[name] = function() {
 				var element;
-				for (var i = 0; i < elements.length; i++) {
-					element = elements[i];
+				for (var i = 0; i < self.length; i++) {
+					element = self[i];
 					if (typeof element[name] == 'function') {
-						element[name].apply(elements[i], [].slice.call(arguments, 0));
+						element[name].apply(self[i], [].slice.call(arguments, 0));
 					}
 				}
 			};
 		});
 
 		self.set = function(key, value) {
-			for (var i = 0; i < elements.length; i++) {
-				elements[i].set(key, value);
+			for (var i = 0; i < self.length; i++) {
+				self[i].set(key, value);
 			}
 		};
 
 		self.get = function(key) {
 			var result = [];
-			for (var i = 0; i < elements.length; i++) {
-				result.push(elements[i].get(key));
+			for (var i = 0; i < self.length; i++) {
+				result.push(self[i].get(key));
 			}
 			return result;
 		};
-
-		for (var i = 0; i < elements.length; i++) {
-			self.push(wrap(elements[i]));
-		}
 	};
 
 });

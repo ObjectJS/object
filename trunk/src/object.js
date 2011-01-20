@@ -333,7 +333,7 @@ var Class = this.Class = function() {
 		Object.keys(this.__properties__).forEach(function(name) {
 			var property = this.__properties__[name];
 			if (property.fget) {
-				this[name] = property.fget.call(null, this);
+				property.fget.call(null, this);
 			}
 		}, this);
 		return value;
