@@ -27,16 +27,16 @@ var Components = this.Components = new Class(Array, function() {
 	/**
 	 * @constructor
 	 * @param elements wrapped dom elements
-	 * @param wrapper 这批节点的共有Component类型，默认为Component
+	 * @param type 这批节点的共有Component类型，默认为Component
 	 */
-	this.initialize  = function(self, elements, wrapper) {
-		if (!wrapper) wrapper = Component;
+	this.initialize  = function(self, elements, type, options) {
+		if (!type) type = Component;
 
 		for (var i = 0; i < elements.length; i++) {
-			self.push(new wrapper(elements[i]));
+			self.push(new type(elements[i], options));
 		}
 
-		Object.keys(wrapper).forEach(function(name) {
+		Object.keys(type).forEach(function(name) {
 			self[name] = function() {
 				var element;
 				var i, arg, args = [];
@@ -78,16 +78,64 @@ var Components = this.Components = new Class(Array, function() {
  */
 var Component = this.Component = new Class(function() {
 
+	var getConstructor = function(type) {
+		if (type === 'number') return Number;
+		else if (type === 'string') return String;
+		else if (type === 'boolean') return Boolean;
+	}
+
 	Class.mixin(this, Element);
 
 	this.initialize = function(self, node, options) {
+		if (!options) options = {};
 		self._descriptors = {};
 		self._components = []; // 建立出来的所有子component的引用
 		self._rendered = []; // render出来的新元素，会在reset时清空
 		self._events = self._getEvents(self); // 本class的所有event方法
-
+		self._options = self._parseOptions(options);
 		self._node = node;
+		self._optionNames = [];
+
+		Class.getPropertyNames(self).forEach(function(name) {
+			// 从dom获取配置
+			var data = self._node.getData(name.toLowerCase());
+			if (data) {
+				var defaultValue = self.get(name);
+				var value = getConstructor(typeof defaultValue)(data);
+				self.set(name, value);
+			// 从options参数获取配置
+			} else if (self._options[name] && typeof self._options[name] !== 'object') {
+				self.set(name, self._options[name]);
+			// 默认配置
+			} else {
+				self[name] = self.get(name);
+
+				// 是option，不是component
+				if (!self._descriptors[name]) {
+					self.set(name, self[name]);
+				}
+			}
+		});
 	};
+
+	/**
+	 * 解析options为对象
+	 * {'a.b.c': 1, b: 2} ==> {a: {'b.c': 1}, b: 2}
+	 */
+	this._parseOptions = staticmethod(function(options) {
+		var parsed = {};
+		Object.keys(options).forEach(function(key) {
+			var point = key.indexOf('.');
+			if (point !== -1) {
+				var first = key.substring(0, point);
+				if (!parsed[first]) parsed[first] = {};
+				parsed[first][key.substring(point + 1)] = options[key];
+			} else {
+				parsed[key] = options[key];
+			}
+		});
+		return parsed;
+	});
 
 	this._addEventTo = function(self, name, node) {
 		var events = self._events[name];
@@ -150,14 +198,21 @@ var Component = this.Component = new Class(function() {
 		var single = descriptor.single;
 		var pname = '_' + name;
 
-		var comp = new type(node);
-		if (data) {
-			Object.keys(data).forEach(function(name) {
-				if (Class.hasProperty(comp, name)) {
-					comp.set(name, data[name]);
-				}
+		var options = {};
+		var extendOptions = self._options[name];
+
+		if (extendOptions) {
+			Object.keys(extendOptions).forEach(function(key) {
+				options[key] = extendOptions[key];
 			});
 		}
+		if (data) {
+			Object.keys(data).forEach(function(key) {
+				options[key] = data[key];
+			});
+		}
+
+		var comp = new type(node, options);
 
 		if (single) {
 			self[name] = comp;
@@ -207,8 +262,8 @@ var Component = this.Component = new Class(function() {
 		}
 
 		var str = string.substitute(template, tdata);
-		var ele = dom.Element.fromString(str).firstChild;
-		return new cls(ele);
+		var node = dom.Element.fromString(str).firstChild;
+		return new cls(node);
 	});
 
 	this._getEvents = classmethod(function(cls, self) {
@@ -242,8 +297,8 @@ var Component = this.Component = new Class(function() {
 
 	this.reset = function(self) {
 		// 清空所有render进来的新元素
-		self._rendered.forEach(function(ele) {
-			ele.dispose();
+		self._rendered.forEach(function(node) {
+			node.dispose();
 		});
 		// 所有子component reset
 		self._components.forEach(function(name) {
@@ -275,36 +330,32 @@ var Component = this.Component = new Class(function() {
 
 			var pname = '_' + name;
 			if (single) {
-				var ele = self._node.getElement(selector);
-				if (!ele) return null;
-				else if (self[pname] === ele) return self[name]; // 不是第一次get，且结果和上次相同，避免再次添加事件
+				var node = self._node.getElement(selector);
+				if (!node) return null;
+				else if (self[pname] === node) return self[name]; // 不是第一次get，且结果和上次相同，避免再次添加事件
 
-				self._addEventTo(name, ele);
-				self[pname] = ele;
-				self[name] = new type(ele, self);
+				self._addEventTo(name, node);
+				self[pname] = node;
 
-				return self[name];
+				return new type(node, self._options[name]);
 			} else {
-				var eles = self._node.getElements(selector);
-				if (!eles) {
+				var nodes = self._node.getElements(selector);
+				if (!nodes) {
 					self[pname] = new dom.Elements([]);
-					self[name] = new Components([], type);
-					return self[name];
+					return new Components([], type);
 				}
 
 				// 如果已经初始化过，则要确保不会对之前取到过得元素重新执行添加事件
-				eles.forEach(function(ele) {
-					if (!self[pname] || self[pname].indexOf(ele) === -1) {
-						self._addEventTo(name, ele);
+				nodes.forEach(function(node) {
+					if (!self[pname] || self[pname].indexOf(node) === -1) {
+						self._addEventTo(name, node);
 					}
 				});
-				self[pname] = eles;
-				self[name] = new Components(eles, type);
+				self[pname] = nodes;
 
-				return self[name];
+				return new Components(nodes, type, self._options[name], self);
 			}
 		};
-		getter.isComponent = true;
 
 		cls[name] = property(getter);
 	};
@@ -323,13 +374,20 @@ var Component = this.Component = new Class(function() {
 
 	this.defineOptions = staticmethod(function(cls, options) {
 		Object.keys(options).forEach(function(name) {
+			var pname = '_' + name;
+			var methodName = name + '_change';
 			cls[name] = property(function(self) {
-				if (self[name] === undefined) {
-					self[name] = options[name];
+				if (self[pname] === undefined) {
+					self[pname] = options[name];
 				}
-				return self[name];
+				return self[pname];
 			}, function(self, value) {
-				self[name] = value;
+				if (self[methodName]) {
+					self[methodName](value);
+				}
+				self[pname] = value;
+				self._set(name, value);
+				return self[pname];
 			});
 		});
 	});

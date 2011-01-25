@@ -201,6 +201,9 @@ var setter = function(prop, value) {
 		throw 'set not defined property ' + prop;
 	}
 };
+var nativeSetter = function(prop, value) {
+	this[prop] = value;
+}
 
 /**
  * 动态mixin的方法。可以通过任意class的mixin调用
@@ -330,12 +333,6 @@ var Class = this.Class = function() {
 		if (prototyping === PROTOTYPING) return this;
 		this.__class__ = arguments.callee;
 		var value = this.initialize? this.initialize.apply(this, arguments) : null;
-		Object.keys(this.__properties__).forEach(function(name) {
-			var property = this.__properties__[name];
-			if (property.fget) {
-				property.fget.call(null, this);
-			}
-		}, this);
 		return value;
 	};
 
@@ -376,6 +373,7 @@ var Class = this.Class = function() {
 	cls.__mixin__ = mixiner;
 	cls.prototype.get = getter;
 	cls.prototype.set = setter;
+	cls.prototype._set = nativeSetter;
 	return cls;
 };
 
@@ -418,6 +416,10 @@ Class.mixin = function(members, cls) {
  */
 Class.hasProperty = function(obj, name) {
 	return (name in obj.__properties__);
+};
+
+Class.getPropertyNames = function(obj) {
+	return Object.keys(obj.__properties__);
 };
 
 /**
