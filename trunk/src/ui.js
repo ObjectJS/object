@@ -1,5 +1,83 @@
 object.add('ui', 'string, dom', function($, string, dom) {
 
+/**
+ * 定义sub components
+ */
+var define = this.define = function(cls, name, selector, type, single) {
+
+	var getter = function(self) {
+		if (!type) type = Component;
+
+		if (!self._descriptors[name]) {
+			self._descriptors[name] = {
+				selector: selector,
+				type: type,
+				single: single
+			};
+		}
+
+		var pname = '_' + name;
+		if (single) {
+			var node = self._node.getElement(selector);
+			if (!node) return null;
+			else if (self[pname] === node) return self[name]; // 不是第一次get，且结果和上次相同，避免再次添加事件
+
+			self._addEventTo(name, node);
+			self[pname] = node;
+
+			return new type(node, self._options[name]);
+		} else {
+			var nodes = self._node.getElements(selector);
+			if (!nodes) {
+				self[pname] = new dom.Elements([]);
+				return new Components([], type);
+			}
+
+			// 如果已经初始化过，则要确保不会对之前取到过得元素重新执行添加事件
+			nodes.forEach(function(node) {
+				if (!self[pname] || self[pname].indexOf(node) === -1) {
+					self._addEventTo(name, node);
+				}
+			});
+			self[pname] = nodes;
+
+			return new Components(nodes, type, self._options[name], self);
+		}
+	};
+
+	cls[name] = property(getter);
+};
+
+/**
+ * 定义一个sub component
+ */
+var define1 = this.define1 = function(cls, name, selector, type) {
+	define(cls, name, selector, type, true);
+};
+
+/**
+ * 定义 options
+ */
+var defineOptions = this.defineOptions = function(cls, options) {
+	Object.keys(options).forEach(function(name) {
+		var pname = '_' + name;
+		var methodName = name + '_change';
+		cls[name] = property(function(self) {
+			if (self[pname] === undefined) {
+				self[pname] = options[name];
+			}
+			return self[pname];
+		}, function(self, value) {
+			if (self[methodName]) {
+				self[methodName](value);
+			}
+			self[pname] = value;
+			self._set(name, value);
+			return self[pname];
+		});
+	});
+};
+
 var Element = new Class(function() {
 
 	Object.keys(dom.Element).forEach(function(name) {
@@ -315,82 +393,12 @@ var Component = this.Component = new Class(function() {
 		});
 	};
 
-	var define = function(cls, name, selector, type, single) {
-
-		var getter = function(self) {
-			if (!type) type = Component;
-
-			if (!self._descriptors[name]) {
-				self._descriptors[name] = {
-					selector: selector,
-					type: type,
-					single: single
-				};
-			}
-
-			var pname = '_' + name;
-			if (single) {
-				var node = self._node.getElement(selector);
-				if (!node) return null;
-				else if (self[pname] === node) return self[name]; // 不是第一次get，且结果和上次相同，避免再次添加事件
-
-				self._addEventTo(name, node);
-				self[pname] = node;
-
-				return new type(node, self._options[name]);
-			} else {
-				var nodes = self._node.getElements(selector);
-				if (!nodes) {
-					self[pname] = new dom.Elements([]);
-					return new Components([], type);
-				}
-
-				// 如果已经初始化过，则要确保不会对之前取到过得元素重新执行添加事件
-				nodes.forEach(function(node) {
-					if (!self[pname] || self[pname].indexOf(node) === -1) {
-						self._addEventTo(name, node);
-					}
-				});
-				self[pname] = nodes;
-
-				return new Components(nodes, type, self._options[name], self);
-			}
-		};
-
-		cls[name] = property(getter);
-	};
-
 	/**
-	 * 定义sub components
+	 * @deprecated
 	 */
 	this.define = staticmethod(define);
-
-	/**
-	 * 定义一个sub component
-	 */
-	this.define1 = staticmethod(function(cls, name, selector, type) {
-		define(cls, name, selector, type, true);
-	});
-
-	this.defineOptions = staticmethod(function(cls, options) {
-		Object.keys(options).forEach(function(name) {
-			var pname = '_' + name;
-			var methodName = name + '_change';
-			cls[name] = property(function(self) {
-				if (self[pname] === undefined) {
-					self[pname] = options[name];
-				}
-				return self[pname];
-			}, function(self, value) {
-				if (self[methodName]) {
-					self[methodName](value);
-				}
-				self[pname] = value;
-				self._set(name, value);
-				return self[pname];
-			});
-		});
-	});
+	this.define1 = staticmethod(define1);
+	this.defineOptions = staticmethod(defineOptions);
 
 });
 
