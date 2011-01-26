@@ -142,7 +142,6 @@ var Component = this.Component = new Class(dom.Element, function() {
 /**
  * Tab UI
  * @class
- * @event change
  */
 this.TabControl = new Class(Component, function() {
 

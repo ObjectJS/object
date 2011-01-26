@@ -78,6 +78,9 @@ var defineOptions = this.defineOptions = function(cls, options) {
 	});
 };
 
+/**
+ * @class Element
+ */
 var Element = new Class(function() {
 
 	Object.keys(dom.Element).forEach(function(name) {
@@ -101,7 +104,7 @@ var Element = new Class(function() {
 
 
 /**
- * @class
+ * @class Components
  */
 var Components = this.Components = new Class(Array, function() {
 
@@ -154,7 +157,7 @@ var Components = this.Components = new Class(Array, function() {
 
 /**
  * UI模块基类
- * @class
+ * @class Component
  */
 var Component = this.Component = new Class(function() {
 
@@ -395,9 +398,6 @@ var Component = this.Component = new Class(function() {
 		});
 	};
 
-	/**
-	 * @deprecated
-	 */
 	this.define = staticmethod(define);
 	this.define1 = staticmethod(define1);
 	this.defineOptions = staticmethod(defineOptions);
@@ -405,7 +405,7 @@ var Component = this.Component = new Class(function() {
 });
 
 /**
- * @class
+ * @class ForeNextControl
  */
 var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
 
