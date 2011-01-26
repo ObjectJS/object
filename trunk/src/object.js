@@ -534,9 +534,6 @@ this.Loader = new Class(function() {
 	};
 	NoModuleError.prototype = new Error();
 
-	/**
-	 * @constructor
-	 */
 	this.initialize = function(self) {
 		self.useCache = true;
 		// 所有use都会默认use的模块，需要注意循环引用问题

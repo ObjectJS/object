@@ -100,10 +100,12 @@ var Element = new Class(function() {
 });
 
 
+/**
+ * @class
+ */
 var Components = this.Components = new Class(Array, function() {
 
 	/**
-	 * @constructor
 	 * @param elements wrapped dom elements
 	 * @param type 这批节点的共有Component类型，默认为Component
 	 */
@@ -410,9 +412,6 @@ var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
 	Component.define(this, 'nextButton', '.nextbutton');
 	Component.define(this, 'foreButton', '.forebutton');
 
-	/**
-	 * @constructor
-	 */
 	this.initialize = function(self, node) {
 		Component.initialize(self, node);
 

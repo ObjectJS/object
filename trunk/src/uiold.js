@@ -146,9 +146,6 @@ var Component = this.Component = new Class(dom.Element, function() {
  */
 this.TabControl = new Class(Component, function() {
 
-	/**
-	 * @constructor
-	 */
 	this.initialize = function(self) {
 		Component.initialize(self);
 
@@ -183,9 +180,6 @@ this.TabControl = new Class(Component, function() {
  */
 this.ForeNextControl = new Class(Component, function() {
 
-	/**
-	 * @constructor
-	 */
 	this.initialize = function(self) {
 		Component.initialize(self);
 

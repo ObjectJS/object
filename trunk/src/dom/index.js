@@ -961,7 +961,6 @@ var Document = this.Document = new Class(Element, function() {
 var Elements = this.Elements = new Class(Array, function() {
 
 	/**
-	 * @constructor
 	 * @param elements native dom elements
 	 * @param wrapper 这批节点的共有类型，默认为Element
 	 */
