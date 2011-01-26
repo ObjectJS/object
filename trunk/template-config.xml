@@ -17,8 +17,6 @@
 			<include path="ui.js" />
 			<include path="urlparse.js" />
 			<include path="validator.js" />
-			<include path="html5/index.js" />
-			<include path="html5/forms.js" />
 		</combine>
 	</source>
 
