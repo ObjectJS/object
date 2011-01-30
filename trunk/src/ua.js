@@ -1,4 +1,8 @@
-object.add('ua', function($) {
+/**
+ * @namespace
+ * @name ua
+ */
+object.add('ua', /**@lends ua*/ function($) {
 
 var o = this.ua = {};
 var ua = navigator.userAgent,

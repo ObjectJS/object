@@ -1,4 +1,8 @@
-object.add('dom.event', function($) {
+/**
+ * @namespace
+ * @name dom.event
+ */
+object.add('dom.event', /**@lends dom.event*/ function($) {
 
 var Events = this.Events = new Class(function() {
 

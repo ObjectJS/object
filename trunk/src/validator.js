@@ -1,4 +1,8 @@
-object.add('validator', function($) {
+/**
+ * @namespace
+ * @name validator
+ */
+object.add('validator', /**@lends validator*/ function($) {
 
 this.isUrl = function(text) {
 	return /^(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i.test(text);

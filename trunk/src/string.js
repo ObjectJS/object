@@ -1,4 +1,8 @@
-object.add('string', function($) {
+/**
+ * @namespace
+ * @name string
+ */
+object.add('string', /**@lends string*/ function($) {
 
 /**
  * 模板

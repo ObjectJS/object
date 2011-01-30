@@ -1,7 +1,12 @@
-object.add('ui', 'string, dom', function($, string, dom) {
+/**
+ * @namespace
+ * @name ui
+ */
+object.add('ui', 'string, dom', /**@lends ui*/ function($, string, dom) {
 
 /**
  * 定义sub components
+ * @name ui.define
  */
 var define = this.define = function(cls, name, selector, type, single) {
 
@@ -50,6 +55,7 @@ var define = this.define = function(cls, name, selector, type, single) {
 
 /**
  * 定义一个sub component
+ * @name ui.define1
  */
 var define1 = this.define1 = function(cls, name, selector, type) {
 	define(cls, name, selector, type, true);
@@ -57,6 +63,7 @@ var define1 = this.define1 = function(cls, name, selector, type) {
 
 /**
  * 定义 options
+ * @name ui.defineOptions
  */
 var defineOptions = this.defineOptions = function(cls, options) {
 	Object.keys(options).forEach(function(name) {
@@ -79,7 +86,7 @@ var defineOptions = this.defineOptions = function(cls, options) {
 };
 
 /**
- * @class Element
+ * @class
  */
 var Element = new Class(function() {
 
@@ -104,7 +111,8 @@ var Element = new Class(function() {
 
 
 /**
- * @class Components
+ * @class
+ * @name ui.Components
  */
 var Components = this.Components = new Class(Array, function() {
 
@@ -157,7 +165,8 @@ var Components = this.Components = new Class(Array, function() {
 
 /**
  * UI模块基类
- * @class Component
+ * @class
+ * @name ui.Component
  */
 var Component = this.Component = new Class(function() {
 
@@ -405,7 +414,8 @@ var Component = this.Component = new Class(function() {
 });
 
 /**
- * @class ForeNextControl
+ * @class
+ * @name ui.ForeNextControl
  */
 var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
 

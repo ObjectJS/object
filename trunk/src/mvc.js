@@ -1,4 +1,8 @@
-object.add('mvc', function($) {
+/**
+ * @namespace
+ * @name mvc
+ */
+object.add('mvc', /**@lends mvc*/ function($) {
 
 /**
  * MVC Action 基类

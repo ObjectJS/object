@@ -1,4 +1,8 @@
-object.add('uiold', 'dom', function($, dom) {
+/**
+ * @namespace
+ * @name uiold
+ */
+object.add('uiold', 'dom', /**@lends uiold*/ function($, dom) {
 
 /**
  * UI模块基类

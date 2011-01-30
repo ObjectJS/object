@@ -1,4 +1,8 @@
-object.add('options', function($) {
+/**
+ * @namespace
+ * @name options
+ */
+object.add('options', /**@lends options*/ function($) {
 
 /**
  * 这个类辅助这种参数传递方式的实现：

@@ -1,4 +1,8 @@
-object.add('net', 'dom', function($, dom) {
+/**
+ * @namespace
+ * @name net
+ */
+object.add('net', 'dom', /**@lends net*/ function($, dom) {
 
 var ajaxProxies = this.ajaxProxies = {};
 

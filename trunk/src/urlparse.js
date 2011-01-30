@@ -1,4 +1,8 @@
-object.add('urlparse', function() {
+/**
+ * @namespace
+ * @name urlparser
+ */
+object.add('urlparse', /**@lends urlparser*/ function() {
 
 this.urljoin = function(base, url) {
 	var baseparts = urlparse(base);

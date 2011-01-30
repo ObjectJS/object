@@ -1,4 +1,8 @@
-object.add('dom', 'ua, string, sys', function($, ua, string, sys) {
+/**
+ * @namespace
+ * @name dom
+ */
+object.add('dom', 'ua, string, sys', /**@lends dom*/ function($, ua, string, sys) {
 
 var UID = 1;
 var storage = {};
