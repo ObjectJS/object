@@ -1,9 +1,14 @@
-var object = new (function(globalHost) {
+/**
+ * @namespace
+ * @name object
+ */
+var object = new (/**@lends object*/ function(globalHost) {
 
 var object = this;
 
 /**
- * Object.keys
+ * 遍历一个对象，返回所有的key的数组
+ * @name Object.keys
  */
 Object.keys = function(o) {
 	// 在Safari 5.0.2(7533.18.5)中，在这里用for in遍历parent会将prototype属性遍历出来，导致原型被指向一个错误的对象
@@ -29,16 +34,25 @@ Object.keys = function(o) {
 	return result; 
 };
 
+/**
+ * @name Array.isArray
+ */
 Array.isArray = Array.isArray || function(o) {
 	return Object.prototype.toString.call(o) === '[object Array]';
 };
 
+/**
+ * @name Array#forEach
+ */
 Array.prototype.forEach = Array.prototype.forEach || function(fn, bind) {
 	for (var i = 0; i < this.length; i++) {
 		fn.call(bind, this[i], i, this);
 	}
 };
 
+/**
+ * @name Array#indexOf
+ */
 Array.prototype.indexOf = Array.prototype.indexOf || function(str){
 	for (var i = 0; i < this.length; i++) {
 		if (str == this[i]) {
@@ -48,6 +62,9 @@ Array.prototype.indexOf = Array.prototype.indexOf || function(str){
 	return -1;
 };
 
+/**
+ * @name Array#some
+ */
 Array.prototype.some = Array.prototype.some || function(fn, bind) {
 	for (var i = 0, l = this.length; i < l; i++){
 		if ((i in this) && fn.call(bind, this[i], i, this)) return true;
@@ -55,6 +72,9 @@ Array.prototype.some = Array.prototype.some || function(fn, bind) {
 	return false;
 };
 
+/**
+ * @name Array#every
+ */
 Array.prototype.every = Array.prototype.every || function(fn, bind){
 	for (var i = 0, l = this.length; i < l; i++){
 		if ((i in this) && !fn.call(bind, this[i], i, this)) return false;
@@ -62,6 +82,9 @@ Array.prototype.every = Array.prototype.every || function(fn, bind){
 	return true;
 };
 
+/**
+ * @name Array#map
+ */
 Array.prototype.map = Array.prototype.map || function (fn, bind) {
 	var results = [];
 	for (var i = 0, l = this.length; i < l; i++){
@@ -70,6 +93,9 @@ Array.prototype.map = Array.prototype.map || function (fn, bind) {
 	return results;
 };
 
+/**
+ * @name Array#filter
+ */
 Array.prototype.filter = Array.prototype.filter || function(fn, bind){
 	var results = [];
 	for (var i = 0, l = this.length; i < l; i++){
@@ -78,6 +104,9 @@ Array.prototype.filter = Array.prototype.filter || function(fn, bind){
 	return results;
 };
 
+/**
+ * @name Function#bind
+ */
 Function.prototype.bind = Function.prototype.bind || function(object) {
 	var method = this;
 	return function() {
@@ -90,7 +119,6 @@ Function.prototype.bind = Function.prototype.bind || function(object) {
  * @param obj 源
  * @param properties 目标
  * @param ov 是否覆盖，默认true
- * @returns 对象
  */
 this.extend = function(obj, properties, ov) {
 	if (ov !== false) ov = true;
@@ -107,13 +135,18 @@ this.extend = function(obj, properties, ov) {
 	return obj;
 };
 
+/**
+ * 浅拷贝
+ */
 this.clone = function(obj) {
 	var clone = {};
 	for (var key in obj) clone[key] = obj[key];
 	return clone;
 };
 
-// 将成员放到window上
+/**
+ * 将成员引用放到window上
+ */
 this.bind = function(host) {
 	object.extend(host, object);
 };
@@ -121,21 +154,36 @@ this.bind = function(host) {
 
 this._loader = null;
 
+/**
+ * 设置全局exports变量的初始成员
+ */
 this.setGlobalUses = function(arr) {
 	if (!object._loader) object._loader = new Loader();
 	object._loader.globalUses = arr;
 };
 
+/**
+ * use一个module
+ * @borrows object.Loader.use
+ */
 this.use = function() {
 	if (!object._loader) object._loader = new Loader();
 	object._loader.use.apply(object._loader, arguments);
 };
 
+/**
+ * 直接执行一个module，其 __name__ 为 __main__
+ * @borrows object.Loader.execute
+ */
 this.execute = function() {
 	if (!object._loader) object._loader = new Loader();
 	object._loader.execute.apply(object._loader, arguments);
 };
 
+/**
+ * 添加一个module
+ * @borrows object.Loader.add
+ */
 this.add = function() {
 	if (!object._loader) object._loader = new Loader();
 	object._loader.add.apply(object._loader, arguments);
@@ -143,7 +191,7 @@ this.add = function() {
 
 })(window);
 
-(function() {
+(/**@lends _global_*/ function() {
 
 // prototyping标识符，有此标识符标识则代表new一个类时是为了继承而new的
 var PROTOTYPING = {anything: true};
@@ -511,14 +559,14 @@ StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "inde
 
 })();
 
-(function() {
+(/**@lends object*/ function() {
 
 /**
  * object的包管理器
  * 这个class依赖于object._lib ，且会修改它
- * @class Loader
+ * @class
  */
-this.Loader = new Class(function() {
+this.Loader = new Class(/**@lends object.Loader*/ function() {
 
 	var _lib;
 
@@ -591,7 +639,7 @@ this.Loader = new Class(function() {
 	 */
 	this.loadScript = function(self, src, callback) {
 
-		var ele, doCallback;
+		var ele;
 
 		if (self.useCache) {
 			var scripts = document.getElementsByTagName('script');
@@ -617,7 +665,7 @@ this.Loader = new Class(function() {
 		ele.loading = true;
 		ele.callbacks = [];
 
-		doCallback = function() {
+		var doCallback = function() {
 			if (window.console) console.log('load ' + src);
 			ele.loading = null;
 			ele.callbacks.forEach(function(callback) {
@@ -975,10 +1023,10 @@ this.Loader = new Class(function() {
 
 })();
 
-(function() {
+(/**@lends object*/ function() {
 
 // 事件
-this.Events = new Class({
+this.Events = new Class(/**@lends object.Events*/ {
 
 	initialize : function(self) {
 		self._eventListeners = {};

@@ -6,7 +6,6 @@ object.add('ui', 'string, dom', /**@lends ui*/ function($, string, dom) {
 
 /**
  * 定义sub components
- * @name ui.define
  */
 var define = this.define = function(cls, name, selector, type, single) {
 
@@ -55,7 +54,6 @@ var define = this.define = function(cls, name, selector, type, single) {
 
 /**
  * 定义一个sub component
- * @name ui.define1
  */
 var define1 = this.define1 = function(cls, name, selector, type) {
 	define(cls, name, selector, type, true);
@@ -63,7 +61,6 @@ var define1 = this.define1 = function(cls, name, selector, type) {
 
 /**
  * 定义 options
- * @name ui.defineOptions
  */
 var defineOptions = this.defineOptions = function(cls, options) {
 	Object.keys(options).forEach(function(name) {
@@ -114,7 +111,7 @@ var Element = new Class(function() {
  * @class
  * @name ui.Components
  */
-var Components = this.Components = new Class(Array, function() {
+var Components = this.Components = new Class(Array, /**@lends ui.Components*/ function() {
 
 	/**
 	 * @param elements wrapped dom elements
@@ -168,7 +165,7 @@ var Components = this.Components = new Class(Array, function() {
  * @class
  * @name ui.Component
  */
-var Component = this.Component = new Class(function() {
+var Component = this.Component = new Class(/**@lends ui.Component*/ function() {
 
 	var getConstructor = function(type) {
 		if (type === 'number') return Number;
@@ -417,7 +414,7 @@ var Component = this.Component = new Class(function() {
  * @class
  * @name ui.ForeNextControl
  */
-var ForeNextControl = this.ForeNextControl = new Class(Component, function() {
+var ForeNextControl = this.ForeNextControl = new Class(Component, /**@lends ui.ForeNextControl*/ function() {
 
 	Component.define(this, 'nextButton', '.nextbutton');
 	Component.define(this, 'foreButton', '.forebutton');

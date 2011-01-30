@@ -57,6 +57,12 @@ if (ua.ua.webkit && ua.ua.webkit < 525) {
 	}, 20); 
 }
 
+/**
+ * 在dom加载完毕后执行callback。
+ * 不同于 DOMContentLoaded 事件，如果 dom.ready 是在页面已经加载完毕后调用的，同样会执行。
+ * 用此方法限制需要执行的函数一定会在页面结构加载完毕后执行。
+ * @param callback 需要执行的callback函数
+ */
 this.ready = function(callback) {
 	if (document.body) {
 		callback();
@@ -74,8 +80,14 @@ this.ready = function(callback) {
 };
 
 /**
- * native node进行包装
- * @param node
+ * 包装一个元素，使其拥有相应的Element包装成员
+ * 比如 div 会使用 Element 进行包装
+ * form 会使用 FormElement 进行包装
+ * input / select 等会使用 FormItemElement 进行包装
+ * 包装后的节点成员请参照相应的包装类成员
+ * @function
+ * @name dom.wrap
+ * @param node 一个原生节点
  */
 var wrap = this.wrap = function(node) {
 	if (!node) return null;
@@ -108,6 +120,16 @@ var wrap = this.wrap = function(node) {
 	}
 };
 
+/**
+ * 通过selector获取context作用域下的节点集合
+ * dom.Elements包装后的节点数组拥有相应最小Element的统一调用方法
+ * 比如 forms = dom.getElements('form'); 'send' in forms // true
+ * @function
+ * @name dom.getElements
+ * @param selector 一个css selector
+ * @param context 一个节点
+ * @returns {dom.Elements}
+ */
 var getElements = this.getElements = function(selector, context) {
 	if (!context) context = document;
 
@@ -152,6 +174,14 @@ var getElements = this.getElements = function(selector, context) {
 	return new Elements(eles, wrapper);
 };
 
+/**
+ * 通过selector获取context作用域下的第一个节点
+ * @function
+ * @name dom.getElement
+ * @param selector 一个css selector
+ * @param context 一个节点
+ * @returns 一个包装后的结点
+ */
 var getElement = this.getElement = function(selector, context) {
 	if (!context) context = document;
 
@@ -160,6 +190,10 @@ var getElement = this.getElement = function(selector, context) {
 	return ele;
 };
 
+/**
+ * document.getElementById 的简单调用
+ * @param id id
+ */
 this.id = function(id) {
 	return document.getElementById(id);
 };
@@ -209,8 +243,11 @@ var eval_inner_JS = this.eval_inner_JS = function(ele) {
 
 /**
  * html5 classList api
+ * @class
+ * @name dom.ElementClassList
+ * @extends Array
  */
-var ElementClassList = this.ElementClassList = new Class(Array, function() {
+var ElementClassList = this.ElementClassList = new Class(Array, /**@lends dom.ElementClassList*/ function() {
 
 	this.initialize = function(self, ele) {
 		self.length = 0; // for Array
@@ -253,9 +290,10 @@ var ElementClassList = this.ElementClassList = new Class(Array, function() {
 });
 
 /**
- * @class Element
+ * @class
+ * @name dom.Element
  */
-var Element = this.Element = new Class(function() {
+var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 	var _needGetDom = (function() {
 		// 检测浏览器是否支持通过innerHTML设置未知标签，典型的就是IE不支持
@@ -303,7 +341,8 @@ var Element = this.Element = new Class(function() {
 	};
 
 	/**
-	 * 事件
+	 * 添加事件
+	 * @param self
 	 * @param type 事件名
 	 * @param func 事件回调
 	 * @param cap 冒泡
@@ -363,6 +402,8 @@ var Element = this.Element = new Class(function() {
 	};
 
 	/**
+	 * 移除事件
+	 * @param self
 	 * @param type 事件名
 	 * @param func 事件回调
 	 * @param cap 冒泡
@@ -393,6 +434,8 @@ var Element = this.Element = new Class(function() {
 	};
 
 	/**
+	 * 触发事件
+	 * @param self
 	 * @param type 事件名
 	 */
 	this.fireEvent = function(self, type) {
@@ -417,9 +460,11 @@ var Element = this.Element = new Class(function() {
 	};
 
 	/**
-	 * @param selector
-	 * @param type
-	 * @param callback
+	 * 事件代理
+	 * @param self
+	 * @param selector 需要被代理的子元素selector
+	 * @param type 事件名称
+	 * @param callback 事件回调
 	 */
 	this.delegate = function(self, selector, type, callback) {
 		self.addEvent(type, function(e) {
@@ -433,6 +478,7 @@ var Element = this.Element = new Class(function() {
 	/**
 	 * html5 matchesSelector api
 	 * 检测元素是否匹配selector
+	 * @param self
 	 * @param selector css选择符
 	 */
 	this.matchesSelector = function(self, selector) {
@@ -440,6 +486,8 @@ var Element = this.Element = new Class(function() {
 	};
 
 	/**
+	 * 获取元素上通过 data- 前缀定义的属性值
+	 * @param self
 	 * @param data name
 	 * @return data value
 	 */
@@ -448,6 +496,8 @@ var Element = this.Element = new Class(function() {
 	};
 
 	/**
+	 * 设置元素的innerHTML
+	 * @param self
 	 * @param str html代码
 	 */
 	this.setHTML = function(self, str) {
@@ -455,11 +505,15 @@ var Element = this.Element = new Class(function() {
 	};
 
 	/**
+	 * @function
+	 * @name dom.Element#setContent
+	 * @borrows dom.Element.setHTML
 	 */
 	this.setContent = this.setHTML;
 
 	/**
-	 * 根据选择器返回第一个
+	 * 根据选择器返回第一个符合selector的元素
+	 * @param self
 	 * @param selector css选择符
 	 */
 	this.getElement = function(self, selector) {
@@ -468,6 +522,7 @@ var Element = this.Element = new Class(function() {
 
 	/**
 	 * 根据选择器返回数组
+	 * @param self
 	 * @param selector css选择符
 	 */
 	this.getElements = function(self, selector) {
@@ -492,11 +547,21 @@ var Element = this.Element = new Class(function() {
 	};
 	inserters.inside = inserters.bottom;
 
+	/**
+	 * @param self
+	 * @param el 被添加的元素
+	 * @param where {'bottom'|'top'|'after'|'before'} 添加的位置
+	 */
 	this.grab = function(self, el, where) {
 		inserters[where || 'bottom'](el, self);
 		return self;
 	};
 
+	/**
+	 * @param self
+	 * @param el 被添加的元素
+	 * @param where {'bottom'|'top'|'after'|'before'} 添加的位置
+	 */
 	this.inject = function(self, el, where) {
 		inserters[where || 'bottom'](self, el);
 		return self;
@@ -552,22 +617,48 @@ var Element = this.Element = new Class(function() {
 		// TODO
 	};
 
+	/**
+	 * 添加className
+	 * @param self
+	 * @param name
+	 */
 	this.addClass = function(self, name) {
 		self.classList.add(name);
 	};
 
+	/**
+	 * 移除className
+	 * @param self
+	 * @param name
+	 */
 	this.removeClass = function(self, name) {
 		self.classList.remove(name);
 	};
 
+	/**
+	 * 切换className
+	 * @param self
+	 * @param name
+	 */
 	this.toggleClass = function(self, name) {
 		self.classList.toggle(name);
 	};
 
+	/**
+	 * 检查是否拥有className
+	 * @param self
+	 * @param name
+	 */
 	this.hasClass = function(self, name) {
 		return self.classList.contains(name);
 	};
 
+	/**
+	 * 设置inline style
+	 * @param self
+	 * @param property
+	 * @param value
+	 */
 	this.setStyle = function(self, property, value) {
 		switch (property){
 			case 'opacity':
@@ -584,12 +675,17 @@ var Element = this.Element = new Class(function() {
 		return null;
 	};
 
+	/**
+	 * 移除自己
+	 * @param self
+	 */
 	this.dispose = function(self) {
 		return (self.parentNode) ? self.parentNode.removeChild(self) : self;
 	};
 	
 	/**
 	 * 隐藏一个元素
+	 * @param self
 	 */
 	this.hide = function(self) {
 		if (self.style.display !== 'none') self.oldDisplay = self.style.display;
@@ -598,6 +694,7 @@ var Element = this.Element = new Class(function() {
 
 	/**
 	 * 显示一个元素
+	 * @param self
 	 */
 	this.show = function(self) {
 		self.style.display = self.oldDisplay || '';
@@ -605,6 +702,7 @@ var Element = this.Element = new Class(function() {
 
 	/**
 	 * 切换显示
+	 * @param self
 	 */
 	this.toggle = function(self) {
 		if (self.style.display == 'none') self.show();
@@ -626,8 +724,17 @@ var Element = this.Element = new Class(function() {
 	});
 
 	/**
+	 * 保证大写的tagName
+	 */
+	this.tagName = property(function(self) {
+		return self.tagName.toUpperCase();
+	});
+
+	/**
 	 * 将IE中的window.event包装一下
-	 * @staticmethod
+	 * @static
+	 * @function
+	 * @name dom.Element.wrapEvent
 	 */
 	this.wrapEvent = staticmethod(function(e) {
 
@@ -649,13 +756,11 @@ var Element = this.Element = new Class(function() {
 		return e;
 	});
 
-	this.tagName = property(function(self) {
-		return self.tagName.toLowerCase();
-	});
-
 	/**
-	 * 将字符串转换成dom
-	 * @staticmethod
+	 * 通过一个字符串创建一个包装后的dom节点
+	 * @function
+	 * @static
+	 * @name dom.Element.fromString
 	 */
 	this.fromString = staticmethod(function(str) {
 		var tmp = document.createElement('div');
@@ -680,8 +785,11 @@ var Element = this.Element = new Class(function() {
 
 /**
  * 表单
+ * @class
+ * @name dom.FormElement
+ * @extends dom.Element
  */
-var FormElement = this.FormElement = new Class(Element, function() {
+var FormElement = this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 
 	this.initialize = function(self) {
 		Element.initialize(self);
@@ -755,8 +863,10 @@ var FormElement = this.FormElement = new Class(Element, function() {
 /**
  * textarea / input / textarea / select / option
  * @class
+ * @name dom.FormItemElement
+ * @extends dom.Element
  */
-var FormItemElement = this.FormItemElement = new Class(Element, function() {
+var FormItemElement = this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ function() {
 
 	var _needBindPlaceholder = (function() {
 		return !('placeholder' in document.createElement('input'));
@@ -765,7 +875,7 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 	this.initialize = function(self) {
 		Element.initialize(self);
 
-		if (_needBindPlaceholder && ['input', 'textarea'].indexOf(self.get('tagName')) !== -1) {
+		if (_needBindPlaceholder && ['INPUT', 'TEXTAREA'].indexOf(self.get('tagName')) !== -1) {
 			self.bindPlaceholder(self);
 		}
 	};
@@ -952,17 +1062,29 @@ var FormItemElement = this.FormItemElement = new Class(Element, function() {
 
 });
 
-var Window = this.Window = new Class(Element, function() {
+/**
+ * @class
+ * @name dom.Window
+ * @extends dom.Element
+ */
+var Window = this.Window = new Class(Element, /**@lends dom.Window*/ function() {
 });
 
-var Document = this.Document = new Class(Element, function() {
+/**
+ * @class
+ * @name dom.Document
+ * @extends dom.Element
+ */
+var Document = this.Document = new Class(Element, /**@lends dom.Document*/ function() {
 });
 
 /**
  * 一个包装类，实现Element方法的统一调用
- * @class Elements
+ * @class
+ * @name dom.Elements
+ * @extends Array
  */
-var Elements = this.Elements = new Class(Array, function() {
+var Elements = this.Elements = new Class(Array, /**@lends dom.Elements*/ function() {
 
 	/**
 	 * @param elements native dom elements
@@ -1005,18 +1127,18 @@ var Elements = this.Elements = new Class(Array, function() {
 });
 
 var _tagMap = {
-	'form': FormElement,
-	'input': FormItemElement,
-	'textarea': FormItemElement,
-	'output': FormItemElement,
-	'select': FormItemElement,
-	'option': FormItemElement,
-	'button': FormItemElement
+	'FORM': FormElement,
+	'INPUT': FormItemElement,
+	'TEXTAREA': FormItemElement,
+	'OUTPUT': FormItemElement,
+	'SELECT': FormItemElement,
+	'OPTION': FormItemElement,
+	'BUTTON': FormItemElement
 };
 
 // 根据ele的tagName返回他所需要的wrapper class
 function getWrapper(tagName) {
-	var tag = tagName.toLowerCase();
+	var tag = tagName.toUpperCase();
 	var cls = _tagMap[tag];
 	if (cls) return cls;
 	else return Element;
