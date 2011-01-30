@@ -5,7 +5,7 @@
 		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
 		<meta name="generator" content="JsDoc Toolkit" />
 		
-		<title>JsDoc Reference - ui.ForeNextControl</title>
+		<title>JsDoc Reference - dom</title>
 
 		<style type="text/css">
 			/* default.css */
@@ -260,7 +260,7 @@ ul.inheritsList
 <!-- ============================== class title ============================ -->
 			<h1 class="classTitle">
 				
-				Class ui.ForeNextControl
+				Namespace dom
 			</h1>
 
 <!-- ============================== class summary ========================== -->			
@@ -271,14 +271,14 @@ ul.inheritsList
 				
 				
 				
-					<br /><i>Defined in: </i> <a href="../symbols/src/d__works_renren_static_object_trunk_src__ui.js.html">ui.js</a>.
+					<br /><i>Defined in: </i> <a href="../symbols/src/d__works_renren_static_object_trunk_src__dom_index.js.html">index.js</a>.
 				
 			</p>
 
 <!-- ============================== constructor summary ==================== -->			
 			
-			<table class="summaryTable" cellspacing="0" summary="A summary of the constructor documented in the class ui.ForeNextControl.">
-				<caption>Class Summary</caption>
+			<table class="summaryTable" cellspacing="0" summary="A summary of the constructor documented in the class dom.">
+				<caption>Namespace Summary</caption>
 				<thead>
 					<tr>
 						<th scope="col">Constructor Attributes</th>
@@ -290,7 +290,7 @@ ul.inheritsList
 						<td class="attributes">&nbsp;</td>
 						<td class="nameDescription" >
 							<div class="fixedFont">
-								<b><a href="../symbols/ui.ForeNextControl.html#constructor">ui.ForeNextControl</a></b>()
+								<b><a href="../symbols/dom.html#constructor">dom</a></b>
 							</div>
 							<div class="description"></div>
 						</td>
@@ -301,12 +301,17 @@ ul.inheritsList
 
 <!-- ============================== properties summary ===================== -->
 			
+				
+				
+				
+				
+			
 
 <!-- ============================== methods summary ======================== -->
 			
 				
 				
-				<table class="summaryTable" cellspacing="0" summary="A summary of the methods documented in the class ui.ForeNextControl.">
+				<table class="summaryTable" cellspacing="0" summary="A summary of the methods documented in the class dom.">
 					<caption>Method Summary</caption>
 					<thead>
 						<tr>
@@ -317,74 +322,64 @@ ul.inheritsList
 					<tbody>
 					
 						<tr>
-							<td class="attributes">&nbsp;</td>
+							<td class="attributes">&lt;static&gt; &nbsp;</td>
 							<td class="nameDescription">
-								<div class="fixedFont"><b><a href="../symbols/ui.ForeNextControl.html#change">change</a></b>(self)
+								<div class="fixedFont">dom.<b><a href="../symbols/dom.html#.eval_inner_JS">eval_inner_JS</a></b>(ele)
 								</div>
 								<div class="description"></div>
 							</td>
 						</tr>
 					
 						<tr>
-							<td class="attributes">&nbsp;</td>
+							<td class="attributes">&lt;static&gt; &nbsp;</td>
 							<td class="nameDescription">
-								<div class="fixedFont"><b><a href="../symbols/ui.ForeNextControl.html#fore">fore</a></b>(self)
+								<div class="fixedFont">dom.<b><a href="../symbols/dom.html#.getElement">getElement</a></b>(selector, context)
 								</div>
-								<div class="description"></div>
+								<div class="description">通过selector获取context作用域下的第一个节点</div>
 							</td>
 						</tr>
 					
 						<tr>
-							<td class="attributes">&nbsp;</td>
+							<td class="attributes">&lt;static&gt; &nbsp;</td>
 							<td class="nameDescription">
-								<div class="fixedFont"><b><a href="../symbols/ui.ForeNextControl.html#foreButton_click">foreButton_click</a></b>(self, event)
+								<div class="fixedFont">dom.<b><a href="../symbols/dom.html#.getElements">getElements</a></b>(selector, context)
 								</div>
-								<div class="description"></div>
+								<div class="description">通过selector获取context作用域下的节点集合
+dom.Elements包装后的节点数组拥有相应最小Element的统一调用方法
+比如 forms = dom.getElements('form'); 'send' in forms // true</div>
 							</td>
 						</tr>
 					
 						<tr>
-							<td class="attributes">&nbsp;</td>
+							<td class="attributes">&lt;static&gt; &nbsp;</td>
 							<td class="nameDescription">
-								<div class="fixedFont"><b><a href="../symbols/ui.ForeNextControl.html#initialize">initialize</a></b>(self, node)
+								<div class="fixedFont">dom.<b><a href="../symbols/dom.html#.id">id</a></b>(id)
 								</div>
-								<div class="description"></div>
+								<div class="description">document.getElementById 的简单调用</div>
 							</td>
 						</tr>
 					
 						<tr>
-							<td class="attributes">&nbsp;</td>
+							<td class="attributes">&lt;static&gt; &nbsp;</td>
 							<td class="nameDescription">
-								<div class="fixedFont"><b><a href="../symbols/ui.ForeNextControl.html#next">next</a></b>(self)
+								<div class="fixedFont">dom.<b><a href="../symbols/dom.html#.ready">ready</a></b>(callback)
 								</div>
-								<div class="description"></div>
+								<div class="description">在dom加载完毕后执行callback。
+不同于 DOMContentLoaded 事件，如果 dom.ready 是在页面已经加载完毕后调用的，同样会执行。
+用此方法限制需要执行的函数一定会在页面结构加载完毕后执行。</div>
 							</td>
 						</tr>
 					
 						<tr>
-							<td class="attributes">&nbsp;</td>
+							<td class="attributes">&lt;static&gt; &nbsp;</td>
 							<td class="nameDescription">
-								<div class="fixedFont"><b><a href="../symbols/ui.ForeNextControl.html#nextButton_click">nextButton_click</a></b>(self, event)
+								<div class="fixedFont">dom.<b><a href="../symbols/dom.html#.wrap">wrap</a></b>(node)
 								</div>
-								<div class="description"></div>
-							</td>
-						</tr>
-					
-						<tr>
-							<td class="attributes">&nbsp;</td>
-							<td class="nameDescription">
-								<div class="fixedFont"><b><a href="../symbols/ui.ForeNextControl.html#updatePosition">updatePosition</a></b>(self)
-								</div>
-								<div class="description"></div>
-							</td>
-						</tr>
-					
-						<tr>
-							<td class="attributes">&nbsp;</td>
-							<td class="nameDescription">
-								<div class="fixedFont"><b><a href="../symbols/ui.ForeNextControl.html#updateTotal">updateTotal</a></b>(self)
-								</div>
-								<div class="description"></div>
+								<div class="description">包装一个元素，使其拥有相应的Element包装成员
+比如 div 会使用 Element 进行包装
+form 会使用 FormElement 进行包装
+input / select 等会使用 FormItemElement 进行包装
+包装后的节点成员请参照相应的包装类成员</div>
 							</td>
 						</tr>
 					
@@ -401,11 +396,11 @@ ul.inheritsList
 			
 			<div class="details"><a name="constructor"> </a>
 				<div class="sectionTitle">
-					Class Detail
+					Namespace Detail
 				</div>
 				
 				<div class="fixedFont">
-						<b>ui.ForeNextControl</b>()
+						<b>dom</b>
 				</div>
 				
 				<div class="description">
@@ -436,11 +431,11 @@ ul.inheritsList
 					Method Detail
 				</div>
 				
-					<a name="change"> </a>
-					<div class="fixedFont">
+					<a name=".eval_inner_JS"> </a>
+					<div class="fixedFont">&lt;static&gt; 
 					
 					
-					<b>change</b>(self)
+					<span class="light">dom.</span><b>eval_inner_JS</b>(ele)
 					
 					</div>
 					<div class="description">
@@ -456,7 +451,7 @@ ul.inheritsList
 							<dt class="heading">Parameters:</dt>
 							
 								<dt>
-									<b>self</b>
+									<b>ele</b>
 									
 								</dt>
 								<dd></dd>
@@ -472,15 +467,15 @@ ul.inheritsList
 
 					<hr />
 				
-					<a name="fore"> </a>
-					<div class="fixedFont">
+					<a name=".getElement"> </a>
+					<div class="fixedFont">&lt;static&gt; 
 					
 					
-					<b>fore</b>(self)
+					<span class="light">dom.</span><b>getElement</b>(selector, context)
 					
 					</div>
 					<div class="description">
-						
+						通过selector获取context作用域下的第一个节点
 						
 						
 					</div>
@@ -492,10 +487,110 @@ ul.inheritsList
 							<dt class="heading">Parameters:</dt>
 							
 								<dt>
-									<b>self</b>
+									<b>selector</b>
 									
 								</dt>
-								<dd></dd>
+								<dd>一个css selector</dd>
+							
+								<dt>
+									<b>context</b>
+									
+								</dt>
+								<dd>一个节点</dd>
+							
+							</dl>
+						
+						
+						
+						
+						
+							<dl class="detailList">
+							<dt class="heading">Returns:</dt>
+							
+								<dd>一个包装后的结点</dd>
+							
+							</dl>
+						
+						
+						
+
+					<hr />
+				
+					<a name=".getElements"> </a>
+					<div class="fixedFont">&lt;static&gt; 
+					
+					<span class="light">{<a href="../symbols/dom.Elements.html">dom.Elements</a>}</span>
+					<span class="light">dom.</span><b>getElements</b>(selector, context)
+					
+					</div>
+					<div class="description">
+						通过selector获取context作用域下的节点集合
+dom.Elements包装后的节点数组拥有相应最小Element的统一调用方法
+比如 forms = dom.getElements('form'); 'send' in forms // true
+						
+						
+					</div>
+					
+					
+					
+						
+							<dl class="detailList">
+							<dt class="heading">Parameters:</dt>
+							
+								<dt>
+									<b>selector</b>
+									
+								</dt>
+								<dd>一个css selector</dd>
+							
+								<dt>
+									<b>context</b>
+									
+								</dt>
+								<dd>一个节点</dd>
+							
+							</dl>
+						
+						
+						
+						
+						
+							<dl class="detailList">
+							<dt class="heading">Returns:</dt>
+							
+								<dd><span class="light fixedFont">{<a href="../symbols/dom.Elements.html">dom.Elements</a>}</span> </dd>
+							
+							</dl>
+						
+						
+						
+
+					<hr />
+				
+					<a name=".id"> </a>
+					<div class="fixedFont">&lt;static&gt; 
+					
+					
+					<span class="light">dom.</span><b>id</b>(id)
+					
+					</div>
+					<div class="description">
+						document.getElementById 的简单调用
+						
+						
+					</div>
+					
+					
+					
+						
+							<dl class="detailList">
+							<dt class="heading">Parameters:</dt>
+							
+								<dt>
+									<b>id</b>
+									
+								</dt>
+								<dd>id</dd>
 							
 							</dl>
 						
@@ -508,15 +603,17 @@ ul.inheritsList
 
 					<hr />
 				
-					<a name="foreButton_click"> </a>
-					<div class="fixedFont">
+					<a name=".ready"> </a>
+					<div class="fixedFont">&lt;static&gt; 
 					
 					
-					<b>foreButton_click</b>(self, event)
+					<span class="light">dom.</span><b>ready</b>(callback)
 					
 					</div>
 					<div class="description">
-						
+						在dom加载完毕后执行callback。
+不同于 DOMContentLoaded 事件，如果 dom.ready 是在页面已经加载完毕后调用的，同样会执行。
+用此方法限制需要执行的函数一定会在页面结构加载完毕后执行。
 						
 						
 					</div>
@@ -528,16 +625,10 @@ ul.inheritsList
 							<dt class="heading">Parameters:</dt>
 							
 								<dt>
-									<b>self</b>
+									<b>callback</b>
 									
 								</dt>
-								<dd></dd>
-							
-								<dt>
-									<b>event</b>
-									
-								</dt>
-								<dd></dd>
+								<dd>需要执行的callback函数</dd>
 							
 							</dl>
 						
@@ -550,15 +641,19 @@ ul.inheritsList
 
 					<hr />
 				
-					<a name="initialize"> </a>
-					<div class="fixedFont">
+					<a name=".wrap"> </a>
+					<div class="fixedFont">&lt;static&gt; 
 					
 					
-					<b>initialize</b>(self, node)
+					<span class="light">dom.</span><b>wrap</b>(node)
 					
 					</div>
 					<div class="description">
-						
+						包装一个元素，使其拥有相应的Element包装成员
+比如 div 会使用 Element 进行包装
+form 会使用 FormElement 进行包装
+input / select 等会使用 FormItemElement 进行包装
+包装后的节点成员请参照相应的包装类成员
 						
 						
 					</div>
@@ -568,168 +663,12 @@ ul.inheritsList
 						
 							<dl class="detailList">
 							<dt class="heading">Parameters:</dt>
-							
-								<dt>
-									<b>self</b>
-									
-								</dt>
-								<dd></dd>
 							
 								<dt>
 									<b>node</b>
 									
 								</dt>
-								<dd></dd>
-							
-							</dl>
-						
-						
-						
-						
-						
-						
-						
-
-					<hr />
-				
-					<a name="next"> </a>
-					<div class="fixedFont">
-					
-					
-					<b>next</b>(self)
-					
-					</div>
-					<div class="description">
-						
-						
-						
-					</div>
-					
-					
-					
-						
-							<dl class="detailList">
-							<dt class="heading">Parameters:</dt>
-							
-								<dt>
-									<b>self</b>
-									
-								</dt>
-								<dd></dd>
-							
-							</dl>
-						
-						
-						
-						
-						
-						
-						
-
-					<hr />
-				
-					<a name="nextButton_click"> </a>
-					<div class="fixedFont">
-					
-					
-					<b>nextButton_click</b>(self, event)
-					
-					</div>
-					<div class="description">
-						
-						
-						
-					</div>
-					
-					
-					
-						
-							<dl class="detailList">
-							<dt class="heading">Parameters:</dt>
-							
-								<dt>
-									<b>self</b>
-									
-								</dt>
-								<dd></dd>
-							
-								<dt>
-									<b>event</b>
-									
-								</dt>
-								<dd></dd>
-							
-							</dl>
-						
-						
-						
-						
-						
-						
-						
-
-					<hr />
-				
-					<a name="updatePosition"> </a>
-					<div class="fixedFont">
-					
-					
-					<b>updatePosition</b>(self)
-					
-					</div>
-					<div class="description">
-						
-						
-						
-					</div>
-					
-					
-					
-						
-							<dl class="detailList">
-							<dt class="heading">Parameters:</dt>
-							
-								<dt>
-									<b>self</b>
-									
-								</dt>
-								<dd></dd>
-							
-							</dl>
-						
-						
-						
-						
-						
-						
-						
-
-					<hr />
-				
-					<a name="updateTotal"> </a>
-					<div class="fixedFont">
-					
-					
-					<b>updateTotal</b>(self)
-					
-					</div>
-					<div class="description">
-						
-						
-						
-					</div>
-					
-					
-					
-						
-							<dl class="detailList">
-							<dt class="heading">Parameters:</dt>
-							
-								<dt>
-									<b>self</b>
-									
-								</dt>
-								<dd></dd>
+								<dd>一个原生节点</dd>
 							
 							</dl>
 						
@@ -754,7 +693,7 @@ ul.inheritsList
 <!-- ============================== footer ================================= -->
 		<div class="fineprint" style="clear:both">
 			
-			Documentation generated by <a href="http://code.google.com/p/jsdoc-toolkit/" target="_blank">JsDoc Toolkit</a> 2.4.0 on Sun Jan 30 2011 12:57:58 GMT+0800 (CST)
+			Documentation generated by <a href="http://code.google.com/p/jsdoc-toolkit/" target="_blank">JsDoc Toolkit</a> 2.4.0 on Sun Jan 30 2011 12:57:57 GMT+0800 (CST)
 		</div>
 	</body>
 </html>

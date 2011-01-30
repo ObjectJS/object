@@ -5,7 +5,7 @@
 		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
 		<meta name="generator" content="JsDoc Toolkit" />
 		
-		<title>JsDoc Reference - ui.ForeNextControl</title>
+		<title>JsDoc Reference - dom.FormElement</title>
 
 		<style type="text/css">
 			/* default.css */
@@ -260,24 +260,26 @@ ul.inheritsList
 <!-- ============================== class title ============================ -->
 			<h1 class="classTitle">
 				
-				Class ui.ForeNextControl
+				Class dom.FormElement
 			</h1>
 
 <!-- ============================== class summary ========================== -->			
 			<p class="description">
 				
+				<br />Extends
+					<a href="../symbols/dom.Element.html">dom.Element</a>.<br />
 				
 			
 				
 				
 				
-					<br /><i>Defined in: </i> <a href="../symbols/src/d__works_renren_static_object_trunk_src__ui.js.html">ui.js</a>.
+					<br /><i>Defined in: </i> <a href="../symbols/src/d__works_renren_static_object_trunk_src__dom_index.js.html">index.js</a>.
 				
 			</p>
 
 <!-- ============================== constructor summary ==================== -->			
 			
-			<table class="summaryTable" cellspacing="0" summary="A summary of the constructor documented in the class ui.ForeNextControl.">
+			<table class="summaryTable" cellspacing="0" summary="A summary of the constructor documented in the class dom.FormElement.">
 				<caption>Class Summary</caption>
 				<thead>
 					<tr>
@@ -290,9 +292,9 @@ ul.inheritsList
 						<td class="attributes">&nbsp;</td>
 						<td class="nameDescription" >
 							<div class="fixedFont">
-								<b><a href="../symbols/ui.ForeNextControl.html#constructor">ui.ForeNextControl</a></b>()
+								<b><a href="../symbols/dom.FormElement.html#constructor">dom.FormElement</a></b>()
 							</div>
-							<div class="description"></div>
+							<div class="description">表单</div>
 						</td>
 					</tr>
 				</tbody>
@@ -301,12 +303,21 @@ ul.inheritsList
 
 <!-- ============================== properties summary ===================== -->
 			
+				
+				
+				
+				
+				<dl class="inheritsList">
+				<dt>Fields borrowed from class <a href="../symbols/dom.Element.html">dom.Element</a>: </dt><dd><a href="../symbols/dom.Element.html#innerHTML">innerHTML</a>, <a href="../symbols/dom.Element.html#tagName">tagName</a></dd>
+				</dl>
+				
+			
 
 <!-- ============================== methods summary ======================== -->
 			
 				
 				
-				<table class="summaryTable" cellspacing="0" summary="A summary of the methods documented in the class ui.ForeNextControl.">
+				<table class="summaryTable" cellspacing="0" summary="A summary of the methods documented in the class dom.FormElement.">
 					<caption>Method Summary</caption>
 					<thead>
 						<tr>
@@ -319,7 +330,7 @@ ul.inheritsList
 						<tr>
 							<td class="attributes">&nbsp;</td>
 							<td class="nameDescription">
-								<div class="fixedFont"><b><a href="../symbols/ui.ForeNextControl.html#change">change</a></b>(self)
+								<div class="fixedFont"><b><a href="../symbols/dom.FormElement.html#checkValidity">checkValidity</a></b>(self)
 								</div>
 								<div class="description"></div>
 							</td>
@@ -328,7 +339,7 @@ ul.inheritsList
 						<tr>
 							<td class="attributes">&nbsp;</td>
 							<td class="nameDescription">
-								<div class="fixedFont"><b><a href="../symbols/ui.ForeNextControl.html#fore">fore</a></b>(self)
+								<div class="fixedFont"><b><a href="../symbols/dom.FormElement.html#getSelected">getSelected</a></b>(self)
 								</div>
 								<div class="description"></div>
 							</td>
@@ -337,7 +348,7 @@ ul.inheritsList
 						<tr>
 							<td class="attributes">&nbsp;</td>
 							<td class="nameDescription">
-								<div class="fixedFont"><b><a href="../symbols/ui.ForeNextControl.html#foreButton_click">foreButton_click</a></b>(self, event)
+								<div class="fixedFont"><b><a href="../symbols/dom.FormElement.html#initialize">initialize</a></b>(self)
 								</div>
 								<div class="description"></div>
 							</td>
@@ -346,45 +357,18 @@ ul.inheritsList
 						<tr>
 							<td class="attributes">&nbsp;</td>
 							<td class="nameDescription">
-								<div class="fixedFont"><b><a href="../symbols/ui.ForeNextControl.html#initialize">initialize</a></b>(self, node)
+								<div class="fixedFont"><b><a href="../symbols/dom.FormElement.html#send">send</a></b>(self, params)
 								</div>
-								<div class="description"></div>
+								<div class="description">用ajax发送一个表单</div>
 							</td>
 						</tr>
 					
 						<tr>
 							<td class="attributes">&nbsp;</td>
 							<td class="nameDescription">
-								<div class="fixedFont"><b><a href="../symbols/ui.ForeNextControl.html#next">next</a></b>(self)
+								<div class="fixedFont"><b><a href="../symbols/dom.FormElement.html#toQueryString">toQueryString</a></b>(self)
 								</div>
-								<div class="description"></div>
-							</td>
-						</tr>
-					
-						<tr>
-							<td class="attributes">&nbsp;</td>
-							<td class="nameDescription">
-								<div class="fixedFont"><b><a href="../symbols/ui.ForeNextControl.html#nextButton_click">nextButton_click</a></b>(self, event)
-								</div>
-								<div class="description"></div>
-							</td>
-						</tr>
-					
-						<tr>
-							<td class="attributes">&nbsp;</td>
-							<td class="nameDescription">
-								<div class="fixedFont"><b><a href="../symbols/ui.ForeNextControl.html#updatePosition">updatePosition</a></b>(self)
-								</div>
-								<div class="description"></div>
-							</td>
-						</tr>
-					
-						<tr>
-							<td class="attributes">&nbsp;</td>
-							<td class="nameDescription">
-								<div class="fixedFont"><b><a href="../symbols/ui.ForeNextControl.html#updateTotal">updateTotal</a></b>(self)
-								</div>
-								<div class="description"></div>
+								<div class="description">将一个表单转换成queryString</div>
 							</td>
 						</tr>
 					
@@ -392,6 +376,10 @@ ul.inheritsList
 				</table>
 				
 				
+				
+				<dl class="inheritsList">
+				<dt>Methods borrowed from class <a href="../symbols/dom.Element.html">dom.Element</a>: </dt><dd><a href="../symbols/dom.Element.html#addClass">addClass</a>, <a href="../symbols/dom.Element.html#addEvent">addEvent</a>, <a href="../symbols/dom.Element.html#delegate">delegate</a>, <a href="../symbols/dom.Element.html#dispose">dispose</a>, <a href="../symbols/dom.Element.html#fireEvent">fireEvent</a>, <a href="../symbols/dom.Element.html#getAllNext">getAllNext</a>, <a href="../symbols/dom.Element.html#getAllPrevious">getAllPrevious</a>, <a href="../symbols/dom.Element.html#getChildren">getChildren</a>, <a href="../symbols/dom.Element.html#getData">getData</a>, <a href="../symbols/dom.Element.html#getElement">getElement</a>, <a href="../symbols/dom.Element.html#getElements">getElements</a>, <a href="../symbols/dom.Element.html#getFirst">getFirst</a>, <a href="../symbols/dom.Element.html#getLast">getLast</a>, <a href="../symbols/dom.Element.html#getNext">getNext</a>, <a href="../symbols/dom.Element.html#getParent">getParent</a>, <a href="../symbols/dom.Element.html#getParents">getParents</a>, <a href="../symbols/dom.Element.html#getPrevious">getPrevious</a>, <a href="../symbols/dom.Element.html#getSiblings">getSiblings</a>, <a href="../symbols/dom.Element.html#grab">grab</a>, <a href="../symbols/dom.Element.html#hasClass">hasClass</a>, <a href="../symbols/dom.Element.html#hide">hide</a>, <a href="../symbols/dom.Element.html#inject">inject</a>, <a href="../symbols/dom.Element.html#matchesSelector">matchesSelector</a>, <a href="../symbols/dom.Element.html#removeClass">removeClass</a>, <a href="../symbols/dom.Element.html#removeEvent">removeEvent</a>, <a href="../symbols/dom.Element.html#retrieve">retrieve</a>, <a href="../symbols/dom.Element.html#setContent">setContent</a>, <a href="../symbols/dom.Element.html#setHTML">setHTML</a>, <a href="../symbols/dom.Element.html#setStyle">setStyle</a>, <a href="../symbols/dom.Element.html#show">show</a>, <a href="../symbols/dom.Element.html#store">store</a>, <a href="../symbols/dom.Element.html#toggle">toggle</a>, <a href="../symbols/dom.Element.html#toggleClass">toggleClass</a></dd>
+				</dl>
 				
 			
 <!-- ============================== events summary ======================== -->
@@ -405,11 +393,11 @@ ul.inheritsList
 				</div>
 				
 				<div class="fixedFont">
-						<b>ui.ForeNextControl</b>()
+						<b>dom.FormElement</b>()
 				</div>
 				
 				<div class="description">
-					
+					表单
 					
 				</div>
 				
@@ -436,11 +424,11 @@ ul.inheritsList
 					Method Detail
 				</div>
 				
-					<a name="change"> </a>
+					<a name="checkValidity"> </a>
 					<div class="fixedFont">
 					
 					
-					<b>change</b>(self)
+					<b>checkValidity</b>(self)
 					
 					</div>
 					<div class="description">
@@ -472,11 +460,11 @@ ul.inheritsList
 
 					<hr />
 				
-					<a name="fore"> </a>
+					<a name="getSelected"> </a>
 					<div class="fixedFont">
 					
 					
-					<b>fore</b>(self)
+					<b>getSelected</b>(self)
 					
 					</div>
 					<div class="description">
@@ -493,48 +481,6 @@ ul.inheritsList
 							
 								<dt>
 									<b>self</b>
-									
-								</dt>
-								<dd></dd>
-							
-							</dl>
-						
-						
-						
-						
-						
-						
-						
-
-					<hr />
-				
-					<a name="foreButton_click"> </a>
-					<div class="fixedFont">
-					
-					
-					<b>foreButton_click</b>(self, event)
-					
-					</div>
-					<div class="description">
-						
-						
-						
-					</div>
-					
-					
-					
-						
-							<dl class="detailList">
-							<dt class="heading">Parameters:</dt>
-							
-								<dt>
-									<b>self</b>
-									
-								</dt>
-								<dd></dd>
-							
-								<dt>
-									<b>event</b>
 									
 								</dt>
 								<dd></dd>
@@ -554,49 +500,7 @@ ul.inheritsList
 					<div class="fixedFont">
 					
 					
-					<b>initialize</b>(self, node)
-					
-					</div>
-					<div class="description">
-						
-						
-						
-					</div>
-					
-					
-					
-						
-							<dl class="detailList">
-							<dt class="heading">Parameters:</dt>
-							
-								<dt>
-									<b>self</b>
-									
-								</dt>
-								<dd></dd>
-							
-								<dt>
-									<b>node</b>
-									
-								</dt>
-								<dd></dd>
-							
-							</dl>
-						
-						
-						
-						
-						
-						
-						
-
-					<hr />
-				
-					<a name="next"> </a>
-					<div class="fixedFont">
-					
-					
-					<b>next</b>(self)
+					<b>initialize</b>(self)
 					
 					</div>
 					<div class="description">
@@ -628,15 +532,15 @@ ul.inheritsList
 
 					<hr />
 				
-					<a name="nextButton_click"> </a>
+					<a name="send"> </a>
 					<div class="fixedFont">
 					
 					
-					<b>nextButton_click</b>(self, event)
+					<b>send</b>(self, params)
 					
 					</div>
 					<div class="description">
-						
+						用ajax发送一个表单
 						
 						
 					</div>
@@ -654,7 +558,7 @@ ul.inheritsList
 								<dd></dd>
 							
 								<dt>
-									<b>event</b>
+									<b>params</b>
 									
 								</dt>
 								<dd></dd>
@@ -670,51 +574,15 @@ ul.inheritsList
 
 					<hr />
 				
-					<a name="updatePosition"> </a>
+					<a name="toQueryString"> </a>
 					<div class="fixedFont">
 					
 					
-					<b>updatePosition</b>(self)
+					<b>toQueryString</b>(self)
 					
 					</div>
 					<div class="description">
-						
-						
-						
-					</div>
-					
-					
-					
-						
-							<dl class="detailList">
-							<dt class="heading">Parameters:</dt>
-							
-								<dt>
-									<b>self</b>
-									
-								</dt>
-								<dd></dd>
-							
-							</dl>
-						
-						
-						
-						
-						
-						
-						
-
-					<hr />
-				
-					<a name="updateTotal"> </a>
-					<div class="fixedFont">
-					
-					
-					<b>updateTotal</b>(self)
-					
-					</div>
-					<div class="description">
-						
+						将一个表单转换成queryString
 						
 						
 					</div>

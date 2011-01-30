@@ -5,7 +5,7 @@
 		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
 		<meta name="generator" content="JsDoc Toolkit" />
 		
-		<title>JsDoc Reference - options.Arguments</title>
+		<title>JsDoc Reference - dom.Elements</title>
 
 		<style type="text/css">
 			/* default.css */
@@ -260,24 +260,26 @@ ul.inheritsList
 <!-- ============================== class title ============================ -->
 			<h1 class="classTitle">
 				
-				Class options.Arguments
+				Class dom.Elements
 			</h1>
 
 <!-- ============================== class summary ========================== -->			
 			<p class="description">
 				
+				<br />Extends
+					<a href="../symbols/Array.html">Array</a>.<br />
 				
 			
 				
 				
 				
-					<br /><i>Defined in: </i> <a href="../symbols/src/d__works_renren_static_object_trunk_src__options.js.html">options.js</a>.
+					<br /><i>Defined in: </i> <a href="../symbols/src/d__works_renren_static_object_trunk_src__dom_index.js.html">index.js</a>.
 				
 			</p>
 
 <!-- ============================== constructor summary ==================== -->			
 			
-			<table class="summaryTable" cellspacing="0" summary="A summary of the constructor documented in the class options.Arguments.">
+			<table class="summaryTable" cellspacing="0" summary="A summary of the constructor documented in the class dom.Elements.">
 				<caption>Class Summary</caption>
 				<thead>
 					<tr>
@@ -290,19 +292,9 @@ ul.inheritsList
 						<td class="attributes">&nbsp;</td>
 						<td class="nameDescription" >
 							<div class="fixedFont">
-								<b><a href="../symbols/options.Arguments.html#constructor">options.Arguments</a></b>()
+								<b><a href="../symbols/dom.Elements.html#constructor">dom.Elements</a></b>()
 							</div>
-							<div class="description">这个类辅助这种参数传递方式的实现：
-callFunc({
-	param1: someValue1,
-	param2: someValue2
-})
-在声明函数时，通过：
-var opts = new ns.Arguments(opts, {
-	param1: 1,
-	param2: 2
-});
-来设定默认值，没有设置过默认值的成员不会输出</div>
+							<div class="description">一个包装类，实现Element方法的统一调用</div>
 						</td>
 					</tr>
 				</tbody>
@@ -311,8 +303,66 @@ var opts = new ns.Arguments(opts, {
 
 <!-- ============================== properties summary ===================== -->
 			
+				
+				
+				
+				
+				<dl class="inheritsList">
+				<dt>Fields borrowed from class <a href="../symbols/Array.html">Array</a>: </dt><dd><a href="../symbols/Array.html#every">every</a>, <a href="../symbols/Array.html#filter">filter</a>, <a href="../symbols/Array.html#forEach">forEach</a>, <a href="../symbols/Array.html#indexOf">indexOf</a>, <a href="../symbols/Array.html#map">map</a>, <a href="../symbols/Array.html#some">some</a></dd>
+				</dl>
+				
+			
 
 <!-- ============================== methods summary ======================== -->
+			
+				
+				
+				<table class="summaryTable" cellspacing="0" summary="A summary of the methods documented in the class dom.Elements.">
+					<caption>Method Summary</caption>
+					<thead>
+						<tr>
+							<th scope="col">Method Attributes</th>
+							<th scope="col">Method Name and Description</th>
+						</tr>
+					</thead>
+					<tbody>
+					
+						<tr>
+							<td class="attributes">&lt;inner&gt; &nbsp;</td>
+							<td class="nameDescription">
+								<div class="fixedFont"><b><a href="../symbols/dom.Elements.html#-getCommon">getCommon</a></b>(arr1, arr2)
+								</div>
+								<div class="description"></div>
+							</td>
+						</tr>
+					
+						<tr>
+							<td class="attributes">&lt;inner&gt; &nbsp;</td>
+							<td class="nameDescription">
+								<div class="fixedFont"><b><a href="../symbols/dom.Elements.html#-getWrapper">getWrapper</a></b>(tagName)
+								</div>
+								<div class="description"></div>
+							</td>
+						</tr>
+					
+						<tr>
+							<td class="attributes">&nbsp;</td>
+							<td class="nameDescription">
+								<div class="fixedFont"><b><a href="../symbols/dom.Elements.html#initialize">initialize</a></b>(elements, wrapper, wrapper)
+								</div>
+								<div class="description"></div>
+							</td>
+						</tr>
+					
+					</tbody>
+				</table>
+				
+				
+				
+				<dl class="inheritsList">
+				
+				</dl>
+				
 			
 <!-- ============================== events summary ======================== -->
 			
@@ -325,21 +375,11 @@ var opts = new ns.Arguments(opts, {
 				</div>
 				
 				<div class="fixedFont">
-						<b>options.Arguments</b>()
+						<b>dom.Elements</b>()
 				</div>
 				
 				<div class="description">
-					这个类辅助这种参数传递方式的实现：
-callFunc({
-	param1: someValue1,
-	param2: someValue2
-})
-在声明函数时，通过：
-var opts = new ns.Arguments(opts, {
-	param1: 1,
-	param2: 2
-});
-来设定默认值，没有设置过默认值的成员不会输出
+					一个包装类，实现Element方法的统一调用
 					
 				</div>
 				
@@ -361,6 +401,137 @@ var opts = new ns.Arguments(opts, {
 			
 
 <!-- ============================== method details ========================= -->		
+			
+				<div class="sectionTitle">
+					Method Detail
+				</div>
+				
+					<a name="-getCommon"> </a>
+					<div class="fixedFont">&lt;inner&gt; 
+					
+					
+					<b>getCommon</b>(arr1, arr2)
+					
+					</div>
+					<div class="description">
+						
+						
+						
+					</div>
+					
+					
+					
+						
+							<dl class="detailList">
+							<dt class="heading">Parameters:</dt>
+							
+								<dt>
+									<b>arr1</b>
+									
+								</dt>
+								<dd></dd>
+							
+								<dt>
+									<b>arr2</b>
+									
+								</dt>
+								<dd></dd>
+							
+							</dl>
+						
+						
+						
+						
+						
+						
+						
+
+					<hr />
+				
+					<a name="-getWrapper"> </a>
+					<div class="fixedFont">&lt;inner&gt; 
+					
+					
+					<b>getWrapper</b>(tagName)
+					
+					</div>
+					<div class="description">
+						
+						
+						
+					</div>
+					
+					
+					
+						
+							<dl class="detailList">
+							<dt class="heading">Parameters:</dt>
+							
+								<dt>
+									<b>tagName</b>
+									
+								</dt>
+								<dd></dd>
+							
+							</dl>
+						
+						
+						
+						
+						
+						
+						
+
+					<hr />
+				
+					<a name="initialize"> </a>
+					<div class="fixedFont">
+					
+					
+					<b>initialize</b>(elements, wrapper, wrapper)
+					
+					</div>
+					<div class="description">
+						
+						
+						
+					</div>
+					
+					
+					
+						
+							<dl class="detailList">
+							<dt class="heading">Parameters:</dt>
+							
+								<dt>
+									<b>elements</b>
+									
+								</dt>
+								<dd>native dom elements</dd>
+							
+								<dt>
+									<b>wrapper</b>
+									
+								</dt>
+								<dd>这批节点的共有类型，默认为Element</dd>
+							
+								<dt>
+									<b>wrapper</b>
+									
+								</dt>
+								<dd></dd>
+							
+							</dl>
+						
+						
+						
+						
+						
+						
+						
+
+					
+				
 			
 			
 <!-- ============================== event details ========================= -->		
