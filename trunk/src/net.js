@@ -47,6 +47,14 @@ var ajaxRequest = this.ajaxRequest = function(url, callback) {
 	}
 };
 
+this.ping = function(url) {
+	var n = "_net_ping_"+ (new Date()).getTime();
+	var c = window[n] = new Image(); // 把new Image()赋给一个全局变量长期持有
+	c.onload = (c.onerror=function(){window[n] = null;});
+	c.src = url;
+	c = null; // 释放局部变量c
+};
+
 var Request = this.Request = new Class(function() {
 
 	this.initialize = function(self, options) {

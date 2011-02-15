@@ -8,7 +8,6 @@ var object = this;
 
 /**
  * 遍历一个对象，返回所有的key的数组
- * @name Object.keys
  */
 Object.keys = function(o) {
 	// 在Safari 5.0.2(7533.18.5)中，在这里用for in遍历parent会将prototype属性遍历出来，导致原型被指向一个错误的对象
@@ -34,25 +33,16 @@ Object.keys = function(o) {
 	return result; 
 };
 
-/**
- * @name Array.isArray
- */
 Array.isArray = Array.isArray || function(o) {
 	return Object.prototype.toString.call(o) === '[object Array]';
 };
 
-/**
- * @name Array#forEach
- */
 Array.prototype.forEach = Array.prototype.forEach || function(fn, bind) {
 	for (var i = 0; i < this.length; i++) {
 		fn.call(bind, this[i], i, this);
 	}
 };
 
-/**
- * @name Array#indexOf
- */
 Array.prototype.indexOf = Array.prototype.indexOf || function(str){
 	for (var i = 0; i < this.length; i++) {
 		if (str == this[i]) {
@@ -62,9 +52,6 @@ Array.prototype.indexOf = Array.prototype.indexOf || function(str){
 	return -1;
 };
 
-/**
- * @name Array#some
- */
 Array.prototype.some = Array.prototype.some || function(fn, bind) {
 	for (var i = 0, l = this.length; i < l; i++){
 		if ((i in this) && fn.call(bind, this[i], i, this)) return true;
@@ -72,9 +59,6 @@ Array.prototype.some = Array.prototype.some || function(fn, bind) {
 	return false;
 };
 
-/**
- * @name Array#every
- */
 Array.prototype.every = Array.prototype.every || function(fn, bind){
 	for (var i = 0, l = this.length; i < l; i++){
 		if ((i in this) && !fn.call(bind, this[i], i, this)) return false;
@@ -82,9 +66,6 @@ Array.prototype.every = Array.prototype.every || function(fn, bind){
 	return true;
 };
 
-/**
- * @name Array#map
- */
 Array.prototype.map = Array.prototype.map || function (fn, bind) {
 	var results = [];
 	for (var i = 0, l = this.length; i < l; i++){
@@ -93,9 +74,6 @@ Array.prototype.map = Array.prototype.map || function (fn, bind) {
 	return results;
 };
 
-/**
- * @name Array#filter
- */
 Array.prototype.filter = Array.prototype.filter || function(fn, bind){
 	var results = [];
 	for (var i = 0, l = this.length; i < l; i++){
@@ -104,9 +82,6 @@ Array.prototype.filter = Array.prototype.filter || function(fn, bind){
 	return results;
 };
 
-/**
- * @name Function#bind
- */
 Function.prototype.bind = Function.prototype.bind || function(object) {
 	var method = this;
 	return function() {
