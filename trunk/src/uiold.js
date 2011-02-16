@@ -2,7 +2,7 @@
  * @namespace
  * @name uiold
  */
-object.add('uiold', 'dom', /**@lends uiold*/ function($, dom) {
+object.add('uiold', 'dom', /**@lends uiold*/ function(exports, dom) {
 
 /**
  * UI模块基类

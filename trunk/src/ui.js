@@ -2,7 +2,7 @@
  * @namespace
  * @name ui
  */
-object.add('ui', 'string, dom', /**@lends ui*/ function($, string, dom) {
+object.add('ui', 'string, dom', /**@lends ui*/ function(exports, string, dom) {
 
 /**
  * 定义sub components

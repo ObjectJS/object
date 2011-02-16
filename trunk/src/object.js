@@ -568,7 +568,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 
 		_lib = self.lib;
 
-		self.add('sys', function($) {
+		self.add('sys', function(exports) {
 		});
 	};
 

@@ -2,7 +2,7 @@
  * @namespace
  * @name ua
  */
-object.add('ua', /**@lends ua*/ function($) {
+object.add('ua', /**@lends ua*/ function(exports) {
 
 var o = this.ua = {};
 var ua = navigator.userAgent,

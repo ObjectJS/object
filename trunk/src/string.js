@@ -2,7 +2,7 @@
  * @namespace
  * @name string
  */
-object.add('string', /**@lends string*/ function($) {
+object.add('string', /**@lends string*/ function(exports) {
 
 /**
  * 模板

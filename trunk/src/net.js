@@ -2,7 +2,7 @@
  * @namespace
  * @name net
  */
-object.add('net', 'dom', /**@lends net*/ function($, dom) {
+object.add('net', 'dom', /**@lends net*/ function(exports, dom) {
 
 var ajaxProxies = this.ajaxProxies = {};
 

@@ -2,7 +2,7 @@
  * @namespace
  * @name options
  */
-object.add('options', /**@lends options*/ function($) {
+object.add('options', /**@lends options*/ function(exports) {
 
 /**
  * 这个类辅助这种参数传递方式的实现：

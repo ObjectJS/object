@@ -2,7 +2,7 @@
  * @namespace
  * @name mvc
  */
-object.add('mvc', /**@lends mvc*/ function($) {
+object.add('mvc', /**@lends mvc*/ function(exports) {
 
 /**
  * MVC Action 基类
