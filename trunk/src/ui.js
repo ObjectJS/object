@@ -181,7 +181,7 @@ var Component = this.Component = new Class(/**@lends ui.Component*/ function() {
 		self._components = []; // 建立出来的所有子component的引用
 		self._rendered = []; // render出来的新元素，会在reset时清空
 		self._events = self._getEvents(self); // 本class的所有event方法
-		self._options = self._parseOptions(options);
+		self._options = self.parseOptions(options);
 		self._node = node;
 		self._optionNames = [];
 
@@ -207,25 +207,6 @@ var Component = this.Component = new Class(/**@lends ui.Component*/ function() {
 		});
 	};
 
-	/**
-	 * 解析options为对象
-	 * {'a.b.c': 1, b: 2} ==> {a: {'b.c': 1}, b: 2}
-	 */
-	this._parseOptions = staticmethod(function(options) {
-		var parsed = {};
-		Object.keys(options).forEach(function(key) {
-			var point = key.indexOf('.');
-			if (point !== -1) {
-				var first = key.substring(0, point);
-				if (!parsed[first]) parsed[first] = {};
-				parsed[first][key.substring(point + 1)] = options[key];
-			} else {
-				parsed[key] = options[key];
-			}
-		});
-		return parsed;
-	});
-
 	this._addEventTo = function(self, name, node) {
 		var events = self._events[name];
 		if (!events) return;
@@ -234,6 +215,32 @@ var Component = this.Component = new Class(/**@lends ui.Component*/ function() {
 			node.addEvent(event.name, event.func);
 		});
 	};
+
+	/**
+	 * 解析options为对象
+	 * {'a.b.c': 1, b: 2} ==> {a: {b: {c:1}}, b: 2}
+	 */
+	this.parseOptions = staticmethod(function(options) {
+		if (options.PARSED) {
+			return options;
+		}
+
+		var parsed = {PARSED: true};
+		Object.keys(options).forEach(function(name) {
+			var parts = name.split('.');
+			var current = parsed;
+			for (var i = 0, part; i < parts.length - 1; i++) {
+				part = parts[i];
+				if (current[part] === undefined) {
+					current[part] = {PARSED: true};
+				}
+				current = current[part];
+			}
+			current[parts[parts.length - 1]] = options[name];
+		});
+		return parsed;
+	});
+
 
 	this.render = function(self, name, data) {
 		var methodName = 'render' + string.capitalize(name);
@@ -470,4 +477,3 @@ var ForeNextControl = this.ForeNextControl = new Class(Component, /**@lends ui.F
 });
 
 });
-
