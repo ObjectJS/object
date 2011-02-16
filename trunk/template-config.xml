@@ -6,7 +6,8 @@
 			<include path="../lib/janl-mustache.js-d2feae3/mustache.js" />
 			<include path="../lib/json2.js" />
 			<include path="object.js" />
-			<include path="ua.js" />
+			<include path="ua/index.js" />
+			<include path="ua/extra.js" />
 			<include path="string.js" />
 			<include path="options.js" />
 			<include path="dom/index.js" />
