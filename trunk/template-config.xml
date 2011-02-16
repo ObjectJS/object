@@ -1,5 +1,4 @@
 <package>
-
 	<source dir="src">
 		<combine path="object-all.js">
 			<include path="../lib/slick/Slick.Parser.js" />
@@ -20,5 +19,4 @@
 			<include path="validator.js" />
 		</combine>
 	</source>
-
 </package>
