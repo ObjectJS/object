@@ -1030,17 +1030,20 @@ var FormItemElement = this.FormItemElement = new Class(Element, /**@lends dom.Fo
 	this.bindPlaceholder = staticmethod(function(input) {
 		// 通过autocomplete=off避免浏览器记住placeholder
 		function checkEmpty(input, event) {
+			var placeholder = input.getAttribute('placeholder');
+			if (!placeholder) return;
+
 			if (input.classList.contains('placeholder')) {
-				if (event.type == 'focus' && input.value === input.getAttribute('placeholder')) {
+				if (event.type == 'focus' && input.value === placeholder) {
 					input.value = '';
 				}
 				input.classList.remove('placeholder');
 				input.removeAttribute('autocomplete');
 
 			// IE不支持autocomplete=off，刷新页面后value还是placeholder（其他浏览器为空，或者之前用户填写的值），只能通过判断是否相等来处理
-			} else if (!input.value || ((ua.ua.ie == 6 || ua.ua.ie == 7) && !event && input.value == input.getAttribute('placeholder'))) {
+			} else if (!input.value || ((ua.ua.ie == 6 || ua.ua.ie == 7) && !event && input.value == placeholder)) {
 				input.classList.add('placeholder');
-				input.value = input.getAttribute('placeholder');
+				input.value = placeholder;
 				input.setAttribute('autocomplete', 'off');
 			}
 		}

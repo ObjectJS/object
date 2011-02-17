@@ -7,10 +7,10 @@ object.add('ui', 'string, dom', /**@lends ui*/ function(exports, string, dom) {
 /**
  * 定义sub components
  */
-var define = this.define = function(cls, name, selector, type, single) {
+this.define = function(cls, name, selector, type, single) {
 
 	var getter = function(self) {
-		if (!type) type = Component;
+		if (!type) type = exports.Component;
 
 		if (!self._descriptors[name]) {
 			self._descriptors[name] = {
@@ -34,7 +34,7 @@ var define = this.define = function(cls, name, selector, type, single) {
 			var nodes = self._node.getElements(selector);
 			if (!nodes) {
 				self[pname] = new dom.Elements([]);
-				return new Components([], type);
+				return new exports.Components([], type);
 			}
 
 			// 如果已经初始化过，则要确保不会对之前取到过得元素重新执行添加事件
@@ -45,7 +45,7 @@ var define = this.define = function(cls, name, selector, type, single) {
 			});
 			self[pname] = nodes;
 
-			return new Components(nodes, type, self._options[name], self);
+			return new exports.Components(nodes, type, self._options[name], self);
 		}
 	};
 
@@ -55,14 +55,14 @@ var define = this.define = function(cls, name, selector, type, single) {
 /**
  * 定义一个sub component
  */
-var define1 = this.define1 = function(cls, name, selector, type) {
-	define(cls, name, selector, type, true);
+this.define1 = function(cls, name, selector, type) {
+	exports.define(cls, name, selector, type, true);
 };
 
 /**
  * 定义 options
  */
-var defineOptions = this.defineOptions = function(cls, options) {
+this.defineOptions = function(cls, options) {
 	Object.keys(options).forEach(function(name) {
 		var pname = '_' + name;
 		var methodName = name + '_change';
@@ -111,14 +111,14 @@ var Element = new Class(function() {
  * @class
  * @name ui.Components
  */
-var Components = this.Components = new Class(Array, /**@lends ui.Components*/ function() {
+this.Components = new Class(Array, /**@lends ui.Components*/ function() {
 
 	/**
 	 * @param elements wrapped dom elements
 	 * @param type 这批节点的共有Component类型，默认为Component
 	 */
 	this.initialize  = function(self, elements, type, options) {
-		if (!type) type = Component;
+		if (!type) type = exports.Component;
 
 		for (var i = 0; i < elements.length; i++) {
 			self.push(new type(elements[i], options));
@@ -165,7 +165,7 @@ var Components = this.Components = new Class(Array, /**@lends ui.Components*/ fu
  * @class
  * @name ui.Component
  */
-var Component = this.Component = new Class(/**@lends ui.Component*/ function() {
+this.Component = new Class(/**@lends ui.Component*/ function() {
 
 	var getConstructor = function(type) {
 		if (type === 'number') return Number;
@@ -241,21 +241,21 @@ var Component = this.Component = new Class(/**@lends ui.Component*/ function() {
 		return parsed;
 	});
 
-
 	this.render = function(self, name, data) {
 		var methodName = 'render' + string.capitalize(name);
 		var descriptor = self._descriptors[name];
 		var type = descriptor.type;
 		if (!self[methodName]) return;
 		var result = self[methodName](data);
+
 		// 如果有返回结果，说明没有使用self.make，而是自己生成了需要的普通node元素，则对返回结果进行一次包装
 		if (result) {
 			if (Array.isArray(result)) {
 				result.forEach(function(node) {
-					self.registerComponent(name, node, data);
+					self.registerComponent(name, node);
 				});
 			} else {
-				self.registerComponent(name, result, data);
+				self.registerComponent(name, result);
 			}
 		}
 	};
@@ -271,6 +271,15 @@ var Component = this.Component = new Class(/**@lends ui.Component*/ function() {
 		var secName = descriptor.secName;
 
 		if (!data) data = {};
+		var options = {};
+		var extendOptions = self._options[name];
+		if (extendOptions) {
+			Object.keys(extendOptions).forEach(function(key) {
+				options[key] = extendOptions[key];
+				if (data[key] === undefined) data[key] = extendOptions[key];
+			});
+		}
+
 		var tdata = {};
 		if (secName) {
 			tdata[secName] = data;
@@ -280,7 +289,7 @@ var Component = this.Component = new Class(/**@lends ui.Component*/ function() {
 
 		var str = string.substitute(template, tdata);
 		var node = dom.Element.fromString(str).firstChild;
-		var comp = self.registerComponent(name, node, data);
+		var comp = self.registerComponent(name, node, options);
 
 		return comp;
 	};
@@ -288,25 +297,11 @@ var Component = this.Component = new Class(/**@lends ui.Component*/ function() {
 	/**
 	 * 根据节点初始化一个component，并放到相应的引用上去。
 	 */
-	this.registerComponent = function(self, name, node, data) {
+	this.registerComponent = function(self, name, node, options) {
 		var descriptor = self._descriptors[name];
 		var type = descriptor.type;
 		var single = descriptor.single;
 		var pname = '_' + name;
-
-		var options = {};
-		var extendOptions = self._options[name];
-
-		if (extendOptions) {
-			Object.keys(extendOptions).forEach(function(key) {
-				options[key] = extendOptions[key];
-			});
-		}
-		if (data) {
-			Object.keys(data).forEach(function(key) {
-				options[key] = data[key];
-			});
-		}
 
 		var comp = new type(node, options);
 
@@ -411,9 +406,13 @@ var Component = this.Component = new Class(/**@lends ui.Component*/ function() {
 		});
 	};
 
-	this.define = staticmethod(define);
-	this.define1 = staticmethod(define1);
-	this.defineOptions = staticmethod(defineOptions);
+	this.getNode = function(self) {
+		return self._node;
+	};
+
+	this.define = staticmethod(exports.define);
+	this.define1 = staticmethod(exports.define1);
+	this.defineOptions = staticmethod(exports.defineOptions);
 
 });
 
@@ -421,13 +420,13 @@ var Component = this.Component = new Class(/**@lends ui.Component*/ function() {
  * @class
  * @name ui.ForeNextControl
  */
-var ForeNextControl = this.ForeNextControl = new Class(Component, /**@lends ui.ForeNextControl*/ function() {
+this.ForeNextControl = new Class(exports.Component, /**@lends ui.ForeNextControl*/ function() {
 
-	Component.define(this, 'nextButton', '.nextbutton');
-	Component.define(this, 'foreButton', '.forebutton');
+	exports.define(this, 'nextButton', '.nextbutton');
+	exports.define(this, 'foreButton', '.forebutton');
 
 	this.initialize = function(self, node) {
-		Component.initialize(self, node);
+		exports.Component.initialize(self, node);
 
 		self.loop = false; // 是否循环
 		self.total = parseInt(self._node.getData('total'));
