@@ -21,6 +21,7 @@ this.define = function(cls, name, selector, type, single) {
 		}
 
 		var pname = '_' + name;
+		if (!self._node) return null;
 		if (single) {
 			var node = self._node.getElement(selector);
 			if (!node) return null;
@@ -182,17 +183,25 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		self._rendered = []; // render出来的新元素，会在reset时清空
 		self._events = self._getEvents(self); // 本class的所有event方法
 		self._subOptions = self.parseOptions(options);
+		var propertyNames = Class.getPropertyNames(self);
+		// template
 		if (typeof node === 'string') {
-			var template = node;
 			var data = {};
-			var str = string.substitute(template, data);
+			propertyNames.forEach(function(name) {
+				if (options[name]) {
+					data[name] = options[name];
+				} else {
+					data[name] = self.get(name);
+				}
+			});
+			var str = string.substitute(node, data);
 			node = dom.Element.fromString(str).firstChild;
 		}
 		self._node = node;
 
-		Class.getPropertyNames(self).forEach(function(name) {
+		propertyNames.forEach(function(name) {
 			// 从dom获取配置
-			var data = self._node.getData(name.toLowerCase());
+			var data = node.getData(name.toLowerCase());
 			if (data) {
 				var defaultValue = self.get(name);
 				var value = getConstructor(typeof defaultValue)(data);
@@ -205,6 +214,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				self[name] = self.get(name);
 			}
 		});
+
 	};
 
 	this._addEventTo = function(self, name, node) {

@@ -16,7 +16,9 @@
 		});
 
 		var template = '<div class="text" data-foo="fuck"><h3 class="title">{{foo}}</h3></div>';
-		var c = new MyComponent(template);
+		var c = new MyComponent(template, {
+			foo: 'jij'
+		});
 		console.log(c._node.innerHTML);
 	});
 </script>
