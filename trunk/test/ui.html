@@ -1,0 +1,28 @@
+<html>
+<head>
+<meta charset="utf-8" />
+<script type="text/javascript" src="http://xnimg.cn/n/core/base-all.js"></script>
+<script>
+	object.use('dom, ui', function(exports, dom, ui) {
+		var MyComponent = new Class(ui.Component, function() {
+			ui.define(this, 'title', '.title');
+			ui.defineOptions(this, {
+				foo: 'haha'
+			});
+
+			this.foo_change = function(self, value) {
+				self._title.set('innerHTML', value);
+			}
+		});
+
+		var template = '<div class="text" data-foo="fuck"><h3 class="title">{{foo}}</h3></div>';
+		var c = new MyComponent(template);
+		console.log(c._node.innerHTML);
+	});
+</script>
+</head>
+<body>
+
+</body>
+</html>
+

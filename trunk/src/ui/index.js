@@ -29,7 +29,7 @@ this.define = function(cls, name, selector, type, single) {
 			self._addEventTo(name, node);
 			self[pname] = node;
 
-			return new type(node, self._options[name]);
+			return new type(node, self._subOptions[name]);
 		} else {
 			var nodes = self._node.getElements(selector);
 			if (!nodes) {
@@ -45,7 +45,7 @@ this.define = function(cls, name, selector, type, single) {
 			});
 			self[pname] = nodes;
 
-			return new exports.Components(nodes, type, self._options[name], self);
+			return new exports.Components(nodes, type, self._subOptions[name], self);
 		}
 	};
 
@@ -181,9 +181,14 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		self._components = []; // 建立出来的所有子component的引用
 		self._rendered = []; // render出来的新元素，会在reset时清空
 		self._events = self._getEvents(self); // 本class的所有event方法
-		self._options = self.parseOptions(options);
+		self._subOptions = self.parseOptions(options);
+		if (typeof node === 'string') {
+			var template = node;
+			var data = {};
+			var str = string.substitute(template, data);
+			node = dom.Element.fromString(str).firstChild;
+		}
 		self._node = node;
-		self._optionNames = [];
 
 		Class.getPropertyNames(self).forEach(function(name) {
 			// 从dom获取配置
@@ -191,18 +196,13 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			if (data) {
 				var defaultValue = self.get(name);
 				var value = getConstructor(typeof defaultValue)(data);
-				self.set(name, value);
+				self._set(name, value);
 			// 从options参数获取配置
-			} else if (self._options[name] && typeof self._options[name] !== 'object') {
-				self.set(name, self._options[name]);
+			} else if (options[name]) {
+				self._set(name, options[name]);
 			// 默认配置
 			} else {
 				self[name] = self.get(name);
-
-				// 是option，不是component
-				if (!self._descriptors[name]) {
-					self.set(name, self[name]);
-				}
 			}
 		});
 	};
@@ -272,7 +272,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 		if (!data) data = {};
 		var options = {};
-		var extendOptions = self._options[name];
+		var extendOptions = self._subOptions[name];
 		if (extendOptions) {
 			Object.keys(extendOptions).forEach(function(key) {
 				options[key] = extendOptions[key];
@@ -342,6 +342,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	 * @param template 模板字符串
 	 * @param data 模板数据
 	 * @param secName 模板片段名称
+	 * @deprecated
 	 */
 	this.create = classmethod(function(cls, template, data, secName) {
 		if (!data) data = {};
