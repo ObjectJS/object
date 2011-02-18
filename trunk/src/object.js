@@ -309,7 +309,11 @@ var buildPrototype = function(cls, name, member) {
 
 	// 这里的member指向new Class参数的书写的对象/函数
 
-	if (member.__class__ === staticmethod) { // this.a = staticmethod(function() {})
+	// 先判断最常出现的instancemethod
+	if (member.__class__ === undefined && typeof member === 'function') { // this.a = function() {}
+		prototype[name] = instancemethod(member);
+
+	} else if (member.__class__ === staticmethod) { // this.a = staticmethod(function() {})
 		prototype[name] = member.im_func;
 
 	} else if (member.__class__ === classmethod) { // this.a = classmethod(function() {})
@@ -317,9 +321,6 @@ var buildPrototype = function(cls, name, member) {
 
 	} else if (member.__class__ === property) { // this.a = property(function fget() {}, function fset() {})
 		prototype.__properties__[name] = member;
-		
-	} else if (typeof member === 'function') { // this.a = function() {}
-		prototype[name] = instancemethod(member);
 
 	} else { // this.a = someObject
 		prototype[name] = member;
