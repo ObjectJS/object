@@ -6,7 +6,6 @@
 			<include path="../lib/json2.js" />
 			<include path="object.js" />
 			<include path="ua/index.js" />
-			<include path="ua/extra.js" />
 			<include path="string.js" />
 			<include path="options.js" />
 			<include path="dom/index.js" />
@@ -14,7 +13,7 @@
 			<include path="net.js" />
 			<include path="setGlobal.js" />
 			<include path="mvc.js" />
-			<include path="ui.js" />
+			<include path="ui/index.js" />
 			<include path="urlparse.js" />
 			<include path="validator.js" />
 		</combine>
