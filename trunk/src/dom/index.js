@@ -294,7 +294,7 @@ var ElementClassList = this.ElementClassList = new Class(Array, /**@lends dom.El
  * @name dom.Element
  */
 var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
-
+	
 	var _needGetDom = (function() {
 		// 检测浏览器是否支持通过innerHTML设置未知标签，典型的就是IE不支持
 		var t = document.createElement('div');
@@ -567,27 +567,27 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 		return self;
 	};
 
-	this.getPrevious = function(expression) {
+	this.getPrevious = function(self) {
 		// TODO
 	};
 
-	this.getAllPrevious = function(expression) {
+	this.getAllPrevious = function(self) {
 		// TODO
 	};
 
-	this.getNext = function(expression) {
+	this.getNext = function(self) {
 		// TODO
 	};
 
-	this.getAllNext = function(expression) {
+	this.getAllNext = function(self) {
 		// TODO
 	};
 
-	this.getFirst = function(expression) {
+	this.getFirst = function(self) {
 		// TODO
 	};
 
-	this.getLast = function(expression) {
+	this.getLast = function(self) {
 		// TODO
 	};
 
@@ -605,15 +605,15 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 		return null;
 	};
 
-	this.getParents = function(expression) {
+	this.getParents = function(self) {
 		// TODO
 	};
 
-	this.getSiblings = function(expression) {
+	this.getSiblings = function(self) {
 		// TODO
 	};
 
-	this.getChildren = function(expression) {
+	this.getChildren = function(self) {
 		// TODO
 	};
 
