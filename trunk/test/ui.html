@@ -15,16 +15,18 @@
 			}
 		});
 
-		var template = '<div class="text" data-foo="fuck"><h3 class="title">{{foo}}</h3></div>';
+		var template = '<div class="text"><h3 class="title">{{foo}}</h3></div>';
 		var c = new MyComponent(template, {
 			foo: 'jij'
 		});
-		console.log(c._node.innerHTML);
+
+		dom.ready(function() {
+			document.body.appendChild(c.getNode());
+		});
 	});
 </script>
 </head>
 <body>
-
 </body>
 </html>
 

@@ -10,6 +10,7 @@ object.add('ui', 'string, dom', /**@lends ui*/ function(exports, string, dom) {
 this.define = function(cls, name, selector, type, single) {
 
 	var getter = function(self) {
+
 		if (!type) type = exports.Component;
 
 		if (!self._descriptors[name]) {
@@ -20,8 +21,9 @@ this.define = function(cls, name, selector, type, single) {
 			};
 		}
 
-		var pname = '_' + name;
 		if (!self._node) return null;
+
+		var pname = '_' + name;
 		if (single) {
 			var node = self._node.getElement(selector);
 			if (!node) return null;
@@ -73,11 +75,10 @@ this.defineOptions = function(cls, options) {
 			}
 			return self[pname];
 		}, function(self, value) {
+			self._setOption(name, value);
 			if (self[methodName]) {
 				self[methodName](value);
 			}
-			self[pname] = value;
-			self._set(name, value);
 			return self[pname];
 		});
 	});
@@ -184,37 +185,59 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		self._events = self._getEvents(self); // 本class的所有event方法
 		self._subOptions = self.parseOptions(options);
 		var propertyNames = Class.getPropertyNames(self);
-		// template
-		if (typeof node === 'string') {
+
+		if (!node.nodeType) {
+			if (typeof node == 'string') {
+				node = {
+					template: node
+				};
+			}
 			var data = {};
-			propertyNames.forEach(function(name) {
-				if (options[name]) {
-					data[name] = options[name];
-				} else {
-					data[name] = self.get(name);
-				}
+			propertyNames.forEach(function(key) {
+				var value = self.get(key);
+				if (!self._descriptors[key] && options[key] === undefined) data[key] = self.get(key);
 			});
-			var str = string.substitute(node, data);
+			extend(data, options);
+			console.log(data)
+
+			var tdata;
+			if (node.section) {
+				tdata = {};
+				tdata[node.section] = data;
+			} else {
+				tdata = data;
+			}
+			var str = string.substitute(node.template, tdata);
 			node = dom.Element.fromString(str).firstChild;
 		}
-		self._node = node;
 
+		self._node = node;
 		propertyNames.forEach(function(name) {
-			// 从dom获取配置
-			var data = node.getData(name.toLowerCase());
-			if (data) {
-				var defaultValue = self.get(name);
-				var value = getConstructor(typeof defaultValue)(data);
+			var value = self.get(name);
+			if (self._descriptors[name]) {
 				self._set(name, value);
-			// 从options参数获取配置
-			} else if (options[name]) {
-				self._set(name, options[name]);
-			// 默认配置
 			} else {
-				self[name] = self.get(name);
+				// 从dom获取配置
+				var data = node.getData(name.toLowerCase());
+				if (data) {
+					var defaultValue = self.get(name);
+					var value = getConstructor(typeof defaultValue)(data);
+					self._setOption(name, value);
+				// 从options参数获取配置
+				} else if (options[name]) {
+					self._setOption(name, options[name]);
+				// 默认配置
+				} else {
+					self._setOption(name, value);
+				}
 			}
 		});
+	};
 
+	this._setOption = function(self, name, value) {
+		var pname = '_' + name;
+		self[pname] = value;
+		self._set(name, value);
 	};
 
 	this._addEventTo = function(self, name, node) {
@@ -277,29 +300,36 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	*/
 	this.make = function(self, name, data) {
 		var descriptor = self._descriptors[name];
-		var template = descriptor.template;
-		var secName = descriptor.secName;
-
-		if (!data) data = {};
+		var type = descriptor.type;
+		var single = descriptor.single;
+		var pname = '_' + name;
 		var options = {};
 		var extendOptions = self._subOptions[name];
-		if (extendOptions) {
-			Object.keys(extendOptions).forEach(function(key) {
-				options[key] = extendOptions[key];
-				if (data[key] === undefined) data[key] = extendOptions[key];
+		extend(options, extendOptions);
+
+		if (data) {
+			Object.keys(data).forEach(function(key) {
+				options[key] = data[key];
 			});
 		}
 
-		var tdata = {};
-		if (secName) {
-			tdata[secName] = data;
-		} else {
-			tdata = data;
-		}
+		var comp = new type({
+			template: descriptor.template,
+			section: descriptor.section
+		}, options);
+		var node = comp._node;
 
-		var str = string.substitute(template, tdata);
-		var node = dom.Element.fromString(str).firstChild;
-		var comp = self.registerComponent(name, node, options);
+		if (single) {
+			self[name] = comp;
+			self[pname] = node;
+			self._addEventTo(name, node);
+			self._rendered.push(node);
+		} else {
+			self[name].push(comp);
+			self[pname].push(node);
+			self._addEventTo(name, node);
+			self._rendered.push(node);
+		}
 
 		return comp;
 	};
@@ -342,23 +372,23 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		self[name].apply(self, args);
 	};
 
-	this.setTemplate = function(self, name, template, secName) {
+	this.setTemplate = function(self, name, template, section) {
 		self._descriptors[name].template = template;
-		self._descriptors[name].secName = secName;
+		self._descriptors[name].section = section;
 	};
 
 	/**
 	 * 渲染一个新的控件
 	 * @param template 模板字符串
 	 * @param data 模板数据
-	 * @param secName 模板片段名称
+	 * @param section 模板片段名称
 	 * @deprecated
 	 */
-	this.create = classmethod(function(cls, template, data, secName) {
+	this.create = classmethod(function(cls, template, data, section) {
 		if (!data) data = {};
 		var tdata = {};
-		if (secName) {
-			tdata[secName] = data;
+		if (section) {
+			tdata[section] = data;
 		} else {
 			tdata = data;
 		}
