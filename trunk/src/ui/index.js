@@ -6,13 +6,17 @@ object.add('ui', 'string, dom', /**@lends ui*/ function(exports, string, dom) {
 
 /**
  * 定义sub components
+ * @param cls 构造器的this
+ * @param name 引用名称
+ * @param selector 选择器
+ * @param type 构造类
+ * @param single 是否是单独的引用
  */
 this.define = function(cls, name, selector, type, single) {
 
 	var getter = function(self) {
-
+		// 默认为 Component
 		if (!type) type = exports.Component;
-
 		if (!self._descriptors[name]) {
 			self._descriptors[name] = {
 				selector: selector,
@@ -22,7 +26,8 @@ this.define = function(cls, name, selector, type, single) {
 		}
 
 		if (!self._node) return null;
-
+		var comVar = '__' + name;
+		if (self[comVar]) return self[comVar];
 		var pname = '_' + name;
 		if (single) {
 			var node = self._node.getElement(selector);
@@ -32,7 +37,7 @@ this.define = function(cls, name, selector, type, single) {
 			self._addEventTo(name, node);
 			self[pname] = node;
 
-			return new type(node, self._subOptions[name]);
+			self[comVar] = new type(node, self._subOptions[name]);
 		} else {
 			var nodes = self._node.getElements(selector);
 			if (!nodes) {
@@ -48,8 +53,9 @@ this.define = function(cls, name, selector, type, single) {
 			});
 			self[pname] = nodes;
 
-			return new exports.Components(nodes, type, self._subOptions[name], self);
+			self[comVar] = new exports.Components(nodes, type, self._subOptions[name], self);
 		}
+		return self[comVar];
 	};
 
 	cls[name] = property(getter);
@@ -183,7 +189,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		self._components = []; // 建立出来的所有子component的引用
 		self._rendered = []; // render出来的新元素，会在reset时清空
 		self._events = self._getEvents(self); // 本class的所有event方法
-		self._subOptions = self.parseOptions(options);
+		self._subOptions = self._parseOptions(options);
 		var propertyNames = Class.getPropertyNames(self);
 
 		if (!node.nodeType) {
@@ -239,6 +245,28 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		self._set(name, value);
 	};
 
+	/**
+	 * 根据key的pattern获取所有sub component的event定义
+	 */
+	this._getEvents = classmethod(function(cls, self) {
+		var events = {};
+
+		Object.keys(cls).forEach(function(key) {
+			var match = key.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/);
+			if (!match) return;
+			var name = match[1];
+			var eventName = match[2];
+
+			if (!events[name]) events[name] = [];
+			events[name].push({
+				name: eventName,
+				func: self[key].bind(self)
+			});
+		});
+
+		return events;
+	});
+
 	this._addEventTo = function(self, name, node) {
 		var events = self._events[name];
 		if (!events) return;
@@ -249,10 +277,36 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	};
 
 	/**
+	 * 根据节点初始化一个component，并放到相应的引用上去。
+	 */
+	this._registerComponent = function(self, name, node, options) {
+		var descriptor = self._descriptors[name];
+		var type = descriptor.type;
+		var single = descriptor.single;
+		var pname = '_' + name;
+
+		var comp = new type(node, options);
+
+		if (single) {
+			self[name] = comp;
+			self[pname] = node;
+			self._addEventTo(name, node);
+			self._rendered.push(node);
+		} else {
+			self[name].push(comp);
+			self[pname].push(node);
+			self._addEventTo(name, node);
+			self._rendered.push(node);
+		}
+
+		return comp;
+	};
+
+	/**
 	 * 解析options为对象
 	 * {'a.b.c': 1, b: 2} ==> {a: {b: {c:1}}, b: 2}
 	 */
-	this.parseOptions = staticmethod(function(options) {
+	this._parseOptions = staticmethod(function(options) {
 		if (options.PARSED) {
 			return options;
 		}
@@ -273,6 +327,11 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		return parsed;
 	});
 
+	/**
+	 * 渲染一组subcomponent
+	 * @param name subcomponent名字
+	 * @param data 模板数据/初始化参数
+	 */
 	this.render = function(self, name, data) {
 		var methodName = 'render' + string.capitalize(name);
 		var descriptor = self._descriptors[name];
@@ -284,10 +343,10 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		if (result) {
 			if (Array.isArray(result)) {
 				result.forEach(function(node) {
-					self.registerComponent(name, node);
+					self._registerComponent(name, node);
 				});
 			} else {
-				self.registerComponent(name, result);
+				self._registerComponent(name, result);
 			}
 		}
 	};
@@ -333,32 +392,6 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		return comp;
 	};
 
-	/**
-	 * 根据节点初始化一个component，并放到相应的引用上去。
-	 */
-	this.registerComponent = function(self, name, node, options) {
-		var descriptor = self._descriptors[name];
-		var type = descriptor.type;
-		var single = descriptor.single;
-		var pname = '_' + name;
-
-		var comp = new type(node, options);
-
-		if (single) {
-			self[name] = comp;
-			self[pname] = node;
-			self._addEventTo(name, node);
-			self._rendered.push(node);
-		} else {
-			self[name].push(comp);
-			self[pname].push(node);
-			self._addEventTo(name, node);
-			self._rendered.push(node);
-		}
-
-		return comp;
-	};
-
 	this.call = function(self, name) {
 		self._node.fireEvent(name, null, self);
 		if (!self[name]) throw 'no method named ' + name;
@@ -371,40 +404,33 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		self[name].apply(self, args);
 	};
 
+	/**
+	 * 设置subcomponent的template
+	 */
 	this.setTemplate = function(self, name, template, section) {
 		self._descriptors[name].template = template;
 		self._descriptors[name].section = section;
 	};
 
-	this._getEvents = classmethod(function(cls, self) {
-		var events = {};
-
-		Object.keys(cls).forEach(function(key) {
-			var match = key.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/);
-			if (!match) return;
-			var name = match[1];
-			var eventName = match[2];
-
-			if (!events[name]) events[name] = [];
-			events[name].push({
-				name: eventName,
-				func: self[key].bind(self)
-			});
-		});
-
-		return events;
-	});
-
+	/**
+	 * 弹出验证错误信息
+	 */
 	this.invalid = function(self, msg) {
 		if (!msg) msg = '输入错误';
 		alert(msg);
 	};
 
+	/**
+	 * 弹出出错信息
+	 */
 	this.error = function(self, msg) {
 		if (!msg) msg = '出错啦！';
 		alert(msg);
 	};
 
+	/**
+	 * 重置一个component，回到初始状态，删除所有render的元素。
+	 */
 	this.reset = function(self) {
 		// 清空所有render进来的新元素
 		self._rendered.forEach(function(node) {
@@ -425,6 +451,9 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		});
 	};
 
+	/**
+	 * 获取包装的节点
+	 */
 	this.getNode = function(self) {
 		return self._node;
 	};
