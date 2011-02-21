@@ -376,27 +376,6 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		self._descriptors[name].section = section;
 	};
 
-	/**
-	 * 渲染一个新的控件
-	 * @param template 模板字符串
-	 * @param data 模板数据
-	 * @param section 模板片段名称
-	 * @deprecated
-	 */
-	this.create = classmethod(function(cls, template, data, section) {
-		if (!data) data = {};
-		var tdata = {};
-		if (section) {
-			tdata[section] = data;
-		} else {
-			tdata = data;
-		}
-
-		var str = string.substitute(template, tdata);
-		var node = dom.Element.fromString(str).firstChild;
-		return new cls(node);
-	});
-
 	this._getEvents = classmethod(function(cls, self) {
 		var events = {};
 
