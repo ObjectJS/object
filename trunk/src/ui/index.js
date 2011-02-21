@@ -198,7 +198,6 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				if (!self._descriptors[key] && options[key] === undefined) data[key] = self.get(key);
 			});
 			extend(data, options);
-			console.log(data)
 
 			var tdata;
 			if (node.section) {
