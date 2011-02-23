@@ -167,6 +167,7 @@ this.add = function() {
 })(window);
 
 // prototyping标识符，有此标识符标识则代表new一个类时是为了继承而new的
+// 这个变量需要放到window上，避免重复加载object.js时重复声明的问题
 if (!window.PROTOTYPING) window.PROTOTYPING = {foo: true};
 
 (/**@lends _global_*/ function() {
