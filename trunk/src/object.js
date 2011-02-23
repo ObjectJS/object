@@ -166,10 +166,10 @@ this.add = function() {
 
 })(window);
 
-(/**@lends _global_*/ function() {
-
 // prototyping标识符，有此标识符标识则代表new一个类时是为了继承而new的
-var PROTOTYPING = {anything: true};
+if (!window.PROTOTYPING) window.PROTOTYPING = {foo: true};
+
+(/**@lends _global_*/ function() {
 
 // 仿照 mootools 的overloadSetter，返回一个 key/value 这种形式的function参数的包装，使其支持{key1: value1, key2: value2} 这种形式
 var enumerables = true;
@@ -196,7 +196,7 @@ var overloadSetter = function(func, usePlural) {
 // 获取父类的实例，用于 cls.prototype = new parent
 var getInstance = function(cls) {
 	if (cls === Array || cls === String) return new cls;
-	return new cls(PROTOTYPING);
+	return new cls(window.PROTOTYPING);
 };
 
 /**
