@@ -279,7 +279,7 @@ var getAllSubClasses = function(cls, array) {
  * 用一个统一的方法虽然会在调用的时候影响效率，但是提高了mixin时的效率，使得通过AClass.__mixin__覆盖某已存在方法时不需要修改所有subclasses的对应方法了
  */
 var buildMember = function(cls, name, member) {
-	if (typeof member === 'function') {
+	if (typeof member == 'function') {
 		cls[name] = function(self) {
 			var member = this.prototype[name];
 			var func = member.im_func;
@@ -311,7 +311,7 @@ var buildPrototype = function(cls, name, member) {
 	// 这里的member指向new Class参数的书写的对象/函数
 
 	// 先判断最常出现的instancemethod
-	if (member.__class__ === undefined && typeof member === 'function') { // this.a = function() {}
+	if (member.__class__ === undefined && typeof member == 'function') { // this.a = function() {}
 		prototype[name] = instancemethod(member);
 
 	} else if (member.__class__ === staticmethod) { // this.a = staticmethod(function() {})
@@ -424,7 +424,7 @@ Class.mixin = function(members, cls) {
 		var member = instance[name];
 		var func = member.im_func;
 
-		if (typeof member === 'function') {
+		if (typeof member == 'function') {
 			if (member.__class__ === instancemethod) {
 				members[name] = func;
 			} else if (member.__class__ === classmethod) {
