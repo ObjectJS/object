@@ -2,7 +2,9 @@
  * @namespace
  * @name ui
  */
-object.add('ui', 'string, dom', /**@lends ui*/ function(exports, string, dom) {
+object.add('ui', 'string, dom, ui.decorators', /**@lends ui*/ function(exports, string, dom, ui) {
+
+var fireevent = ui.decorators.fireevent;
 
 /**
  * 定义sub components
@@ -75,6 +77,7 @@ this.defineOptions = function(cls, options) {
 	Object.keys(options).forEach(function(name) {
 		var pname = '_' + name;
 		var methodName = name + '_change';
+		var methodName2 = name + 'change';
 		cls[name] = property(function(self) {
 			if (self[pname] === undefined) {
 				self[pname] = options[name];
@@ -82,7 +85,9 @@ this.defineOptions = function(cls, options) {
 			return self[pname];
 		}, function(self, value) {
 			self._setOption(name, value);
-			if (self[methodName]) {
+			if (self[methodName2]) {
+				self[methodName2](value);
+			} else if (self[methodName]) {
 				self[methodName](value);
 			}
 			return self[pname];
@@ -392,17 +397,12 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		return comp;
 	};
 
-	this.call = function(self, name) {
-		self._node.fireEvent(name, null, self);
-		if (!self[name]) throw 'no method named ' + name;
-		self[name].apply(self, [].slice.call(arguments, 2));
-	};
-
-	this.apply = function(self, name, args) {
-		self._node.fireEvent(name, null, self);
-		if (!self[name]) throw 'no method named ' + name;
-		self[name].apply(self, args);
-	};
+	this.call = classmethod(function(cls, name, self) {
+		if (!cls[name]) throw 'no method named ' + name;
+		self.nofireevent = true;
+		cls[name].apply(cls, [].slice.call(arguments, 2));
+		self.nofireevent = false;
+	});
 
 	/**
 	 * 设置subcomponent的template
@@ -415,23 +415,23 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	/**
 	 * 弹出验证错误信息
 	 */
-	this.invalid = function(self, msg) {
+	this.invalid = fireevent(function(self, msg) {
 		if (!msg) msg = '输入错误';
 		alert(msg);
-	};
+	});
 
 	/**
 	 * 弹出出错信息
 	 */
-	this.error = function(self, msg) {
+	this.error = fireevent(function(self, msg) {
 		if (!msg) msg = '出错啦！';
 		alert(msg);
-	};
+	});
 
 	/**
 	 * 重置一个component，回到初始状态，删除所有render的元素。
 	 */
-	this.reset = function(self) {
+	this.reset = fireevent(function(self) {
 		// 清空所有render进来的新元素
 		self._rendered.forEach(function(node) {
 			node.dispose();
@@ -449,7 +449,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				}
 			}
 		});
-	};
+	});
 
 	/**
 	 * 获取包装的节点
@@ -487,7 +487,7 @@ this.ForeNextControl = new Class(exports.Component, /**@lends ui.ForeNextControl
 			if (self.loop) self.position = -1;
 			else return;
 		}
-		self.call('next');
+		self.next();
 	};
 
 	this.foreButton_click = function(self, event) {
@@ -495,31 +495,31 @@ this.ForeNextControl = new Class(exports.Component, /**@lends ui.ForeNextControl
 			if (self.loop) self.position = self.total;
 			else return;
 		}
-		self.call('fore');
+		self.fore();
 	};
 
-	this.next = function(self) {
+	this.next = fireevent(function(self) {
 		self.position++;
-		self.call('change');
-	};
+		self.change();
+	});
 
-	this.fore = function(self) {
+	this.fore = fireevent(function(self) {
 		self.position--;
-		self.call('change');
-	};
+		self.change();
+	});
 
-	this.change = function(self) {
-		self.call('updateTotal');
-		self.call('updatePosition');
-	};
+	this.change = fireevent(function(self) {
+		self.updateTotal();
+		self.updatePosition();
+	});
 
-	this.updatePosition = function(self) {
+	this.updatePosition = fireevent(function(self) {
 		self._node.getElements('.current').set('innerHTML', self.position + 1); // position是从0开始滴～展示的时候+1
-	};
+	});
 
-	this.updateTotal = function(self) {
+	this.updateTotal = fireevent(function(self) {
 		self._node.getElements('.total').set('innerHTML', self.total);
-	};
+	});
 
 });
 

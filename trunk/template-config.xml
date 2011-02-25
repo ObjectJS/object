@@ -1,4 +1,4 @@
-<package>
+<package name="object" id="xn-object">
 	<source dir="src">
 		<combine path="object-all.js">
 			<include path="../lib/slick/Slick.Parser.js" />
@@ -14,6 +14,7 @@
 			<include path="setGlobal.js" />
 			<include path="mvc.js" />
 			<include path="ui/index.js" />
+			<include path="ui/decorators.js" />
 			<include path="urlparse.js" />
 			<include path="validator.js" />
 		</combine>

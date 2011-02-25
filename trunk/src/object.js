@@ -280,6 +280,7 @@ var getAllSubClasses = function(cls, array) {
  */
 var buildMember = function(cls, name, member) {
 	if (typeof member == 'function') {
+		member.__name__ = name;
 		cls[name] = function(self) {
 			var member = this.prototype[name];
 			var func = member.im_func;
