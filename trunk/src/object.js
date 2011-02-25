@@ -439,8 +439,6 @@ Class.mixin = function(members, cls) {
 
 };
 
-/**
- */
 Class.hasProperty = function(obj, name) {
 	return (name in obj.__properties__);
 };
