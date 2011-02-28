@@ -5,14 +5,10 @@
 <script>
 	object.use('dom, ui', function(exports, dom, ui) {
 		var MyComponent = new Class(ui.Component, function() {
-			ui.define(this, 'title', '.title');
-			ui.defineOptions(this, {
-				foo: 'haha'
-			});
-
-			this.foo_change = function(self, value) {
+			this.title = ui.define('.title');
+			this.foo = ui.option('haha', function(self, value) {
 				self._title.set('innerHTML', value);
-			}
+			});
 		});
 
 		var template = '<div class="text"><h3 class="title">{{foo}}</h3></div>';

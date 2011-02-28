@@ -208,7 +208,7 @@ var getInstance = function(cls) {
 var getter = function(prop) {
 	var property = this.__properties__[prop];
 	if (property && property.fget) {
-		return property.fget.call(null, this);
+		return property.fget.call(this.__class__.__this__, this);
 	} else {
 		throw 'get not defined property ' + prop;
 	}
@@ -222,7 +222,7 @@ var getter = function(prop) {
 var setter = function(prop, value) {
 	var property = this.__properties__[prop];
 	if (property && property.fset) {
-		property.fset.call(null, this, value);
+		property.fset.call(this.__class__.__this__, this, value);
 	} else {
 		throw 'set not defined property ' + prop;
 	}
@@ -282,20 +282,20 @@ var buildMember = function(cls, name, member) {
 	if (typeof member == 'function') {
 		member.__name__ = name;
 		cls[name] = function(self) {
-			var member = this.prototype[name];
+			var member = cls.prototype[name];
 			var func = member.im_func;
 			var args;
 
 			if (member.__class__ === instancemethod) {
-				return func.apply(null, arguments);
+				return func.apply(cls.__this__, arguments);
 
 			} else if (member.__class__ === classmethod) {
 				args = [].slice.call(arguments, 0);
-				args.unshift(this); // 第一个参数是cls
-				return func.apply(null, args);
+				args.unshift(cls); // 第一个参数是cls
+				return func.apply(cls.__this__, args);
 
 			} else { // staticmethod
-				return member.apply(null, arguments);
+				return member.apply(cls.__this__, arguments);
 			}
 		}
 	} else {
@@ -399,6 +399,14 @@ var Class = this.Class = function() {
 	cls.__subclassesarray__ = [];
 	cls.__subclasses__ = getSubClasses;
 	cls.__mixin__ = mixiner;
+	// 支持 this.parent 调用父级同名方法
+	cls.__this__ = {
+		parent: function() {
+			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
+			var name = arguments.callee.caller.__name__;
+			cls.__base__[name].apply(cls.__base__, arguments);
+		}
+	};
 	cls.prototype.get = getter;
 	cls.prototype.set = setter;
 	cls.prototype._set = nativeSetter;
@@ -480,7 +488,7 @@ var instancemethod = function(func) {
 	var wrapper = function() {
 		var args = [].slice.call(arguments, 0);
 		args.unshift(this);
-		return func.apply(null, args);
+		return func.apply(this.__class__.__this__, args);
 	};
 	wrapper.__class__ = arguments.callee;
 	wrapper.im_func = func;
@@ -489,7 +497,7 @@ var instancemethod = function(func) {
 
 var staticmethod = this.staticmethod = function(func) {
 	var wrapper = function() {
-		return func.apply(null, arguments);
+		return func.apply(this.__class__.__this__, arguments);
 	};
 	wrapper.__class__ = arguments.callee;
 	wrapper.im_func = func;
@@ -499,8 +507,9 @@ var staticmethod = this.staticmethod = function(func) {
 var classmethod = this.classmethod = function(func) {
 	var wrapper = function() {
 		var args = [].slice.call(arguments, 0);
-		args.unshift(this.__class__);
-		return func.apply(null, args);
+		var cls = this.__class__;
+		args.unshift(cls);
+		return func.apply(cls.__this__, args);
 	};
 	wrapper.__class__ = arguments.callee;
 	wrapper.im_func = func;
