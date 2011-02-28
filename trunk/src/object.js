@@ -401,6 +401,7 @@ var Class = this.Class = function() {
 	cls.__mixin__ = mixiner;
 	// 支持 this.parent 调用父级同名方法
 	cls.__this__ = {
+		base: cls.__base__,
 		parent: function() {
 			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
 			var name = arguments.callee.caller.__name__;
