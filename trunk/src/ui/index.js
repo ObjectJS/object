@@ -7,12 +7,18 @@ object.add('ui', 'string, dom, ui.decorators', /**@lends ui*/ function(exports, 
 var fireevent = ui.decorators.fireevent;
 
 /**
- * 定义sub components
+ * 为一个Component定义一个sub components引用
+ * 用法：
+ * MyComponent = new Class(ui.Component, {
+ *	refname: ui.define('css selector', ui.menu.Menu)
+ * });
+ * 这样MyComponent实例的refname属性极为相对应selector获取到的节点引用
  * @param selector 选择器
  * @param type 构造类
  * @param single 是否是单独的引用
  */
 this.define = function(selector, type, single) {
+	var prop;
 	function getter(self) {
 		var name = prop.__name__;
 
@@ -58,18 +64,30 @@ this.define = function(selector, type, single) {
 		}
 		return self[comVar];
 	};
-	var prop = property(getter);
+	prop = property(getter);
 	return prop;
 };
 
 /**
- * 定义一个sub component
+ * 定义唯一引用的sub component
  */
 this.define1 = function(selector, type) {
 	return exports.define(selector, type, 1);
 };
 
+/**
+ * 声明一个option
+ * 用法：
+ * MyComponent = new Class(ui.Component, {
+ *	myConfig: ui.option(1)
+ * });
+ * 这样MyComponent实例的myConfig属性值即为默认值1，可通过 set 方法修改
+ * @param selector 选择器
+ * @param type 构造类
+ * @param single 是否是单独的引用
+ */
 this.option = function(value, onchange) {
+	var prop;
 	function fget(self) {
 		var pname = '_' + prop.__name__;
 		if (self[pname] === undefined) {
@@ -84,7 +102,7 @@ this.option = function(value, onchange) {
 		if (onchange) onchange(self, value);
 		return self[pname];
 	}
-	var prop = property(fget, fset);
+	prop = property(fget, fset);
 	return prop;
 };
 
@@ -167,7 +185,7 @@ this.Components = new Class(Array, /**@lends ui.Components*/ function() {
 
 
 /**
- * UI模块基类
+ * UI模块基类，所有UI组件的基本类
  * @class
  * @name ui.Component
  */
@@ -454,65 +472,6 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	this.define = staticmethod(exports.define);
 	this.define1 = staticmethod(exports.define1);
 	this.defineOptions = staticmethod(exports.defineOptions);
-
-});
-
-/**
- * @class
- * @name ui.ForeNextControl
- */
-this.ForeNextControl = new Class(exports.Component, /**@lends ui.ForeNextControl*/ function() {
-
-	this.nextButton = exports.define('.nextbutton');
-	this.foreButton = exports.define('.forebutton');
-
-	this.initialize = function(self, node) {
-		exports.Component.initialize(self, node);
-
-		self.loop = false; // 是否循环
-		self.total = parseInt(self._node.getData('total'));
-		self.start = parseInt(self._node.getData('start')) || 0;
-		self.position = self.start;
-	};
-
-	this.nextButton_click = function(self, event) {
-		if (self.position >= self.total - 1) {
-			if (self.loop) self.position = -1;
-			else return;
-		}
-		self.next();
-	};
-
-	this.foreButton_click = function(self, event) {
-		if (self.position <= 0) {
-			if (self.loop) self.position = self.total;
-			else return;
-		}
-		self.fore();
-	};
-
-	this.next = fireevent(function(self) {
-		self.position++;
-		self.change();
-	});
-
-	this.fore = fireevent(function(self) {
-		self.position--;
-		self.change();
-	});
-
-	this.change = fireevent(function(self) {
-		self.updateTotal();
-		self.updatePosition();
-	});
-
-	this.updatePosition = fireevent(function(self) {
-		self._node.getElements('.current').set('innerHTML', self.position + 1); // position是从0开始滴～展示的时候+1
-	});
-
-	this.updateTotal = fireevent(function(self) {
-		self._node.getElements('.total').set('innerHTML', self.total);
-	});
 
 });
 
