@@ -70,6 +70,79 @@ this.define1 = function(cls, name, selector, type) {
 	exports.define(cls, name, selector, type, true);
 };
 
+this.select = function(selector, type, single) {
+	function getter(self) {
+		var name = prop.__name__;
+
+		// 默认为 Component
+		if (!type) type = exports.Component;
+		if (!self._descriptors[name]) {
+			self._descriptors[name] = {
+				selector: selector,
+				type: type,
+				single: single
+			};
+		}
+
+		if (!self._node) return null;
+		var comVar = '__' + name;
+		if (self[comVar]) return self[comVar];
+		var pname = '_' + name;
+		if (single) {
+			var node = self._node.getElement(selector);
+			if (!node) return null;
+			else if (self[pname] === node) return self[name]; // 不是第一次get，且结果和上次相同，避免再次添加事件
+
+			self._addEventTo(name, node);
+			self[pname] = node;
+
+			self[comVar] = new type(node, self._subOptions[name]);
+		} else {
+			var nodes = self._node.getElements(selector);
+			if (!nodes) {
+				self[pname] = new dom.Elements([]);
+				return new exports.Components([], type);
+			}
+
+			// 如果已经初始化过，则要确保不会对之前取到过得元素重新执行添加事件
+			nodes.forEach(function(node) {
+				if (!self[pname] || self[pname].indexOf(node) === -1) {
+					self._addEventTo(name, node);
+				}
+			});
+			self[pname] = nodes;
+
+			self[comVar] = new exports.Components(nodes, type, self._subOptions[name], self);
+		}
+		return self[comVar];
+	};
+	var prop = property(getter);
+	return prop;
+};
+
+this.select1 = function(selector, type) {
+	return exports.select(selector, type, 1);
+}
+
+this.option = function(value, onchange) {
+	function fget(self) {
+		var pname = '_' + prop.__name__;
+		if (self[pname] === undefined) {
+			self[pname] = value;
+		}
+		return self[pname];
+	}
+	function fset(self, value) {
+		var name = prop.__name__;
+		var pname = '_' + name;
+		self._setOption(name, value);
+		if (onchange) onchange(self, value);
+		return self[pname];
+	}
+	var prop = property(fget, fset);
+	return prop;
+};
+
 /**
  * 定义 options
  */
@@ -470,8 +543,8 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
  */
 this.ForeNextControl = new Class(exports.Component, /**@lends ui.ForeNextControl*/ function() {
 
-	exports.define(this, 'nextButton', '.nextbutton');
-	exports.define(this, 'foreButton', '.forebutton');
+	this.nextButton = exports.select('.nextbutton');
+	this.foreButton = exports.select('.forebutton');
 
 	this.initialize = function(self, node) {
 		exports.Component.initialize(self, node);

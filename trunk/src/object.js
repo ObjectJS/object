@@ -508,7 +508,7 @@ var classmethod = this.classmethod = function(func) {
 };
 
 var property = this.property = function(fget, fset) {
-	var p = {};
+	var p = function () {};
 	p.__class__ = arguments.callee;
 	p.fget = fget;
 	p.fset = fset;
