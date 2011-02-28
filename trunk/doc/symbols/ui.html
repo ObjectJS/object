@@ -62,9 +62,9 @@
 				
 					<li><a href="../symbols/net.html">net</a></li>
 				
-					<li><a href="../symbols/object.html">object</a></li>
-				
 					<li><a href="../symbols/Object.html">Object</a></li>
+				
+					<li><a href="../symbols/object.html">object</a></li>
 				
 					<li><a href="../symbols/object.Loader.html">object<span class='break'> </span>.<span class='break'> </span>Loader</a></li>
 				
@@ -78,11 +78,15 @@
 				
 					<li><a href="../symbols/ua.html">ua</a></li>
 				
+					<li><a href="../symbols/ua.extra.html">ua<span class='break'> </span>.<span class='break'> </span>extra</a></li>
+				
 					<li><a href="../symbols/ui.html">ui</a></li>
 				
 					<li><a href="../symbols/ui.Component.html">ui<span class='break'> </span>.<span class='break'> </span>Component</a></li>
 				
 					<li><a href="../symbols/ui.Components.html">ui<span class='break'> </span>.<span class='break'> </span>Components</a></li>
+				
+					<li><a href="../symbols/ui.decorators.html">ui<span class='break'> </span>.<span class='break'> </span>decorators</a></li>
 				
 					<li><a href="../symbols/ui.ForeNextControl.html">ui<span class='break'> </span>.<span class='break'> </span>ForeNextControl</a></li>
 				
@@ -103,7 +107,7 @@
 		
 		Documentation generator: <a href="http://code.google.com/p/jsdoc-toolkit/" target="_blank">JsDoc Toolkit</a> 2.4.0<br />
 		Template: <a href="http://www.thebrightlines.com/2010/05/06/new-template-for-jsdoctoolkit-codeview/" target="_blank">Codeview</a> 1.2<br />
-		Generated on: 2011-1-15 14:26
+		Generated on: 2011-1-28 16:11
 	</div>
 </div>
 
@@ -126,7 +130,7 @@
 					
 					
 					
-						<li>Defined in: <a href="../symbols/src/d__works_renren_static_object_trunk_src__ui.js.html">ui.js</a></li>
+						<li>Defined in: <a href="../symbols/src/d__works_renren_static_object_trunk_src__ui_index.js.html">index.js</a></li>
 					
 						
 				</ul>
@@ -159,6 +163,11 @@
 		
 		
 		
+			
+			
+			
+			
+		
 <!--
 #### METHODS SUMMARY
 -->
@@ -185,9 +194,9 @@
 								>
 									<td class="attributes">&lt;static&gt; &nbsp;</td>
 									<td class="nameDescription">
-										<div class="fixedFont">ui.<b><a href="../symbols/ui.html#.define">define</a></b>(cls, name, selector, type, single)
+										<div class="fixedFont">ui.<b><a href="../symbols/ui.html#.define">define</a></b>(selector, type, single)
 										</div>
-										<div class="description"></div>
+										<div class="description">定义sub components</div>
 									</td>
 								</tr>
 							
@@ -196,9 +205,9 @@
 								>
 									<td class="attributes">&lt;static&gt; &nbsp;</td>
 									<td class="nameDescription">
-										<div class="fixedFont">ui.<b><a href="../symbols/ui.html#.define1">define1</a></b>(cls, name, selector, type)
+										<div class="fixedFont">ui.<b><a href="../symbols/ui.html#.define1">define1</a></b>(selector, type)
 										</div>
-										<div class="description"></div>
+										<div class="description">定义一个sub component</div>
 									</td>
 								</tr>
 							
@@ -207,7 +216,7 @@
 								>
 									<td class="attributes">&lt;static&gt; &nbsp;</td>
 									<td class="nameDescription">
-										<div class="fixedFont">ui.<b><a href="../symbols/ui.html#.defineOptions">defineOptions</a></b>(cls, options)
+										<div class="fixedFont">ui.<b><a href="../symbols/ui.html#.option">option</a></b>(value, onchange)
 										</div>
 										<div class="description"></div>
 									</td>
@@ -279,11 +288,11 @@
 									
 									
 									
-									<span class="light">ui.</span><b>define</b>(cls, name, selector, type, single)
+									<span class="light">ui.</span><b>define</b>(selector, type, single)
 								</div>
 								
 								<div class="description">
-									
+									定义sub components
 									
 									
 									
@@ -297,34 +306,22 @@
 										<dt class="heading">Parameters:</dt>
 										
 											<dt>
-												<b>cls</b>
-												
-											</dt>
-											<dd></dd>
-										
-											<dt>
-												<b>name</b>
-												
-											</dt>
-											<dd></dd>
-										
-											<dt>
 												<b>selector</b>
 												
 											</dt>
-											<dd></dd>
+											<dd>选择器</dd>
 										
 											<dt>
 												<b>type</b>
 												
 											</dt>
-											<dd></dd>
+											<dd>构造类</dd>
 										
 											<dt>
 												<b>single</b>
 												
 											</dt>
-											<dd></dd>
+											<dd>是否是单独的引用</dd>
 										
 									</dl>
 								
@@ -343,11 +340,11 @@
 									
 									
 									
-									<span class="light">ui.</span><b>define1</b>(cls, name, selector, type)
+									<span class="light">ui.</span><b>define1</b>(selector, type)
 								</div>
 								
 								<div class="description">
-									
+									定义一个sub component
 									
 									
 									
@@ -359,18 +356,6 @@
 								
 									<dl class="detailList params">
 										<dt class="heading">Parameters:</dt>
-										
-											<dt>
-												<b>cls</b>
-												
-											</dt>
-											<dd></dd>
-										
-											<dt>
-												<b>name</b>
-												
-											</dt>
-											<dd></dd>
 										
 											<dt>
 												<b>selector</b>
@@ -394,14 +379,14 @@
 							<li 
 								 class='item2'
 							>
-								<div class="fixedFont heading" id=".defineOptions">
+								<div class="fixedFont heading" id=".option">
 									<span class='lighter'>
 									&lt;static&gt; 
 									</span>
 									
 									
 									
-									<span class="light">ui.</span><b>defineOptions</b>(cls, options)
+									<span class="light">ui.</span><b>option</b>(value, onchange)
 								</div>
 								
 								<div class="description">
@@ -419,13 +404,13 @@
 										<dt class="heading">Parameters:</dt>
 										
 											<dt>
-												<b>cls</b>
+												<b>value</b>
 												
 											</dt>
 											<dd></dd>
 										
 											<dt>
-												<b>options</b>
+												<b>onchange</b>
 												
 											</dt>
 											<dd></dd>

@@ -62,9 +62,9 @@
 				
 					<li><a href="../symbols/net.html">net</a></li>
 				
-					<li><a href="../symbols/object.html">object</a></li>
-				
 					<li><a href="../symbols/Object.html">Object</a></li>
+				
+					<li><a href="../symbols/object.html">object</a></li>
 				
 					<li><a href="../symbols/object.Loader.html">object<span class='break'> </span>.<span class='break'> </span>Loader</a></li>
 				
@@ -78,11 +78,15 @@
 				
 					<li><a href="../symbols/ua.html">ua</a></li>
 				
+					<li><a href="../symbols/ua.extra.html">ua<span class='break'> </span>.<span class='break'> </span>extra</a></li>
+				
 					<li><a href="../symbols/ui.html">ui</a></li>
 				
 					<li><a href="../symbols/ui.Component.html">ui<span class='break'> </span>.<span class='break'> </span>Component</a></li>
 				
 					<li><a href="../symbols/ui.Components.html">ui<span class='break'> </span>.<span class='break'> </span>Components</a></li>
+				
+					<li><a href="../symbols/ui.decorators.html">ui<span class='break'> </span>.<span class='break'> </span>decorators</a></li>
 				
 					<li><a href="../symbols/ui.ForeNextControl.html">ui<span class='break'> </span>.<span class='break'> </span>ForeNextControl</a></li>
 				
@@ -103,7 +107,7 @@
 		
 		Documentation generator: <a href="http://code.google.com/p/jsdoc-toolkit/" target="_blank">JsDoc Toolkit</a> 2.4.0<br />
 		Template: <a href="http://www.thebrightlines.com/2010/05/06/new-template-for-jsdoctoolkit-codeview/" target="_blank">Codeview</a> 1.2<br />
-		Generated on: 2011-1-15 14:26
+		Generated on: 2011-1-28 16:11
 	</div>
 </div>
 
@@ -126,7 +130,7 @@
 					
 					
 					
-						<li>Defined in: <a href="../symbols/src/d__works_renren_static_object_trunk_src__ui.js.html">ui.js</a></li>
+						<li>Defined in: <a href="../symbols/src/d__works_renren_static_object_trunk_src__ui_index.js.html">index.js</a></li>
 					
 						
 				</ul>
@@ -178,9 +182,29 @@
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
 										<div class="fixedFont">
-										<b><a href="../symbols/ui.Component.html#create">create</a></b>
+										<b><a href="../symbols/ui.Component.html#error">error</a></b>
 										</div>
-										<div class="description">渲染一个新的控件</div>
+										<div class="description">弹出出错信息</div>
+									</td>
+								</tr>
+							
+								<tr>
+									<td class="attributes">&nbsp;</td>
+									<td class="nameDescription">
+										<div class="fixedFont">
+										<b><a href="../symbols/ui.Component.html#invalid">invalid</a></b>
+										</div>
+										<div class="description">弹出验证错误信息</div>
+									</td>
+								</tr>
+							
+								<tr>
+									<td class="attributes">&nbsp;</td>
+									<td class="nameDescription">
+										<div class="fixedFont">
+										<b><a href="../symbols/ui.Component.html#reset">reset</a></b>
+										</div>
+										<div class="description">重置一个component，回到初始状态，删除所有render的元素。</div>
 									</td>
 								</tr>
 							
@@ -217,36 +241,14 @@
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/ui.Component.html#apply">apply</a></b>(self, name, args)
+										<div class="fixedFont"><b><a href="../symbols/ui.Component.html#getNode">getNode</a></b>(self)
 										</div>
-										<div class="description"></div>
+										<div class="description">获取包装的节点</div>
 									</td>
 								</tr>
 							
 								<tr
 									 class='item1'
-								>
-									<td class="attributes">&nbsp;</td>
-									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/ui.Component.html#call">call</a></b>(self, name)
-										</div>
-										<div class="description"></div>
-									</td>
-								</tr>
-							
-								<tr
-									 class='item2'
-								>
-									<td class="attributes">&nbsp;</td>
-									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/ui.Component.html#error">error</a></b>(self, msg)
-										</div>
-										<div class="description"></div>
-									</td>
-								</tr>
-							
-								<tr
-									 class='item3'
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
@@ -257,18 +259,7 @@
 								</tr>
 							
 								<tr
-									 class='item4'
-								>
-									<td class="attributes">&nbsp;</td>
-									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/ui.Component.html#invalid">invalid</a></b>(self, msg)
-										</div>
-										<div class="description"></div>
-									</td>
-								</tr>
-							
-								<tr
-									 class='item5'
+									 class='item2'
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
@@ -279,46 +270,24 @@
 								</tr>
 							
 								<tr
-									 class='item6'
+									 class='item3'
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/ui.Component.html#registerComponent">registerComponent</a></b>(self, name, node, data)
+										<div class="fixedFont"><b><a href="../symbols/ui.Component.html#render">render</a></b>(name, data, data)
 										</div>
-										<div class="description">根据节点初始化一个component，并放到相应的引用上去。</div>
+										<div class="description">渲染一组subcomponent</div>
 									</td>
 								</tr>
 							
 								<tr
-									 class='item7'
+									 class='item4'
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/ui.Component.html#render">render</a></b>(self, name, data)
+										<div class="fixedFont"><b><a href="../symbols/ui.Component.html#setTemplate">setTemplate</a></b>(self, name, template, section)
 										</div>
-										<div class="description"></div>
-									</td>
-								</tr>
-							
-								<tr
-									 class='item8'
-								>
-									<td class="attributes">&nbsp;</td>
-									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/ui.Component.html#reset">reset</a></b>(self)
-										</div>
-										<div class="description"></div>
-									</td>
-								</tr>
-							
-								<tr
-									 class='item9'
-								>
-									<td class="attributes">&nbsp;</td>
-									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/ui.Component.html#setTemplate">setTemplate</a></b>(self, name, template, secName)
-										</div>
-										<div class="description"></div>
+										<div class="description">设置subcomponent的template</div>
 									</td>
 								</tr>
 							
@@ -372,18 +341,62 @@
 					</h2>
 					
 					
-						<div class="fixedFont heading" id="create">
+						<div class="fixedFont heading" id="error">
 							<span class='lighter'>
 							
 							</span>
 							
 							
 							
-							<b>create</b>							
+							<b>error</b>							
 						</div>
 						
 						<div class="description">
-							渲染一个新的控件
+							弹出出错信息
+							
+							
+							
+						</div>
+						
+						
+							
+						
+						<div class="hr"></div>
+					
+						<div class="fixedFont heading" id="invalid">
+							<span class='lighter'>
+							
+							</span>
+							
+							
+							
+							<b>invalid</b>							
+						</div>
+						
+						<div class="description">
+							弹出验证错误信息
+							
+							
+							
+						</div>
+						
+						
+							
+						
+						<div class="hr"></div>
+					
+						<div class="fixedFont heading" id="reset">
+							<span class='lighter'>
+							
+							</span>
+							
+							
+							
+							<b>reset</b>							
+						</div>
+						
+						<div class="description">
+							重置一个component，回到初始状态，删除所有render的元素。
 							
 							
 							
@@ -413,18 +426,18 @@
 							<li 
 								 class='item0'
 							>
-								<div class="fixedFont heading" id="apply">
+								<div class="fixedFont heading" id="getNode">
 									<span class='lighter'>
 									
 									</span>
 									
 									
 									
-									<b>apply</b>(self, name, args)
+									<b>getNode</b>(self)
 								</div>
 								
 								<div class="description">
-									
+									获取包装的节点
 									
 									
 									
@@ -439,18 +452,6 @@
 										
 											<dt>
 												<b>self</b>
-												
-											</dt>
-											<dd></dd>
-										
-											<dt>
-												<b>name</b>
-												
-											</dt>
-											<dd></dd>
-										
-											<dt>
-												<b>args</b>
 												
 											</dt>
 											<dd></dd>
@@ -464,98 +465,6 @@
 						
 							<li 
 								 class='item1'
-							>
-								<div class="fixedFont heading" id="call">
-									<span class='lighter'>
-									
-									</span>
-									
-									
-									
-									<b>call</b>(self, name)
-								</div>
-								
-								<div class="description">
-									
-									
-									
-									
-									
-								</div>
-								
-								
-								
-								
-									<dl class="detailList params">
-										<dt class="heading">Parameters:</dt>
-										
-											<dt>
-												<b>self</b>
-												
-											</dt>
-											<dd></dd>
-										
-											<dt>
-												<b>name</b>
-												
-											</dt>
-											<dd></dd>
-										
-									</dl>
-								
-								
-								
-								<div class="hr"></div>
-							</li>
-						
-							<li 
-								 class='item2'
-							>
-								<div class="fixedFont heading" id="error">
-									<span class='lighter'>
-									
-									</span>
-									
-									
-									
-									<b>error</b>(self, msg)
-								</div>
-								
-								<div class="description">
-									
-									
-									
-									
-									
-								</div>
-								
-								
-								
-								
-									<dl class="detailList params">
-										<dt class="heading">Parameters:</dt>
-										
-											<dt>
-												<b>self</b>
-												
-											</dt>
-											<dd></dd>
-										
-											<dt>
-												<b>msg</b>
-												
-											</dt>
-											<dd></dd>
-										
-									</dl>
-								
-								
-								
-								<div class="hr"></div>
-							</li>
-						
-							<li 
-								 class='item3'
 							>
 								<div class="fixedFont heading" id="initialize">
 									<span class='lighter'>
@@ -607,53 +516,7 @@
 							</li>
 						
 							<li 
-								 class='item4'
-							>
-								<div class="fixedFont heading" id="invalid">
-									<span class='lighter'>
-									
-									</span>
-									
-									
-									
-									<b>invalid</b>(self, msg)
-								</div>
-								
-								<div class="description">
-									
-									
-									
-									
-									
-								</div>
-								
-								
-								
-								
-									<dl class="detailList params">
-										<dt class="heading">Parameters:</dt>
-										
-											<dt>
-												<b>self</b>
-												
-											</dt>
-											<dd></dd>
-										
-											<dt>
-												<b>msg</b>
-												
-											</dt>
-											<dd></dd>
-										
-									</dl>
-								
-								
-								
-								<div class="hr"></div>
-							</li>
-						
-							<li 
-								 class='item5'
+								 class='item2'
 							>
 								<div class="fixedFont heading" id="make">
 									<span class='lighter'>
@@ -705,65 +568,7 @@
 							</li>
 						
 							<li 
-								 class='item6'
-							>
-								<div class="fixedFont heading" id="registerComponent">
-									<span class='lighter'>
-									
-									</span>
-									
-									
-									
-									<b>registerComponent</b>(self, name, node, data)
-								</div>
-								
-								<div class="description">
-									根据节点初始化一个component，并放到相应的引用上去。
-									
-									
-									
-									
-								</div>
-								
-								
-								
-								
-									<dl class="detailList params">
-										<dt class="heading">Parameters:</dt>
-										
-											<dt>
-												<b>self</b>
-												
-											</dt>
-											<dd></dd>
-										
-											<dt>
-												<b>name</b>
-												
-											</dt>
-											<dd></dd>
-										
-											<dt>
-												<b>node</b>
-												
-											</dt>
-											<dd></dd>
-										
-											<dt>
-												<b>data</b>
-												
-											</dt>
-											<dd></dd>
-										
-									</dl>
-								
-								
-								
-								<div class="hr"></div>
-							</li>
-						
-							<li 
-								 class='item7'
+								 class='item3'
 							>
 								<div class="fixedFont heading" id="render">
 									<span class='lighter'>
@@ -772,11 +577,11 @@
 									
 									
 									
-									<b>render</b>(self, name, data)
+									<b>render</b>(name, data, data)
 								</div>
 								
 								<div class="description">
-									
+									渲染一组subcomponent
 									
 									
 									
@@ -790,16 +595,16 @@
 										<dt class="heading">Parameters:</dt>
 										
 											<dt>
-												<b>self</b>
-												
-											</dt>
-											<dd></dd>
-										
-											<dt>
 												<b>name</b>
 												
 											</dt>
-											<dd></dd>
+											<dd>subcomponent名字</dd>
+										
+											<dt>
+												<b>data</b>
+												
+											</dt>
+											<dd>模板数据/初始化参数</dd>
 										
 											<dt>
 												<b>data</b>
@@ -815,47 +620,7 @@
 							</li>
 						
 							<li 
-								 class='item8'
-							>
-								<div class="fixedFont heading" id="reset">
-									<span class='lighter'>
-									
-									</span>
-									
-									
-									
-									<b>reset</b>(self)
-								</div>
-								
-								<div class="description">
-									
-									
-									
-									
-									
-								</div>
-								
-								
-								
-								
-									<dl class="detailList params">
-										<dt class="heading">Parameters:</dt>
-										
-											<dt>
-												<b>self</b>
-												
-											</dt>
-											<dd></dd>
-										
-									</dl>
-								
-								
-								
-								<div class="hr"></div>
-							</li>
-						
-							<li 
-								 class='item9'
+								 class='item4'
 							>
 								<div class="fixedFont heading" id="setTemplate">
 									<span class='lighter'>
@@ -864,11 +629,11 @@
 									
 									
 									
-									<b>setTemplate</b>(self, name, template, secName)
+									<b>setTemplate</b>(self, name, template, section)
 								</div>
 								
 								<div class="description">
-									
+									设置subcomponent的template
 									
 									
 									
@@ -900,7 +665,7 @@
 											<dd></dd>
 										
 											<dt>
-												<b>secName</b>
+												<b>section</b>
 												
 											</dt>
 											<dd></dd>
