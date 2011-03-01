@@ -12,6 +12,8 @@ this.Events = new Class(/**@lends object.Events*/ {
 	},
 
 	addEvent : function(self, type, func) {
+		if (!self._eventListeners) self._eventListeners = {};
+
 		var funcs = self._eventListeners;
 		if (!funcs[type]) funcs[type] = [];
 		// 不允许重复添加同一个事件
@@ -21,6 +23,8 @@ this.Events = new Class(/**@lends object.Events*/ {
 	},
 
 	removeEvent : function(self, type, func) {
+		if (!self._eventListeners) self._eventListeners = {};
+
 		var funcs = self._eventListeners[type];
 		if (funcs) {
 			for (var i = funcs.length - 1; i >= 0; i--) {
@@ -34,7 +38,7 @@ this.Events = new Class(/**@lends object.Events*/ {
 	},
 
 	fireEvent : function(self, type) {
-		if (!self._eventListeners[type]) return;
+		if (!self._eventListeners || !self._eventListeners[type]) return;
 
 		var funcs = self._eventListeners[type];
 		for (var i = 0, j = funcs.length; i < j; i++) {
