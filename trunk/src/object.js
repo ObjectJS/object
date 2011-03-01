@@ -1025,7 +1025,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		var module = _lib[name];
 		if (!module) throw new NoModuleError(name);
 
-		self.executeModule(module, {}, {}, null, {name: '__main__'});
+		self.executeModule(module, window, {}, null, {name: '__main__'});
 	};
 
 });
