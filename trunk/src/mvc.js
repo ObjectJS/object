@@ -2,16 +2,16 @@
  * @namespace
  * @name mvc
  */
-object.add('mvc', /**@lends mvc*/ function(exports) {
+object.add('mvc', 'events', /**@lends mvc*/ function(exports, events) {
 
 /**
  * MVC Action 基类
  * @class
  */
-var Action = this.Action = new Class(Events, function() {
+var Action = this.Action = new Class(events.Events, function() {
 
 	this.initialize = function(self) {
-		Events.initialize(self);
+		events.Events.initialize(self);
 
 		self.view = null;
 	};

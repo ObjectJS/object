@@ -7,6 +7,7 @@
 			<include path="object.js" />
 			<include path="ua/index.js" />
 			<include path="string.js" />
+			<include path="events.js" />
 			<include path="options.js" />
 			<include path="dom/index.js" />
 			<include path="dom/event.js" />
