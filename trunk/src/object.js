@@ -282,20 +282,20 @@ var buildMember = function(cls, name, member) {
 	if (typeof member == 'function') {
 		member.__name__ = name;
 		cls[name] = function(self) {
-			var member = cls.prototype[name];
+			var member = this.prototype[name];
 			var func = member.im_func;
 			var args;
 
 			if (member.__class__ === instancemethod) {
-				return func.apply(cls.__this__, arguments);
+				return func.apply(this.__this__, arguments);
 
 			} else if (member.__class__ === classmethod) {
 				args = [].slice.call(arguments, 0);
-				args.unshift(cls); // 第一个参数是cls
-				return func.apply(cls.__this__, args);
+				args.unshift(this); // 第一个参数是cls
+				return func.apply(this.__this__, args);
 
 			} else { // staticmethod
-				return member.apply(cls.__this__, arguments);
+				return member.apply(this.__this__, arguments);
 			}
 		}
 	} else {
