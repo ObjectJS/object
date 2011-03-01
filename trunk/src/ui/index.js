@@ -471,7 +471,6 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 	this.define = staticmethod(exports.define);
 	this.define1 = staticmethod(exports.define1);
-	this.defineOptions = staticmethod(exports.defineOptions);
 
 });
 
