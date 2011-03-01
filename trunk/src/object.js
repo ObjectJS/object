@@ -336,19 +336,24 @@ var buildPrototype = function(cls, name, member) {
 
 };
 
-var funcNameRegExp = /^function ([\w$]+)/;
 // 根据function生成其__name__属性
-var fillFuncName = function(func, name) {
-	if (func.name) {
-		name = func.name;
-	// IE 下没有 Function.prototype.name，通过代码获得
-	} else if (func.name === undefined) {
+// 判断function TEST() 是否能取到name属性来选择不同的算法函数
+if ((function TEST(){}).name) {
+	var fillFuncName = function(func, name) {
+		if (func.name) name = func.name;
+		func.__name__ = name;
+	}
+// IE
+} else {
+	var funcNameRegExp = /^function ([\w$]+)/;
+	var fillFuncName = function(func, name) {
+		// IE 下没有 Function.prototype.name，通过代码获得
 		if (result = funcNameRegExp.exec(func.toString())) {
 			name = result[1];
 		}
-	}
-	func.__name__ = name;
-};
+		func.__name__ = name;
+	};
+}
 
 // IE不可以通过prototype = new Array的方式使function获得数组功能。
 var _nativeExtendable = (function() {
