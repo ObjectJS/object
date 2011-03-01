@@ -227,9 +227,10 @@ var setter = function(prop, value) {
 		throw 'set not defined property ' + prop;
 	}
 };
+
 var nativeSetter = function(prop, value) {
 	this[prop] = value;
-}
+};
 
 /**
  * 动态mixin的方法。可以通过任意class的mixin调用
@@ -282,22 +283,22 @@ var buildMember = function(cls, name, member) {
 	if (typeof member == 'function') {
 		member.__name__ = name;
 		cls[name] = function(self) {
-			var member = this.prototype[name];
-			var func = member.im_func;
+			var prototype = this.prototype[name];
+			var func = prototype.im_func;
 			var args;
 
-			if (member.__class__ === instancemethod) {
+			if (prototype.__class__ === instancemethod) {
 				return func.apply(this.__this__, arguments);
 
-			} else if (member.__class__ === classmethod) {
+			} else if (prototype.__class__ === classmethod) {
 				args = [].slice.call(arguments, 0);
 				args.unshift(this); // 第一个参数是cls
 				return func.apply(this.__this__, args);
 
 			} else { // staticmethod
-				return member.apply(this.__this__, arguments);
+				return func.apply(this.__this__, arguments);
 			}
-		}
+		};
 	} else {
 		cls[name] = member;
 	}
@@ -315,10 +316,10 @@ var buildPrototype = function(cls, name, member) {
 	if (member.__class__ === undefined && typeof member == 'function') { // this.a = function() {}
 		prototype[name] = instancemethod(member);
 
-	} else if (member.__class__ === staticmethod) { // this.a = staticmethod(function() {})
-		prototype[name] = member.im_func;
-
 	} else if (member.__class__ === classmethod) { // this.a = classmethod(function() {})
+		prototype[name] = member;
+
+	} else if (member.__class__ === staticmethod) { // this.a = staticmethod(function() {})
 		prototype[name] = member;
 
 	} else if (member.__class__ === property) { // this.a = property(function fget() {}, function fset() {})
@@ -437,10 +438,8 @@ Class.mixin = function(members, cls) {
 		if (typeof member == 'function') {
 			if (member.__class__ === instancemethod) {
 				members[name] = func;
-			} else if (member.__class__ === classmethod) {
-				members[name] = member;
 			} else {
-				members[name] = staticmethod(member);
+				members[name] = member;
 			}
 		} else {
 			members[name] = member;
