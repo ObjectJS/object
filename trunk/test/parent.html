@@ -16,11 +16,11 @@
 
 	var MyClass2 = new Class(MyClass, function() {
 		this.initialize = function(self) {
-			this.base.initialize('fuck');
+			this.parent('fuck');
 			alert('2');
 		};
 		this.test = staticmethod(function(cls, self) {
-			this.base.test(self);
+			this.parent(self);
 			alert('b');
 		});
 	});
@@ -28,18 +28,18 @@
 
 	var MyClass3 = new Class(MyClass2, function() {
 		this.initialize = function(self) {
-			// this.base.initialize(self);
-			// alert('3');
+			this.parent(self);
+			alert('3');
 		};
 		this.test = function(self) {
-			this.base.test(self);
+			this.parent(self);
 			alert('c');
 		};
 	});
 	MyClass3.__name__ = 'MyClass3';
 
 	var myClass3 = new MyClass3();
-	// myClass3.test();
+	myClass3.test();
 
 </script>
 </head>
