@@ -9,7 +9,7 @@ var ajaxProxies = this.ajaxProxies = {};
 // 执行一个可跨域的ajax请求
 // 跨域host必须有ajaxproxy.htm
 // callback唯一参数返回 XMLHttpRequest 对象实例
-var ajaxRequest = this.ajaxRequest = function(url, callback) {
+this.ajaxRequest = function(url, callback) {
 	var tmpA = document.createElement('a');
 	tmpA.href = url;
 	var hostname = tmpA.hostname;
@@ -55,7 +55,7 @@ this.ping = function(url) {
 	c = null; // 释放局部变量c
 };
 
-var Request = this.Request = new Class(function() {
+this.Request = new Class(function() {
 
 	this.initialize = function(self, options) {
 		self.url = options.url || '';
@@ -76,7 +76,7 @@ var Request = this.Request = new Class(function() {
 	};
 
 	this.send = function(self, params) {
-		ajaxRequest(self.url, function(xhr) {
+		exports.ajaxRequest(self.url, function(xhr) {
 			self._xhr = xhr;
 
 			xhr.onreadystatechange = self.onStateChange.bind(self);

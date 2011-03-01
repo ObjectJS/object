@@ -281,7 +281,7 @@ var getAllSubClasses = function(cls, array) {
  */
 var buildMember = function(cls, name, member) {
 	if (typeof member == 'function') {
-		member.__name__ = name;
+
 		cls[name] = function(self) {
 			var prototype = this.prototype[name];
 			var func = prototype.im_func;
@@ -314,21 +314,40 @@ var buildPrototype = function(cls, name, member) {
 
 	// 先判断最常出现的instancemethod
 	if (member.__class__ === undefined && typeof member == 'function') { // this.a = function() {}
+		// 这样赋值__name__，确保__name__都是被赋值在用户所书写的那个function上，能够通过arguments.callee.__name__获取到。
+		fillFuncName(member, name);
 		prototype[name] = instancemethod(member);
 
 	} else if (member.__class__ === classmethod) { // this.a = classmethod(function() {})
+		fillFuncName(member.im_func, name);
 		prototype[name] = member;
 
 	} else if (member.__class__ === staticmethod) { // this.a = staticmethod(function() {})
+		fillFuncName(member.im_func, name);
 		prototype[name] = member;
 
 	} else if (member.__class__ === property) { // this.a = property(function fget() {}, function fset() {})
+		fillFuncName(member, name);
 		prototype.__properties__[name] = member;
 
 	} else { // this.a = someObject
 		prototype[name] = member;
 	}
 
+};
+
+var funcNameRegExp = /^function ([\w$]+)/;
+// 根据function生成其__name__属性
+var fillFuncName = function(func, name) {
+	if (func.name) {
+		name = func.name;
+	// IE 下没有 Function.prototype.name，通过代码获得
+	} else if (func.name === undefined) {
+		if (result = funcNameRegExp.exec(func.toString())) {
+			name = result[1];
+		}
+	}
+	func.__name__ = name;
 };
 
 // IE不可以通过prototype = new Array的方式使function获得数组功能。
