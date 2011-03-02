@@ -1018,7 +1018,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		var module = self.add(name, uses, context);
 
 		// 第二个{}参数会被所有相关module通过第一个 runtime 参数获取到，实现module获取调用者的信息
-		self.executeModule(module, {}, {}, null, {name: '__main__'});
+		self.executeModule(module, window, {}, null, {name: '__main__'});
 	};
 
 	/**
@@ -1032,7 +1032,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		var module = _lib[name];
 		if (!module) throw new NoModuleError(name);
 
-		self.executeModule(module, window, {}, null, {name: '__main__'});
+		self.executeModule(module, {}, {}, null, {name: '__main__'});
 	};
 
 });

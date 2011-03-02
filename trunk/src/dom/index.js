@@ -195,7 +195,7 @@ var getElement = this.getElement = function(selector, context) {
  * @param id id
  */
 this.id = function(id) {
-	return document.getElementById(id);
+	return exports.wrap(document.getElementById(id));
 };
 
 
