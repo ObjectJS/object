@@ -377,6 +377,12 @@ var Class = this.Class = function() {
 		members = {};
 		f.call(members);
 	}
+	var mixins = members['@mixins'];
+	if (mixins) {
+		mixins.forEach(function(mixin) {
+			Class.mixin(members, mixin);
+		});
+	}
 
 	// 父类
 	var parent = arguments.length > 1? arguments[0] : null;
