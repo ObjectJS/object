@@ -1018,7 +1018,12 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		var module = self.add(name, uses, context);
 
 		// 第二个{}参数会被所有相关module通过第一个 runtime 参数获取到，实现module获取调用者的信息
-		self.executeModule(module, window, {}, null, {name: '__main__'});
+		// 之前是直接将window代替exports传递进去，但是在module初始化完毕后会有一个遍历赋值__name__的过程，会导致IE6下出错，且遍历window也会有性能问题
+		// 因此改为传入exports，然后在extend到window上。
+		// 经验是，不要用一个已经有内容、不可控的对象作为executeModule的host。
+		var exports = {};
+		self.executeModule(module, exports, {}, null, {name: '__main__'});
+		object.extend(window, exports);
 	};
 
 	/**
