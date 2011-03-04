@@ -2,7 +2,7 @@
  * @namespace
  * @name dom
  */
-object.add('dom', 'ua, string, sys', /**@lends dom*/ function($, ua, string, sys) {
+object.add('dom', 'ua, string, sys', /**@lends dom*/ function(exports, ua, string, sys) {
 
 var UID = 1;
 var storage = {};
