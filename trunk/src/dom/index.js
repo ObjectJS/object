@@ -4,7 +4,7 @@
  */
 object.add('dom', 'ua, string, sys', /**@lends dom*/ function(exports, ua, string, sys) {
 
-var UID = 1;
+window.UID = 1;
 var storage = {};
 
 var get = function(uid) {
@@ -12,49 +12,45 @@ var get = function(uid) {
 };
 
 var $uid = this.$uid = (window.ActiveXObject) ? function(item){
-	return (item.uid || (item.uid = [UID++]))[0];
+	return (item.uid || (item.uid = [window.UID++]))[0];
 } : function(item){
-	return item.uid || (item.uid = UID++);
+	return item.uid || (item.uid = window.UID++);
 };
 
 $uid(window);
 $uid(document);
 
-var domLoaded = false;
-var domloadHooks = [];
+if (!window._domloadHooks) {
+	window._domloadHooks = [];
 
-function runHooks() {
-	if (!domloadHooks) return;
+	function runHooks() {
+		window._domloadHooks.forEach(function(f, i) {
+			try {
+				f();
+			} catch (e) {
+				throw e;
+			}
+		});
+		window._domloadHooks = [];
+	}
 
-	domloadHooks.forEach(function(f, i) {
-		try {
-			f();
-		} catch (e) {
-			if(true) throw e;
-		}
-	});
-
-	domloadHooks = [];
-}
-
-var timer = null;
-if (ua.ua.webkit && ua.ua.webkit < 525) {
-	timer = setInterval(function() {
-		if (/loaded|complete/.test(document.readyState)) {
-			domLoaded = true;
-			clearInterval(timer);
-			runHooks();
-		}
-	}, 10); 
-} else if (ua.ua.ie) {
-	timer = setInterval(function() {
-		try {
-			document.body.doScroll('left');
-			clearInterval(timer);
-			domLoaded = true;
-			runHooks();
-		} catch (e) {}
-	}, 20); 
+	var timer = null;
+	if (ua.ua.webkit && ua.ua.webkit < 525) {
+		timer = setInterval(function() {
+			if (/loaded|complete/.test(document.readyState)) {
+				clearInterval(timer);
+				runHooks();
+			}
+		}, 10); 
+	} else if (ua.ua.ie) {
+		timer = setInterval(function() {
+			try {
+				document.body.doScroll('left');
+				clearInterval(timer);
+				runHooks();
+			} catch (e) {}
+		}, 20); 
+	}
 }
 
 /**
@@ -68,13 +64,11 @@ this.ready = function(callback) {
 		callback();
 	} else {
 		if (ua.ua.webkit && ua.ua.webkit < 525) {
-			domLoaded = true;
-			domloadHooks.push(callback);
+			window._domloadHooks.push(callback);
 		} if (document.addEventListener) {
 			document.addEventListener('DOMContentLoaded', callback, false);
 		} else {
-			domLoaded = true;
-			domloadHooks.push(callback);
+			window._domloadHooks.push(callback);
 		}
 	}
 };
@@ -198,7 +192,6 @@ this.id = function(id) {
 	return exports.wrap(document.getElementById(id));
 };
 
-
 /**
  * eval inner js
  * 执行某个元素中的script标签
@@ -239,6 +232,39 @@ var eval_inner_JS = this.eval_inner_JS = function(ele) {
 			}
 		}
 	});
+};
+	
+var _needGetDom = (function() {
+	// 检测浏览器是否支持通过innerHTML设置未知标签，典型的就是IE不支持
+	var t = document.createElement('div');
+	t.innerHTML = '<TEST_TAG></TEST_TAG>';
+	// IE 下无法获取到自定义的Element，其他浏览器会得到HTMLUnknownElement
+	return (t.firstChild === null);
+})();
+
+/**
+ * 通过一个字符串创建一个Fragment
+ * @function
+ * @static
+ * @name dom.Element.getDom
+ */
+this.getDom = function(str) {
+	var tmp = document.createElement('div');
+	var result = document.createDocumentFragment();
+
+	if (_needGetDom) {
+		tmp.style.display = 'none';
+		document.body.appendChild(tmp);
+	}
+
+	tmp.innerHTML = str;
+	while (tmp.firstChild) {
+		result.appendChild(wrap(tmp.firstChild));
+	}
+
+	if (_needGetDom) tmp.parentNode.removeChild(tmp);
+
+	return result;
 };
 
 /**
@@ -294,14 +320,6 @@ var ElementClassList = this.ElementClassList = new Class(Array, /**@lends dom.El
  * @name dom.Element
  */
 var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
-	
-	var _needGetDom = (function() {
-		// 检测浏览器是否支持通过innerHTML设置未知标签，典型的就是IE不支持
-		var t = document.createElement('div');
-		t.innerHTML = '<TEST_TAG></TEST_TAG>';
-		// IE 下无法获取到自定义的Element，其他浏览器会得到HTMLUnknownElement
-		return (t.firstChild === null);
-	})();
 
 	this._eventListeners = {};
 
@@ -715,7 +733,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	 */
 	this.innerHTML = property(null, function(self, html) {
 		if (_needGetDom) {
-			var nodes = self.fromString(html);
+			var nodes = exports.getDom(html);
 			self.innerHTML = '';
 			while (nodes.firstChild) self.appendChild(nodes.firstChild);
 		} else {
@@ -764,20 +782,13 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	 */
 	this.fromString = staticmethod(function(str) {
 		var tmp = document.createElement('div');
-		var result = document.createDocumentFragment();
-
 		if (_needGetDom) {
 			tmp.style.display = 'none';
 			document.body.appendChild(tmp);
 		}
-
 		tmp.innerHTML = str;
-		while (tmp.firstChild) {
-			result.appendChild(wrap(tmp.firstChild));
-		}
-
+		var result = wrap(tmp.firstChild);
 		if (_needGetDom) tmp.parentNode.removeChild(tmp);
-
 		return result;
 	});
 
