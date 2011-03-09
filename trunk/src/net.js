@@ -2,7 +2,7 @@
  * @namespace
  * @name net
  */
-object.add('net', 'dom', /**@lends net*/ function(exports, dom) {
+object.add('net', 'dom, events', /**@lends net*/ function(exports, dom, events) {
 
 var ajaxProxies = this.ajaxProxies = {};
 
@@ -57,30 +57,41 @@ this.ping = function(url) {
 
 this.Request = new Class(function() {
 
+	Class.mixin(this, events.Events);
+
 	this.initialize = function(self, options) {
 		self.url = options.url || '';
 		self.method = options.method || 'get';
-		self.onSuccess = options.onSuccess;
 		self.headers = {};
 		self._xhr = null;
-	};
 
-	this.onStateChange = function(self) {
-		var xhr = self._xhr;
-
-		if (xhr.readyState == 4) {
-			if (xhr.status === undefined || xhr.status === 0 || (xhr.status >= 200 && xhr.status < 300)) {
-				self.onSuccess(xhr);
-			}
-		}
+		self.onSuccess = options.onSuccess;
+		self.onsuccess = options.onsuccess;
+		self.onerror = options.onerror;
+		self.oncomplete = options.oncomplete;
 	};
 
 	this.send = function(self, params) {
 		exports.ajaxRequest(self.url, function(xhr) {
 			self._xhr = xhr;
 
-			xhr.onreadystatechange = self.onStateChange.bind(self);
+			xhr.onreadystatechange = function() {
+				var xhr = self._xhr;
 
+				if (xhr.readyState === 4) {
+					if (xhr.status === undefined || xhr.status === 0 || (xhr.status >= 200 && xhr.status < 300)) {
+						self.fireEvent('success');
+						if (self.onsuccess) self.onsuccess(xhr);
+						// compatible
+						else if (self.onSuccess) self.onSuccess(xhr);
+					} else {
+						self.fireEvent('error');
+						if (self.onerror) self.onerror(xhr);
+					}
+					self.fireEvent('complete');
+					if (self.oncomplete) self.oncomplete(xhr);
+				}
+			};
 			var xhr = self._xhr;
 			var url = self.url;
 
@@ -102,7 +113,6 @@ this.Request = new Class(function() {
 
 			self._xhr.send(params);
 		});
-
 	};
 
 	this.setHeader = function(self, name, value) {
