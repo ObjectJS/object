@@ -14,14 +14,19 @@ object.add('ui.decorators', /**@lends ui.decorators*/ function(exports, string, 
 			var name = func;
 			return function(func) {
 				var result = function(self) {
-					if (self.nofireevent !== true) self._node.fireEvent(name, null, self);
+					var handleName = 'on' + name;
+					if (self[handleName]) self[handleName]();
+					self._node.fireEvent(name, null, self);
 					func.apply(this, arguments);
 				};
 				return result;
 			};
 		} else {
 			return function(self) {
-				if (self.nofireevent !== true) self._node.fireEvent(arguments.callee.__name__, null, self);
+				var name = arguments.callee.__name__;
+				var handleName = 'on' + name;
+				if (self[handleName]) self[handleName]();
+				self._node.fireEvent(name, null, self);
 				func.apply(this, arguments);
 			};
 		}

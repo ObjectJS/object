@@ -410,9 +410,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 	this.call = classmethod(function(cls, name, self) {
 		if (!cls[name]) throw 'no method named ' + name;
-		self.nofireevent = true;
 		cls[name].apply(cls, [].slice.call(arguments, 2));
-		self.nofireevent = false;
 	});
 
 	/**
