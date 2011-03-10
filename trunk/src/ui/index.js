@@ -229,7 +229,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				tdata = data;
 			}
 			var str = string.substitute(node.template, tdata);
-			node = dom.Element.fromString(str).firstChild;
+			node = dom.Element.fromString(str);
 		}
 
 		self._node = node;
