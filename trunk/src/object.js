@@ -600,6 +600,8 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	};
 	NoModuleError.prototype = new Error();
 
+	this.scripts = document.getElementsByTagName('scripts');
+
 	this.initialize = function(self) {
 		self.useCache = true;
 		// 所有use都会默认use的模块，需要注意循环引用问题
@@ -617,7 +619,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * 查找页面中的标记script标签，更新 _lib
 	 */
 	this.loadLib = function(self) {
-		var scripts = document.getElementsByTagName('script');
+		var scripts = self.scripts;
 		for (var i = 0, script, module, l = scripts.length; i < l; i++) {
 			script = scripts[i];
 			module = script.getAttribute('data-module');
@@ -653,12 +655,13 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * @param src 地址
 	 * @param callback callback函数
 	 */
-	this.loadScript = function(self, src, callback) {
+	this.loadScript = classmethod(function(cls, src, callback, useCache) {
 
+		useCache = !!useCache;
 		var ele;
 
-		if (self.useCache) {
-			var scripts = document.getElementsByTagName('script');
+		if (useCache) {
+			var scripts = cls.scripts;
 			for (var i = 0, l = scripts.length; i < l; i++) {
 				if (scripts[i].src == src) {
 					ele = scripts[i];
@@ -667,7 +670,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 						// 增加一个回调即可
 						ele.callbacks.push(callback);
 					} else {
-						callback();
+						callback(ele);
 					}
 					return;
 				}
@@ -682,10 +685,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		ele.callbacks = [];
 
 		var doCallback = function() {
-			if (window.console) console.log('load ' + src);
 			ele.loading = null;
 			ele.callbacks.forEach(function(callback) {
-				callback();
+				callback(ele);
 			});
 			ele.callbacks = null;
 		};
@@ -712,7 +714,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 
 		document.getElementsByTagName('head')[0].insertBefore(ele, null);
 
-	};
+	});
 
 	/**
 	 * context 执行方法
