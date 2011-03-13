@@ -20,19 +20,19 @@ var $uid = this.$uid = (window.ActiveXObject) ? function(item){
 $uid(window);
 $uid(document);
 
-if (!window._domloadHooks) {
-	window._domloadHooks = [];
+function runHooks() {
+	window.__domloadHooks.forEach(function(f, i) {
+		try {
+			f();
+		} catch (e) {
+			throw e;
+		}
+	});
+	window.__domloadHooks = [];
+}
 
-	function runHooks() {
-		window._domloadHooks.forEach(function(f, i) {
-			try {
-				f();
-			} catch (e) {
-				throw e;
-			}
-		});
-		window._domloadHooks = [];
-	}
+if (!window.__domloadHooks) {
+	window.__domloadHooks = [];
 
 	var timer = null;
 	if (ua.ua.webkit && ua.ua.webkit < 525) {
@@ -63,12 +63,10 @@ this.ready = function(callback) {
 	if (document.body) {
 		callback();
 	} else {
-		if (ua.ua.webkit && ua.ua.webkit < 525) {
-			window._domloadHooks.push(callback);
+		if ((ua.ua.webkit && ua.ua.webkit < 525) || !document.addEventListener) {
+			window.__domloadHooks.push(callback);
 		} if (document.addEventListener) {
 			document.addEventListener('DOMContentLoaded', callback, false);
-		} else {
-			window._domloadHooks.push(callback);
 		}
 	}
 };
@@ -368,6 +366,27 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	this.addEvent = function(self, type, func, cap) {
 		if (cap === null) cap = false;
 
+		// 非IE不支持mouseleave/mouseenter事件
+		// 在老base中大量使用了这个事件，支持一下
+		if (!ua.ua.ie && type == 'mouseleave') {
+			var ismouseleave = function(event, element) {
+				var p = event.relatedTarget;
+				while ( p && p != element ) try { p = p.parentNode; } catch(error) { p = element; }
+				return p !== element;
+			}
+			var innerFunc = func;
+			func = function(event) {
+				var p = event.relatedTarget;
+				while (p && p != self) try {
+					p = p.parentNode;
+				} catch (e) {
+					p = self;
+				}
+				if (p !== self && innerFunc) innerFunc.call(self, event);
+			};
+			type = 'mouseout';
+		}
+
 		// 存储此元素的事件
 		if (!self._eventListeners[type]) {
 			self._eventListeners[type] = [];
@@ -427,6 +446,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	 * @param cap 冒泡
 	 */
 	this.removeEvent = function(self, type, func, cap) {
+		if (!self._eventListeners) self._eventListeners = {};
 		var funcs = self._eventListeners[type];
 		if (!funcs) return;
 
@@ -457,23 +477,18 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	 * @param type 事件名
 	 */
 	this.fireEvent = function(self, type) {
-		if (!self._eventListeners[type]) return;
-		var funcs = self._eventListeners[type];
-		for (var i = 0, j = funcs.length; i < j; i++) {
-			if (funcs[i]) {
-				funcs[i].apply(self, Array.prototype.slice.call(arguments, 2));
-			}
-		}
-	};
-
-	this._fireEvent = function(self, type) {
 		if (document.createEvent) {
 			var event = document.createEvent('UIEvents');
 			event.initEvent(type, false, false);
 			self.dispatchEvent(event);
-		} else if (document.attachEvent) {
-			var propertyName = '_event_' + type;
-			self[propertyName]++;
+		} else {
+			if (!self._eventListeners[type]) return;
+			var funcs = self._eventListeners[type];
+			for (var i = 0, j = funcs.length; i < j; i++) {
+				if (funcs[i]) {
+					funcs[i].apply(self, Array.prototype.slice.call(arguments, 2));
+				}
+			}
 		}
 	};
 
@@ -776,6 +791,8 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 	/**
 	 * 通过一个字符串创建一个包装后的dom节点
+	 * 一下元素无法被处理哦：
+	 * html/head/body/meta/link/script/style
 	 * @function
 	 * @static
 	 * @name dom.Element.fromString
@@ -1171,4 +1188,3 @@ function getCommon(arr1, arr2) {
 }
 
 });
-
