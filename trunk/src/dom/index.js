@@ -463,14 +463,6 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 		else self.detachEvent('on' + type, wrapperFunc);
 	};
 
-	this._removeEvent = function(self, type, func, cap) {
-		if (self.removeEventListener) {
-			self.removeEventListener(type, func, cap);
-		} else if (self.detatchEvent) {
-			// TODO
-		}
-	};
-
 	/**
 	 * 触发事件
 	 * @param self
@@ -875,7 +867,7 @@ var FormElement = this.FormElement = new Class(Element, /**@lends dom.FormElemen
 			var value = (el.tagName.toLowerCase() == 'select') ? el.getSelected().map(function(opt) {
 				// IE
 				return document.id(opt).get('value');
-			}) : ((type == 'radio' || type == 'checkbox') && !el.checked) ? null : el.value;
+			}) : ((type == 'radio' || type == 'checkbox') && !el.checked) ? null : el.get('value');
 
 			if (typeof value != 'undefined') queryString.push(encodeURIComponent(el.name) + '=' + encodeURIComponent(value));
 		});
@@ -1090,6 +1082,10 @@ var FormItemElement = this.FormItemElement = new Class(Element, /**@lends dom.Fo
 		input.addEvent('blur', function(event) {
 			return checkEmpty(event.target, event);
 		});
+		// 在IE6下，由于事件执行顺序的问题，当通过send()发送一个表单时，下面这段脚本实际上是不工作的
+		// 也就是说，在send()时，input.value还是placeholder的值，导致把placeholder的值发送出去了
+		// 通过在toQueryString中调用get('value')过滤掉placeholder的值
+		// 完美的解决方法大概是需要接管IE6下的事件系统，工程量比较大。
 		if (input.form) {
 			wrap(input.form).addEvent('submit', function() {
 				if (input.classList.contains('placeholder')) {
