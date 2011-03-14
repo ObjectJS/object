@@ -74,22 +74,19 @@ this.Request = new Class(function() {
 	this.send = function(self, params) {
 		exports.ajaxRequest(self.url, function(xhr) {
 			self._xhr = xhr;
+			var eventData = {request: xhr};
 
 			xhr.onreadystatechange = function() {
 				var xhr = self._xhr;
 
 				if (xhr.readyState === 4) {
 					if (xhr.status === undefined || xhr.status === 0 || (xhr.status >= 200 && xhr.status < 300)) {
-						self.fireEvent('success');
-						if (self.onsuccess) self.onsuccess(xhr);
-						// compatible
-						else if (self.onSuccess) self.onSuccess(xhr);
+						self.fireEvent('success', eventData);
+						if (self.onSuccess) self.onSuccess(eventData);
 					} else {
-						self.fireEvent('error');
-						if (self.onerror) self.onerror(xhr);
+						self.fireEvent('error', eventData);
 					}
-					self.fireEvent('complete');
-					if (self.oncomplete) self.oncomplete(xhr);
+					self.fireEvent('complete', eventData);
 				}
 			};
 			var xhr = self._xhr;

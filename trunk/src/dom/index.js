@@ -475,14 +475,23 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	 * 触发事件
 	 * @param self
 	 * @param type 事件名
+	 * @param eventData 扩展到event对象上的数据
 	 */
-	this.fireEvent = function(self, type) {
+	this.fireEvent = function(self, type, eventData) {
+		var triggerName = 'on' + type.toLowerCase();
+
 		if (document.createEvent) {
-			var event = document.createEvent('UIEvents');
+			var event = document.createEvent('Event');
 			event.initEvent(type, false, false);
+			extend(event, eventData);
+			if (self[triggerName]) self[triggerName].apply(self, event);
+
 			self.dispatchEvent(event);
 		} else {
 			if (!self._eventListeners[type]) return;
+
+			if (self[triggerName]) self[triggerName].apply(self, null);
+
 			var funcs = self._eventListeners[type];
 			for (var i = 0, j = funcs.length; i < j; i++) {
 				if (funcs[i]) {
@@ -839,11 +848,11 @@ var FormElement = this.FormElement = new Class(Element, /**@lends dom.FormElemen
 		var net = sys.modules['net'];
 		if (net) {
 			xhr = new net.Request({
-				onSuccess: function(xhr) {
-					self.fireEvent('requestSuccess', xhr);
+				onsuccess: function(event) {
+					self.fireEvent('requestSuccess', {request: event.request});
 				},
-				onError: function() {
-					self.fireEvent('requestError', xhr);
+				onerror: function(event) {
+					self.fireEvent('requestError', {request: event.request});
 				}
 			});
 		} else {

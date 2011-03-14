@@ -37,13 +37,15 @@ this.Events = new Class(/**@lends object.Events*/ {
 		return self;
 	},
 
-	fireEvent : function(self, type) {
-		if (!self._eventListeners || !self._eventListeners[type]) return;
+	fireEvent : function(self, type, eventData) {
+		var triggerName = 'on' + type.toLowerCase();
+		if (self[triggerName]) self[triggerName].call(self, eventData);
 
+		if (!self._eventListeners || !self._eventListeners[type]) return;
 		var funcs = self._eventListeners[type];
 		for (var i = 0, j = funcs.length; i < j; i++) {
 			if (funcs[i]) {
-				funcs[i].apply(self, Array.prototype.slice.call(arguments, 2));
+				funcs[i].call(self, eventData);
 			}
 		}
 	}
