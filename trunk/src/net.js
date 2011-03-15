@@ -75,14 +75,16 @@ this.Request = new Class(function() {
 		exports.ajaxRequest(self.url, function(xhr) {
 			self._xhr = xhr;
 			var eventData = {request: xhr};
-			// Compatible
-			eventData.responseText = xhr.responseText;
-			eventData.responseXML = xhr.responseXML;
 
 			xhr.onreadystatechange = function() {
 				var xhr = self._xhr;
 
 				if (xhr.readyState === 4) {
+
+					// Compatible
+					eventData.responseText = xhr.responseText;
+					eventData.responseXML = xhr.responseXML;
+
 					if (xhr.status === undefined || xhr.status === 0 || (xhr.status >= 200 && xhr.status < 300)) {
 						self.fireEvent('success', eventData);
 						if (self.onSuccess) self.onSuccess(eventData);
