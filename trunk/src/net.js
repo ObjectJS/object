@@ -75,6 +75,9 @@ this.Request = new Class(function() {
 		exports.ajaxRequest(self.url, function(xhr) {
 			self._xhr = xhr;
 			var eventData = {request: xhr};
+			// Compatible
+			eventData.responseText = xhr.responseText;
+			eventData.responseXML = xhr.responseXML;
 
 			xhr.onreadystatechange = function() {
 				var xhr = self._xhr;
