@@ -171,7 +171,7 @@ this.TabControl = new Class(Component, function() {
 				});
 				self.selectedEle = ele;
 				ele.classList.add('selected');
-				self.fireEvent('change', null, self);
+				self.fireEvent('change', {tab: self});
 			});
 		});
 	};
