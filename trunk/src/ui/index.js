@@ -446,7 +446,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			node.dispose();
 		});
 		// 所有子component reset
-		self._components.forEach(function(name) {
+		Object.keys(self._descriptors).forEach(function(name) {
 			var single = self._descriptors[name].single;
 			if (single) {
 				if (self[name] && self[name].reset) self[name].reset();

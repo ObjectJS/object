@@ -373,7 +373,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 				var p = event.relatedTarget;
 				while ( p && p != element ) try { p = p.parentNode; } catch(error) { p = element; }
 				return p !== element;
-			}
+			};
 			var innerFunc = func;
 			func = function(event) {
 				var p = event.relatedTarget;
@@ -406,8 +406,8 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 			// 为IE做事件包装，使回调的func的this指针指向元素本身，并支持preventDefault等
 			// 包装Func，会被attachEvent
 			// 包装Func存储被包装的func，detach的时候，参数是innerFunc，需要通过innerFunc找到wrapperFunc进行detach
-			var wrapperFunc = function(eventData) {
-				var e = eventData? eventData : self.wrapEvent(window.event);
+			var wrapperFunc = function() {
+				var e = arguments.length > 1? eventData : self.wrapEvent(window.event);
 				func.call(self, e);
 			};
 			wrapperFunc.innerFunc = func;
@@ -442,21 +442,23 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	 * @param cap 冒泡
 	 */
 	this.removeEvent = function(self, type, func, cap) {
-		if (!self._eventListeners) self._eventListeners = {};
-		var funcs = self._eventListeners[type];
-		if (!funcs) return;
-
-		// func 是 innerFunc，需要找到 wrapperFunc
-		for (var i = 0, wrapperFunc; i < self._eventListeners[type].length; i++) {
-			wrapperFunc = self._eventListeners[type][i];
-			if (wrapperFunc === func || wrapperFunc.innerFunc === func) {
-				funcs.splice(i, 1); // 将这个function删除
-				break;
-			}
-		}
-
 		if (self.removeEventListener) self.removeEventListener(type, func, cap);
-		else self.detachEvent('on' + type, wrapperFunc);
+		else {
+			if (!self._eventListeners) self._eventListeners = {};
+			var funcs = self._eventListeners[type];
+			if (!funcs) return;
+
+			// func 是 innerFunc，需要找到 wrapperFunc
+			for (var i = 0, wrapperFunc; i < funcs.length; i++) {
+				wrapperFunc = funcs[i];
+				if (wrapperFunc === func || wrapperFunc.innerFunc === func) {
+					funcs.splice(i, 1); // 将这个function删除
+					break;
+				}
+			}
+			// 如果没有找到func，虽然此次remove无效，但是根据标准，不应该报错。
+			if (wrapperFunc) self.detachEvent('on' + type, wrapperFunc);
+		}
 	};
 
 	/**
@@ -483,7 +485,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 			var funcs = self._eventListeners[type];
 			for (var i = 0, j = funcs.length; i < j; i++) {
 				if (funcs[i]) {
-					funcs[i].call(self, eventData);
+					funcs[i].call(self, eventData, true);
 				}
 			}
 		}
