@@ -406,13 +406,9 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 			// 为IE做事件包装，使回调的func的this指针指向元素本身，并支持preventDefault等
 			// 包装Func，会被attachEvent
 			// 包装Func存储被包装的func，detach的时候，参数是innerFunc，需要通过innerFunc找到wrapperFunc进行detach
-			var wrapperFunc = function() {
-				var args = [].slice.call(arguments, 0);
-				if (window.event) {
-					var e = self.wrapEvent(window.event);
-					args[0] = e;
-				}
-				func.apply(self, args);
+			var wrapperFunc = function(eventData) {
+				var e = eventData? eventData : self.wrapEvent(window.event);
+				func.call(self, e);
 			};
 			wrapperFunc.innerFunc = func;
 
@@ -476,7 +472,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 			var event = document.createEvent('Event');
 			event.initEvent(type, false, false);
 			extend(event, eventData);
-			if (self[triggerName]) self[triggerName].apply(self, event);
+			if (self[triggerName]) self[triggerName].call(self, event);
 
 			self.dispatchEvent(event);
 		} else {
@@ -487,7 +483,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 			var funcs = self._eventListeners[type];
 			for (var i = 0, j = funcs.length; i < j; i++) {
 				if (funcs[i]) {
-					funcs[i].apply(self, Array.prototype.slice.call(arguments, 2));
+					funcs[i].call(self, eventData);
 				}
 			}
 		}
