@@ -406,7 +406,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 			// 为IE做事件包装，使回调的func的this指针指向元素本身，并支持preventDefault等
 			// 包装Func，会被attachEvent
 			// 包装Func存储被包装的func，detach的时候，参数是innerFunc，需要通过innerFunc找到wrapperFunc进行detach
-			var wrapperFunc = function() {
+			var wrapperFunc = function(eventData) {
 				var e = arguments.length > 1? eventData : self.wrapEvent(window.event);
 				func.call(self, e);
 			};
