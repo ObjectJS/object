@@ -522,7 +522,7 @@ var Class = this.Class = function() {
 		parent: function() {
 			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
 			var name = arguments.callee.caller.__name__;
-			cls.__base__[name].apply(cls.__base__, arguments);
+			return cls.__base__[name].apply(cls.__base__, arguments);
 		}
 	};
 	cls.prototype.get = getter;
