@@ -10,27 +10,32 @@ object.add('ui.decorators', /**@lends ui.decorators*/ function(exports) {
  * fireevent 或 fireevent(eventName)
  * fireevent 默认eventName通过__name__获得
  */
-this.fireevent = function(func) {
+this.fireevent = function(funcOrName) {
+	var name, func;
+
+	// 千万别给这个function起名字，否则fire出来的事件都叫一个名字
+	var firer = function(self) {
+		if (!name) name = arguments.callee.__name__;
+
+		var eventData = {};
+		var handleName = 'on' + name;
+		if (self[handleName]) self[handleName]();
+		var event = self._node.fireEvent(name, eventData, self);
+		var preventDefaulted = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
+		if (!preventDefaulted) func.apply(this, arguments);
+		return event;
+	}
+
 	// 自定义了事件名称，返回一个decorator
-	if (typeof func == 'string') {
-		var name = func;
-		return function(func) {
-			var result = function(self) {
-				var handleName = 'on' + name;
-				if (self[handleName]) self[handleName]();
-				self._node.fireEvent(name, null, self);
-				func.apply(this, arguments);
-			};
-			return result;
+	if (typeof funcOrName == 'string') {
+		name = funcOrName;
+		return function(_func) {
+			func = _func;
+			return firer;
 		};
 	} else {
-		return function(self) {
-			var name = arguments.callee.__name__;
-			var handleName = 'on' + name;
-			if (self[handleName]) self[handleName]();
-			self._node.fireEvent(name, null, self);
-			func.apply(this, arguments);
-		};
+		func = funcOrName;
+		return firer;
 	}
 };
 
