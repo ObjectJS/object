@@ -98,8 +98,10 @@ this.option = function(value, onchange) {
 	function fset(self, value) {
 		var name = prop.__name__;
 		var pname = '_' + name;
+		var methodName = name + 'Change';
 		self._setOption(name, value);
 		if (onchange) onchange(self, value);
+		if (self[methodName]) self[methodName](value);
 		return self[pname];
 	}
 	prop = property(fget, fset);
@@ -232,7 +234,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			node = dom.Element.fromString(str);
 		}
 
-		self._node = node;
+		self._node = dom.wrap(node);
 		propertyNames.forEach(function(name) {
 			var value = self.get(name);
 			if (self._descriptors[name]) {
