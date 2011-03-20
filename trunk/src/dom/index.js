@@ -265,6 +265,27 @@ this.getDom = function(str) {
 	return result;
 };
 
+function IEEvent() {
+
+}
+IEEvent.prototype.stopPropagation = function() {
+	this.cancelBubble = true;
+};
+
+IEEvent.prototype.preventDefault = function() {
+	this.returnValue = false;
+};
+
+IEEvent.prototype.getPreventDefault = function() {
+	return !this.returnValue;
+};
+
+IEEvent.prototype.stop = function() {
+	this.stopPropagation();
+	this.preventDefault();
+};
+
+
 /**
  * html5 classList api
  * @class
@@ -467,28 +488,39 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	 * @param type 事件名
 	 * @param eventData 扩展到event对象上的数据
 	 */
-	this.fireEvent = function(self, type, eventData) {
+	this.fireEvent = document.createEvent? function(self, type, eventData) {
 		var triggerName = 'on' + type.toLowerCase();
 
-		if (document.createEvent) {
-			var event = document.createEvent('Event');
-			event.initEvent(type, false, false);
-			extend(event, eventData);
-			if (self[triggerName]) self[triggerName].call(self, event);
+		var event = document.createEvent('Event');
+		event.initEvent(type, false, true);
+		extend(event, eventData);
 
-			self.dispatchEvent(event);
-		} else {
-			if (!self._eventListeners[type]) return;
+		if (self[triggerName]) {
+			var returnValue = self[triggerName].call(self, event);
+			if (returnValue === false) event.preventDefault();
+		}
 
-			if (self[triggerName]) self[triggerName].apply(self, null);
+		self.dispatchEvent(event);
+		return event;
 
-			var funcs = self._eventListeners[type];
-			for (var i = 0, j = funcs.length; i < j; i++) {
-				if (funcs[i]) {
-					funcs[i].call(self, eventData, true);
-				}
+	} : function(self, type, eventData) {
+		if (!eventData) eventData = {};
+		var triggerName = 'on' + type.toLowerCase();
+		var event = self.wrapEvent(eventData);
+
+		if (self[triggerName]) {
+			var returnValue = self[triggerName].call(self, event);
+			if (returnValue === false) event.preventDefault();
+		}
+
+		if (!self._eventListeners[type]) return event;
+		var funcs = self._eventListeners[type];
+		for (var i = 0, j = funcs.length; i < j; i++) {
+			if (funcs[i]) {
+				funcs[i].call(self, event, true);
 			}
 		}
+		return event;
 	};
 
 	/**
@@ -770,20 +802,13 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	 */
 	this.wrapEvent = staticmethod(function(e) {
 
+		e.cancelBubble = false;
+		e.returnValue = true;
 		e.target = e.srcElement;
-
-		e.stopPropagation = function() {
-			this.cancelBubble = true;
-		};
-
-		e.preventDefault = function() {
-			this.returnValue = false;
-		};
-
-		e.stop = function() {
-			this.stopPropagation();
-			this.preventDefault();
-		};
+		e.stopPropagation = IEEvent.prototype.stopPropagation;
+		e.preventDefault = IEEvent.prototype.preventDefault;
+		e.getPreventDefault = IEEvent.prototype.getPreventDefault;
+		e.stop = IEEvent.prototype.stop;
 
 		return e;
 	});
@@ -910,9 +935,9 @@ var FormItemElement = this.FormItemElement = new Class(Element, /**@lends dom.Fo
 	this.selectionStart = property(function(self) {
 		if (typeof self.selectionStart == 'number') {
 			return self.selectionStart;
-		}
+
 		// IE
-		else if (document.selection) {
+		} else if (document.selection) {
 			self.focus();
 
 			var range = document.selection.createRange();
@@ -964,7 +989,18 @@ var FormItemElement = this.FormItemElement = new Class(Element, /**@lends dom.Fo
 		if (self.classList.contains('placeholder')) return '';
 		return self.value;
 	}, function(self, value) {
+		// 设置value的时候取消placeholder模式
+		if (self.classList.contains('placeholder')) {
+			self.classList.remove('placeholder');
+			self.removeAttribute('autocomplete');
+			self.value = '';
+		}
 		self.value = value;
+		if (!self.value && self.getAttribute('placeholder')) {
+			self.classList.add('placeholder');
+			self.value = self.getAttribute('placeholder');
+			self.setAttribute('autocomplete', 'off');
+		};
 		self.checkValidity();
 	});
 
