@@ -168,6 +168,10 @@ Array.prototype.reduceRight = Array.prototype.reduceRight || function(callbackfn
 	return accumulator;
 };
 
+String.prototype.trim = String.prototype.trim || function() {
+	return this.replace(/(^\s*)|(\s*$)/g, '');
+};
+
 Function.prototype.bind = Function.prototype.bind || function(object) {
 	var method = this;
 	return function() {
@@ -443,6 +447,10 @@ if ((function TEST(){}).name) {
 
 // IE不可以通过prototype = new Array的方式使function获得数组功能。
 var _nativeExtendable = (function() {
+	// IE和webkit没有统一访问方法（Array.forEach)，避免使用native extend
+	if (!Array.push) return false;
+
+	// 理论上走不到
 	var a = function() {};
 	a.prototype = new Array;
 	var b = new a;
