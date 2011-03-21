@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7" />
+<!--[if IE]><script type="text/javascript" src="http://xnimg.cn/n/core/expressions.js"></script><![endif]-->
+<script type="text/javascript" src="http://xnimg.cn/n/core/object-all.js"></script>
+<script type="text/javascript" src="../../src/ui/forms.js"></script>
+<link rel="stylesheet" href="../../src/ui/forms.css" />
+</head>
+<body>
+
+<form action="." method="post">
+	<input id="selection" name="myselection" class="selectioninput" placeholder="请输入email/用户名" />
+	<input type="submit" />
+</form>
+<script>
+	object.use('ui.forms', function(exports, ui) {
+		window.input = new ui.forms.SelectionInput(document.getElementsByTagName('input')[0]);
+	});
+</script>
+
+</body>
+</html>
+
