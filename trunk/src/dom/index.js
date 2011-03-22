@@ -801,9 +801,10 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	 * @name dom.Element.wrapEvent
 	 */
 	this.wrapEvent = staticmethod(function(e) {
+		// 之前手贱在这里写了个 e.returnValue = true
+		// 于是所有的事件都无法阻止执行了
+		// IE可能只认第一次赋值，因为后面还是有重新把returnValue设置成false的
 
-		e.cancelBubble = false;
-		e.returnValue = true;
 		e.target = e.srcElement;
 		e.stopPropagation = IEEvent.prototype.stopPropagation;
 		e.preventDefault = IEEvent.prototype.preventDefault;
