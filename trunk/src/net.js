@@ -55,6 +55,16 @@ this.ping = function(url) {
 	c = null; // 释放局部变量c
 };
 
+/**
+ * 发送Ajax请求的类
+ * 使用时需要实例化一个Request对象,然后手动调用该对象的send方法完成发送(与base中的xmlhttp不同)
+ * 
+ * @param {object} options
+ * @param {string} options.url 要请求的url
+ * @param {string} options.method get/post
+ * @param {function} options.onsuccess 请求成功后的回调,参数是封装过的ajax对象
+ * param {function} options.onerror 请求失败后的回调
+ */
 this.Request = new Class(function() {
 
 	Class.mixin(this, events.Events);
