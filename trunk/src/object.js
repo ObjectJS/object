@@ -791,16 +791,15 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		if (window.ActiveXObject) { // IE
 			ele.onreadystatechange = function() {
 				var rs = this.readyState;
-				if ("loaded" === rs || "complete" === rs) {
+				if ('loaded' === rs || 'complete' === rs) {
 					ele.onreadystatechange = null;
 					doCallback();
 				}
 			};
 
 		} else if (ele.addEventListener) { // Standard
-			ele.addEventListener("load", function() {
-				doCallback();
-			}, false);
+			ele.addEventListener('load', doCallback, false);
+			ele.addEventListener('error', doCallback, false);
 
 		} else { // Old browser
 			ele.onload = ele.onerror = doCallback;
