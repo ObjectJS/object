@@ -277,7 +277,9 @@ IEEvent.prototype.preventDefault = function() {
 };
 
 IEEvent.prototype.getPreventDefault = function() {
-	return !this.returnValue;
+	// 自定义事件是没有 returnValue 值的，如果设置默认为true，则会导致非自定义的事件后面再设置false失效，出现无法preventDefault()的问题
+	// 不能设置默认值，就只能严格限制returnValue === false才算preventDefaulted
+	return this.returnValue === false;
 };
 
 IEEvent.prototype.stop = function() {
