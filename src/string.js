@@ -1,5 +1,3 @@
-
-
 /**
  * @namespace
  * @name string
@@ -79,4 +77,3 @@ this.toQueryString = function(object) {
 };
 
 });
-
