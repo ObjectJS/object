@@ -48,15 +48,22 @@ this.SelectionInput = new Class(ui.Component, function() {
 				}
 			} else if (event.keyCode === 188/*,*/ || event.keyCode === 59 /*;*/ || event.keyCode === 13 /*return*/ || event.keyCode === 32/*space*/) {
 				event.preventDefault();
-				var value = self._node.get('value').trim();
-				if (value) self.addValue(value);
+				self.inputValue();
 			}
 		});
 
 		self._node.addEvent('blur', function(event) {
-			var value = self._node.get('value').trim();
-			if (value) self.addValue(value);
+			self.inputValue();
 		});
+	};
+
+	this.inputValue = function(self, value) {
+		var value = self._node.get('value').trim();
+		if (value && self._node.checkValidity()) {
+			self.values.push(value);
+		} else {
+			self._node.set('value', '');
+		}
 	};
 
 	this.addValue = fireevent(function(self, value) {

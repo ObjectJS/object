@@ -927,6 +927,10 @@ var FormItemElement = this.FormItemElement = new Class(Element, /**@lends dom.Fo
 		return !('placeholder' in document.createElement('input'));
 	})();
 
+	var _supportHTML5Forms = (function() {
+		return ('checkValidity' in document.createElement('input'));
+	})();
+
 	this.initialize = function(self) {
 		Element.initialize(self);
 
@@ -1007,66 +1011,70 @@ var FormItemElement = this.FormItemElement = new Class(Element, /**@lends dom.Fo
 		self.checkValidity();
 	});
 
-	this.validity = property(function(self) {
-		self.checkValidity();
-		return self.validity;
-	});
+	if (!_supportHTML5Forms) {
 
-	/**
-	 * html5 forms checkValidity
-	 */
-	this.checkValidity = function(self) {
-		/*
-		 * required
-		 * pattern
-		 * min
-		 * max
-		 * step
-		 */
-		/*
-		 * text
-		 * search
-		 * url
-		 * tel
-		 * email
-		 * password
-		 */
-
-		var value = self.get('value');
-		
-		var validity = {
-			valueMissing: self.getAttribute('required') && !value? true : false,
-			typeMismatch: (function(type) {
-				if (type == 'url') return !(/^\s*(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i).test(value);
-				if (type == 'tel') return !(/[^\r\n]/i).test(value);
-				if (type == 'email') return !(/^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/i).test(value);
-				return false;
-			})(self.getAttribute('type')),
-			patternMismatch: (function() {
-				var pattern = self.getAttribute('pattern');
-				if (pattern) return (new RegExp(pattern)).test(value);
-				return false;
-			})(),
-			tooLong: (function() {
-				var maxlength = self.getAttribute('maxlength');
-				var n = Number(maxlength);
-				if (n != maxlength) return false;
-				return value.length > n;
-			})(),
-			// 以下四个 firefox 4 beta 也不支持，暂时不支持
-			rangeUnderflow: false,
-			rangeOverflow: false,
-			stepMismatch: false,
-			customError: false
-		};
-		validity.valid = ['valueMissing', 'typeMismatch', 'patternMismatch', 'tooLong', 'rangeUnderflow', 'rangeOverflow', 'stepMismatch', 'customError'].every(function(name) {
-			return validity[name] === false;
+		this.validity = property(function(self) {
+			self.checkValidity();
+			return self.validity;
 		});
 
-		self.validity = validity;
+		/**
+		 * html5 forms checkValidity
+		 */
+		this.checkValidity = function(self) {
+			/*
+			 * required
+			 * pattern
+			 * min
+			 * max
+			 * step
+			 */
+			/*
+			 * text
+			 * search
+			 * url
+			 * tel
+			 * email
+			 * password
+			 */
 
-		return validity.valid;
-	};
+			var value = self.get('value');
+			
+			var validity = {
+				valueMissing: self.getAttribute('required') && !value? true : false,
+				typeMismatch: (function(type) {
+					if (type == 'url') return !(/^\s*(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i).test(value);
+					if (type == 'tel') return !(/[^\r\n]/i).test(value);
+					if (type == 'email') return !(/^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/i).test(value);
+					return false;
+				})(self.getAttribute('type')),
+				patternMismatch: (function() {
+					var pattern = self.getAttribute('pattern');
+					if (pattern) return !(new RegExp('^' + pattern + '$')).test(value);
+					else return false;
+				})(),
+				tooLong: (function() {
+					var maxlength = self.getAttribute('maxlength');
+					var n = Number(maxlength);
+					if (n != maxlength) return false;
+					return value.length > n;
+				})(),
+				// 以下四个 firefox 4 beta 也不支持，暂时不支持
+				rangeUnderflow: false,
+				rangeOverflow: false,
+				stepMismatch: false,
+				customError: false
+			};
+			validity.valid = ['valueMissing', 'typeMismatch', 'patternMismatch', 'tooLong', 'rangeUnderflow', 'rangeOverflow', 'stepMismatch', 'customError'].every(function(name) {
+				return validity[name] === false;
+			});
+
+			self.validity = validity;
+
+			return validity.valid;
+		};
+
+	}
 
 	/**
 	 * focus，并且将光标定位到指定的位置上
