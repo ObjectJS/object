@@ -1,4 +1,4 @@
-object.add('ui.forms', 'ui, ui.decorators, ua', function(exports, ui, ua) {
+object.add('ui.forms', 'dom, ui, ui.decorators, ua', function(exports, dom, ui, ua) {
 
 var fireevent = ui.decorators.fireevent;
 
@@ -37,6 +37,20 @@ this.SelectionInput = new Class(ui.Component, function() {
 
 		self.name = self._node.name;
 		self.values = new exports.SelectionInputValues(self);
+
+		// Webkit 不能通过设置input的padding影响其光标位置（永远在中间），因此将self._node替换成一个textarea
+		// @see: https://bugs.webkit.org/show_bug.cgi?id=32981
+		if (ua.ua.webkit) {
+			var textarea = dom.wrap(document.createElement('textarea'));
+			textarea.style.resize = 'none';
+			textarea.rows = 1;
+			for (var i = 0; i < self._node.attributes.length; i++) {
+				var attribute = self._node.attributes[i];
+				textarea.setAttribute(attribute.name, attribute.value);
+			}
+			self._node.parentNode.replaceChild(textarea, self._node);
+			self._node = textarea;
+		}
 
 		// 去掉输入框的value避免提交空白value上去
 		self._node.removeAttribute('name');
