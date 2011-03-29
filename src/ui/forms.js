@@ -32,6 +32,8 @@ this.SelectionInputValues = new Class(Array, function() {
 
 this.SelectionInput = new Class(ui.Component, function() {
 
+	this.maxCount = ui.option(-1);
+
 	this.initialize = function(self, node, options) {
 		this.parent(self, node, options);
 
@@ -62,26 +64,30 @@ this.SelectionInput = new Class(ui.Component, function() {
 				}
 			} else if (event.keyCode === 188/*,*/ || event.keyCode === 59 /*;*/ || event.keyCode === 13 /*return*/ || event.keyCode === 32/*space*/) {
 				event.preventDefault();
-				self.inputValue();
+				self.__inputValue();
 			}
 		});
 
 		self._node.addEvent('blur', function(event) {
-			self.inputValue();
+			self.__inputValue();
 		});
 	};
 
-	this.inputValue = function(self, value) {
+	this.__inputValue = function(self, value) {
 		var value = self._node.get('value').trim();
 		if (value && self._node.checkValidity()) {
-			self.values.push(value);
+			self.addValue(value);
 		} else {
 			self._node.set('value', '');
 		}
 	};
 
 	this.addValue = fireevent(function(self, value) {
-		self.values.push(value);
+		if (self.maxCount !== -1 && self.values.length >= self.maxCount) {
+			self._node.set('value', '');
+		} else {
+			self.values.push(value);
+		}
 	});
 
 	//this.addValue_dataPasser = function(self, value) {
