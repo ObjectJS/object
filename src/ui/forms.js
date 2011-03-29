@@ -47,6 +47,7 @@ this.SelectionInput = new Class(ui.Component, function() {
 		if (ua.ua.webkit) {
 			var textarea = dom.wrap(document.createElement('textarea'));
 			textarea.style.resize = 'none';
+			textarea.style.overflow = 'hidden';
 			textarea.rows = 1;
 			for (var i = 0; i < self._node.attributes.length; i++) {
 				var attribute = self._node.attributes[i];
