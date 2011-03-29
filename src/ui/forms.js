@@ -34,6 +34,8 @@ this.SelectionInput = new Class(ui.Component, function() {
 
 	this.maxCount = ui.option(-1);
 
+	this.noRepeat = ui.option(false);
+
 	this.initialize = function(self, node, options) {
 		this.parent(self, node, options);
 
@@ -83,7 +85,8 @@ this.SelectionInput = new Class(ui.Component, function() {
 	};
 
 	this.addValue = fireevent(function(self, value) {
-		if (self.maxCount !== -1 && self.values.length >= self.maxCount) {
+		if ((self.maxCount !== -1 && self.values.length >= self.maxCount)
+			|| (self.noRepeat && self.values.indexOf(value) !== -1)) {
 			self._node.set('value', '');
 		} else {
 			self.values.push(value);
