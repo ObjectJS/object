@@ -547,17 +547,13 @@ var Class = this.Class = function() {
  */
 Class.mixin = function(members, cls) {
 
-	// new一个，保证拥有initialize中声明的初始变量
-	var instance = new cls();
-	var member, func;
-
 	Object.keys(cls.prototype).forEach(function(name) {
 
 		// 这3个需要过滤掉，是为了支持property加入的内置成员
 		if (['get', 'set', '__properties__'].indexOf(name) !== -1) return;
 		if (members[name] !== undefined) return; // 不要覆盖自定义的
 
-		var member = instance[name];
+		var member = cls.prototype[name];
 		var func = member.im_func;
 
 		if (typeof member == 'function') {

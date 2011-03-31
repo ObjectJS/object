@@ -6,7 +6,7 @@ object.add('events', /**@lends events*/ function(exports) {
 
 /**
  * decorator
- * 使得相应方法在调用时fire出同名事件，调用相应的 onxxx 方法，并支持preventDefault
+ * 使得相应方法在调用时fire出同名事件，并支持preventDefault
  * fireevent 或 fireevent(eventName)
  * fireevent 默认eventName通过__name__获得
  */
@@ -15,7 +15,8 @@ this.fireevent = function(arg1) {
 
 	// 千万别给这个function起名字，否则fire出来的事件都叫一个名字
 	var firer = function(self) {
-		if (!name) name = arguments.callee.__name__;
+		var nativeName = arguments.callee.__name__;
+		if (!name) name = nativeName;
 
 		// 根据eventDataNames生成eventData，每一个参数对应一个eventData
 		var eventData = {};
@@ -26,9 +27,16 @@ this.fireevent = function(arg1) {
 			}
 		}
 
-		var handleName = 'on' + name;
-		if (self[handleName]) self[handleName]();
 		var event = self.fireEvent(name, eventData, self);
+
+		// 执行 xxx_createEvent 方法，可用于定制event
+		var createEventMethod = self[nativeName + '_createEvent'];
+		if (createEventMethod) {
+			var args = Array.prototype.slice.call(arguments, 1);
+			args.unshift(event);
+			createEventMethod.apply(self, args);
+		}
+
 		// Webkit 使用 defaultPrevented
 		// Gecko 使用 getPreventDefault()
 		// IE 用 returnValue 模拟了 getPreventDefault
@@ -58,13 +66,29 @@ this.fireevent = function(arg1) {
 };
 
 // 事件
-this.Events = new Class(/**@lends object.Events*/ {
+this.Events = new Class(/**@lends object.Events*/ function() {
 
-	initialize : function(self) {
+	this.__addEvent = function(self, type, func, cap) {
+		if (self.addEventListener) {
+			self.addEventListener(type, func, cap);
+		} else if (self.attachEvent) {
+			var propertyName = '_event_' + type;
+			if (self[propertyName] === undefined) {
+				self[propertyName] = 0;
+			}
+			self.attachEvent('onpropertychange', function(event) {
+				if (event.propertyName == propertyName) {
+					func();
+				}
+			});
+		}
+	};
+
+	this.initialize = function(self) {
 		self._eventListeners = {};
-	},
+	};
 
-	addEvent : function(self, type, func) {
+	this.addEvent = function(self, type, func) {
 		if (!self._eventListeners) self._eventListeners = {};
 
 		var funcs = self._eventListeners;
@@ -73,9 +97,9 @@ this.Events = new Class(/**@lends object.Events*/ {
 		else if (funcs[type].indexOf(func) != -1) return self;
 		funcs[type].push(func);
 		return null;
-	},
+	};
 
-	removeEvent : function(self, type, func) {
+	this.removeEvent = function(self, type, func) {
 		if (!self._eventListeners) self._eventListeners = {};
 
 		var funcs = self._eventListeners[type];
@@ -88,9 +112,9 @@ this.Events = new Class(/**@lends object.Events*/ {
 			}
 		}
 		return self;
-	},
+	};
 
-	fireEvent : function(self, type, eventData) {
+	this.fireEvent = function(self, type, eventData) {
 		var triggerName = 'on' + type.toLowerCase();
 		if (self[triggerName]) self[triggerName].call(self, eventData);
 
@@ -101,7 +125,7 @@ this.Events = new Class(/**@lends object.Events*/ {
 				funcs[i].call(self, eventData);
 			}
 		}
-	}
+	};
 });
 
 });

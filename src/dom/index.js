@@ -441,22 +441,6 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 		}
 	};
 
-	this._addEvent = function(self, type, func, cap) {
-		if (self.addEventListener) {
-			self.addEventListener(type, func, cap);
-		} else if (self.attachEvent) {
-			var propertyName = '_event_' + type;
-			if (self[propertyName] === undefined) {
-				self[propertyName] = 0;
-			}
-			self.attachEvent('onpropertychange', function(event) {
-				if (event.propertyName == propertyName) {
-					func();
-				}
-			});
-		}
-	};
-
 	/**
 	 * 移除事件
 	 * @param self

@@ -50,10 +50,12 @@ this.ForeNextControl = new Class(ui.Component, /**@lends ui.nav.ForeNextControl*
 		self.change();
 	});
 
-	this.change = fireevent(function(self) {
+	this.change = function(self) {
+		// TODO
+		self.fireEvent('change', {forenext: self});
 		self.updateTotal();
 		self.updatePosition();
-	});
+	};
 
 	this.updatePosition = fireevent(function(self) {
 		self._node.getElements('.current').set('innerHTML', self.position + 1); // position是从0开始滴～展示的时候+1
