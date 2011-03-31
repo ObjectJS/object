@@ -1003,7 +1003,7 @@ var FormItemElement = this.FormItemElement = new Class(Element, /**@lends dom.Fo
 			self.value = '';
 		}
 		self.value = value;
-		if (!self.value && self.getAttribute('placeholder')) {
+		if (_needBindPlaceholder && !self.value && self.getAttribute('placeholder')) {
 			self.classList.add('placeholder');
 			self.value = self.getAttribute('placeholder');
 			self.setAttribute('autocomplete', 'off');
