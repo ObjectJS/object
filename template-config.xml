@@ -10,7 +10,6 @@
 			<include path="events.js" />
 			<include path="options.js" />
 			<include path="dom/index.js" />
-			<include path="dom/event.js" />
 			<include path="net.js" />
 			<include path="mvc.js" />
 			<include path="ui/index.js" />
