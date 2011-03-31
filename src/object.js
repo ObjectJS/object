@@ -323,6 +323,18 @@ var nativeSetter = function(prop, value) {
 };
 
 /**
+ * 将一个类的所有子类形成平面数组返回
+ * 会在Class.mixin中用到
+ */
+var getAllSubClasses = function(cls, array) {
+	if (!array) array = [];
+	else array.push(cls);
+	var subs = cls.__subclassesarray__;
+	for (var i = 0, l = subs.length; i < l; i++) arguments.callee(subs[i], array);
+	return array;
+};
+
+/**
  * 动态mixin的方法。可以通过任意class的mixin调用
  * MyClass.mixin(name, value);
  * MyClass.mixin({name1: value1, name2: value2})
@@ -349,18 +361,6 @@ var mixiner = overloadSetter(function(name, member) {
  */
 var getSubClasses = function() {
 	return this.__subclassesarray__;
-};
-
-/**
- * 将一个类的所有子类形成平面数组返回
- * 会在Class.mixin中用到
- */
-var getAllSubClasses = function(cls, array) {
-	if (!array) array = [];
-	else array.push(cls);
-	var subs = cls.__subclassesarray__;
-	for (var i = 0, l = subs.length; i < l; i++) arguments.callee(subs[i], array);
-	return array;
 };
 
 /**

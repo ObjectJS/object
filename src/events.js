@@ -6,37 +6,53 @@ object.add('events', /**@lends events*/ function(exports) {
 
 /**
  * decorator
- * 使得相应方法在调用时fire出同名事件，并调用相应的 onxxx 方法
+ * 使得相应方法在调用时fire出同名事件，调用相应的 onxxx 方法，并支持preventDefault
  * fireevent 或 fireevent(eventName)
  * fireevent 默认eventName通过__name__获得
  */
-this.fireevent = function(funcOrName) {
-	var name, func;
+this.fireevent = function(arg1) {
+	var name, func, eventDataNames;
 
 	// 千万别给这个function起名字，否则fire出来的事件都叫一个名字
 	var firer = function(self) {
 		if (!name) name = arguments.callee.__name__;
 
 		var eventData = {};
+		var args = arguments;
+		if (eventDataNames) {
+			for (var i = 1; i < eventDataNames.length; i++) {
+				eventData[eventDataNames[i]] = args[i];
+			}
+		}
 		var handleName = 'on' + name;
 		if (self[handleName]) self[handleName]();
 		var event = self.fireEvent(name, eventData, self);
+		// Webkit 使用 defaultPrevented
+		// Gecko 使用 getPreventDefault()
+		// IE 用 returnValue 模拟了 getPreventDefault
 		var preventDefaulted = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
 		if (!preventDefaulted) func.apply(this, arguments);
 		return event;
-	}
+	};
+
+	if (typeof arg1 == 'function') {
+		func = arg1;
+		return firer;
 
 	// 自定义了事件名称，返回一个decorator
-	if (typeof funcOrName == 'string') {
-		name = funcOrName;
+	} else {
+		if (Array.isArray(arguments[0])) {
+			eventDataNames = arguments[0];
+		} else {
+			name = arg1;
+			if (arguments[1]) eventDataNames = arguments[1];
+		}
 		return function(_func) {
 			func = _func;
 			return firer;
 		};
-	} else {
-		func = funcOrName;
-		return firer;
 	}
+
 };
 
 // 事件
