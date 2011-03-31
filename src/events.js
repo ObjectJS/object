@@ -17,13 +17,15 @@ this.fireevent = function(arg1) {
 	var firer = function(self) {
 		if (!name) name = arguments.callee.__name__;
 
+		// 根据eventDataNames生成eventData，每一个参数对应一个eventData
 		var eventData = {};
-		var args = arguments;
 		if (eventDataNames) {
-			for (var i = 1; i < eventDataNames.length; i++) {
-				eventData[eventDataNames[i]] = args[i];
+			for (var i = 0; i < eventDataNames.length; i++) {
+				// 名字对应方法的参数，从第2个参数开始，因为第一个是self
+				eventData[eventDataNames[i]] = arguments[i + 1];
 			}
 		}
+
 		var handleName = 'on' + name;
 		if (self[handleName]) self[handleName]();
 		var event = self.fireEvent(name, eventData, self);
