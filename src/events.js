@@ -108,23 +108,22 @@ this.wrapEvent = function(e) {
 this.Event = new Class(/**@lends object.Event*/ function() {
 
 	this.__addEvent = function(self, type, func, cap) {
-		if (self.addEventListener) {
-			self.addEventListener(type, func, cap);
-		} else if (self.attachEvent) {
-			var propertyName = '_event_' + type;
-			if (self[propertyName] === undefined) {
-				self[propertyName] = 0;
-			}
-			self.attachEvent('onpropertychange', function(event) {
-				if (event.propertyName == propertyName) {
-					func();
-				}
-			});
+		var propertyName = '_event_' + type;
+		if (self[propertyName] === undefined) {
+			self[propertyName] = 0;
 		}
+		self.attachEvent('onpropertychange', function(event) {
+			if (event.propertyName == propertyName) {
+				func();
+			}
+		});
 	};
 
 	this.initialize = function(self) {
-		self._eventListeners = {};
+		if (!self.addEventListener) {
+			self._eventListeners = {};
+		}
+		// 自定义事件，用一个隐含div用来触发事件
 		if (!self.addEventListener && !self.attachEvent) {
 			self.__boss = document.createElement('div');
 		}
@@ -137,7 +136,7 @@ this.Event = new Class(/**@lends object.Event*/ function() {
 	 * @param func 事件回调
 	 * @param cap 冒泡
 	 */
-	this.addEvent = function(self, type, func, cap) {
+	this.addEvent = document.addEventListener? function(self, type, func, cap) {
 		var boss = self.__boss || self;
 
 		if (cap === null) cap = false;
@@ -160,8 +159,13 @@ this.Event = new Class(/**@lends object.Event*/ function() {
 				}
 				if (p !== self && innerFunc) innerFunc.call(self, event);
 			};
+			func.innerFunc = innerFunc;
 			type = 'mouseout';
 		}
+
+		boss.addEventListener(type, func, cap);
+	} : function(self, type, func) {
+		var boss = self.__boss || self;
 
 		// 存储此元素的事件
 		if (!self._eventListeners[type]) {
@@ -169,29 +173,23 @@ this.Event = new Class(/**@lends object.Event*/ function() {
 		}
 		var funcs = self._eventListeners[type];
 
-		// 标准浏览器
-		if (boss.addEventListener) {
-			boss.addEventListener(type, func, cap);
-			funcs.push(func);
-		} else {
-			// 不允许两次添加同一事件
-			if (funcs.some(function(f) {
-				return f.innerFunc === func;
-			})) return;
+		// 不允许两次添加同一事件
+		if (funcs.some(function(f) {
+			return f.innerFunc === func;
+		})) return;
 
-			// 为IE做事件包装，使回调的func的this指针指向元素本身，并支持preventDefault等
-			// 包装Func，会被attachEvent
-			// 包装Func存储被包装的func，detach的时候，参数是innerFunc，需要通过innerFunc找到wrapperFunc进行detach
-			var wrapperFunc = function(eventData) {
-				var e = arguments.length > 1? eventData : exports.wrapEvent(window.event);
-				func.call(self, e);
-			};
-			wrapperFunc.innerFunc = func;
+		// 为IE做事件包装，使回调的func的this指针指向元素本身，并支持preventDefault等
+		// 包装Func，会被attachEvent
+		// 包装Func存储被包装的func，detach的时候，参数是innerFunc，需要通过innerFunc找到wrapperFunc进行detach
+		var wrapperFunc = function(eventData) {
+			var e = arguments.length > 1? eventData : exports.wrapEvent(window.event);
+			func.call(self, e);
+		};
+		wrapperFunc.innerFunc = func;
 
-			funcs.push(wrapperFunc);
+		funcs.push(wrapperFunc);
 
-			boss.attachEvent('on' + type, wrapperFunc);
-		}
+		boss.attachEvent('on' + type, wrapperFunc);
 	};
 
 	/**
@@ -201,26 +199,27 @@ this.Event = new Class(/**@lends object.Event*/ function() {
 	 * @param func 事件回调
 	 * @param cap 冒泡
 	 */
-	this.removeEvent = function(self, type, func, cap) {
+	this.removeEvent = document.removeEventListener? function(self, type, func, cap) {
 		var boss = self.__boss || self;
 
-		if (boss.removeEventListener) boss.removeEventListener(type, func, cap);
-		else {
-			if (!self._eventListeners) self._eventListeners = {};
-			var funcs = self._eventListeners[type];
-			if (!funcs) return;
+		boss.removeEventListener(type, func, cap);
+	} : function(self, type, func, cap) {
+		var boss = self.__boss || self;
 
-			// func 是 innerFunc，需要找到 wrapperFunc
-			for (var i = 0, wrapperFunc; i < funcs.length; i++) {
-				wrapperFunc = funcs[i];
-				if (wrapperFunc === func || wrapperFunc.innerFunc === func) {
-					funcs.splice(i, 1); // 将这个function删除
-					break;
-				}
+		if (!self._eventListeners) self._eventListeners = {};
+		var funcs = self._eventListeners[type];
+		if (!funcs) return;
+
+		// func 是 innerFunc，需要找到 wrapperFunc
+		for (var i = 0, wrapperFunc; i < funcs.length; i++) {
+			wrapperFunc = funcs[i];
+			if (wrapperFunc === func || wrapperFunc.innerFunc === func) {
+				funcs.splice(i, 1); // 将这个function删除
+				break;
 			}
-			// 如果没有找到func，虽然此次remove无效，但是根据标准，不应该报错。
-			if (wrapperFunc) boss.detachEvent('on' + type, wrapperFunc);
 		}
+		// 如果没有找到func，虽然此次remove无效，但是根据标准，不应该报错。
+		if (wrapperFunc) boss.detachEvent('on' + type, wrapperFunc);
 	};
 
 	/**
@@ -229,7 +228,7 @@ this.Event = new Class(/**@lends object.Event*/ function() {
 	 * @param type 事件名
 	 * @param eventData 扩展到event对象上的数据
 	 */
-	this.fireEvent = document.createEvent? function(self, type, eventData) {
+	this.fireEvent = document.dispatchEvent? function(self, type, eventData) {
 		var boss = self.__boss || self;
 
 		var triggerName = 'on' + type.toLowerCase();
@@ -244,7 +243,6 @@ this.Event = new Class(/**@lends object.Event*/ function() {
 
 		boss.dispatchEvent(event);
 		return event;
-
 	} : function(self, type, eventData) {
 		if (!eventData) eventData = {};
 		var triggerName = 'on' + type.toLowerCase();
@@ -264,7 +262,6 @@ this.Event = new Class(/**@lends object.Event*/ function() {
 		}
 		return event;
 	};
-
 });
 
 this.Events = this.Event;

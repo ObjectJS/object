@@ -356,9 +356,11 @@ var mixiner = overloadSetter(function(name, member) {
 });
 
 var initMixins = function(cls, instance) {
+	var mixin;
 	if (cls.__mixins__) {
 		for (var i = 0; i < cls.__mixins__.length; i++) {
-			cls.__mixins__[i].initialize(instance);
+			mixin = cls.__mixins__[i];
+			if (mixin.initialize) mixin.initialize(instance);
 		}
 	}
 };
