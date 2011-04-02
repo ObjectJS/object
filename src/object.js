@@ -355,6 +355,14 @@ var mixiner = overloadSetter(function(name, member) {
 	buildPrototype(this, name, member);
 });
 
+var initMixins = function(cls, instance) {
+	if (cls.__mixins__) {
+		for (var i = 0; i < cls.__mixins__.length; i++) {
+			cls.__mixins__[i].initialize(instance);
+		}
+	}
+};
+
 /**
  * 获取一个类的子类
  * 会被放到 cls.__subclasses__
@@ -485,6 +493,7 @@ var Class = this.Class = function() {
 	var cls = function(prototyping) {
 		if (prototyping === PROTOTYPING) return this;
 		this.__class__ = arguments.callee;
+		initMixins(cls, this);
 		var value = this.initialize? this.initialize.apply(this, arguments) : null;
 		return value;
 	};
@@ -547,10 +556,14 @@ var Class = this.Class = function() {
  */
 Class.mixin = function(members, cls) {
 
+	if (!members.__mixins__) members.__mixins__ = [];
+	members.__mixins__.push(cls);
+
 	Object.keys(cls.prototype).forEach(function(name) {
 
 		// 这3个需要过滤掉，是为了支持property加入的内置成员
-		if (['get', 'set', '__properties__'].indexOf(name) !== -1) return;
+		// initialize也需要过滤，当mixin多个class的时候，initialize默认为最后一个，这种行为没意义
+		if (['get', 'set', '__properties__', 'initialize'].indexOf(name) !== -1) return;
 		if (members[name] !== undefined) return; // 不要覆盖自定义的
 
 		var member = cls.prototype[name];
@@ -590,6 +603,7 @@ Class.inject = function(cls, host, args) {
 	var p = getInstance(cls);
 	object.extend(host, p);
 	args.unshift(host);
+	initMixins(cls, host);
 	cls.initialize.apply(cls, args);
 };
 

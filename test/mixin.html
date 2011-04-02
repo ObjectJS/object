@@ -1,0 +1,21 @@
+<!doctype>
+<html>
+	<head>
+		<script type="text/javascript" src="http://xnimg.cn/n/core/object-all.js"></script>
+		<script>
+			object.use('events', function(exports, events) {
+				var A = new Class(function() {
+					Class.mixin(this, events.Events);
+
+					this.initialize = function(self) {
+					};
+				});
+
+				var a = new A();
+				console.log(a._eventListeners)
+			});
+		</script>
+	</head>
+	<body>
+	</body>
+</html>
