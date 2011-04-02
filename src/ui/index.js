@@ -235,6 +235,11 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		}
 
 		self._node = dom.wrap(node);
+		if (self._node.retrieve('component')) {
+			throw '此节点已经是一个组件了';
+		} else {
+			self._node.store('component', self);
+		}
 		propertyNames.forEach(function(name) {
 			var value = self.get(name);
 			if (self._descriptors[name]) {
@@ -278,7 +283,11 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			if (!events[name]) events[name] = [];
 			events[name].push({
 				name: eventName,
-				func: self[key].bind(self)
+				func: function() {
+					var args = Array.prototype.slice.call(arguments, 0);
+					args.push(this.retrieve('component'));
+					self[key].apply(self, args);
+				}
 			});
 		});
 

@@ -319,7 +319,7 @@ var ElementClassList = this.ElementClassList = new Class(Array, /**@lends dom.El
  */
 var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
-	Class.mixin(this, events.Event);
+	Class.mixin(this, events.Events);
 
 	this.initialize = function(self, tagName) {
 
