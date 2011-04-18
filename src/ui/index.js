@@ -205,7 +205,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		if (!options) options = {};
 		self._descriptors = {};
 		self._components = []; // 建立出来的所有子component的引用
-		self._rendered = []; // render出来的新元素，会在reset时清空
+		self._rendered = {}; // render出来的新元素，会在reset时清空
 		self._events = self._getEvents(self); // 本class的所有event方法
 		self._subOptions = self._parseOptions(options);
 		var propertyNames = Class.getPropertyNames(self);
@@ -317,14 +317,13 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		if (single) {
 			self[name] = comp;
 			self[pname] = node;
-			self._addEventTo(name, node);
-			self._rendered.push(node);
 		} else {
 			self[name].push(comp);
 			self[pname].push(node);
-			self._addEventTo(name, node);
-			self._rendered.push(node);
 		}
+		self._addEventTo(name, node);
+		if (!self._rendered[name]) self._rendered[name] = [];
+		self._rendered[name].push(node);
 
 		return comp;
 	};
@@ -360,6 +359,8 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	 * @param data 模板数据/初始化参数
 	 */
 	this.render = function(self, name, data) {
+		if (self[name]) return; // 如果已经存在结构了，则不用再render了
+
 		var methodName = 'render' + string.capitalize(name);
 		var descriptor = self._descriptors[name];
 		var type = descriptor.type;
@@ -407,14 +408,13 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		if (single) {
 			self[name] = comp;
 			self[pname] = node;
-			self._addEventTo(name, node);
-			self._rendered.push(node);
 		} else {
 			self[name].push(comp);
 			self[pname].push(node);
-			self._addEventTo(name, node);
-			self._rendered.push(node);
 		}
+		self._addEventTo(name, node);
+		if (!self._rendered[name]) self._rendered[name] = [];
+		self._rendered[name].push(node);
 
 		return comp;
 	};
@@ -453,8 +453,13 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	 */
 	this.reset = fireevent(function(self) {
 		// 清空所有render进来的新元素
-		self._rendered.forEach(function(node) {
-			node.dispose();
+		Object.keys(self._rendered).forEach(function(name) {
+			var pname = '_' + name;
+			self._rendered[name].forEach(function(node) {
+				node.dispose();
+			});
+			self[name] = null;
+			self[pname] = null;
 		});
 		// 所有子component reset
 		Object.keys(self._descriptors).forEach(function(name) {
