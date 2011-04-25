@@ -179,6 +179,23 @@ Function.prototype.bind = Function.prototype.bind || function(object) {
 	};
 };
 
+// 获取function的name
+// 判断function TEST() 是否能取到name属性来选择不同的算法函数
+if ((function TEST(){}).name) {
+	Function.__get_name__ = function(func) {
+		return func.name;
+	}
+// IE
+} else {
+	var funcNameRegExp = /^function ([\w$]+)/;
+	Function.__get_name__ = function(func) {
+		// IE 下没有 Function.prototype.name，通过代码获得
+		if (result = funcNameRegExp.exec(func.toString())) {
+			return result[1];
+		}
+	};
+}
+
 /**
  * 为obj增加properties中的成员
  * @param obj 源
@@ -414,20 +431,20 @@ var buildPrototype = function(cls, name, member) {
 
 	// 先判断最常出现的instancemethod
 	if (member.__class__ === undefined && typeof member == 'function') { // this.a = function() {}
-		// 这样赋值__name__，确保__name__都是被赋值在用户所书写的那个function上，能够通过arguments.callee.__name__获取到。
-		fillFuncName(member, name);
+		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
+		member.__name__ = Function.__get_name__(member) || name;
 		prototype[name] = instancemethod(member);
 
 	} else if (member.__class__ === classmethod) { // this.a = classmethod(function() {})
-		fillFuncName(member.im_func, name);
+		member.im_func.__name__ = Function.__get_name__(member.im_func) || name;
 		prototype[name] = member;
 
 	} else if (member.__class__ === staticmethod) { // this.a = staticmethod(function() {})
-		fillFuncName(member.im_func, name);
+		member.im_func.__name__ = Function.__get_name__(member.im_func) || name;
 		prototype[name] = member;
 
 	} else if (member.__class__ === property) { // this.a = property(function fget() {}, function fset() {})
-		fillFuncName(member, name);
+		member.__name__ = Function.__get_name__(member) || name;
 		prototype.__properties__[name] = member;
 
 	} else { // this.a = someObject
@@ -435,25 +452,6 @@ var buildPrototype = function(cls, name, member) {
 	}
 
 };
-
-// 根据function生成其__name__属性
-// 判断function TEST() 是否能取到name属性来选择不同的算法函数
-if ((function TEST(){}).name) {
-	var fillFuncName = function(func, name) {
-		if (func.name) name = func.name;
-		func.__name__ = name;
-	}
-// IE
-} else {
-	var funcNameRegExp = /^function ([\w$]+)/;
-	var fillFuncName = function(func, name) {
-		// IE 下没有 Function.prototype.name，通过代码获得
-		if (result = funcNameRegExp.exec(func.toString())) {
-			name = result[1];
-		}
-		func.__name__ = name;
-	};
-}
 
 // IE不可以通过prototype = new Array的方式使function获得数组功能。
 var _nativeExtendable = (function() {
@@ -845,12 +843,12 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		var done = function() {
 			args.unshift(runtime);
 			pkg.fn.apply(host, args);
-			// 输出 __name__
-			Object.keys(host).forEach(function(key) {
-				if (typeof host[key] == 'function') {
-					host[key].__name__ = key;
-				}
-			});
+			// 不输出 __name__ 了，没有大用且影响性能，应该在创建时就指定name
+			//Object.keys(host).forEach(function(key) {
+				//if (typeof host[key] == 'function') {
+					//host[key].__name__ = key;
+				//}
+			//});
 
 			if (callback) callback();
 		};
