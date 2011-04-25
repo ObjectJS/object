@@ -798,9 +798,11 @@ var FormItemElement = this.FormItemElement = new Class(Element, /**@lends dom.Fo
 	// for select
 	this.getSelected = function(self) {
 		self.selectedIndex; // Safari 3.2.1
-		return new Elements(self.options.filter(function(option) {
-			return option.selected;
-		}));
+		var selected = [];
+		for (var i = 0; i < self.options.length; i++) {
+			if (self.options[i].selected) selected.push(self.options[i]);
+		};
+		return new Elements(selected);
 	};
 
 	this.value = property(function(self) {
