@@ -711,13 +711,6 @@ var FormElement = this.FormElement = new Class(Element, /**@lends dom.FormElemen
 		return queryString.join('&');
 	};
 
-	this.getSelected = function(self) {
-		self.selectedIndex; // Safari 3.2.1
-		return new Elements(self.options.filter(function(option) {
-			return option.selected;
-		}));
-	};
-
 	this.checkValidity = function(self) {
 		return self.getElements('input, select, textarea, output').every(function(el) {
 			return el.checkValidity();
@@ -801,6 +794,14 @@ var FormItemElement = this.FormItemElement = new Class(Element, /**@lends dom.Fo
 			return end;
 		}
 	});
+
+	// for select
+	this.getSelected = function(self) {
+		self.selectedIndex; // Safari 3.2.1
+		return new Elements(self.options.filter(function(option) {
+			return option.selected;
+		}));
+	};
 
 	this.value = property(function(self) {
 		// 如果是placeholder，则value为空
