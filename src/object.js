@@ -432,19 +432,19 @@ var buildPrototype = function(cls, name, member) {
 	// 先判断最常出现的instancemethod
 	if (member.__class__ === undefined && typeof member == 'function') { // this.a = function() {}
 		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
-		member.__name__ = Function.__get_name__(member) || name;
+		member.__name__ = name;
 		prototype[name] = instancemethod(member);
 
 	} else if (member.__class__ === classmethod) { // this.a = classmethod(function() {})
-		member.im_func.__name__ = Function.__get_name__(member.im_func) || name;
+		member.im_func.__name__ = name;
 		prototype[name] = member;
 
 	} else if (member.__class__ === staticmethod) { // this.a = staticmethod(function() {})
-		member.im_func.__name__ = Function.__get_name__(member.im_func) || name;
+		member.im_func.__name__ = name;
 		prototype[name] = member;
 
 	} else if (member.__class__ === property) { // this.a = property(function fget() {}, function fset() {})
-		member.__name__ = Function.__get_name__(member) || name;
+		member.__name__ = name;
 		prototype.__properties__[name] = member;
 
 	} else { // this.a = someObject
@@ -487,7 +487,7 @@ var Class = this.Class = function() {
 	}
 
 	// 父类
-	var parent = arguments.length > 1? arguments[0] : null;
+	var base = arguments.length > 1? arguments[0] : null;
 
 	// cls
 	var cls = function(prototyping) {
@@ -499,27 +499,27 @@ var Class = this.Class = function() {
 	};
 
 	// 继承
-	if (parent) {
+	if (base) {
 		// IE不能extend native function，用相应的class包装一下
 		if (!_nativeExtendable) {
-			if (parent === Array) {
-				parent = ArrayClass;
-			} else if (parent === String) {
-				parent = StringClass;
+			if (base === Array) {
+				base = ArrayClass;
+			} else if (base === String) {
+				base = StringClass;
 			}
 		}
 
 		// 继承的核心
-		cls.prototype = getInstance(parent);
+		cls.prototype = getInstance(base);
 
 		// Array / String 没有 subclass，需要先判断一下是否存在 subclassesarray
-		if (parent.__subclassesarray__) parent.__subclassesarray__.push(cls);
+		if (base.__subclassesarray__) base.__subclassesarray__.push(cls);
 	}
 
 	var prototype = cls.prototype;
-	// 有可能已经继承了parent的__properties__了
-	var parentProperties = prototype.__properties__ || {};
-	prototype.__properties__ = object.extend({}, parentProperties);
+	// 有可能已经继承了base的__properties__了
+	var baseProperties = prototype.__properties__ || {};
+	prototype.__properties__ = object.extend({}, baseProperties);
 
 	Object.keys(members).forEach(function(name) {
 		var member = members[name];
@@ -527,9 +527,9 @@ var Class = this.Class = function() {
 		buildMember(cls, name, member);
 	});
 
-	object.extend(cls, parent, false);
+	object.extend(cls, base, false);
 
-	cls.__base__ = parent;
+	cls.__base__ = base;
 	cls.__subclassesarray__ = [];
 	cls.__subclasses__ = getSubClasses;
 	cls.__mixin__ = mixiner;

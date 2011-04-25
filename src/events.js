@@ -37,7 +37,7 @@ this.fireevent = function(arg1) {
 
 	// 千万别给这个function起名字，否则fire出来的事件都叫一个名字
 	var firer = function(self) {
-		var nativeName = arguments.callee.__name__;
+		var nativeName = Function.__get_name__(arguments.callee) || arguments.callee.__name__;
 		if (!name) name = nativeName;
 
 		// 根据eventDataNames生成eventData，每一个参数对应一个eventData
