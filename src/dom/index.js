@@ -703,7 +703,7 @@ var FormElement = this.FormElement = new Class(Element, /**@lends dom.FormElemen
 
 			var value = (el.tagName.toLowerCase() == 'select') ? el.getSelected().map(function(opt) {
 				// IE
-				return document.id(opt).get('value');
+				return wrap(opt).get('value');
 			}) : ((type == 'radio' || type == 'checkbox') && !el.checked) ? null : el.get('value');
 
 			if (typeof value != 'undefined') queryString.push(encodeURIComponent(el.name) + '=' + encodeURIComponent(value));
