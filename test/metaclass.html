@@ -1,0 +1,45 @@
+<html>
+<head>
+<script type="text/javascript" src="../src/object.js"></script>
+<script>
+
+object.add('test', function(exports) {
+
+	var ComponentClass = new Class.MetaClass(function() {
+		this.initialize = function(self, name, base, members) {
+			Object.keys(members).forEach(function(name) {
+				console.log(name)
+			});
+		};
+	});
+
+	var Component = new ComponentClass(function() {
+	});
+
+	var Publisher = new Class(Component, function() {
+		this.a = 1;
+		this.aa = function(self) {
+		
+		};
+	});
+
+	var DefaultPublisher = new Class(Publisher, function() {
+		this.b = 2;
+		this.bb = function(self) {
+		
+		};
+	});
+
+	var publisher = new DefaultPublisher();
+	console.dir(publisher);
+
+});
+object.execute('test');
+
+</script>
+</head>
+<body>
+
+</body>
+</html>
+

@@ -548,6 +548,10 @@ var Class = this.Class = function() {
 	return cls;
 };
 
+Class.MetaClass = function() {
+	return Class;
+};
+
 /**
  * 在new Class的callback中mixin
  * var MyClass = new Class(function() {
