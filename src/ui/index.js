@@ -65,6 +65,7 @@ this.define = function(selector, type, single) {
 		return self[comVar];
 	};
 	prop = property(getter);
+	prop.isComponent = true;
 	return prop;
 };
 
@@ -82,9 +83,6 @@ this.define1 = function(selector, type) {
  *	myConfig: ui.option(1)
  * });
  * 这样MyComponent实例的myConfig属性值即为默认值1，可通过 set 方法修改
- * @param selector 选择器
- * @param type 构造类
- * @param single 是否是单独的引用
  */
 this.option = function(value, onchange) {
 	var prop;
@@ -185,17 +183,24 @@ this.Components = new Class(Array, /**@lends ui.Components*/ function() {
 
 });
 
-this.ComponentClass = new Class.MetaClass(function() {
-	this.initialize = function(self, name, base, members) {
-	};
-});
+this.ComponentClass = function(self, name, base, members) {
+	Object.keys(members).forEach(function(name) {
+		var member = members[name];
+		if (member.__class__ === property && member.isComponent) {
+			//var pname = '__' + name;
+			//members[pname] = property(getter);
+		}
+	});
+};
 
 /**
  * UI模块基类，所有UI组件的基本类
  * @class
  * @name ui.Component
  */
-this.Component = new exports.ComponentClass(/**@lends ui.Component*/ function() {
+this.Component = new Class(/**@lends ui.Component*/ function() {
+
+	this.__metaclass__ = exports.ComponentClass;
 
 	var getConstructor = function(type) {
 		if (type === 'number') return Number;
