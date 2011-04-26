@@ -5,15 +5,20 @@
 
 object.add('test', function(exports) {
 
-	var ComponentClass = new Class.MetaClass(function() {
-		this.initialize = function(self, name, base, members) {
-			Object.keys(members).forEach(function(name) {
-				console.log(name)
-			});
-		};
-	});
+	var ComponentClass = function(self, name, base, members) {
+		console.dir(members)
+	};
 
-	var Component = new ComponentClass(function() {
+	var Component = new Class(function() {
+		this.__metaclass__ = ComponentClass;
+
+		this.initialize = function(self) {
+		};
+
+		this.test = function(self) {
+		
+		};
+
 	});
 
 	var Publisher = new Class(Component, function() {
@@ -31,7 +36,6 @@ object.add('test', function(exports) {
 	});
 
 	var publisher = new DefaultPublisher();
-	console.dir(publisher);
 
 });
 object.execute('test');

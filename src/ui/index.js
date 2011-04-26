@@ -185,13 +185,17 @@ this.Components = new Class(Array, /**@lends ui.Components*/ function() {
 
 });
 
+this.ComponentClass = new Class.MetaClass(function() {
+	this.initialize = function(self, name, base, members) {
+	};
+});
 
 /**
  * UI模块基类，所有UI组件的基本类
  * @class
  * @name ui.Component
  */
-this.Component = new Class(/**@lends ui.Component*/ function() {
+this.Component = new exports.ComponentClass(/**@lends ui.Component*/ function() {
 
 	var getConstructor = function(type) {
 		if (type === 'number') return Number;

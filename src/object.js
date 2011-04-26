@@ -85,7 +85,7 @@ Array.prototype.filter = Array.prototype.filter || function(fn, bind){
 Array.prototype.reduce = Array.prototype.reduce || function(fun /*, initialValue */) {
 	"use strict";
 
-	if (this === void 0 || this === null)
+	if (this === undefined || this === null)
 		throw new TypeError();
 
 	var t = Object(this);
@@ -94,7 +94,7 @@ Array.prototype.reduce = Array.prototype.reduce || function(fun /*, initialValue
 		throw new TypeError();
 
 	// no value to return if no initial value and an empty array
-	if (len == 0 && arguments.length == 1)
+	if (len === 0 && arguments.length == 1)
 		throw new TypeError();
 
 	var k = 0;
@@ -128,7 +128,7 @@ Array.prototype.reduce = Array.prototype.reduce || function(fun /*, initialValue
 Array.prototype.reduceRight = Array.prototype.reduceRight || function(callbackfn /*, initialValue */) {
 	"use strict";
 
-	if (this === void 0 || this === null)
+	if (this === undefined || this === null)
 		throw new TypeError();
 
 	var t = Object(this);
@@ -184,15 +184,14 @@ Function.prototype.bind = Function.prototype.bind || function(object) {
 if ((function TEST(){}).name) {
 	Function.__get_name__ = function(func) {
 		return func.name;
-	}
+	};
 // IE
 } else {
 	var funcNameRegExp = /^function ([\w$]+)/;
 	Function.__get_name__ = function(func) {
 		// IE 下没有 Function.prototype.name，通过代码获得
-		if (result = funcNameRegExp.exec(func.toString())) {
-			return result[1];
-		}
+		result = funcNameRegExp.exec(func.toString());
+		if (result) return result[1];
 	};
 }
 
@@ -397,8 +396,9 @@ var getSubClasses = function() {
  * 用一个统一的方法虽然会在调用的时候影响效率，但是提高了mixin时的效率，使得通过AClass.__mixin__覆盖某已存在方法时不需要修改所有subclasses的对应方法了
  */
 var buildMember = function(cls, name, member) {
-	if (typeof member == 'function') {
-
+	if (name == '__metaclass__' || typeof member != 'function') {
+		cls[name] = member;
+	} else {
 		cls[name] = function(self) {
 			var prototype = this.prototype[name];
 			var func = prototype.im_func;
@@ -416,8 +416,6 @@ var buildMember = function(cls, name, member) {
 				return func.apply(this.__this__, arguments);
 			}
 		};
-	} else {
-		cls[name] = member;
 	}
 };
 
@@ -472,6 +470,29 @@ var ArrayClass, StringClass;
 var Class = this.Class = function() {
 	if (arguments.length < 1) throw new Error('bad arguments');
 
+	// cls
+	var cls = function(prototyping) {
+		if (prototyping === PROTOTYPING) return this;
+		this.__class__ = arguments.callee;
+		initMixins(cls, this);
+		var value = this.initialize? this.initialize.apply(this, arguments) : null;
+		return value;
+	};
+
+	// 父类
+	var base = arguments.length > 1? arguments[0] : null;
+	// 继承
+	if (base) {
+		// IE不能extend native function，用相应的class包装一下
+		if (!_nativeExtendable) {
+			if (base === Array) {
+				base = ArrayClass;
+			} else if (base === String) {
+				base = StringClass;
+			}
+		}
+	}
+
 	// 构造器
 	var members = arguments[arguments.length - 1];
 	if (members instanceof Function) {
@@ -486,41 +507,20 @@ var Class = this.Class = function() {
 		});
 	}
 
-	// 父类
-	var base = arguments.length > 1? arguments[0] : null;
-
-	// cls
-	var cls = function(prototyping) {
-		if (prototyping === PROTOTYPING) return this;
-		this.__class__ = arguments.callee;
-		initMixins(cls, this);
-		var value = this.initialize? this.initialize.apply(this, arguments) : null;
-		return value;
-	};
-
-	// 继承
 	if (base) {
-		// IE不能extend native function，用相应的class包装一下
-		if (!_nativeExtendable) {
-			if (base === Array) {
-				base = ArrayClass;
-			} else if (base === String) {
-				base = StringClass;
-			}
-		}
-
 		// 继承的核心
 		cls.prototype = getInstance(base);
-
 		// Array / String 没有 subclass，需要先判断一下是否存在 subclassesarray
 		if (base.__subclassesarray__) base.__subclassesarray__.push(cls);
 	}
 
+	// Propeties
 	var prototype = cls.prototype;
 	// 有可能已经继承了base的__properties__了
 	var baseProperties = prototype.__properties__ || {};
 	prototype.__properties__ = object.extend({}, baseProperties);
 
+	// Members
 	Object.keys(members).forEach(function(name) {
 		var member = members[name];
 		buildPrototype(cls, name, member);
@@ -528,6 +528,9 @@ var Class = this.Class = function() {
 	});
 
 	object.extend(cls, base, false);
+
+	var metaclass = cls.__metaclass__;
+	if (metaclass) metaclass(cls, null, base, members);
 
 	cls.__base__ = base;
 	cls.__subclassesarray__ = [];
@@ -545,11 +548,8 @@ var Class = this.Class = function() {
 	cls.prototype.get = getter;
 	cls.prototype.set = setter;
 	cls.prototype._set = nativeSetter;
-	return cls;
-};
 
-Class.MetaClass = function() {
-	return Class;
+	return cls;
 };
 
 /**
@@ -608,7 +608,7 @@ Class.inject = function(cls, host, args) {
 	object.extend(host, p);
 	args.unshift(host);
 	initMixins(cls, host);
-	cls.initialize.apply(cls, args);
+	if (cls.initialize) cls.initialize.apply(cls, args);
 };
 
 /**
