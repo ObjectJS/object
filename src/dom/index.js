@@ -802,7 +802,7 @@ var FormItemElement = this.FormItemElement = new Class(Element, /**@lends dom.Fo
 		for (var i = 0; i < self.options.length; i++) {
 			if (self.options[i].selected) selected.push(self.options[i]);
 		};
-		return new Elements(selected);
+		return selected;
 	};
 
 	this.value = property(function(self) {
