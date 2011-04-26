@@ -520,17 +520,17 @@ var Class = this.Class = function() {
 	var baseProperties = prototype.__properties__ || {};
 	prototype.__properties__ = object.extend({}, baseProperties);
 
+	object.extend(cls, base, false);
+
+	var metaclass = cls.__metaclass__;
+	if (metaclass) metaclass(cls, null, base, members);
+
 	// Members
 	Object.keys(members).forEach(function(name) {
 		var member = members[name];
 		buildPrototype(cls, name, member);
 		buildMember(cls, name, member);
 	});
-
-	object.extend(cls, base, false);
-
-	var metaclass = cls.__metaclass__;
-	if (metaclass) metaclass(cls, null, base, members);
 
 	cls.__base__ = base;
 	cls.__subclassesarray__ = [];
