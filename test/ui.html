@@ -4,11 +4,10 @@
 <script type="text/javascript" src="http://xnimg.cn/n/core/base-all.js"></script>
 <script>
 	object.use('dom, ui', function(exports, dom, ui) {
+
 		var MyComponent = new Class(ui.Component, function() {
 			this.title = ui.define('.title');
-			this.foo = ui.option('haha', function(self, value) {
-				self._title.set('innerHTML', value);
-			});
+			this.foo = ui.option('haha');
 		});
 
 		var template = '<div class="text"><h3 class="title">{{foo}}</h3></div>';
@@ -19,6 +18,7 @@
 		dom.ready(function() {
 			document.body.appendChild(c.getNode());
 		});
+
 	});
 </script>
 </head>

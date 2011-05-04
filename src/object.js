@@ -367,7 +367,7 @@ var mixiner = overloadSetter(function(name, member) {
 			buildMember(one, name, member);
 		});
 	}
-	// member有可能是方法，也有可能是属性
+	// member有可能是方法，也有可能是属性，需要每次都进行mixin的，而不是仅仅在没有此成员时进行mixin，否则将无法修改属性
 	buildMember(this, name, member);
 	buildPrototype(this, name, member);
 });

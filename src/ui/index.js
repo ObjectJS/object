@@ -41,7 +41,7 @@ this.define = function(selector, type, single) {
 			if (!node) return null;
 			else if (self[pname] === node) return self[name]; // 不是第一次get，且结果和上次相同，避免再次添加事件
 
-			self._addEventTo(name, node);
+			self.__addEventTo(name, node);
 			self[pname] = node;
 
 			self[comVar] = new type(node, self._subOptions[name]);
@@ -55,7 +55,7 @@ this.define = function(selector, type, single) {
 			// 如果已经初始化过，则要确保不会对之前取到过得元素重新执行添加事件
 			nodes.forEach(function(node) {
 				if (!self[pname] || self[pname].indexOf(node) === -1) {
-					self._addEventTo(name, node);
+					self.__addEventTo(name, node);
 				}
 			});
 			self[pname] = nodes;
@@ -97,7 +97,7 @@ this.option = function(value, onchange) {
 		var name = prop.__name__;
 		var pname = '_' + name;
 		var methodName = name + 'Change';
-		self._setOption(name, value);
+		self.__setOption(name, value);
 		if (onchange) onchange(self, value);
 		if (self[methodName]) self[methodName](value);
 		return self[pname];
@@ -183,12 +183,45 @@ this.Components = new Class(Array, /**@lends ui.Components*/ function() {
 
 });
 
-this.ComponentClass = function(self, name, base, members) {
+this.ComponentClass = function(cls, name, base, members) {
+	var subEvents = {};
+	if (base && base._subEvents) {
+		Object.keys(base._subEvents).forEach(function(name) {
+			subEvents[name] = base._subEvents[name].slice(0); // 复制数组
+		});
+	}
+
+	var events = [];
+	cls.__mixin__({
+		__components : [],
+		__options : [],
+		_subEvents: subEvents,
+		_events : events
+	});
+
 	Object.keys(members).forEach(function(name) {
 		var member = members[name];
-		if (member.__class__ === property && member.isComponent) {
-			//var pname = '__' + name;
-			//members[pname] = property(getter);
+		if (member.__class__ === property) {
+			if (member.isComponent) {
+				cls.__components.push(name);
+			} else {
+				cls.__options.push(name);
+			}
+		} else if (typeof member == 'function') {
+			var match = name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/);
+			if (match) {
+				var name = match[1];
+				var eventName = match[2];
+				if (!subEvents[name]) subEvents[name] = [];
+				subEvents[name].push(eventName);
+
+			} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
+				var eventName = name.slice(1);
+				events.push(eventName);
+				cls.__mixin__(eventName, function(self) {
+					self.fireEvent(eventName);
+				});
+			}
 		}
 	});
 };
@@ -215,8 +248,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		self._descriptors = {};
 		self._components = []; // 建立出来的所有子component的引用
 		self._rendered = []; // render过的成员
-		self._events = self._getEvents(self); // 本class的所有event方法
-		self._subOptions = self._parseOptions(options);
+		self._subOptions = self.__parseOptions(options);
 		var propertyNames = Class.getPropertyNames(self);
 
 		if (!node.nodeType) {
@@ -249,6 +281,15 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		} else {
 			self._node.store('component', self);
 		}
+
+		// 加入 _eventType 方法定义的事件
+		self._events.forEach(function(eventType) {
+			self.addEvent(eventType, function() {
+				var args = Array.prototype.slice.call(arguments, 0);
+				self['_' + eventType].apply(self, args);
+			});
+		});
+
 		propertyNames.forEach(function(name) {
 			var value = self.get(name);
 			if (self._descriptors[name]) {
@@ -259,63 +300,41 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				if (data) {
 					var defaultValue = self.get(name);
 					var value = getConstructor(typeof defaultValue)(data);
-					self._setOption(name, value);
+					self.__setOption(name, value);
 				// 从options参数获取配置
 				} else if (options[name]) {
-					self._setOption(name, options[name]);
+					self.__setOption(name, options[name]);
 				// 默认配置
 				} else {
-					self._setOption(name, value);
+					self.__setOption(name, value);
 				}
 			}
 		});
 	};
 
-	this._setOption = function(self, name, value) {
+	this.__setOption = function(self, name, value) {
 		var pname = '_' + name;
 		self[pname] = value;
 		self._set(name, value);
 	};
 
-	/**
-	 * 根据key的pattern获取所有sub component的event定义
-	 */
-	this._getEvents = classmethod(function(cls, self) {
-		var events = {};
-
-		Object.keys(cls).forEach(function(key) {
-			var match = key.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/);
-			if (!match) return;
-			var name = match[1];
-			var eventName = match[2];
-
-			if (!events[name]) events[name] = [];
-			events[name].push({
-				name: eventName,
-				func: function() {
-					var args = Array.prototype.slice.call(arguments, 0);
-					args.push(this.retrieve('component'));
-					self[key].apply(self, args);
-				}
-			});
-		});
-
-		return events;
-	});
-
-	this._addEventTo = function(self, name, node) {
-		var events = self._events[name];
+	this.__addEventTo = function(self, name, node) {
+		var events = self._subEvents[name];
 		if (!events) return;
 
-		if (events) events.forEach(function(event) {
-			node.addEvent(event.name, event.func);
+		events.forEach(function(eventType) {
+			node.addEvent(eventType, function() {
+				var args = Array.prototype.slice.call(arguments, 0);
+				args.push(this.retrieve('component'));
+				self[name + '_' + eventType].apply(self, args);
+			});
 		});
 	};
 
 	/**
 	 * 根据节点初始化一个component，并放到相应的引用上去。
 	 */
-	this._registerComponent = function(self, name, node, options) {
+	this.__registerComponent = function(self, name, node, options) {
 		var descriptor = self._descriptors[name];
 		var type = descriptor.type;
 		var single = descriptor.single;
@@ -330,7 +349,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			self[name].push(comp);
 			self[pname].push(node);
 		}
-		self._addEventTo(name, node);
+		self.__addEventTo(name, node);
 		self._rendered.push(name);
 
 		return comp;
@@ -340,7 +359,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	 * 解析options为对象
 	 * {'a.b.c': 1, b: 2} ==> {a: {b: {c:1}}, b: 2}
 	 */
-	this._parseOptions = staticmethod(function(options) {
+	this.__parseOptions = staticmethod(function(options) {
 		if (options.PARSED) {
 			return options;
 		}
@@ -383,10 +402,10 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		if (result) {
 			if (Array.isArray(result)) {
 				result.forEach(function(node) {
-					self._registerComponent(name, node);
+					self.__registerComponent(name, node);
 				});
 			} else {
-				self._registerComponent(name, result);
+				self.__registerComponent(name, result);
 			}
 		}
 	};
@@ -424,7 +443,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			self[name].push(comp);
 			self[pname].push(node);
 		}
-		self._addEventTo(name, node);
+		self.__addEventTo(name, node);
 		self._rendered.push(name);
 
 		return comp;
@@ -513,3 +532,5 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 });
 
 });
+
+
