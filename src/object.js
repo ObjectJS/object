@@ -363,11 +363,12 @@ var mixiner = overloadSetter(function(name, member) {
 	// 实现自动的继承机制
 	if (!(name in this.prototype)) {
 		var classes = getAllSubClasses(this); 
-		classes.unshift(this); // 包括自己也需要加上
 		classes.forEach(function(one) {
 			buildMember(one, name, member);
 		});
 	}
+	// member有可能是方法，也有可能是属性
+	buildMember(this, name, member);
 	buildPrototype(this, name, member);
 });
 
@@ -522,9 +523,6 @@ var Class = this.Class = function() {
 
 	object.extend(cls, base, false);
 
-	var metaclass = cls.__metaclass__;
-	if (metaclass) metaclass(cls, null, base, members);
-
 	// Members
 	Object.keys(members).forEach(function(name) {
 		var member = members[name];
@@ -548,6 +546,9 @@ var Class = this.Class = function() {
 	cls.prototype.get = getter;
 	cls.prototype.set = setter;
 	cls.prototype._set = nativeSetter;
+
+	var metaclass = cls.__metaclass__;
+	if (metaclass) metaclass(cls, null, base, members);
 
 	return cls;
 };
