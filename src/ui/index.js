@@ -213,11 +213,11 @@ this.ComponentClass = function(cls, name, base, members) {
 				var name = match[1];
 				var eventName = match[2];
 				if (!subEvents[name]) subEvents[name] = [];
-				subEvents[name].push(eventName);
+				if (subEvents[name].indexOf(eventName) === -1) subEvents[name].push(eventName);
 
 			} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
 				var eventName = name.slice(1);
-				events.push(eventName);
+				if (events.indexOf(eventName === -1)) events.push(eventName);
 				cls.__mixin__(eventName, function(self) {
 					self.fireEvent(eventName);
 				});
