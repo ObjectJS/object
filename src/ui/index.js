@@ -7,6 +7,142 @@ object.add('ui', 'string, dom, ui.decorators', /**@lends ui*/ function(exports, 
 var fireevent = ui.decorators.fireevent;
 
 /**
+ * @class
+ */
+var Element = new Class(function() {
+
+	Object.keys(dom.Element).forEach(function(name) {
+		if (typeof dom.Element[name] === 'function') {
+			if (['initialize'].indexOf(name) != -1) return;
+
+			this[name] = function(self) {
+				var args = [self._node];
+				var arg;
+				// 代理方法支持Component参数
+				for (var i = 1; i < arguments.length; i++) {
+					arg = arguments[i];
+					args.push((arg && arg._node)? arg._node : arg);
+				}
+				return dom.Element[name].apply(dom.Element, args);
+			};
+		}
+	}, this);
+
+});
+
+/**
+ * @class
+ * @name ui.Components
+ */
+this.Components = new Class(Array, /**@lends ui.Components*/ function() {
+
+	/**
+	 * @param elements wrapped dom elements
+	 * @param type 这批节点的共有Component类型，默认为Component
+	 */
+	this.initialize = function(self, elements, type, options) {
+		if (!type) type = exports.Component;
+
+		for (var i = 0; i < elements.length; i++) {
+			self.push(new type(elements[i], options));
+		}
+
+		Object.keys(type).forEach(function(name) {
+			self[name] = function() {
+				var element;
+				//var i, arg, args = [];
+				// 代理方法支持Component参数
+				//for (i = 0; i < arguments.length; i++) {
+					//arg = arguments[i];
+					//args.push((arg && arg._node)? arg._node : arg);
+				//}
+				for (i = 0; i < self.length; i++) {
+					element = self[i];
+					if (typeof element[name] == 'function') {
+						element[name].apply(self[i], arguments);
+					}
+				}
+			};
+		});
+
+		self.set = function(key, value) {
+			for (var i = 0; i < self.length; i++) {
+				self[i].set(key, value);
+			}
+		};
+
+		self.get = function(key) {
+			var result = [];
+			for (var i = 0; i < self.length; i++) {
+				result.push(self[i].get(key));
+			}
+			return result;
+		};
+	};
+
+});
+
+this.ComponentClass = function(cls, name, base, members) {
+	var subEvents = {};
+	if (base && base._subEvents) {
+		Object.keys(base._subEvents).forEach(function(name) {
+			subEvents[name] = base._subEvents[name].slice(0); // 复制数组
+		});
+	}
+
+	var events = [];
+	if (base && base._events) {
+		events = base._events.slice(0);
+	}
+
+	var subs = {};
+	if (base && base._subs) {
+		Object.keys(base._subs).forEach(function(name) {
+			subs[name] = base._subs[name];
+		});
+	}
+
+	cls.__mixin__({
+		_optionNames : [],
+		_subs : subs,
+		_subEvents: subEvents,
+		_events : events
+	});
+
+	Object.keys(members).forEach(function(name) {
+		var member = members[name];
+		if (member.__class__ === property) {
+			if (member.isComponent) {
+				subs[name] = {
+					selector: member.selector,
+					type: member.type || exports.Component,
+					single: member.single,
+					nodeMap: {}, // 相应node的uid对应component，用于在需要通过node找到component时使用
+					refs: []
+				};
+			} else {
+				cls._optionNames.push(name);
+			}
+		} else if (typeof member == 'function') {
+			var match = name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/);
+			if (match) {
+				var component = match[1];
+				var eventName = match[2];
+				if (!subEvents[component]) subEvents[component] = [];
+				if (subEvents[component].indexOf(eventName) === -1) subEvents[component].push(eventName);
+
+			} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
+				eventName = name.slice(1);
+				if (events.indexOf(eventName === -1)) events.push(eventName);
+				cls.__mixin__(eventName, function(self) {
+					self.fireEvent(eventName);
+				});
+			}
+		}
+	});
+};
+
+/**
  * 为一个Component定义一个sub components引用
  * 用法：
  * MyComponent = new Class(ui.Component, {
@@ -18,54 +154,9 @@ var fireevent = ui.decorators.fireevent;
  * @param single 是否是单独的引用
  */
 this.define = function(selector, type, single) {
-	var prop;
-	function getter(self) {
-		var name = prop.__name__;
-
-		// 默认为 Component
-		if (!type) type = exports.Component;
-		if (!self._node) return null;
-		var comVar = '__' + name;
-		if (self[comVar]) return self[comVar];
-		var pname = '_' + name;
-		self._subComponents[name].nodeMap = {}; // 存储所有节点的引用
-		if (single) {
-			var node = self._node.getElement(selector);
-			if (!node) return null;
-			else if (self[pname] === node) return self[name]; // 不是第一次get，且结果和上次相同，避免再次添加事件
-			var comp = new type(node, self._subOptions[name]);
-
-			self._subComponents[name].nodeMap[String(node.uid)] = comp;
-			self.__addEventTo(name, node);
-			self[pname] = node;
-
-			self[comVar] = comp;
-		} else {
-			var nodes = self._node.getElements(selector);
-			if (!nodes) {
-				self[pname] = new dom.Elements([]);
-				return new exports.Components([], type);
-			}
-
-			self._subComponents[name].nodeMap = {}; // 存储所有节点的引用
-
-			var comps = new exports.Components(nodes, type, self._subOptions[name], self);
-
-			// 如果已经初始化过，则要确保不会对之前取到过得元素重新执行添加事件
-			comps.forEach(function(comp) {
-				var node = comp._node;
-				self._subComponents[name].nodeMap[String(node.uid)] = comp;
-				if (!self[pname] || self[pname].indexOf(node) === -1) {
-					self.__addEventTo(name, node);
-				}
-			});
-			self[pname] = nodes;
-
-			self[comVar] = comps;
-		}
-		return self[comVar];
-	};
-	prop = property(getter);
+	var prop = property(function(self) {
+		return self[prop.__name__];
+	});
 	prop.isComponent = true;
 	prop.selector = selector;
 	prop.type = type;
@@ -111,141 +202,6 @@ this.option = function(value, onchange) {
 };
 
 /**
- * @class
- */
-var Element = new Class(function() {
-
-	Object.keys(dom.Element).forEach(function(name) {
-		if (typeof dom.Element[name] === 'function') {
-			if (['initialize'].indexOf(name) != -1) return;
-
-			this[name] = function(self) {
-				var args = [self._node];
-				var arg;
-				// 代理方法支持Component参数
-				for (var i = 1; i < arguments.length; i++) {
-					arg = arguments[i];
-					args.push((arg && arg._node)? arg._node : arg);
-				}
-				return dom.Element[name].apply(dom.Element, args);
-			};
-		}
-	}, this);
-
-});
-
-
-/**
- * @class
- * @name ui.Components
- */
-this.Components = new Class(Array, /**@lends ui.Components*/ function() {
-
-	/**
-	 * @param elements wrapped dom elements
-	 * @param type 这批节点的共有Component类型，默认为Component
-	 */
-	this.initialize = function(self, elements, type, options) {
-		if (!type) type = exports.Component;
-
-		for (var i = 0; i < elements.length; i++) {
-			self.push(new type(elements[i], options));
-		}
-
-		Object.keys(type).forEach(function(name) {
-			self[name] = function() {
-				var element;
-				var i, arg, args = [];
-				// 代理方法支持Component参数
-				for (i = 0; i < arguments.length; i++) {
-					arg = arguments[i];
-					args.push((arg && arg._node)? arg._node : arg);
-				}
-				for (i = 0; i < self.length; i++) {
-					element = self[i];
-					if (typeof element[name] == 'function') {
-						element[name].apply(self[i], args);
-					}
-				}
-			};
-		});
-
-		self.set = function(key, value) {
-			for (var i = 0; i < self.length; i++) {
-				self[i].set(key, value);
-			}
-		};
-
-		self.get = function(key) {
-			var result = [];
-			for (var i = 0; i < self.length; i++) {
-				result.push(self[i].get(key));
-			}
-			return result;
-		};
-	};
-
-});
-
-this.ComponentClass = function(cls, name, base, members) {
-	var subEvents = {};
-	if (base && base._subEvents) {
-		Object.keys(base._subEvents).forEach(function(name) {
-			subEvents[name] = base._subEvents[name].slice(0); // 复制数组
-		});
-	}
-
-	var events = [];
-	if (base && base._events) {
-		events = base._events.slice(0);
-	}
-
-	var subComponents = {};
-	if (base && base._subComponents) {
-		Object.keys(base._subComponents).forEach(function(name) {
-			subComponents[name] = base._subComponents[name];
-		});
-	}
-
-	cls.__mixin__({
-		_optionNames : [],
-		_subComponents : subComponents,
-		_subEvents: subEvents,
-		_events : events
-	});
-
-	Object.keys(members).forEach(function(name) {
-		var member = members[name];
-		if (member.__class__ === property) {
-			if (member.isComponent) {
-				subComponents[name] = {
-					selector: member.selector,
-					type: member.type || exports.Component,
-					single: member.single
-				};
-			} else {
-				cls._optionNames.push(name);
-			}
-		} else if (typeof member == 'function') {
-			var match = name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/);
-			if (match) {
-				var component = match[1];
-				var eventName = match[2];
-				if (!subEvents[component]) subEvents[component] = [];
-				if (subEvents[component].indexOf(eventName) === -1) subEvents[component].push(eventName);
-
-			} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
-				eventName = name.slice(1);
-				if (events.indexOf(eventName === -1)) events.push(eventName);
-				cls.__mixin__(eventName, function(self) {
-					self.fireEvent(eventName);
-				});
-			}
-		}
-	});
-};
-
-/**
  * UI模块基类，所有UI组件的基本类
  * @class
  * @name ui.Component
@@ -264,7 +220,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 	this.initialize = function(self, node, options) {
 		if (!options) options = {};
-		self._rendered = []; // render过的成员
+		self._rendered = []; // render过的subComponent
 		self._subOptions = self.__parseOptions(options);
 		var propertyNames = Class.getPropertyNames(self);
 
@@ -293,18 +249,27 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 		self._node = dom.wrap(node);
 
-		// 加入 _eventType 方法定义的事件
+		self.__initEvents();
+		self.__initOptions(options);
+		self.__initSubs();
+	};
+
+	/**
+	 * 加入 _eventType 方法定义的事件
+	 */
+	this.__initEvents = function(self) {
 		self._events.forEach(function(eventType) {
 			self.addEvent(eventType, function() {
-				var args = Array.prototype.slice.call(arguments, 0);
-				self['_' + eventType].apply(self, args);
+				self['_' + eventType].apply(self, arguments);
 			});
 		});
+	};
 
+	this.__initOptions = function(self, options) {
 		self._optionNames.forEach(function(name) {
 			var value = self.get(name);
 			// 从dom获取配置
-			var data = node.getData(name.toLowerCase());
+			var data = self._node.getData(name.toLowerCase());
 			if (data) {
 				var defaultValue = self.get(name);
 				value = getConstructor(typeof defaultValue)(data);
@@ -317,10 +282,70 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				self.__setOption(name, value);
 			}
 		});
+	};
 
-		Object.keys(self._subComponents).forEach(function(name) {
-			self._set(name, self.get(name));
+	this.__initSubs = function(self) {
+		Object.keys(self._subs).forEach(function(name) {
+			var sub = self._subs[name];
+			var node;
+
+			if (sub.single) {
+				node = self._node.getElement(sub.selector);
+			} else {
+				node = self._node.getElements(sub.selector);
+			}
+
+			self.__initSub(name, node);
 		});
+	};
+
+	/**
+	 * 根据sub的定义获取component的引用
+	 */
+	this.__initSub = function(self, name, nodes) {
+		if (!self._node) return null;
+
+		var sub = self._subs[name];
+		var comps;
+
+		if (sub.single) {
+			if (nodes) {
+				comps = new sub.type(nodes, self._subOptions[name]);
+				self.__fillSub(name, comps);
+			}
+		} else {
+			if (nodes) {
+				comps = new exports.Components(nodes, sub.type, self._subOptions[name]);
+				comps.forEach(function(comp) {
+					self.__fillSub(name, comp);
+				});
+			} else {
+				// 没有的也留下一个空的Components
+				comps = new exports.Components([], sub.type);
+			}
+		}
+
+		self['_' + name] = nodes;
+		self._set(name, comps);
+
+		return comps;
+	};
+
+	/**
+	 * 将一个comp的信息注册到_subs上
+	 */
+	this.__fillSub = function(self, name, comp) {
+		var sub = self._subs[name];
+		var node = comp._node;
+		sub.nodeMap[String(node.uid)] = comp;
+		sub.refs.push(comp);
+		self.__addEventTo(name, node);
+	};
+
+	this.__unfillSub = function(self, name) {
+		var sub = self._subs[name];
+		sub.nodeMap = {};
+		sub.refs = [];
 	};
 
 	this.__setOption = function(self, name, value) {
@@ -336,35 +361,11 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		events.forEach(function(eventType) {
 			node.addEvent(eventType, function() {
 				var args = Array.prototype.slice.call(arguments, 0);
-				var comp = self._subComponents[name].nodeMap[String(node.uid)];
-				args.push(comp);
+				var comp = self._subs[name].nodeMap[String(node.uid)];
+				args.push(comp); // 最后一个参数为component
 				self[name + '_' + eventType].apply(self, args);
 			});
 		});
-	};
-
-	/**
-	 * 根据节点初始化一个component，并放到相应的引用上去。
-	 */
-	this.__registerComponent = function(self, name, node, options) {
-		var sub = self._subComponents[name];
-		var type = sub.type;
-		var single = sub.single;
-		var pname = '_' + name;
-
-		var comp = new type(node, options);
-
-		if (single) {
-			self[name] = comp;
-			self[pname] = node;
-		} else {
-			self[name].push(comp);
-			self[pname].push(node);
-		}
-		self.__addEventTo(name, node);
-		self._rendered.push(name);
-
-		return comp;
 	};
 
 	/**
@@ -399,38 +400,42 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	 */
 	this.render = function(self, name, data) {
 
+		var sub = self._subs[name];
 		var methodName = 'render' + string.capitalize(name);
-		var sub = self._subComponents[name];
 
 		// 如果已经存在结构了，则不用再render了
-		if (sub.single && self[name]) return;
-		if (!sub.single && self[name].length) return;
+		// 没有render方法，则返回
+		if (sub.refs.length || !self[methodName]) {
+			return;
+		}
 
-		var type = sub.type;
-		if (!self[methodName]) return;
-		var result = self[methodName](data);
+		var nodes = self[methodName](data);
 
 		// 如果有返回结果，说明没有使用self.make，而是自己生成了需要的普通node元素，则对返回结果进行一次包装
-		if (result) {
-			if (Array.isArray(result)) {
-				result.forEach(function(node) {
-					self.__registerComponent(name, node);
-				});
+		if (nodes) {
+			var sub = self._subs[name];
+
+			if (sub.single) {
+				if (Array.isArray(nodes)) throw '这是一个唯一引用元素，请不要返回一个数组';
 			} else {
-				self.__registerComponent(name, result);
+				if (!Array.isArray(nodes)) throw '这是一个多引用元素，请返回一个数组';
+				nodes = new dom.Elements(nodes);
 			}
+
+			self.__initSub(name, nodes);
+
 		}
+
+		self._rendered.push(name);
 	};
 
 	/**
-	* 根据subComponents的type创建一个component，这一般是在renderXXX方法中进行调用
+	* 根据subs的type创建一个component，并加入到引用中，这一般是在renderXXX方法中进行调用
 	* @param name
 	* @param data 模板数据
 	*/
 	this.make = function(self, name, data) {
-		var sub = self._subComponents[name];
-		var type = sub.type;
-		var single = sub.single;
+		var sub = self._subs[name];
 		var pname = '_' + name;
 		var options = {};
 		var extendOptions = self._subOptions[name];
@@ -442,36 +447,30 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			});
 		}
 
-		var comp = new type({
+		var comp = new sub.type({
 			template: sub.template,
 			section: sub.section
 		}, options);
 		var node = comp._node;
 
-		if (single) {
+		if (sub.single) {
 			self[name] = comp;
 			self[pname] = node;
 		} else {
 			self[name].push(comp);
 			self[pname].push(node);
 		}
-		self.__addEventTo(name, node);
-		self._rendered.push(name);
+		self.__fillSub(name, comp);
 
 		return comp;
 	};
-
-	this.call = classmethod(function(cls, name, self) {
-		if (!cls[name]) throw 'no method named ' + name;
-		cls[name].apply(cls, [].slice.call(arguments, 2));
-	});
 
 	/**
 	 * 设置subcomponent的template
 	 */
 	this.setTemplate = function(self, name, template, section) {
-		self._subComponents[name].template = template;
-		self._subComponents[name].section = section;
+		self._subs[name].template = template;
+		self._subs[name].section = section;
 	};
 
 	/**
@@ -496,10 +495,10 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	this.reset = fireevent(function(self) {
 		// 清空所有render进来的新元素
 		self._rendered.forEach(function(name) {
-			var single = self._subComponents[name].single;
+			var sub = self._subs[name];
 			var pname = '_' + name;
 			if (self[name]) {
-				if (single) {
+				if (sub.single) {
 					self[pname].dispose();
 					self[name] = null;
 					self[pname] = null;
@@ -507,27 +506,22 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 					self[pname].forEach(function(node) {
 						node.dispose();
 					});
-					while(self[name].length) {
+					while (self[name].length) {
 						self[name].shift();
 					}
-					while(self[pname].length) {
+					while (self[pname].length) {
 						self[pname].shift();
 					}
 				}
+
+				self.__unfillSub(name);
 			}
 		});
 		// 所有子component reset
-		Object.keys(self._subComponents).forEach(function(name) {
-			var single = self._subComponents[name].single;
-			if (single) {
-				if (self[name] && self[name].reset) self[name].reset();
-			} else {
-				if (self[name]) {
-					self[name].forEach(function(comp) {
-						comp.reset();
-					});
-				}
-			}
+		Object.keys(self._subs).forEach(function(name) {
+			self._subs[name].refs.forEach(function(comp) {
+				comp.reset();
+			});
 		});
 	});
 
@@ -544,5 +538,3 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 });
 
 });
-
-
