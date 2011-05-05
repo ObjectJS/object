@@ -352,8 +352,8 @@ var getAllSubClasses = function(cls, array) {
 
 /**
  * 动态mixin的方法。可以通过任意class的mixin调用
- * MyClass.mixin(name, value);
- * MyClass.mixin({name1: value1, name2: value2})
+ * MyClass.__mixin__(name, value);
+ * MyClass.__mixin__({name1: value1, name2: value2})
  * 会被放到 cls.__mixin__
  */
 var mixiner = overloadSetter(function(name, member) {

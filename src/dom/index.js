@@ -649,13 +649,52 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 });
 
+this.ImageElement = new Class(Element, function() {
+
+	var _supportNatural = 'naturalWidth' in document.createElement('img');
+
+	function _getNaturalSize(img) {
+		var style = img.runtimeStyle;
+		var old = {
+			w: style.width,
+			h: style.height
+		}; //保存原来的尺寸
+		style.width = style.height = "auto"; //重写
+		var w = img.width; //取得现在的尺寸
+		var h = img.height;
+		style.width  = old.w; //还原
+		style.height = old.h;
+		return {
+			width: w,
+			height: h
+		}
+	};
+
+	this.naturalWidth = property(function(self) {
+		if (_supportNatural) {
+			return self.naturalWidth;
+		} else {
+			return _getNaturalSize(self).width;
+		}
+	});
+
+	this.naturalHeight = property(function(self) {
+		if (_supportNatural) {
+			return self.naturalHeight;
+		} else {
+			return _getNaturalSize(self).height;
+		}
+	});
+
+});
+
 /**
  * 表单
  * @class
  * @name dom.FormElement
  * @extends dom.Element
  */
-var FormElement = this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
+this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 
 	this.initialize = function(self) {
 		Element.initialize(self);
@@ -725,7 +764,7 @@ var FormElement = this.FormElement = new Class(Element, /**@lends dom.FormElemen
  * @name dom.FormItemElement
  * @extends dom.Element
  */
-var FormItemElement = this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ function() {
+this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ function() {
 
 	var _needBindPlaceholder = (function() {
 		return !('placeholder' in document.createElement('input'));
@@ -1022,13 +1061,14 @@ var Elements = this.Elements = new Class(Array, /**@lends dom.Elements*/ functio
 });
 
 var _tagMap = {
-	'FORM': FormElement,
-	'INPUT': FormItemElement,
-	'TEXTAREA': FormItemElement,
-	'OUTPUT': FormItemElement,
-	'SELECT': FormItemElement,
-	'OPTION': FormItemElement,
-	'BUTTON': FormItemElement
+	'IMG': exports.ImageElement,
+	'FORM': exports.FormElement,
+	'INPUT': exports.FormItemElement,
+	'TEXTAREA': exports.FormItemElement,
+	'OUTPUT': exports.FormItemElement,
+	'SELECT': exports.FormItemElement,
+	'OPTION': exports.FormItemElement,
+	'BUTTON': exports.FormItemElement
 };
 
 // 根据ele的tagName返回他所需要的wrapper class
