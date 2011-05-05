@@ -105,6 +105,7 @@ this.ComponentClass = function(cls, name, base, members) {
 	cls.__mixin__({
 		_optionNames : [],
 		_subs : subs,
+		_subComponents : subComponents,
 		_subEvents: subEvents,
 		_events : events
 	});
