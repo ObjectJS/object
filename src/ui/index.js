@@ -118,7 +118,7 @@ this.ComponentClass = function(cls, name, base, members) {
 					type: member.type || exports.Component,
 					single: member.single,
 					nodeMap: {}, // 相应node的uid对应component，用于在需要通过node找到component时使用
-					refs: []
+					rendered: [] // 后来被加入的，而不是首次通过selector选择的node的引用
 				};
 			} else {
 				cls._optionNames.push(name);
@@ -220,7 +220,6 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 	this.initialize = function(self, node, options) {
 		if (!options) options = {};
-		self._rendered = []; // render过的subComponent
 		self._subOptions = self.__parseOptions(options);
 		var propertyNames = Class.getPropertyNames(self);
 
@@ -338,14 +337,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		var sub = self._subs[name];
 		var node = comp._node;
 		sub.nodeMap[String(node.uid)] = comp;
-		sub.refs.push(comp);
 		self.__addEventTo(name, node);
-	};
-
-	this.__unfillSub = function(self, name) {
-		var sub = self._subs[name];
-		sub.nodeMap = {};
-		sub.refs = [];
 	};
 
 	this.__setOption = function(self, name, value) {
@@ -393,6 +385,14 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		return parsed;
 	});
 
+	this.__hasRefs = function(self, name) {
+		if (self._subs[name].single) {
+			return !!self[name];
+		} else {
+			return !!self[name].length;
+		}
+	};
+
 	/**
 	 * 渲染一组subcomponent
 	 * @param name subcomponent名字
@@ -405,7 +405,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 		// 如果已经存在结构了，则不用再render了
 		// 没有render方法，则返回
-		if (sub.refs.length || !self[methodName]) {
+		if (self.__hasRefs(name) || !self[methodName]) {
 			return;
 		}
 
@@ -417,16 +417,15 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 			if (sub.single) {
 				if (Array.isArray(nodes)) throw '这是一个唯一引用元素，请不要返回一个数组';
+				sub.rendered.push(nodes);
 			} else {
 				if (!Array.isArray(nodes)) throw '这是一个多引用元素，请返回一个数组';
 				nodes = new dom.Elements(nodes);
+				sub.rendered = sub.rendered.concat(nodes);
 			}
 
 			self.__initSub(name, nodes);
-
 		}
-
-		self._rendered.push(name);
 	};
 
 	/**
@@ -461,6 +460,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			self[pname].push(node);
 		}
 		self.__fillSub(name, comp);
+		sub.rendered.push(node);
 
 		return comp;
 	};
@@ -494,34 +494,27 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	 */
 	this.reset = fireevent(function(self) {
 		// 清空所有render进来的新元素
-		self._rendered.forEach(function(name) {
+		Object.keys(self._subs).forEach(function(name) {
 			var sub = self._subs[name];
 			var pname = '_' + name;
-			if (self[name]) {
+			sub.rendered.forEach(function(node) {
+				var comp = sub.nodeMap[node.uid];
+				delete sub.nodeMap[node.uid];
+				node.dispose();
 				if (sub.single) {
-					self[pname].dispose();
-					self[name] = null;
-					self[pname] = null;
+					self[name] = self[pname] = null;
 				} else {
-					self[pname].forEach(function(node) {
-						node.dispose();
-					});
-					while (self[name].length) {
-						self[name].shift();
-					}
-					while (self[pname].length) {
-						self[pname].shift();
-					}
+					self[name].splice(self[name].indexOf(comp), 1); // 去掉
+					self[pname].splice(self[pname].indexOf(node), 1); // 去掉
 				}
-
-				self.__unfillSub(name);
-			}
-		});
-		// 所有子component reset
-		Object.keys(self._subs).forEach(function(name) {
-			self._subs[name].refs.forEach(function(comp) {
-				comp.reset();
 			});
+			if (!sub.single) {
+				self[name].forEach(function(comp) {
+					comp.reset();
+				});
+			} else if (self[name]) {
+				self[name].reset();
+			}
 		});
 	});
 
