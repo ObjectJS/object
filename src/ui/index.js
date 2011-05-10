@@ -385,14 +385,6 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		return parsed;
 	});
 
-	this.__hasRefs = function(self, name) {
-		if (self._subs[name].single) {
-			return !!self[name];
-		} else {
-			return !!self[name].length;
-		}
-	};
-
 	/**
 	 * 渲染一组subcomponent
 	 * @param name subcomponent名字
@@ -402,19 +394,25 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 		var sub = self._subs[name];
 		var methodName = 'render' + string.capitalize(name);
+		var method2Name = name + 'Render';
+		var nodes;
 
 		// 如果已经存在结构了，则不用再render了
 		// 没有render方法，则返回
-		if (self.__hasRefs(name) || !self[methodName]) {
+		if (!!(sub.single? self[name] : self[name].length) || (!self[methodName] && !self[method2Name])) {
 			return;
 		}
 
-		var nodes = self[methodName](data);
+		if (self[method2Name]) {
+			nodes = self[method2Name](function() {
+				return self.make(name, data);
+			});
+		} else {
+			nodes = self[methodName](data);
+		}
 
 		// 如果有返回结果，说明没有使用self.make，而是自己生成了需要的普通node元素，则对返回结果进行一次包装
 		if (nodes) {
-			var sub = self._subs[name];
-
 			if (sub.single) {
 				if (Array.isArray(nodes)) throw '这是一个唯一引用元素，请不要返回一个数组';
 				sub.rendered.push(nodes);
