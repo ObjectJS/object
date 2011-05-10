@@ -102,8 +102,13 @@ this.ComponentClass = function(cls, name, base, members) {
 		});
 	}
 
+	var optionNames = [];
+	if (base && base._optionNames) {
+		optionNames = base._optionNames.slice(0);
+	}
+
 	cls.__mixin__({
-		_optionNames : [],
+		_optionNames : optionNames,
 		_subs : subs,
 		_subEvents: subEvents,
 		_events : events
