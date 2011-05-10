@@ -172,12 +172,17 @@ String.prototype.trim = String.prototype.trim || function() {
 	return this.replace(/(^\s*)|(\s*$)/g, '');
 };
 
-Function.prototype.bind = Function.prototype.bind || function(object) {
-	var method = this;
-	return function() {
-		method.apply(object, arguments); 
+/**
+* 有些老页面引用了js/compact.js，其中有一个错误的Function.prototype.bind
+*/
+if (!Function.prototype.bind || Function.prototype.bind === window.__hualuOldBind) {
+	Function.prototype.bind = function(object) {
+		var method = this;
+		return function() {
+			method.apply(object, arguments); 
+		};
 	};
-};
+}
 
 // 获取function的name
 // 判断function TEST() 是否能取到name属性来选择不同的算法函数
