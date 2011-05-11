@@ -2,7 +2,7 @@
  * @namespace
  * @name ui
  */
-object.add('ui', 'string, dom, ui.decorators', /**@lends ui*/ function(exports, string, dom, ui) {
+object.add('ui', 'string, options, dom, ui.decorators', /**@lends ui*/ function(exports, string, options, dom, ui) {
 
 var fireevent = ui.decorators.fireevent;
 
@@ -102,13 +102,15 @@ this.ComponentClass = function(cls, name, base, members) {
 		});
 	}
 
-	var optionNames = [];
-	if (base && base._optionNames) {
-		optionNames = base._optionNames.slice(0);
+	var defaultOptions = {};
+	if (base && base._defaultOptions) {
+		Object.keys(base._defaultOptions).forEach(function(name) {
+			defaultOptions[name] = base._defaultOptions[name];
+		});
 	}
 
 	cls.__mixin__({
-		_optionNames : optionNames,
+		_defaultOptions : defaultOptions,
 		_subs : subs,
 		_subEvents: subEvents,
 		_events : events
@@ -126,7 +128,7 @@ this.ComponentClass = function(cls, name, base, members) {
 					rendered: [] // 后来被加入的，而不是首次通过selector选择的node的引用
 				};
 			} else {
-				cls._optionNames.push(name);
+				cls._defaultOptions[name] = member.defaultValue;
 			}
 		} else if (typeof member == 'function') {
 			var match = name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/);
@@ -184,25 +186,16 @@ this.define1 = function(selector, type) {
  * });
  * 这样MyComponent实例的myConfig属性值即为默认值1，可通过 set 方法修改
  */
-this.option = function(value, onchange) {
+this.option = function(defaultValue) {
 	var prop;
 	function fget(self) {
-		var pname = '_' + prop.__name__;
-		if (self[pname] === undefined) {
-			self[pname] = value;
-		}
-		return self[pname];
+		return self.getOption(prop.__name__);
 	}
 	function fset(self, value) {
-		var name = prop.__name__;
-		var pname = '_' + name;
-		var methodName = name + 'Change';
-		self.__setOption(name, value);
-		if (onchange) onchange(self, value);
-		if (self[methodName]) self[methodName](value);
-		return self[pname];
+		return self.setOption(prop.__name__, value);
 	}
 	prop = property(fget, fset);
+	prop.defaultValue = defaultValue;
 	return prop;
 };
 
@@ -225,8 +218,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 	this.initialize = function(self, node, options) {
 		if (!options) options = {};
-		self._subOptions = self.__parseOptions(options);
-		var propertyNames = Class.getPropertyNames(self);
+		self.__initSubOptions(options);
 
 		if (!node.nodeType) {
 			if (typeof node == 'string') {
@@ -235,7 +227,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				};
 			}
 			var data = {};
-			self._optionNames.forEach(function(key) {
+			Object.keys(self._defaultOptions).forEach(function(key) {
 				if (options[key] === undefined) data[key] = self.get(key);
 			});
 			extend(data, options);
@@ -270,12 +262,13 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	};
 
 	this.__initOptions = function(self, options) {
-		self._optionNames.forEach(function(name) {
-			var value = self.get(name);
+		Object.keys(self._defaultOptions).forEach(function(name) {
 			// 从dom获取配置
-			var data = self._node.getData(name.toLowerCase());
+			var data = self._node.getData(name.toLowerCase()),
+			defaultValue = self._defaultOptions[name],
+			value;
+
 			if (data) {
-				var defaultValue = self.get(name);
 				value = getConstructor(typeof defaultValue)(data);
 				self.__setOption(name, value);
 			// 从options参数获取配置
@@ -283,7 +276,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				self.__setOption(name, options[name]);
 			// 默认配置
 			} else {
-				self.__setOption(name, value);
+				self.__setOption(name, defaultValue);
 			}
 		});
 	};
@@ -345,6 +338,27 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		self.__addEventTo(name, node);
 	};
 
+	this.getOption = function(self, name) {
+		var pname = '_' + name;
+		if (self[pname] === undefined) {
+			self[pname] = self._defaultOptions[name];
+		}
+		return self[pname];
+	};
+
+	/**
+	 */
+	this.setOption = options.overloadsetter(function(self, name, value) {
+		if (name.indexOf('.') !== -1) {
+			self.__addSubOption(name, value);
+		} else {
+			var pname = '_' + name;
+			var methodName = name + 'Change';
+			self.__setOption(name, value);
+			if (self[methodName]) self[methodName](value);
+		}
+	});
+
 	this.__setOption = function(self, name, value) {
 		var pname = '_' + name;
 		self[pname] = value;
@@ -366,29 +380,36 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	};
 
 	/**
-	 * 解析options为对象
+	 * 向_subOptions生成一个option
 	 * {'a.b.c': 1, b: 2} ==> {a: {b: {c:1}}, b: 2}
 	 */
-	this.__parseOptions = staticmethod(function(options) {
-		if (options.PARSED) {
-			return options;
-		}
-
-		var parsed = {PARSED: true};
-		Object.keys(options).forEach(function(name) {
-			var parts = name.split('.');
-			var current = parsed;
-			for (var i = 0, part; i < parts.length - 1; i++) {
-				part = parts[i];
-				if (current[part] === undefined) {
-					current[part] = {PARSED: true};
-				}
-				current = current[part];
+	this.__addSubOption = function(self, name, value) {
+		var current = self._subOptions;
+		var parts = name.split('.');
+		// 生成前缀对象
+		for (var i = 0, part; i < parts.length - 1; i++) {
+			part = parts[i];
+			if (current[part] === undefined) {
+				current[part] = {PARSED: true};
 			}
-			current[parts[parts.length - 1]] = options[name];
-		});
-		return parsed;
-	});
+			current = current[part];
+		}
+		current[parts[parts.length - 1]] = value;
+	};
+
+	/**
+	 * 初始化 subOptions
+	 */
+	this.__initSubOptions = function(self, options) {
+		if (!options.PARSED) {
+			self._subOptions = {PARSED: true};
+			Object.keys(options).forEach(function(name) {
+				self.__addSubOption(name, options[name]);
+			});
+		} else {
+			self._subOptions = options;
+		}
+	};
 
 	/**
 	 * 渲染一组subcomponent
