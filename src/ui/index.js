@@ -349,14 +349,12 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	/**
 	 */
 	this.setOption = options.overloadsetter(function(self, name, value) {
-		var parts = name.split('.');
-		if (parts.length) {
-			self.__addSubOption(parts, value);
-			//if (parts.length === 2) {
-				//if (self[parts[0]]) {
-					//self[parts[0]].setOption(parts[1], value);
-				//}
-			//}
+		var parts = Array.isArray(name)? name : name.split('.');
+		if (parts.length > 1) {
+			self.__setSubOption(parts, value);
+			if (self[parts[0]]) {
+				self[parts[0]].setOption(parts.slice(1), value);
+			}
 		} else {
 			var pname = '_' + name;
 			var methodName = name + 'Change';
@@ -389,7 +387,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	 * 向_subOptions生成一个option
 	 * {'a.b.c': 1, b: 2} ==> {a: {b: {c:1}}, b: 2}
 	 */
-	this.__addSubOption = function(self, name, value) {
+	this.__setSubOption = function(self, name, value) {
 		var current = self._subOptions;
 		var parts = Array.isArray(name)? name : name.split('.');
 		// 生成前缀对象
@@ -410,7 +408,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		if (!options.PARSED) {
 			self._subOptions = {PARSED: true};
 			Object.keys(options).forEach(function(name) {
-				self.__addSubOption(name, options[name]);
+				self.__setSubOption(name, options[name]);
 			});
 		} else {
 			self._subOptions = options;
