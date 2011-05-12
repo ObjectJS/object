@@ -349,8 +349,14 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	/**
 	 */
 	this.setOption = options.overloadsetter(function(self, name, value) {
-		if (name.indexOf('.') !== -1) {
-			self.__addSubOption(name, value);
+		var parts = name.split('.');
+		if (parts.length) {
+			self.__addSubOption(parts, value);
+			//if (parts.length === 2) {
+				//if (self[parts[0]]) {
+					//self[parts[0]].setOption(parts[1], value);
+				//}
+			//}
 		} else {
 			var pname = '_' + name;
 			var methodName = name + 'Change';
@@ -385,7 +391,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	 */
 	this.__addSubOption = function(self, name, value) {
 		var current = self._subOptions;
-		var parts = name.split('.');
+		var parts = Array.isArray(name)? name : name.split('.');
 		// 生成前缀对象
 		for (var i = 0, part; i < parts.length - 1; i++) {
 			part = parts[i];
