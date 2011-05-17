@@ -1,5 +1,4 @@
 <package url="http://svn.d.xiaonei.com/frontend/static/object/">
-
 	<source dir="src">
 		<combine path="object-all.js">
 			<include path="../lib/slick/Slick.Parser.js" />
