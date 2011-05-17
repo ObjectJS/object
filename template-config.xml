@@ -19,4 +19,5 @@
 			<include path="validator.js" />
 		</combine>
 	</source>
+
 </package>
