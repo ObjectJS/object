@@ -1,5 +1,9 @@
 <package url="http://svn.d.xiaonei.com/frontend/static/object/">
 
+	<library dir="lib">
+		<folder name="html5-history" url="http://objectjs.org/html5-history" />
+	</library>
+
 	<source dir="src">
 		<combine path="object-all.js">
 			<include path="../lib/slick/Slick.Parser.js" />
