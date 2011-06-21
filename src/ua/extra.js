@@ -32,7 +32,7 @@ if (uamodule) {
 		}catch(e){
 			return null;
 		}
-	};
+	}; 
 	
 	if (m = ua.match(/360SE/) || (getExternal('twGetRunPath') && window.external.twGetRunPath().indexOf('360se.exe') != -1)) {
 		o[shell = 'se360'] = 3; // issue: 360Browser 2.x cannot be recognised, so if recognised default set verstion number to 3
