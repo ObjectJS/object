@@ -25,11 +25,20 @@ if (uamodule) {
 	 */
 
 	// 360Browser
-	if (m = ua.match(/360SE/) || (window.external.twGetRunPath && window.external.twGetRunPath().indexOf('360se.exe') != -1)) {
+	
+	var getExternal = function(key){
+		try{
+			return window.external[key];
+		}catch(e){
+			return null;
+		}
+	};
+	
+	if (m = ua.match(/360SE/) || (getExternal('twGetRunPath') && window.external.twGetRunPath().indexOf('360se.exe') != -1)) {
 		o[shell = 'se360'] = 3; // issue: 360Browser 2.x cannot be recognised, so if recognised default set verstion number to 3
 	}
 	// Maxthon
-	else if (m = ua.match(/Maxthon/) || window.external.max_version) {
+	else if (m = ua.match(/Maxthon/) || getExternal('max_version')) {
 		// issue: Maxthon 3.x in IE-Core cannot be recognised and it doesn't have exact version number
 		// but other maxthon versions all have exact version number
 		shell = 'maxthon';
