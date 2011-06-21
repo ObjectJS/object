@@ -2,7 +2,7 @@
  * @namespace
  * @name ua.extra
  */
-object.add('ua.extra', 'sys', function(exports) {
+object.add('ua.extra', 'sys', function(exports, sys) {
 
 var uamodule = sys.modules['ua'];
 
@@ -12,7 +12,7 @@ if (uamodule) {
 
 	var UA = uamodule.ua,
 		ua = navigator.userAgent,
-		m, external, shell,
+		m, shell,
 		o = { },
 		numberify = UA._numberify;
 
@@ -25,16 +25,16 @@ if (uamodule) {
 	 */
 
 	// 360Browser
-	if (m = ua.match(/360SE/)) {
+	if (m = ua.match(/360SE/) || (window.external.twGetRunPath && window.external.twGetRunPath().indexOf('360se.exe') != -1)) {
 		o[shell = 'se360'] = 3; // issue: 360Browser 2.x cannot be recognised, so if recognised default set verstion number to 3
 	}
 	// Maxthon
-	else if ((m = ua.match(/Maxthon/)) && (external = window.external)) {
+	else if (m = ua.match(/Maxthon/) || window.external.max_version) {
 		// issue: Maxthon 3.x in IE-Core cannot be recognised and it doesn't have exact version number
 		// but other maxthon versions all have exact version number
 		shell = 'maxthon';
 		try {
-			o[shell] = numberify(external['max_version']);
+			o[shell] = numberify(window.external['max_version']);
 		} catch(ex) {
 			o[shell] = 0.1;
 		}
@@ -51,6 +51,11 @@ if (uamodule) {
 	else if (m = ua.match(/SE\s([\d.]*)/)) {
 		o[shell = 'sougou'] = m[1] ? numberify(m[1]) : 0.1;
 	}
+	// QQBrowser
+	else if (m = ua.match(/QQBrowser.([\d.]*)/)) {
+		o[shell = 'qqbrowser'] = m[1] ? numberify(m[1]) : 0.1;
+	}
+
 
 	// If the browser has shell(no matter IE-core or Webkit-core or others), set the shell key
 	shell && (o.shell = shell);
