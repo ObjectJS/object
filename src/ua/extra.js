@@ -4,7 +4,6 @@
  */
 object.add('ua.extra', 'sys', function(exports, sys) {
 
-
 var uamodule = sys.modules['ua'];
 
 if (uamodule) {
