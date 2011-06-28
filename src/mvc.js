@@ -4,6 +4,7 @@
  */
 object.add('mvc', 'events', /**@lends mvc*/ function(exports, events) {
 
+
 /**
  * MVC Action 基类
  * @class
