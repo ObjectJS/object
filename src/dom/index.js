@@ -736,16 +736,29 @@ this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 	 */
 	this.toQueryString = function(self) {
 		var queryString = [];
+
+		function addItem(name, value) {
+			if (typeof value != 'undefined') queryString.push(encodeURIComponent(name) + '=' + encodeURIComponent(value));
+		}
+
 		self.getElements('input, select, textarea, output').forEach(function(el) {
 			var type = el.type;
 			if (!el.name || el.disabled || type == 'submit' || type == 'reset' || type == 'file' || type == 'image') return;
 
-			var value = (el.tagName.toLowerCase() == 'select') ? el.getSelected().map(function(opt) {
-				// IE
-				return wrap(opt).get('value');
-			}) : ((type == 'radio' || type == 'checkbox') && !el.checked) ? null : el.get('value');
+			if (el.tagName.toLowerCase() == 'select') {
+				el.getSelected().map(function(opt) {
+					// IE
+					var value = wrap(opt).get('value');
+					addItem(el.name, value);
+				});
+			} else if (type == 'radio' || type == 'checkbox') {
+				if (el.checked) {
+					addItem(el.name, el.get('value'));
+				}
+			} else {
+				addItem(el.name, el.get('value'));
+			}
 
-			if (typeof value != 'undefined') queryString.push(encodeURIComponent(el.name) + '=' + encodeURIComponent(value));
 		});
 		return queryString.join('&');
 	};

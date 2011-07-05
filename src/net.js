@@ -91,9 +91,15 @@ this.Request = new Class(function() {
 
 				if (xhr.readyState === 4) {
 
+					// IE6 dont's support getResponseHeader method
+					//if (xhr.getResponseHeader('Content-Type') == 'text/json') {
+						//xhr.responseJSON = JSON.parse(xhr.responseText)
+					//}
+
 					// Compatible
 					eventData.responseText = xhr.responseText;
 					eventData.responseXML = xhr.responseXML;
+					//eventData.responseJSON = xhr.responseJSON;
 
 					if (xhr.status === undefined || xhr.status === 0 || (xhr.status >= 200 && xhr.status < 300)) {
 						self.fireEvent('success', eventData);
