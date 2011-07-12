@@ -1,5 +1,4 @@
-<package url="http://objectjs.org/object">
-
+<package id="object" url="http://objectjs.org/object">
 
 	<library dir="lib">
 	</library>
