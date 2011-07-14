@@ -50,21 +50,23 @@
 				
 					<li><a href="../symbols/dom.Elements.html">dom<span class='break'> </span>.<span class='break'> </span>Elements</a></li>
 				
-					<li><a href="../symbols/dom.event.html">dom<span class='break'> </span>.<span class='break'> </span>event</a></li>
-				
 					<li><a href="../symbols/dom.FormElement.html">dom<span class='break'> </span>.<span class='break'> </span>FormElement</a></li>
 				
 					<li><a href="../symbols/dom.FormItemElement.html">dom<span class='break'> </span>.<span class='break'> </span>FormItemElement</a></li>
 				
 					<li><a href="../symbols/dom.Window.html">dom<span class='break'> </span>.<span class='break'> </span>Window</a></li>
 				
+					<li><a href="../symbols/events.html">events</a></li>
+				
+					<li><a href="../symbols/Function.html">Function</a></li>
+				
 					<li><a href="../symbols/mvc.html">mvc</a></li>
 				
 					<li><a href="../symbols/net.html">net</a></li>
 				
-					<li><a href="../symbols/Object.html">Object</a></li>
-				
 					<li><a href="../symbols/object.html">object</a></li>
+				
+					<li><a href="../symbols/Object.html">Object</a></li>
 				
 					<li><a href="../symbols/object.Loader.html">object<span class='break'> </span>.<span class='break'> </span>Loader</a></li>
 				
@@ -88,7 +90,9 @@
 				
 					<li><a href="../symbols/ui.decorators.html">ui<span class='break'> </span>.<span class='break'> </span>decorators</a></li>
 				
-					<li><a href="../symbols/ui.ForeNextControl.html">ui<span class='break'> </span>.<span class='break'> </span>ForeNextControl</a></li>
+					<li><a href="../symbols/ui.nav.html">ui<span class='break'> </span>.<span class='break'> </span>nav</a></li>
+				
+					<li><a href="../symbols/ui.nav.ForeNextControl.html">ui<span class='break'> </span>.<span class='break'> </span>nav<span class='break'> </span>.<span class='break'> </span>ForeNextControl</a></li>
 				
 					<li><a href="../symbols/uiold.html">uiold</a></li>
 				
@@ -107,7 +111,7 @@
 		
 		Documentation generator: <a href="http://code.google.com/p/jsdoc-toolkit/" target="_blank">JsDoc Toolkit</a> 2.4.0<br />
 		Template: <a href="http://www.thebrightlines.com/2010/05/06/new-template-for-jsdoctoolkit-codeview/" target="_blank">Codeview</a> 1.2<br />
-		Generated on: 2011-1-28 16:11
+		Generated on: 2011-6-14 18:33
 	</div>
 </div>
 
@@ -130,7 +134,7 @@
 					
 					
 					
-						<li>Defined in: <a href="../symbols/src/d__works_renren_static_object_trunk_src__ui_index.js.html">index.js</a></li>
+						<li>Defined in: <a href="../symbols/src/d__works_workspace_objectjs.org_object_src__ui_index.js.html">index.js</a></li>
 					
 						
 				</ul>
@@ -154,7 +158,7 @@
 								<div class="fixedFont">
 									<b><a href="../symbols/ui.Component.html#constructor">ui.Component</a></b>()
 								</div>
-								<div class="description">UI模块基类</div>
+								<div class="description">UI模块基类，所有UI组件的基本类</div>
 							</td>
 						</tr>
 					</tbody>
@@ -208,6 +212,16 @@
 									</td>
 								</tr>
 							
+								<tr>
+									<td class="attributes">&nbsp;</td>
+									<td class="nameDescription">
+										<div class="fixedFont">
+										<b><a href="../symbols/ui.Component.html#setOption">setOption</a></b>
+										</div>
+										<div class="description"></div>
+									</td>
+								</tr>
+							
 						</tbody>
 					</table>
 				</div>
@@ -252,7 +266,7 @@
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/ui.Component.html#initialize">initialize</a></b>(self, node, options)
+										<div class="fixedFont"><b><a href="../symbols/ui.Component.html#getOption">getOption</a></b>(self, name)
 										</div>
 										<div class="description"></div>
 									</td>
@@ -263,14 +277,25 @@
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/ui.Component.html#make">make</a></b>(name, data, data)
+										<div class="fixedFont"><b><a href="../symbols/ui.Component.html#initialize">initialize</a></b>(self, node, options)
 										</div>
-										<div class="description">根据descriptors的type创建一个component，这一般是在renderXXX方法中进行调用</div>
+										<div class="description"></div>
 									</td>
 								</tr>
 							
 								<tr
 									 class='item3'
+								>
+									<td class="attributes">&nbsp;</td>
+									<td class="nameDescription">
+										<div class="fixedFont"><b><a href="../symbols/ui.Component.html#make">make</a></b>(name, data, data)
+										</div>
+										<div class="description">根据subs的type创建一个component，并加入到引用中，这一般是在renderXXX方法中进行调用</div>
+									</td>
+								</tr>
+							
+								<tr
+									 class='item4'
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
@@ -281,7 +306,7 @@
 								</tr>
 							
 								<tr
-									 class='item4'
+									 class='item5'
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
@@ -318,7 +343,7 @@
 					</div>
 					
 					<div class="description">
-						UI模块基类
+						UI模块基类，所有UI组件的基本类
 						
 					</div>
 					
@@ -405,6 +430,28 @@
 						
 							
 						
+						<div class="hr"></div>
+					
+						<div class="fixedFont heading" id="setOption">
+							<span class='lighter'>
+							
+							</span>
+							
+							
+							
+							<b>setOption</b>							
+						</div>
+						
+						<div class="description">
+							
+							
+							
+							
+						</div>
+						
+						
+							
+						
 						
 					
 				</div>
@@ -466,6 +513,52 @@
 							<li 
 								 class='item1'
 							>
+								<div class="fixedFont heading" id="getOption">
+									<span class='lighter'>
+									
+									</span>
+									
+									
+									
+									<b>getOption</b>(self, name)
+								</div>
+								
+								<div class="description">
+									
+									
+									
+									
+									
+								</div>
+								
+								
+								
+								
+									<dl class="detailList params">
+										<dt class="heading">Parameters:</dt>
+										
+											<dt>
+												<b>self</b>
+												
+											</dt>
+											<dd></dd>
+										
+											<dt>
+												<b>name</b>
+												
+											</dt>
+											<dd></dd>
+										
+									</dl>
+								
+								
+								
+								<div class="hr"></div>
+							</li>
+						
+							<li 
+								 class='item2'
+							>
 								<div class="fixedFont heading" id="initialize">
 									<span class='lighter'>
 									
@@ -516,7 +609,7 @@
 							</li>
 						
 							<li 
-								 class='item2'
+								 class='item3'
 							>
 								<div class="fixedFont heading" id="make">
 									<span class='lighter'>
@@ -529,7 +622,7 @@
 								</div>
 								
 								<div class="description">
-									根据descriptors的type创建一个component，这一般是在renderXXX方法中进行调用
+									根据subs的type创建一个component，并加入到引用中，这一般是在renderXXX方法中进行调用
 									
 									
 									
@@ -568,7 +661,7 @@
 							</li>
 						
 							<li 
-								 class='item3'
+								 class='item4'
 							>
 								<div class="fixedFont heading" id="render">
 									<span class='lighter'>
@@ -620,7 +713,7 @@
 							</li>
 						
 							<li 
-								 class='item4'
+								 class='item5'
 							>
 								<div class="fixedFont heading" id="setTemplate">
 									<span class='lighter'>
