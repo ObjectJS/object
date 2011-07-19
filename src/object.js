@@ -241,14 +241,6 @@ this.bind = function(host) {
 this._loader = null;
 
 /**
- * 设置全局exports变量的初始成员
- */
-this.setGlobalUses = function(arr) {
-	if (!object._loader) object._loader = new Loader();
-	object._loader.globalUses = arr;
-};
-
-/**
  * use一个module
  * @borrows object.Loader.use
  */
@@ -714,12 +706,11 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	};
 	NoModuleError.prototype = new Error();
 
-	this.scripts = document.getElementsByTagName('scripts');
+	this.scripts = document.getElementsByTagName('script');
 
 	this.initialize = function(self) {
 		self.useCache = true;
 		// 所有use都会默认use的模块，需要注意循环引用问题
-		self.globalUses = [];
 		self.lib = {};
 		self.anonymousModuleCount = 0;
 
@@ -832,45 +823,52 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	/**
 	 * context 执行方法
 	 * @param pkg 被执行的pkg
-	 * @param host context回调的this指针会指向它
 	 * @param modules 保存了此次use运行过程中用到的所有module
 	 * @param callback 异步方法，执行完毕后调用
 	 * @param options 可选，可用来定制name
 	 */
-	this.executeModule = function(self, pkg, host, modules, callback, options) {
+	this.executeModule = function(self, pkg, modules, callback, options) {
 		if (!options) options = {};
 
-		// 最后传进context的参数
-		var args = [];
-		// 存储所有uses，最后通过第一个参数传给context
-		var runtime = host;
-
-		// host.__name__ 为自己的名称
-		host.__name__ = options.name || pkg.name;
+		var exports = new Module(options.name || pkg.name);
 		// sys.modules
-		if (host.__name__ === 'sys') host.modules = modules;
+		if (exports.__name__ === 'sys') exports.modules = modules;
+
+		// 最后传进context的参数
+		var args = [exports];
 
 		var done = function() {
-			args.unshift(runtime);
-			pkg.fn.apply(host, args);
+			// 空package不需要
+			if (pkg.fn) {
+				var returnValue = pkg.fn.apply(exports, args);
+				if (returnValue) {
+					returnValue.prototype.toString = Module.prototype.toString;
+					returnValue.prototype.constructor = Module;
+					returnValue.__name__ = exports.__name__;
+					exports = returnValue;
+				}
+			}
+
 			// 不输出 __name__ 了，没有大用且影响性能，应该在创建时就指定name
-			//Object.keys(host).forEach(function(key) {
-				//if (typeof host[key] == 'function') {
-					//host[key].__name__ = key;
+			//Object.keys(exports).forEach(function(key) {
+				//if (typeof exports[key] == 'function') {
+					//exports[key].__name__ = key;
 				//}
 			//});
 
-			if (callback) callback();
+			if (callback) callback(exports);
 		};
 
-		// 在没有uses的情况下直接返回即可。
-		if (pkg.fn && pkg.uses.length === 0) {
-			done();
-			return;
-		} else if (!pkg.fn && pkg.file) {
+		// file
+		if (!pkg.fn && pkg.file) {
 			self.loadScript(pkg.file, function() {
 				loadNext(0);
 			}, true);
+			return;
+
+		// 在空package或没有uses的情况下直接返回即可。
+		} else if (!pkg.fn || pkg.uses.length === 0) {
+			done();
 			return;
 		}
 
@@ -879,34 +877,13 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 
 			var use = pkg.uses[i];
 
-			self.getModule(use.name, modules, function(useModule) {
+			self.getModule(use, modules, function(useModule) {
 				var names, root, member;
 
-				// 有别名
-				if (use.as) {
-					runtime[use.as] = useModule;
-					if (args.indexOf(useModule) == -1) args.push(useModule);
+				names = use.split('.');
+				root = modules[names[0]];
 
-				// 是一个from import
-				} else if (use.uses) {
-					if (use.uses == '*') {
-						for (member in useModule) {
-							if (useModule.hasOwnProperty(member) && !member.match(/__.*__/g)) runtime[member] = useModule[member];
-						}
-					} else {
-						use.uses.forEach(function(member) {
-							if (member.as) runtime[member.as] = useModule[member.name];
-							else runtime[member.name] = useModule[member.name];
-						});
-					}
-
-				// 正常的引入
-				} else {
-					names = use.name.split('.');
-					root = runtime[names[0]] = modules[names[0]];
-
-					if (args.indexOf(root) == -1) args.push(root);
-				}
+				if (args.indexOf(root) == -1) args.push(root);
 
 				if (i < pkg.uses.length - 1) {
 					loadNext(i + 1);
@@ -941,7 +918,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			var prefix = names.slice(0, i + 1).join('.');
 			name = names[i];
 
-			var next = function() {
+			var next = function(exports) {
+				if (exports) modules[prefix] = exports;
+
 				if (pname) modules[pname][name] = modules[prefix];
 
 				if (i < names.length - 1) {
@@ -953,7 +932,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 
 			// 使用缓存中的
 			if (modules[prefix]) {
-				next();
+				next(modules[prefix]);
 
 			// lib 中有
 			} else if (_lib[prefix]) {
@@ -963,19 +942,17 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 					modules[prefix] = new Module(prefix);
 				}
 
-				// 有可能是空的模块，是没有 fn 的
-				if (pkg.fn) {
-					self.executeModule(pkg, modules[prefix], modules, next);
-
 				// lib中有，但是是file，需要动态加载
-				} else if (pkg.file) {
+				if (pkg.file) {
 					// 文件加载完毕后，其中执行的 add 会自动把 _lib 中的对象替换掉，file 属性丢失，加入了 execute/name/uses 等属性
 					// 使用缓存
 					self.loadScript(pkg.file, function() {
-						self.executeModule(pkg, modules[prefix], modules, next);
+						self.executeModule(pkg, modules, next);
 					}, true);
+
+				// 也有可能是空的模块，是没有 fn 的，executeModule会处理
 				} else {
-					next();
+					self.executeModule(pkg, modules, next);
 				}
 
 			// lib中没有
@@ -989,86 +966,15 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	};
 
 	/**
-	 * 处理传入的uses参数，输入格式：
-	 * ['module1', {
-	 * 	name: 'module2',
-	 * 	uses: [
-	 * 		{
-	 * 			name: 'Member1',
-	 * 			as: 'M'
-	 * 		},
-	 * 		'Member2'
-	 * 	]
-	 * }, {
-	 * 	name: 'full.module.name',
-	 * 	as: 'shortname'
-	 * }, {
-	 *	name: 'somemodule',
-	 *	uses: '*'
-	 * }];
-	 *
-	 * 输出格式：
-	 * [{
-	 * 	name: 'module1'
-	 * }, {
-	 *	name: 'module2',
-	 *	uses: [
-	 *		{
-	 *			name: 'Member1',
-	 *			as: 'M'
-	 *		}, {
-	 *			name: 'Member2'
-	 *		}
-	 *	]
-	 * }, {
-	 *	name: 'full.module.name',
-	 *	as: 'shortname'
-	 * }, {
-	 *	name: 'somemodule',
-	 *	uses: '*'
-	 * }];
-	 *
+	 * 处理传入的uses参数
 	 * 在getUses阶段不需要根据名称判断去重（比如自己use自己），因为并不能避免所有冲突，还有循环引用的问题（比如 core use dom, dom use core）
-	 * 因此限定：globalUses 中声明的模块不允许有use
 	 *
 	 * @param uses 输入
 	 * @param ignore 跳过ignore模块，用来避免自己调用自己
 	 */
 	this.getUses = function(self, uses, ignore) {
 		if (typeof uses == 'string') {
-
 			uses = uses.split(/\s*,\s*/ig);
-			for (var i = 0; i < uses.length; i++) {
-				uses[i] = {name: uses[i]};
-			}
-
-		} else {
-
-			for (i = 0, use; i < uses.length; i++) { // typeof uses == object
-				use = uses[i];
-				if (typeof use == 'string') {
-					uses[i] = {name : use};
-					continue;
-				}
-				if (use.uses) {
-					// uses/as 互斥
-					use.as = null;
-					if (use.uses == '*') continue; // 如果是 * 则保持字符串，不做处理
-					if (typeof use.uses == 'string') {
-						use.uses = use.uses.split(/\s*,\s*/ig);
-					}
-					for (var j = 0, subuse; j < use.uses.length; j++) {
-						subuse = use.uses[j];
-						if (typeof subuse == 'string') {
-							use.uses[j] = {
-								name: subuse
-							};
-						}
-					}
-					continue;
-				}
-			}
-
 		}
 
 		// 过滤自己调用自己
@@ -1084,7 +990,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * 创造一个context，内部通过 this.xxx 设置的成员都会在这个 context 下。
 	 * @param name 名称
 	 * @param uses 用逗号分隔开的模块名称列表
-	 * @param context 这个function会在调用module时调用，并将module通过参数传入context，第一个参数为runtime，后面的参数为每个module的不重复引用，顺序排列
+	 * @param context 这个function会在调用module时调用，并将module通过参数传入context，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
 	 */
 	this.add = function(self, name, uses, context) {
 
@@ -1097,12 +1003,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			uses = [];
 		}
 
-		var globalUses = self.globalUses? self.getUses(self.globalUses, name) : [];
-		// globalUses放在数组前面还是后面还有大讲究：
-		// 放在前面，首先引入的core模块无法通过sys.modules找到其他后加载的模块；
-		// 放在后面，则可以找到。
-		uses = self.getUses(uses, name).concat(globalUses);
-		//uses = globalUses.concat(self.getUses(uses));
+		uses = self.getUses(uses, name);
 
 		// 建立前缀占位模块
 		self.makePrefixPackage(name);
@@ -1120,10 +1021,8 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 
 	/**
 	 * use
-	 * uses参数书写有一个技巧，写在后面的module在运行时可以通过runtime参数得到之前已经引入module的引用
-	 * 这对于利用引入对象做处理的模块来说是一个很重要的特性
 	 * @param uses 用逗号分隔开的模块名称列表
-	 * @param context uses加载后调用，将module通过参数传入context，第一个参数为runtime，后面的参数为每个module的不重复引用，顺序排列
+	 * @param context uses加载后调用，将module通过参数传入context，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
 	 */
 	this.use = function(self, uses, context) {
 		self.loadLib();
@@ -1132,13 +1031,13 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		self.anonymousModuleCount++;
 		var module = self.add(name, uses, context);
 
-		// 第二个{}参数会被所有相关module通过第一个 runtime 参数获取到，实现module获取调用者的信息
+		// 第二个{}参数会被所有相关module通过第一个 exports 参数获取到，实现module获取调用者的信息
 		// 之前是直接将window代替exports传递进去，但是在module初始化完毕后会有一个遍历赋值__name__的过程，会导致IE6下出错，且遍历window也会有性能问题
 		// 因此改为传入exports，然后在extend到window上。
-		// 经验是，不要用一个已经有内容、不可控的对象作为executeModule的host。
-		var exports = {};
-		self.executeModule(module, exports, {}, null, {name: '__main__'});
-		object.extend(window, exports);
+		// 经验是，不要用一个已经有内容、不可控的对象作为executeModule的exports。
+		self.executeModule(module, {}, function(exports) {
+			object.extend(window, exports);
+		}, {name: '__main__'});
 	};
 
 	/**
@@ -1152,7 +1051,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		var module = _lib[name];
 		if (!module) throw new NoModuleError(name);
 
-		self.executeModule(module, {}, {}, null, {name: '__main__'});
+		self.executeModule(module, {}, null, {name: '__main__'});
 	};
 
 });
