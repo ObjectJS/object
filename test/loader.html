@@ -1,0 +1,23 @@
+<html>
+<head>
+<script type="text/javascript" src="../src/object.js"></script>
+<script>
+	object.add('a', function(exports) {
+		exports.aa = 1;
+	});
+	object.add('b', 'a', function(exports, a) {
+		exports.bb = 1;
+	});
+
+	object.use('b', function(exports, b) {
+		console.log(exports)
+	});
+</script>
+<script>
+</script>
+</head>
+<body>
+
+</body>
+</html>
+
