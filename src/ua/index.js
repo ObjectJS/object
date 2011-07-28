@@ -23,9 +23,8 @@ object.add('ua', /**@lends ua*/ function(exports) {
 		// IE9: same as documentMode, with Trident 5
 		// IE10: same as documentMode, with Trident 6
 		if ((m2 = ua.match(/Trident\/([\d.]*)/)) && m2[1]) {
-			o.trident = numberify(m2[1]);
 			o[core = 'ie'] = document.documentMode;
-			o[shell = 'ieshell'] = o.trident + 4;
+			o[shell = 'ieshell'] = numberify(m2[1]) + 4;
 		// IE6
 		// IE7
 		} else {

@@ -7,10 +7,13 @@
 	});
 	object.add('b', 'a', function(exports, a) {
 		exports.bb = 1;
+		return {
+			bb: 2
+		}
 	});
 
 	object.use('b', function(exports, b) {
-		console.log(exports)
+		console.dir(exports)
 	});
 </script>
 <script>
