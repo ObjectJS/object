@@ -1,14 +1,14 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<script type="text/javascript" src="http://xnimg.cn/n/core/base-all.js"></script>
+<script type="text/javascript" src="../pub/object-all.js"></script>
 <script>
 	object.use('dom, ui, events', function(exports, dom, ui, events) {
 
-		var MyAddon = new Class(ui.Component, function() {
+		var MyAddon = new Class(ui.Addon, function() {
 			this.content = ui.define('.content');
 
-			this.onpublish = function(self) {
+			this.onpublish = function(self, event) {
 				alert('beforepublish');
 			};
 		});
@@ -20,6 +20,10 @@
 			this.publish = events.fireevent(function(self) {
 				alert('publish!');
 			});
+
+			this._click = function(self, event) {
+				alert('click');
+			}
 		});
 
 		var MyPublisher = new Class(Publisher, function() {
@@ -34,9 +38,9 @@
 		console.log(c.content[0]._node);
 		c.publish();
 
-		// dom.ready(function() {
-		// 	document.body.appendChild(c.getNode());
-		// });
+		dom.ready(function() {
+			document.body.appendChild(c.getNode());
+		});
 
 	});
 </script>

@@ -150,12 +150,9 @@ this.ComponentClass = function(cls, name, base, members) {
 				if (addonEvents.indexOf(eventType) == -1) addonEvents.push(eventType);
 
 			} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
+				var eventType = name.slice(1);
 				if (!events[eventType]) events[eventType] = [];
-				eventType = name.slice(1);
-				eventFunc = function(self) {
-					member.apply(self, arguments);
-				};
-				events[eventType].push(eventFunc);
+				events[eventType].push(member);
 
 				cls.__mixin__(eventType, function(self) {
 					self.fireEvent(eventType);
@@ -272,7 +269,9 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	this.__initEvents = function(self) {
 		Object.keys(self._events).forEach(function(eventType) {
 			self._events[eventType].forEach(function(eventFunc) {
-				self.addEvent(eventType, eventFunc);
+				self.addEvent(eventType, function(event) {
+					eventFunc(self, event);
+				});
 			});
 		});
 	};
@@ -574,11 +573,9 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		extend(cls._subs, addon._subs);
 		extend(cls._subEvents, addon._subEvents);
 		extend(cls._events, addon._events);
-		cls._addonEvents.forEach(function(eventType) {
-			var eventFunc = function() {
-				addon['on' + eventType]();
-			};
-			cls._events[eventType].push(eventFunc);
+		addon._addonEvents.forEach(function(eventType) {
+			if (!cls._events[eventType]) cls._events[eventType] = [];
+			cls._events[eventType].push(addon.prototype['on' + eventType].im_func);
 		});
 	});
 
@@ -587,14 +584,10 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 });
 
-this.addon = function(base, addons) {
-	var ExtendedComponent = new Class(base, function() {
-		Object.keys(addons).forEach(function(name) {
-			var addon = addons[name]
-			Class.mixin(this, addon);
-		}, this);
-	});
-	return ExtendedComponent;
-};
+this.Addon = new Class(exports.Component, function() {
+	this.initialize = function() {
+		throw new Error('This is an addon.');
+	};
+});
 
 });
