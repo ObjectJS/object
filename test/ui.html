@@ -3,21 +3,40 @@
 <meta charset="utf-8" />
 <script type="text/javascript" src="http://xnimg.cn/n/core/base-all.js"></script>
 <script>
-	object.use('dom, ui', function(exports, dom, ui) {
+	object.use('dom, ui, events', function(exports, dom, ui, events) {
 
-		var MyComponent = new Class(ui.Component, function() {
+		var MyAddon = new Class(ui.Component, function() {
+			this.content = ui.define('.content');
+
+			this.onpublish = function(self) {
+				alert('beforepublish');
+			};
+		});
+
+		var Publisher = new Class(ui.Component, function() {
 			this.title = ui.define('.title');
 			this.foo = ui.option('haha');
+
+			this.publish = events.fireevent(function(self) {
+				alert('publish!');
+			});
 		});
 
-		var template = '<div class="text"><h3 class="title">{{foo}}</h3></div>';
-		var c = new MyComponent(template, {
-			foo: 'jij'
+		var MyPublisher = new Class(Publisher, function() {
+		});
+		MyPublisher.setAddon(MyAddon);
+
+		var template = '<div class="text"><h3 class="title">{{foo}}</h3><section class="content">content</section></div>';
+		var c = new MyPublisher(template, {
+			foo: 'test'
 		});
 
-		dom.ready(function() {
-			document.body.appendChild(c.getNode());
-		});
+		console.log(c.content[0]._node);
+		c.publish();
+
+		// dom.ready(function() {
+		// 	document.body.appendChild(c.getNode());
+		// });
 
 	});
 </script>

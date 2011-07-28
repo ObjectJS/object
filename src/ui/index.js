@@ -92,7 +92,14 @@ this.ComponentClass = function(cls, name, base, members) {
 
 	var events = [];
 	if (base && base._events) {
-		events = base._events.slice(0);
+		Object.keys(base._events).forEach(function(name) {
+			events[name] = base._events[name].slice(0); // 复制数组
+		});
+	}
+
+	var addonEvents = [];
+	if (base && base._addonEvents) {
+		addonEvents = base._addonEvents.slice(0);
 	}
 
 	var subs = {};
@@ -113,7 +120,8 @@ this.ComponentClass = function(cls, name, base, members) {
 		_defaultOptions : defaultOptions,
 		_subs : subs,
 		_subEvents: subEvents,
-		_events : events
+		_events : events,
+		_addonEvents : addonEvents
 	});
 
 	Object.keys(members).forEach(function(name) {
@@ -131,18 +139,26 @@ this.ComponentClass = function(cls, name, base, members) {
 				cls._defaultOptions[name] = member.defaultValue;
 			}
 		} else if (typeof member == 'function') {
-			var match = name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/);
-			if (match) {
-				var component = match[1];
-				var eventName = match[2];
+			if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
+				var component = RegExp.$1;
+				var eventType = RegExp.$2;
 				if (!subEvents[component]) subEvents[component] = [];
-				if (subEvents[component].indexOf(eventName) === -1) subEvents[component].push(eventName);
+				if (subEvents[component].indexOf(eventType) == -1) subEvents[component].push(eventType);
+
+			} else if (name.match(/^on([a-zA-A]+)$/)) {
+				var eventType = RegExp.$1;
+				if (addonEvents.indexOf(eventType) == -1) addonEvents.push(eventType);
 
 			} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
-				eventName = name.slice(1);
-				if (events.indexOf(eventName === -1)) events.push(eventName);
-				cls.__mixin__(eventName, function(self) {
-					self.fireEvent(eventName);
+				if (!events[eventType]) events[eventType] = [];
+				eventType = name.slice(1);
+				eventFunc = function(self) {
+					member.apply(self, arguments);
+				};
+				events[eventType].push(eventFunc);
+
+				cls.__mixin__(eventType, function(self) {
+					self.fireEvent(eventType);
 				});
 			}
 		}
@@ -254,9 +270,9 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	 * 加入 _eventType 方法定义的事件
 	 */
 	this.__initEvents = function(self) {
-		self._events.forEach(function(eventType) {
-			self.addEvent(eventType, function() {
-				self['_' + eventType].apply(self, arguments);
+		Object.keys(self._events).forEach(function(eventType) {
+			self._events[eventType].forEach(function(eventFunc) {
+				self.addEvent(eventType, eventFunc);
 			});
 		});
 	};
@@ -553,9 +569,32 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		return self._node;
 	};
 
+	this.setAddon = classmethod(function(cls, addon) {
+		extend(cls._defaultOptions, addon._defaultOptions);
+		extend(cls._subs, addon._subs);
+		extend(cls._subEvents, addon._subEvents);
+		extend(cls._events, addon._events);
+		cls._addonEvents.forEach(function(eventType) {
+			var eventFunc = function() {
+				addon['on' + eventType]();
+			};
+			cls._events[eventType].push(eventFunc);
+		});
+	});
+
 	this.define = staticmethod(exports.define);
 	this.define1 = staticmethod(exports.define1);
 
 });
+
+this.addon = function(base, addons) {
+	var ExtendedComponent = new Class(base, function() {
+		Object.keys(addons).forEach(function(name) {
+			var addon = addons[name]
+			Class.mixin(this, addon);
+		}, this);
+	});
+	return ExtendedComponent;
+};
 
 });
