@@ -12,6 +12,14 @@
 				alert('beforepublish');
 			};
 
+			this._click = function(self, event) {
+				alert('click!!!')
+			};
+
+			this.content_mouseover = function(self) {
+				self._content[0].style.backgroundColor = '#f90';
+			};
+
 			this.title_mouseover = function(self) {
 				console.log('ha2')
 			};
@@ -40,17 +48,16 @@
 
 		});
 
-		var MyPublisher = new Class(Publisher, function() {
-			ui.addon(this, MyAddon);
+		var MyPublisher = new Class(ui.Component, function() {
+			this.publisher = ui.define1('.publisher', Publisher);
 		});
 
-		var template = '<div class="text"><h3 class="title">{{foo}}</h3><section class="content">content</section></div>';
+		var template = '<div><div class="publisher"><div class="text"><h3 class="title">{{foo}}</h3><section class="content">{{haha}}</section></div></div></div>';
 		var c = new MyPublisher(template, {
-			foo: 'test'
+			'foo': 'test',
+			'haha': 'xixi',
+			'publisher.addons': [MyAddon]
 		});
-
-		console.log(c.content[0]._node);
-		c.publish();
 
 		dom.ready(function() {
 			document.body.appendChild(c.getNode());

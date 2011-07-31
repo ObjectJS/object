@@ -2,7 +2,7 @@
  * @namespace
  * @name ui
  */
-object.add('ui', 'string, options, dom, ui.decorators', /**@lends ui*/ function(exports, string, options, dom, ui) {
+object.add('ui', 'string, options, dom, events, ui.decorators', /**@lends ui*/ function(exports, string, options, dom, events, ui) {
 
 var fireevent = ui.decorators.fireevent;
 
@@ -131,7 +131,7 @@ this.ComponentClass = function(cls, name, base, members) {
 
 			} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
 				var eventType = name.slice(1);
-				cls.regEvent(eventType, member)
+				cls.regEvent(eventType, member, true);
 
 				cls.__mixin__(eventType, function(self) {
 					self.fireEvent(eventType);
@@ -300,6 +300,10 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		});
 	};
 
+	this.__getSubType = function(self, name) {
+		return self._subs[name].type;
+	};
+
 	/**
 	 * 根据sub的定义获取component的引用
 	 */
@@ -308,21 +312,30 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 		var sub = self._subs[name];
 		var comps;
+		var options = self._subOptions[name];
+		var type = self.__getSubType(name);
+		if (options && options.addons) {
+			type = new Class(type, function() {
+				options.addons.forEach(function(addon) {
+					exports.addon(this, addon);
+				}, this);
+			});
+		}
 
 		if (sub.single) {
 			if (nodes) {
-				comps = new sub.type(nodes, self._subOptions[name]);
+				comps = new type(nodes, options);
 				self.__fillSub(name, comps);
 			}
 		} else {
 			if (nodes) {
-				comps = new exports.Components(nodes, sub.type, self._subOptions[name]);
+				comps = new exports.Components(nodes, type, options);
 				comps.forEach(function(comp) {
 					self.__fillSub(name, comp);
 				});
 			} else {
 				// 没有的也留下一个空的Components
-				comps = new exports.Components([], sub.type);
+				comps = new exports.Components([], type);
 			}
 		}
 
@@ -478,7 +491,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			});
 		}
 
-		var comp = new sub.type({
+		var comp = new self.__getSubType(name)({
 			template: sub.template,
 			section: sub.section
 		}, options);
@@ -565,9 +578,13 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		cls._defaultOptions[name] = value;
 	});
 
-	this.regEvent = classmethod(function(cls, eventType, eventFunc) {
+	this.regEvent = classmethod(function(cls, eventType, eventFunc, overwrite) {
 		if (!cls._events[eventType]) cls._events[eventType] = [];
-		cls._events[eventType].push(eventFunc);
+		if (overwrite) {
+			cls._events[eventType][0] = eventFunc;
+		} else {
+			cls._events[eventType].push(eventFunc);
+		}
 	});
 
 	this.regSubEvent = classmethod(function(cls, subName, eventType, eventFunc) {
@@ -596,7 +613,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		if (comp && comp._events) {
 			Object.keys(comp._events).forEach(function(name) {
 				comp._events[name].forEach(function(event) {
-					cls.regEvent(name, event);
+					cls.regEvent(name, event, true);
 				});
 			});
 		}
