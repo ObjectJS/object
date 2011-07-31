@@ -5,12 +5,17 @@
 <script>
 	object.use('dom, ui, events', function(exports, dom, ui, events) {
 
-		var MyAddon = new Class(ui.Addon, function() {
+		var MyAddon = new Class(ui.Component, function() {
 			this.content = ui.define('.content');
 
 			this.onpublish = function(self, event) {
 				alert('beforepublish');
 			};
+
+			this.title_mouseover = function(self) {
+				console.log('ha2')
+			};
+
 		});
 
 		var Publisher = new Class(ui.Component, function() {
@@ -24,11 +29,20 @@
 			this._click = function(self, event) {
 				alert('click');
 			}
+
+			this.title_mouseover = function(self) {
+				self._title[0].style.border = '1px solid #000';
+			};
+
+			this.title_mouseout = function(self) {
+				self._title[0].style.border = '0 none';
+			};
+
 		});
 
 		var MyPublisher = new Class(Publisher, function() {
+			ui.addon(this, MyAddon);
 		});
-		MyPublisher.setAddon(MyAddon);
 
 		var template = '<div class="text"><h3 class="title">{{foo}}</h3><section class="content">content</section></div>';
 		var c = new MyPublisher(template, {

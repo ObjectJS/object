@@ -369,12 +369,17 @@ var mixiner = overloadSetter(function(name, member) {
 	buildPrototype(this, name, member);
 });
 
+/**
+* mixin时调用mixin的initialize方法，保证其中的初始化成员能够被执行
+*/
 var initMixins = function(cls, instance) {
 	var mixin;
 	if (cls.__mixins__) {
 		for (var i = 0; i < cls.__mixins__.length; i++) {
 			mixin = cls.__mixins__[i];
+			mixin.__this__.mixining = cls;
 			if (mixin.initialize) mixin.initialize(instance);
+			mixin.__this__.mixining = null;
 		}
 	}
 };
@@ -533,6 +538,7 @@ var Class = this.Class = function() {
 	cls.__mixin__ = mixiner;
 	// 支持 this.parent 调用父级同名方法
 	cls.__this__ = {
+		mixining: null,
 		base: cls.__base__,
 		parent: function() {
 			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
@@ -556,7 +562,7 @@ var Class = this.Class = function() {
  *	Class.mixin(AnotherClass);
  * })
  */
-Class.mixin = function(members, cls) {
+Class.mixin = function(members, cls, fuck) {
 
 	if (!members.__mixins__) members.__mixins__ = [];
 	members.__mixins__.push(cls);

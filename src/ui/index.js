@@ -83,76 +83,55 @@ this.Components = new Class(Array, /**@lends ui.Components*/ function() {
 });
 
 this.ComponentClass = function(cls, name, base, members) {
-	var subEvents = {};
-	if (base && base._subEvents) {
-		Object.keys(base._subEvents).forEach(function(name) {
-			subEvents[name] = base._subEvents[name].slice(0); // 复制数组
-		});
-	}
-
-	var events = [];
-	if (base && base._events) {
-		Object.keys(base._events).forEach(function(name) {
-			events[name] = base._events[name].slice(0); // 复制数组
-		});
-	}
-
-	var addonEvents = [];
-	if (base && base._addonEvents) {
-		addonEvents = base._addonEvents.slice(0);
-	}
-
-	var subs = {};
-	if (base && base._subs) {
-		Object.keys(base._subs).forEach(function(name) {
-			subs[name] = base._subs[name];
-		});
-	}
-
-	var defaultOptions = {};
-	if (base && base._defaultOptions) {
-		Object.keys(base._defaultOptions).forEach(function(name) {
-			defaultOptions[name] = base._defaultOptions[name];
-		});
-	}
 
 	cls.__mixin__({
-		_defaultOptions : defaultOptions,
-		_subs : subs,
-		_subEvents: subEvents,
-		_events : events,
-		_addonEvents : addonEvents
+		_defaultOptions : {},
+		_subs : {},
+		_subEvents: {},
+		_events : {},
+		_addonEvents : {}
 	});
+
+	cls.mixinComponent(base);
+
+	if (base && base._addonEvents) {
+		Object.keys(base._addonEvents).forEach(function(eventType) {
+			cls.regAddonEvent(eventType, base._addonEvents[eventType]);
+		});
+	}
 
 	Object.keys(members).forEach(function(name) {
 		var member = members[name];
 		if (member.__class__ === property) {
 			if (member.isComponent) {
-				subs[name] = {
+				cls.regSub(name, {
 					selector: member.selector,
 					type: member.type || exports.Component,
 					single: member.single,
 					nodeMap: {}, // 相应node的uid对应component，用于在需要通过node找到component时使用
 					rendered: [] // 后来被加入的，而不是首次通过selector选择的node的引用
-				};
+				});
 			} else {
-				cls._defaultOptions[name] = member.defaultValue;
+				cls.regOption(name, member.defaultValue);
 			}
 		} else if (typeof member == 'function') {
 			if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
-				var component = RegExp.$1;
+				var subName = RegExp.$1;
 				var eventType = RegExp.$2;
-				if (!subEvents[component]) subEvents[component] = [];
-				if (subEvents[component].indexOf(eventType) == -1) subEvents[component].push(eventType);
+				cls.regSubEvent(subName, eventType, member);
+				// addon也可以通过这种命名格式为宿主增加事件，为避免addon的同名方法覆盖宿主同名方法，导致此方法“不稳定”而变得不可用，直接在宿主类的原型中删除此类方法
+				delete cls[name];
+				delete cls.prototype[name];
 
 			} else if (name.match(/^on([a-zA-A]+)$/)) {
 				var eventType = RegExp.$1;
-				if (addonEvents.indexOf(eventType) == -1) addonEvents.push(eventType);
+				cls.regAddonEvent(eventType, member);
+				delete cls[name];
+				delete cls.prototype[name];
 
 			} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
 				var eventType = name.slice(1);
-				if (!events[eventType]) events[eventType] = [];
-				events[eventType].push(member);
+				cls.regEvent(eventType, member)
 
 				cls.__mixin__(eventType, function(self) {
 					self.fireEvent(eventType);
@@ -160,6 +139,13 @@ this.ComponentClass = function(cls, name, base, members) {
 			}
 		}
 	});
+
+	if (members.addons) {
+		cls.addons.forEach(function(addon) {
+			cls.setAddon(addon);
+		});
+	}
+
 };
 
 /**
@@ -230,6 +216,9 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	Class.mixin(this, Element);
 
 	this.initialize = function(self, node, options) {
+		// 如果是在mixin中，代表自己正在被当作一个addon
+		if (this.mixining) return;
+
 		if (!options) options = {};
 		self.__initSubOptions(options);
 
@@ -388,12 +377,12 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		var events = self._subEvents[name];
 		if (!events) return;
 
-		events.forEach(function(eventType) {
-			node.addEvent(eventType, function() {
-				var args = Array.prototype.slice.call(arguments, 0);
-				var comp = self._subs[name].nodeMap[String(node.uid)];
-				args.push(comp); // 最后一个参数为component
-				self[name + '_' + eventType].apply(self, args);
+		Object.keys(events).forEach(function(eventType) {
+			events[eventType].forEach(function(eventFunc) {
+				node.addEvent(eventType, function(event) {
+					var comp = self._subs[name].nodeMap[String(node.uid)];
+					eventFunc(self, event, comp);
+				});
 			});
 		});
 	};
@@ -568,15 +557,68 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		return self._node;
 	};
 
+	this.regSub = classmethod(function(cls, name, descriptor) {
+		cls._subs[name] = descriptor;
+	});
+
+	this.regOption = classmethod(function(cls, name, value) {
+		cls._defaultOptions[name] = value;
+	});
+
+	this.regEvent = classmethod(function(cls, eventType, eventFunc) {
+		if (!cls._events[eventType]) cls._events[eventType] = [];
+		cls._events[eventType].push(eventFunc);
+	});
+
+	this.regSubEvent = classmethod(function(cls, subName, eventType, eventFunc) {
+		if (!cls._subEvents[subName]) cls._subEvents[subName] = {};
+		if (!cls._subEvents[subName][eventType]) cls._subEvents[subName][eventType] = [];
+		cls._subEvents[subName][eventType].push(eventFunc);
+	});
+
+	this.regAddonEvent = classmethod(function(cls, eventType, eventFunc) {
+		cls._addonEvents[eventType] = eventFunc;
+	});
+
+	this.mixinComponent = classmethod(function(cls, comp) {
+		if (comp && comp._defaultOptions) {
+			Object.keys(comp._defaultOptions).forEach(function(name) {
+				cls.regOption(name, comp._defaultOptions[name]);
+			});
+		}
+
+		if (comp && comp._subs) {
+			Object.keys(comp._subs).forEach(function(name) {
+				cls.regSub(name, comp._subs[name]);
+			});
+		}
+
+		if (comp && comp._events) {
+			Object.keys(comp._events).forEach(function(name) {
+				comp._events[name].forEach(function(event) {
+					cls.regEvent(name, event);
+				});
+			});
+		}
+
+		if (comp && comp._subEvents) {
+			Object.keys(comp._subEvents).forEach(function(subName) {
+				Object.keys(comp._subEvents[subName]).forEach(function(eventType) {
+					comp._subEvents[subName][eventType].forEach(function(eventFunc) {
+						cls.regSubEvent(subName, eventType, eventFunc);
+					});
+				})
+			});
+		}
+	});
+
 	this.setAddon = classmethod(function(cls, addon) {
-		extend(cls._defaultOptions, addon._defaultOptions);
-		extend(cls._subs, addon._subs);
-		extend(cls._subEvents, addon._subEvents);
-		extend(cls._events, addon._events);
-		addon._addonEvents.forEach(function(eventType) {
-			if (!cls._events[eventType]) cls._events[eventType] = [];
-			cls._events[eventType].push(addon.prototype['on' + eventType].im_func);
+		cls.mixinComponent(addon);
+
+		Object.keys(addon._addonEvents).forEach(function(eventType) {
+			cls.regEvent(eventType, addon._addonEvents[eventType]);
 		});
+
 	});
 
 	this.define = staticmethod(exports.define);
@@ -584,10 +626,10 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 });
 
-this.Addon = new Class(exports.Component, function() {
-	this.initialize = function() {
-		throw new Error('This is an addon.');
-	};
-});
+this.addon = function(members, Addon) {
+	if (!members.addons) members.addons = [];
+	members.addons.push(Addon);
+	Class.mixin(this, Addon);
+};
 
 });
