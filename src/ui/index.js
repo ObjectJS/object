@@ -84,11 +84,14 @@ this.Components = new Class(Array, /**@lends ui.Components*/ function() {
 
 this.ComponentClass = function(cls, name, base, members) {
 
+	// 此时cls中这5个成员有可能有东西，是从base继承过来的
+	// 不过没有意义，因为是保存在class上，而不是instance上
+	// 在继承时必须保证每个类都有自己独立的对象保存这几种信息
 	cls.__mixin__({
 		_defaultOptions : {},
 		_subs : {},
 		_subEvents: {},
-		_events : {},
+		_events : [],
 		_addonEvents : {}
 	});
 
@@ -102,7 +105,8 @@ this.ComponentClass = function(cls, name, base, members) {
 
 	Object.keys(members).forEach(function(name) {
 		var member = members[name];
-		if (member.__class__ === property) {
+		// member有可能是null
+		if (member != null && member.__class__ === property) {
 			if (member.isComponent) {
 				cls.regSub(name, {
 					selector: member.selector,
@@ -116,22 +120,19 @@ this.ComponentClass = function(cls, name, base, members) {
 			}
 		} else if (typeof member == 'function') {
 			if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
-				var subName = RegExp.$1;
-				var eventType = RegExp.$2;
-				cls.regSubEvent(subName, eventType, member);
-				// addon也可以通过这种命名格式为宿主增加事件，为避免addon的同名方法覆盖宿主同名方法，导致此方法“不稳定”而变得不可用，直接在宿主类的原型中删除此类方法
-				// delete cls[name];
-				// delete cls.prototype[name];
+				cls.regSubEvent(RegExp.$1, RegExp.$2, member);
+				// addon也可以通过这种命名格式为宿主增加事件
+				// 为避免addon的同名方法在mixin时覆盖宿主同名方法，直接在宿主类的原型中删除此类方法
+				delete cls[name];
+				delete cls.prototype[name];
 
 			} else if (name.match(/^on([a-zA-A]+)$/)) {
-				var eventType = RegExp.$1;
-				cls.regAddonEvent(eventType, member);
+				cls.regAddonEvent(RegExp.$1, member);
 				delete cls[name];
 				delete cls.prototype[name];
 
 			} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
-				var eventType = name.slice(1);
-				cls.__mixin__(eventType, fireevent(member));
+				cls.__mixin__(name.slice(1), fireevent(member));
 			}
 		}
 	});
@@ -253,11 +254,9 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	 * 加入 _eventType 方法定义的事件
 	 */
 	this.__initEvents = function(self) {
-		Object.keys(self._events).forEach(function(eventType) {
-			self._events[eventType].forEach(function(eventFunc) {
-				self.addEvent(eventType, function(event) {
-					eventFunc(self, event);
-				});
+		self._events.forEach(function(desc) {
+			self.addEvent(desc.type, function(event) {
+				desc.func(self, event)
 			});
 		});
 	};
@@ -581,13 +580,8 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		cls._defaultOptions[name] = value;
 	});
 
-	this.regEvent = classmethod(function(cls, eventType, eventFunc, overwrite) {
-		if (!cls._events[eventType]) cls._events[eventType] = [];
-		if (overwrite) {
-			cls._events[eventType][0] = eventFunc;
-		} else {
-			cls._events[eventType].push(eventFunc);
-		}
+	this.regEvent = classmethod(function(cls, eventType, eventFunc) {
+		cls._events.push({type: eventType, func: eventFunc});
 	});
 
 	this.regSubEvent = classmethod(function(cls, subName, eventType, eventFunc) {
@@ -614,10 +608,8 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		}
 
 		if (comp && comp._events) {
-			Object.keys(comp._events).forEach(function(name) {
-				comp._events[name].forEach(function(event) {
-					cls.regEvent(name, event, true);
-				});
+			comp._events.forEach(function(desc) {
+				cls.regEvent(desc.type, desc.func)
 			});
 		}
 
@@ -647,8 +639,18 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 });
 
 this.addon = function(members, Addon) {
-	if (!members.addons) members.addons = [];
+	if (!members.addons) {
+		members.addons = [];
+		// 将用于保存component信息的几个变量置null，避免mixin时被赋予了没有意义的值
+		// 因为在ComponentClass中会重新为cls初始化这几个成员，因此没有意义
+		members._events = null;
+		members._subEvents = null;
+		members._subs = null;
+		members._defaultOptions = null;
+		members._addonEvents = null;
+	}
 	members.addons.push(Addon);
+	Class.mixin(members, Addon);
 };
 
 });

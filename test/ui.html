@@ -2,80 +2,39 @@
 <head>
 <meta charset="utf-8" />
 <script type="text/javascript" src="../pub/object-all.js"></script>
-<script>
-	object.use('dom, ui, events', function(exports, dom, ui, events) {
-
-		var MyAddon = new Class(ui.Component, function() {
-
-			this.content = ui.define('.content');
-
-			this.onpublish = function(self, event) {
-				alert('beforepublish');
-			};
-
-			this._click = function(self, event) {
-				alert('click!!!')
-			};
-
-			this.content_mouseover = function(self) {
-				self._content[0].style.backgroundColor = '#f90';
-			};
-
-			this.title_mouseover = function(self) {
-				console.log('ha2')
-			};
-
-		});
-
-		var Publisher = new Class(ui.Component, function() {
-			this.title = ui.define('.title');
-			this.foo = ui.option('haha');
-
-			this._publish = function(self) {
-				alert('publish!');
-			};
-
-			this._click = function(self, event) {
-				alert('click');
-			}
-
-			this.title_mouseover = function(self) {
-				self._title[0].style.border = '1px solid #000';
-			};
-
-			this.title_mouseout = function(self) {
-				self._title[0].style.border = '0 none';
-			};
-
-		});
-
-		var MyPublisher = new Class(Publisher, function() {
-			ui.addon(this, MyAddon);
-		});
-		alert(MyPublisher.prototype.publish.im_func)
-
-		var c = new MyPublisher('<div></div>');
-		c.publish()
-
-		// var MyPublisher = new Class(ui.Component, function() {
-		// 	this.publisher = ui.define1('.publisher', Publisher);
-		// });
-
-		// var template = '<div><div class="publisher"><div class="text"><h3 class="title">{{foo}}</h3><section class="content">{{haha}}</section></div></div></div>';
-		// var c = new MyPublisher(template, {
-		// 	'foo': 'test',
-		// 	'haha': 'xixi',
-		// 	'publisher.addons': [MyAddon]
-		// });
-
-		// dom.ready(function() {
-		// 	document.body.appendChild(c.getNode());
-		// });
-
-	});
-</script>
+<script type="text/javascript" src="ui.js"></script>
+<style>
+	.active {
+		border: 1px solid #F90;
+	}
+</style>
 </head>
 <body>
+	<div id="publisher">
+		<div id="publisher-func-selector">
+			<span class="close-button">关闭</span>
+			<ul>
+				<li id="publisher-status-trigger">状态</li>
+				<li id="publisher-share-trigger">分享</li>
+				<li id="publisher-photo-trigger">照片</li>
+			</ul>
+		</div>
+		<div id="publisher-status-box" style="display:none">
+			<div class="status-publisher">
+				status publisher
+			</div>
+		</div>
+		<div id="publisher-share-box" style="display:none">
+			<div class="share-publisher">
+				share publisher
+			</div>
+		</div>
+		<div id="publisher-photo-box" style="display:none">
+			<div class="photo-publisher">
+				photo publisher
+			</div>
+		</div>
+	</div>
 </body>
 </html>
 

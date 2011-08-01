@@ -430,8 +430,12 @@ var buildPrototype = function(cls, name, member) {
 
 	// 这里的member指向new Class参数的书写的对象/函数
 
+	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
+	if (member == null) {
+		prototype[name] = member;
+
 	// 先判断最常出现的instancemethod
-	if (member.__class__ === undefined && typeof member == 'function') { // this.a = function() {}
+	} else if (member.__class__ === undefined && typeof member == 'function') { // this.a = function() {}
 		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
 		member.__name__ = name;
 		prototype[name] = instancemethod(member);
