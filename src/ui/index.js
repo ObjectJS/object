@@ -2,7 +2,7 @@
  * @namespace
  * @name ui
  */
-object.add('ui', 'string, options, dom, events, ui.decorators', /**@lends ui*/ function(exports, string, options, dom, events, ui) {
+object.add('ui', 'string, options, dom, ui.decorators', /**@lends ui*/ function(exports, string, options, dom, ui) {
 
 var fireevent = ui.decorators.fireevent;
 
@@ -120,8 +120,8 @@ this.ComponentClass = function(cls, name, base, members) {
 				var eventType = RegExp.$2;
 				cls.regSubEvent(subName, eventType, member);
 				// addon也可以通过这种命名格式为宿主增加事件，为避免addon的同名方法覆盖宿主同名方法，导致此方法“不稳定”而变得不可用，直接在宿主类的原型中删除此类方法
-				delete cls[name];
-				delete cls.prototype[name];
+				// delete cls[name];
+				// delete cls.prototype[name];
 
 			} else if (name.match(/^on([a-zA-A]+)$/)) {
 				var eventType = RegExp.$1;
@@ -131,11 +131,7 @@ this.ComponentClass = function(cls, name, base, members) {
 
 			} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
 				var eventType = name.slice(1);
-				cls.regEvent(eventType, member, true);
-
-				cls.__mixin__(eventType, function(self) {
-					self.fireEvent(eventType);
-				});
+				cls.__mixin__(eventType, fireevent(member));
 			}
 		}
 	});
@@ -221,6 +217,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 		if (!options) options = {};
 		self.__initSubOptions(options);
+		self._extendedSubs = {};
 
 		if (!node.nodeType) {
 			if (typeof node == 'string') {
@@ -300,8 +297,20 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		});
 	};
 
-	this.__getSubType = function(self, name) {
-		return self._subs[name].type;
+	this.__getSubType = function(self, name, options) {
+		var type = self._extendedSubs[name];
+		if (!type) {
+			type = self._subs[name].type;
+			if (options && options.addons) {
+				type = new Class(type, function() {
+					options.addons.forEach(function(addon) {
+						exports.addon(this, addon);
+					}, this);
+				});
+				self._extendedSubs[name] = type;
+			}
+		}
+		return type;
 	};
 
 	/**
@@ -313,14 +322,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		var sub = self._subs[name];
 		var comps;
 		var options = self._subOptions[name];
-		var type = self.__getSubType(name);
-		if (options && options.addons) {
-			type = new Class(type, function() {
-				options.addons.forEach(function(addon) {
-					exports.addon(this, addon);
-				}, this);
-			});
-		}
+		var type = self.__getSubType(name, options);
 
 		if (sub.single) {
 			if (nodes) {
@@ -490,8 +492,9 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				options[key] = data[key];
 			});
 		}
+		var type = self.__getSubType(name, options);
 
-		var comp = new self.__getSubType(name)({
+		var comp = new type({
 			template: sub.template,
 			section: sub.section
 		}, options);
@@ -646,7 +649,6 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 this.addon = function(members, Addon) {
 	if (!members.addons) members.addons = [];
 	members.addons.push(Addon);
-	Class.mixin(this, Addon);
 };
 
 });

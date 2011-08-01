@@ -6,6 +6,7 @@
 	object.use('dom, ui, events', function(exports, dom, ui, events) {
 
 		var MyAddon = new Class(ui.Component, function() {
+
 			this.content = ui.define('.content');
 
 			this.onpublish = function(self, event) {
@@ -30,9 +31,9 @@
 			this.title = ui.define('.title');
 			this.foo = ui.option('haha');
 
-			this.publish = events.fireevent(function(self) {
+			this._publish = function(self) {
 				alert('publish!');
-			});
+			};
 
 			this._click = function(self, event) {
 				alert('click');
@@ -48,20 +49,28 @@
 
 		});
 
-		var MyPublisher = new Class(ui.Component, function() {
-			this.publisher = ui.define1('.publisher', Publisher);
+		var MyPublisher = new Class(Publisher, function() {
+			ui.addon(this, MyAddon);
 		});
+		alert(MyPublisher.prototype.publish.im_func)
 
-		var template = '<div><div class="publisher"><div class="text"><h3 class="title">{{foo}}</h3><section class="content">{{haha}}</section></div></div></div>';
-		var c = new MyPublisher(template, {
-			'foo': 'test',
-			'haha': 'xixi',
-			'publisher.addons': [MyAddon]
-		});
+		var c = new MyPublisher('<div></div>');
+		c.publish()
 
-		dom.ready(function() {
-			document.body.appendChild(c.getNode());
-		});
+		// var MyPublisher = new Class(ui.Component, function() {
+		// 	this.publisher = ui.define1('.publisher', Publisher);
+		// });
+
+		// var template = '<div><div class="publisher"><div class="text"><h3 class="title">{{foo}}</h3><section class="content">{{haha}}</section></div></div></div>';
+		// var c = new MyPublisher(template, {
+		// 	'foo': 'test',
+		// 	'haha': 'xixi',
+		// 	'publisher.addons': [MyAddon]
+		// });
+
+		// dom.ready(function() {
+		// 	document.body.appendChild(c.getNode());
+		// });
 
 	});
 </script>
