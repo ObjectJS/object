@@ -2,9 +2,7 @@
  * @namespace
  * @name ui
  */
-object.add('ui', 'string, options, dom, ui.decorators', /**@lends ui*/ function(exports, string, options, dom, ui) {
-
-var fireevent = ui.decorators.fireevent;
+object.add('ui', 'string, options, dom, events', /**@lends ui*/ function(exports, string, options, dom, events) {
 
 /**
  * @class
@@ -126,13 +124,13 @@ this.ComponentClass = function(cls, name, base, members) {
 				delete cls[name];
 				delete cls.prototype[name];
 
-			} else if (name.match(/^on([a-zA-A]+)$/)) {
+			} else if (name.match(/^on([a-zA-Z]+)$/)) {
 				cls.regAddonEvent(RegExp.$1, member);
 				delete cls[name];
 				delete cls.prototype[name];
 
 			} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
-				cls.__mixin__(name.slice(1), fireevent(member));
+				cls.__mixin__(name.slice(1), events.fireevent(member));
 			}
 		}
 	});
@@ -256,7 +254,9 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	this.__initEvents = function(self) {
 		self._events.forEach(function(desc) {
 			self.addEvent(desc.type, function(event) {
-				desc.func(self, event)
+				// 将event._args pass 到函数后面
+				var args = [self, event].concat(event._args);
+				desc.func.apply(self, args);
 			});
 		});
 	};
@@ -523,23 +523,23 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	/**
 	 * 弹出验证错误信息
 	 */
-	this.invalid = fireevent(function(self, msg) {
+	this._invalid = function(self, msg) {
 		if (!msg) msg = '输入错误';
 		alert(msg);
-	});
+	};
 
 	/**
 	 * 弹出出错信息
 	 */
-	this.error = fireevent(function(self, msg) {
+	this._error = function(self, msg) {
 		if (!msg) msg = '出错啦！';
 		alert(msg);
-	});
+	};
 
 	/**
 	 * 重置一个component，回到初始状态，删除所有render的元素。
 	 */
-	this.reset = fireevent(function(self) {
+	this._reset = function(self) {
 		// 清空所有render进来的新元素
 		Object.keys(self._subs).forEach(function(name) {
 			var sub = self._subs[name];
@@ -563,7 +563,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				self[name].reset();
 			}
 		});
-	});
+	};
 
 	/**
 	 * 获取包装的节点
