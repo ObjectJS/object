@@ -215,7 +215,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		if (this.mixining) return;
 
 		if (!options) options = {};
-		self.__initSubOptions(options);
+		self._options = options;
 		self._extendedSubs = {};
 
 		if (!node.nodeType) {
@@ -284,6 +284,21 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	this.__initSubs = function(self) {
 		Object.keys(self._subs).forEach(function(name) {
 			var sub = self._subs[name];
+			// _options还是prototype上的，需要先复制一个唯一实例 TODO
+			// 从options获取子元素的模板信息
+			var options = self._options[name];
+			if (options && !sub.template) {
+				sub.template = options.template;
+				sub.section = options.templateSection;
+			}
+			// 从options获取子元素的扩展信息
+			if (options && options.addons) {
+				sub.type = new Class(sub.type, function() {
+					options.addons.forEach(function(addon) {
+						exports.addon(this, addon);
+					}, this);
+				});
+			}
 			var node;
 
 			if (sub.single) {
@@ -296,22 +311,6 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		});
 	};
 
-	this.__getSubType = function(self, name, options) {
-		var type = self._extendedSubs[name];
-		if (!type) {
-			type = self._subs[name].type;
-			if (options && options.addons) {
-				type = new Class(type, function() {
-					options.addons.forEach(function(addon) {
-						exports.addon(this, addon);
-					}, this);
-				});
-				self._extendedSubs[name] = type;
-			}
-		}
-		return type;
-	};
-
 	/**
 	 * 根据sub的定义获取component的引用
 	 */
@@ -320,23 +319,22 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 		var sub = self._subs[name];
 		var comps;
-		var options = self._subOptions[name];
-		var type = self.__getSubType(name, options);
+		var options = self._options[name];
 
 		if (sub.single) {
 			if (nodes) {
-				comps = new type(nodes, options);
+				comps = new sub.type(nodes, options);
 				self.__fillSub(name, comps);
 			}
 		} else {
 			if (nodes) {
-				comps = new exports.Components(nodes, type, options);
+				comps = new exports.Components(nodes, sub.type, options);
 				comps.forEach(function(comp) {
 					self.__fillSub(name, comp);
 				});
 			} else {
 				// 没有的也留下一个空的Components
-				comps = new exports.Components([], type);
+				comps = new exports.Components([], sub.type);
 			}
 		}
 
@@ -402,38 +400,6 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	};
 
 	/**
-	 * 向_subOptions生成一个option
-	 * {'a.b.c': 1, b: 2} ==> {a: {b: {c:1}}, b: 2}
-	 */
-	this.__setSubOption = function(self, name, value) {
-		var current = self._subOptions;
-		var parts = Array.isArray(name)? name : name.split('.');
-		// 生成前缀对象
-		for (var i = 0, part; i < parts.length - 1; i++) {
-			part = parts[i];
-			if (current[part] === undefined) {
-				current[part] = {PARSED: true};
-			}
-			current = current[part];
-		}
-		current[parts[parts.length - 1]] = value;
-	};
-
-	/**
-	 * 初始化 subOptions
-	 */
-	this.__initSubOptions = function(self, options) {
-		if (!options.PARSED) {
-			self._subOptions = {PARSED: true};
-			Object.keys(options).forEach(function(name) {
-				self.__setSubOption(name, options[name]);
-			});
-		} else {
-			self._subOptions = options;
-		}
-	};
-
-	/**
 	 * 渲染一组subcomponent
 	 * @param name subcomponent名字
 	 * @param data 模板数据/初始化参数
@@ -483,7 +449,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		var sub = self._subs[name];
 		var pname = '_' + name;
 		var options = {};
-		var extendOptions = self._subOptions[name];
+		var extendOptions = self._options[name];
 		extend(options, extendOptions);
 
 		if (data) {
@@ -491,9 +457,8 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				options[key] = data[key];
 			});
 		}
-		var type = self.__getSubType(name, options);
 
-		var comp = new type({
+		var comp = new sub.type({
 			template: sub.template,
 			section: sub.section
 		}, options);
@@ -651,6 +616,28 @@ this.addon = function(members, Addon) {
 	}
 	members.addons.push(Addon);
 	Class.mixin(members, Addon);
+};
+
+/**
+ * {'a.b.c': 1, b: 2} ==> {a: {b: {c:1}}, b: 2}
+ */
+this.parseOptions = function(options) {
+	var parsed = {};
+	Object.keys(options).forEach(function(name) {
+		var current = parsed;
+		var value = options[name];
+		var parts = Array.isArray(name)? name : name.split('.');
+		// 生成前缀对象
+		for (var i = 0, part; i < parts.length - 1; i++) {
+			part = parts[i];
+			if (current[part] === undefined) {
+				current[part] = {};
+			}
+			current = current[part];
+		}
+		current[parts[parts.length - 1]] = value;
+	});
+	return parsed;
 };
 
 });
