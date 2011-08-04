@@ -367,7 +367,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	this.setOption = options.overloadsetter(function(self, name, value) {
 		var parts = Array.isArray(name)? name : name.split('.');
 		if (parts.length > 1) {
-			self.__setSubOption(parts, value);
+			exports.setOptionTo(self._options, parts, value);
 			if (self[parts[0]]) {
 				self[parts[0]].setOption(parts.slice(1), value);
 			}
@@ -574,7 +574,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 		if (comp && comp._events) {
 			comp._events.forEach(function(desc) {
-				cls.regEvent(desc.type, desc.func)
+				cls.regEvent(desc.type, desc.func);
 			});
 		}
 
@@ -584,7 +584,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 					comp._subEvents[subName][eventType].forEach(function(eventFunc) {
 						cls.regSubEvent(subName, eventType, eventFunc);
 					});
-				})
+				});
 			});
 		}
 	});
@@ -624,20 +624,22 @@ this.addon = function(members, Addon) {
 this.parseOptions = function(options) {
 	var parsed = {};
 	Object.keys(options).forEach(function(name) {
-		var current = parsed;
-		var value = options[name];
-		var parts = Array.isArray(name)? name : name.split('.');
-		// 生成前缀对象
-		for (var i = 0, part; i < parts.length - 1; i++) {
-			part = parts[i];
-			if (current[part] === undefined) {
-				current[part] = {};
-			}
-			current = current[part];
-		}
-		current[parts[parts.length - 1]] = value;
+		exports.setOptionTo(parsed, name, options[name]);
 	});
 	return parsed;
+};
+
+this.setOptionTo = function(current, name, value) {
+	var parts = Array.isArray(name)? name : name.split('.');
+	// 生成前缀对象
+	for (var i = 0, part; i < parts.length - 1; i++) {
+		part = parts[i];
+		if (current[part] === undefined) {
+			current[part] = {};
+		}
+		current = current[part];
+	}
+	current[parts[parts.length - 1]] = value;
 };
 
 });
