@@ -989,11 +989,12 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 
 		// 过滤自己调用自己
 		uses = uses.filter(function(use) {
-			return use.name != ignore;
+			return use != ignore;
 		});
 
 		return uses;
 	};
+
 
 	/**
 	 * 传入context，context的参数会包含use进来的module
