@@ -579,11 +579,10 @@ Class.mixin = function(members, cls, fuck) {
 		if (members[name] !== undefined) return; // 不要覆盖自定义的
 
 		var member = cls.prototype[name];
-		var func = member.im_func;
 
 		if (typeof member == 'function') {
 			if (member.__class__ === instancemethod) {
-				members[name] = func;
+				members[name] = member.im_func;
 			} else {
 				members[name] = member;
 			}
