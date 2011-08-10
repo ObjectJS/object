@@ -388,7 +388,13 @@ var Class = this.Class = function() {
 	// 构造器
 	var members = Class.initMembers(arguments[arguments.length - 1]);
 
-	Class.__new__(cls, null, base, members);
+	if (base) cls.__metaclass__ = base.__metaclass__;
+
+	if (cls.__metaclass__) {
+		cls = cls.__metaclass__.__new__(cls, name, base, members)
+	} else {
+		cls = Class.__new__(cls, null, base, members);
+	}
 
 	// 执行metaclass的init
 	if (cls.__metaclass__) Class.MetaClass.init(cls);
@@ -439,8 +445,6 @@ Class.__new__ = function(cls, name, base, members) {
 				cls[property] = base[property];
 			}
 		}
-		// metaclass是继承的
-		cls.__metaclass__ = base.__metaclass__;
 	}
 
 	// Members
@@ -627,8 +631,10 @@ Class.MetaClass = function(meta) {
 		Class.MetaClass.init(cls);
 		return cls;
 	};
-	metaclass.__init__ = meta.__init__;
-	metaclass.__new__ = meta.__new__;
+	metaclass.__init__ = meta.__init__ || function() {};
+	metaclass.__new__ = meta.__new__ || function(cls, name, base, members) {
+		return Class.__new__(cls, name, base, members);
+	};
 	return metaclass;
 };
 
