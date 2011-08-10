@@ -142,7 +142,7 @@ this.ComponentClass = function(cls, name, base, members) {
 		__subEvents: {}, // 通过subName_eventType进行注册的事件
 		__onEvents : {}, // 通过oneventtype对宿主component注册的事件
 		__eventHandles: [], // 定义的会触发事件的方法集合
-		__events: {}, // 每个会触发事件的方法的默认事件，由addon加入
+		__events: {} // 每个会触发事件的方法的默认事件，由addon加入
 	});
 
 	cls.mixinComponent(base);
@@ -409,21 +409,25 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		return self[pname];
 	};
 
-	/**
-	 */
-	this.setOption = options.overloadsetter(function(self, name, value) {
-		// TODO
+	var setOption = function(self, name, value) {
+		console.log(name, value)
 		var parts = Array.isArray(name)? name : name.split('.');
 		if (parts.length > 1) {
 			exports.setOptionTo(self._options, parts, value);
 			if (self[parts[0]]) {
-				self[parts[0]].setOption(parts.slice(1), value);
+				setOption(self[parts[0]], parts.slice(1), value);
 			}
 		} else {
 			var methodName = name + 'Change';
 			self.__setOption(name, value);
 			if (self[methodName]) self[methodName](value);
 		}
+	};
+
+	/**
+	 */
+	this.setOption = options.overloadsetter(function(self, name, value) {
+		setOption(self, name, value);
 	});
 
 	this.__setOption = function(self, name, value) {
