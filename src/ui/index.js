@@ -312,6 +312,18 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			} else {
 				self.__setOption(name, defaultValue);
 			}
+
+			// 注册 option_change 等事件
+			var events = self.__subEvents[name];
+			if (events) {
+				Object.keys(events).forEach(function(eventType) {
+					events[eventType].forEach(function(eventFunc) {
+						self.addEvent('__option_' + eventType + '_' + name, function(event) {
+							eventFunc(self, event.value);
+						});
+					});
+				});
+			}
 		});
 	};
 
@@ -409,25 +421,23 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		return self[pname];
 	};
 
-	var setOption = function(self, name, value) {
-		console.log(name, value)
-		var parts = Array.isArray(name)? name : name.split('.');
-		if (parts.length > 1) {
-			exports.setOptionTo(self._options, parts, value);
-			if (self[parts[0]]) {
-				setOption(self[parts[0]], parts.slice(1), value);
-			}
-		} else {
-			var methodName = name + 'Change';
-			self.__setOption(name, value);
-			if (self[methodName]) self[methodName](value);
-		}
-	};
-
 	/**
 	 */
 	this.setOption = options.overloadsetter(function(self, name, value) {
-		setOption(self, name, value);
+		// 由于overloadsetter是通过name是否为string来判断传递形式是name-value还是{name:value}的
+		// 在回调中为了性能需要直接传的parts，类型为数组，因此无法通过回调用overloadsetter包装后的方法进行回调
+		(function(self, name, value) {
+			var parts = Array.isArray(name)? name : name.split('.');
+			if (parts.length > 1) {
+				exports.setOptionTo(self._options, parts, value);
+				if (self[parts[0]]) {
+					arguments.callee(self[parts[0]], parts.slice(1), value);
+				}
+			} else {
+				self.__setOption(name, value);
+				self.fireEvent('__option_change_' + name, {value: value});
+			}
+		})(self, name, value);
 	});
 
 	this.__setOption = function(self, name, value) {
