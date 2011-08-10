@@ -290,7 +290,7 @@ var ElementClassList = this.ElementClassList = new Class(Array, /**@lends dom.El
 	};
 
 	this.add = function(self, token) {
-		self._ele.className += (' ' + token);
+		if (!self.contains(token)) self._ele.className += (' ' + token); // 根据规范，不允许重复添加
 	};
 
 	this.remove = function(self, token) {
