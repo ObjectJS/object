@@ -527,7 +527,16 @@ var Class = this.Class = function() {
 	var baseProperties = prototype.__properties__ || {};
 	prototype.__properties__ = object.extend({}, baseProperties);
 
-	object.extend(cls, base, false);
+	if (base) {
+		for (var property in base) {
+			// 过滤双下划线开头的系统成员和私有成员
+			if (property.indexOf('__') != 0 && cls[property] === undefined) {
+				cls[property] = base[property];
+			}
+		}
+		// metaclass是继承的
+		cls.__metaclass__ = base.__metaclass__;
+	}
 
 	// Members
 	Object.keys(members).forEach(function(name) {
@@ -575,7 +584,8 @@ Class.mixin = function(members, cls, fuck) {
 
 		// 这3个需要过滤掉，是为了支持property加入的内置成员
 		// initialize也需要过滤，当mixin多个class的时候，initialize默认为最后一个，这种行为没意义
-		if (['get', 'set', '__properties__', 'initialize'].indexOf(name) !== -1) return;
+		// 过滤掉双下划线命名的系统成员和私有成员
+		if (['get', 'set', 'initialize'].indexOf(name) !== -1 || name.indexOf('__') == 0) return;
 		if (members[name] !== undefined) return; // 不要覆盖自定义的
 
 		var member = cls.prototype[name];
