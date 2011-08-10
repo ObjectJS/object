@@ -297,12 +297,6 @@ var overloadSetter = function(func, usePlural) {
 	};
 };
 
-// 获取父类的实例，用于 cls.prototype = new parent
-var getInstance = function(cls) {
-	if (cls === Array || cls === String) return new cls;
-	return new cls(window.PROTOTYPING);
-};
-
 /**
  * propery 特性支持getter函数，用法：
  * obj.get(prop_name)
@@ -331,20 +325,11 @@ var setter = function(prop, value) {
 	}
 };
 
-var nativeSetter = function(prop, value) {
-	this[prop] = value;
-};
-
 /**
- * 将一个类的所有子类形成平面数组返回
- * 会在Class.mixin中用到
+ * 对于支持defineProperty的浏览器，可考虑将此setter不设置任何动作
  */
-var getAllSubClasses = function(cls, array) {
-	if (!array) array = [];
-	else array.push(cls);
-	var subs = cls.__subclassesarray__;
-	for (var i = 0, l = subs.length; i < l; i++) arguments.callee(subs[i], array);
-	return array;
+var nativesetter = function(prop, value) {
+	this[prop] = value;
 };
 
 /**
@@ -359,20 +344,167 @@ var mixiner = overloadSetter(function(name, member) {
 	// SubClass.__proto__ = Parent
 	// 实现自动的继承机制
 	if (!(name in this.prototype)) {
-		var classes = getAllSubClasses(this); 
+		var classes = Class.getAllSubClasses(this); 
 		classes.forEach(function(one) {
-			buildMember(one, name, member);
+			Class.buildMember(one, name, member);
 		});
 	}
 	// member有可能是方法，也有可能是属性，需要每次都进行mixin的，而不是仅仅在没有此成员时进行mixin，否则将无法修改属性
-	buildMember(this, name, member);
-	buildPrototype(this, name, member);
+	Class.buildMember(this, name, member);
+	Class.buildPrototype(this, name, member);
 });
+
+/**
+ * 获取一个类的子类
+ * 会被放到 cls.__subclasses__
+ */
+var subclassesgetter = function() {
+	return this.__subclassesarray__;
+};
+
+// IE不可以通过prototype = new Array的方式使function获得数组功能。
+var _nativeExtendable = (function() {
+	// IE和webkit没有统一访问方法（Array.forEach)，避免使用native extend
+	if (!Array.push) return false;
+
+	// 理论上走不到
+	var a = function() {};
+	a.prototype = new Array;
+	var b = new a;
+	b.push(null);
+	return !!b.length;
+})();
+
+var ArrayClass, StringClass;
+
+// 类
+var Class = this.Class = function() {
+	if (arguments.length < 1) throw new Error('bad arguments');
+	// cls
+	var cls = Class.create();
+
+	// 父类
+	var base = Class.initBase(arguments.length > 1? arguments[0] : null);
+	// 构造器
+	var members = Class.initMembers(arguments[arguments.length - 1]);
+
+	Class.__new__(cls, null, base, members);
+
+	// 执行metaclass的init
+	if (cls.__metaclass__) Class.MetaClass.init(cls);
+
+	return cls;
+};
+
+Class.create = function() {
+	var cls = function(prototyping) {
+		if (prototyping === PROTOTYPING) return this;
+		this.__class__ = cls;
+		Class.initMixins(cls, this);
+		var value = this.initialize? this.initialize.apply(this, arguments) : null;
+		return value;
+	};
+	return cls;
+};
+
+/**
+* 创建一个类的核心过程
+*/
+Class.__new__ = function(cls, name, base, members) {
+
+	var mixins = members['@mixins'];
+	if (mixins) {
+		mixins.forEach(function(mixin) {
+			Class.mixin(members, mixin);
+		});
+	}
+
+	if (base) {
+		// 继承的核心
+		cls.prototype = Class.getInstance(base);
+		// Array / String 没有 subclass，需要先判断一下是否存在 subclassesarray
+		if (base.__subclassesarray__) base.__subclassesarray__.push(cls);
+	}
+
+	// Propeties
+	var prototype = cls.prototype;
+	// 有可能已经继承了base的__properties__了
+	var baseProperties = prototype.__properties__ || {};
+	prototype.__properties__ = object.extend({}, baseProperties);
+
+	if (base) {
+		for (var property in base) {
+			// 过滤双下划线开头的系统成员和私有成员
+			if (property.indexOf('__') != 0 && cls[property] === undefined) {
+				cls[property] = base[property];
+			}
+		}
+		// metaclass是继承的
+		cls.__metaclass__ = base.__metaclass__;
+	}
+
+	// Members
+	Object.keys(members).forEach(function(name) {
+		var member = members[name];
+		Class.buildPrototype(cls, name, member);
+		Class.buildMember(cls, name, member);
+	});
+
+	cls.__base__ = base;
+	cls.__members__ = members;
+	cls.__subclassesarray__ = [];
+	cls.__subclasses__ = subclassesgetter;
+	cls.__mixin__ = mixiner;
+	// 支持 this.parent 调用父级同名方法
+	cls.__this__ = {
+		mixining: null,
+		base: cls.__base__,
+		parent: function() {
+			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
+			var name = arguments.callee.caller.__name__;
+			return cls.__base__[name].apply(cls.__base__, arguments);
+		}
+	};
+	cls.prototype.get = getter;
+	cls.prototype.set = setter;
+	cls.prototype._set = nativesetter;
+
+	return cls;
+};
+
+/**
+* 针对不能extend native function的浏览器，转换相应native function为Class
+*/
+Class.initBase = function(base) {
+	if (base) {
+		// IE不能extend native function，用相应的class包装一下
+		if (!_nativeExtendable) {
+			if (base === Array) {
+				base = ArrayClass;
+			} else if (base === String) {
+				base = StringClass;
+			}
+		}
+	}
+	return base;
+};
+
+/**
+* 将用户书写的function类members变成object
+*/
+Class.initMembers = function(members) {
+	if (members instanceof Function) {
+		var f = members;
+		members = {};
+		f.call(members);
+	}
+	return members;
+};
 
 /**
 * mixin时调用mixin的initialize方法，保证其中的初始化成员能够被执行
 */
-var initMixins = function(cls, instance) {
+Class.initMixins = function(cls, instance) {
 	var mixin;
 	if (cls.__mixins__) {
 		for (var i = 0; i < cls.__mixins__.length; i++) {
@@ -384,13 +516,6 @@ var initMixins = function(cls, instance) {
 	}
 };
 
-/**
- * 获取一个类的子类
- * 会被放到 cls.__subclasses__
- */
-var getSubClasses = function() {
-	return this.__subclassesarray__;
-};
 
 /**
  * 生成类的所有class成员
@@ -398,7 +523,7 @@ var getSubClasses = function() {
  * 可以动态根据prototype中方法的类型传递不同参数
  * 用一个统一的方法虽然会在调用的时候影响效率，但是提高了mixin时的效率，使得通过AClass.__mixin__覆盖某已存在方法时不需要修改所有subclasses的对应方法了
  */
-var buildMember = function(cls, name, member) {
+Class.buildMember = function(cls, name, member) {
 	if (name == '__metaclass__' || typeof member != 'function') {
 		cls[name] = member;
 	} else {
@@ -425,7 +550,7 @@ var buildMember = function(cls, name, member) {
 /**
  * 在创建类的过程中生成类的所有prototype
  */
-var buildPrototype = function(cls, name, member) {
+Class.buildPrototype = function(cls, name, member) {
 	var prototype = cls.prototype;
 
 	// 这里的member指向new Class参数的书写的对象/函数
@@ -458,124 +583,13 @@ var buildPrototype = function(cls, name, member) {
 
 };
 
-// IE不可以通过prototype = new Array的方式使function获得数组功能。
-var _nativeExtendable = (function() {
-	// IE和webkit没有统一访问方法（Array.forEach)，避免使用native extend
-	if (!Array.push) return false;
-
-	// 理论上走不到
-	var a = function() {};
-	a.prototype = new Array;
-	var b = new a;
-	b.push(null);
-	return !!b.length;
-})();
-
-var ArrayClass, StringClass;
-
-// 类
-var Class = this.Class = function() {
-	if (arguments.length < 1) throw new Error('bad arguments');
-
-	// cls
-	var cls = function(prototyping) {
-		if (prototyping === PROTOTYPING) return this;
-		this.__class__ = arguments.callee;
-		initMixins(cls, this);
-		var value = this.initialize? this.initialize.apply(this, arguments) : null;
-		return value;
-	};
-
-	// 父类
-	var base = arguments.length > 1? arguments[0] : null;
-	// 继承
-	if (base) {
-		// IE不能extend native function，用相应的class包装一下
-		if (!_nativeExtendable) {
-			if (base === Array) {
-				base = ArrayClass;
-			} else if (base === String) {
-				base = StringClass;
-			}
-		}
-	}
-
-	// 构造器
-	var members = arguments[arguments.length - 1];
-	if (members instanceof Function) {
-		var f = members;
-		members = {};
-		f.call(members);
-	}
-	var mixins = members['@mixins'];
-	if (mixins) {
-		mixins.forEach(function(mixin) {
-			Class.mixin(members, mixin);
-		});
-	}
-
-	if (base) {
-		// 继承的核心
-		cls.prototype = getInstance(base);
-		// Array / String 没有 subclass，需要先判断一下是否存在 subclassesarray
-		if (base.__subclassesarray__) base.__subclassesarray__.push(cls);
-	}
-
-	// Propeties
-	var prototype = cls.prototype;
-	// 有可能已经继承了base的__properties__了
-	var baseProperties = prototype.__properties__ || {};
-	prototype.__properties__ = object.extend({}, baseProperties);
-
-	if (base) {
-		for (var property in base) {
-			// 过滤双下划线开头的系统成员和私有成员
-			if (property.indexOf('__') != 0 && cls[property] === undefined) {
-				cls[property] = base[property];
-			}
-		}
-		// metaclass是继承的
-		cls.__metaclass__ = base.__metaclass__;
-	}
-
-	// Members
-	Object.keys(members).forEach(function(name) {
-		var member = members[name];
-		buildPrototype(cls, name, member);
-		buildMember(cls, name, member);
-	});
-
-	cls.__base__ = base;
-	cls.__subclassesarray__ = [];
-	cls.__subclasses__ = getSubClasses;
-	cls.__mixin__ = mixiner;
-	// 支持 this.parent 调用父级同名方法
-	cls.__this__ = {
-		mixining: null,
-		base: cls.__base__,
-		parent: function() {
-			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
-			var name = arguments.callee.caller.__name__;
-			return cls.__base__[name].apply(cls.__base__, arguments);
-		}
-	};
-	cls.prototype.get = getter;
-	cls.prototype.set = setter;
-	cls.prototype._set = nativeSetter;
-
-	var metaclass = cls.__metaclass__;
-	if (metaclass) metaclass(cls, null, base, members);
-
-	return cls;
-};
-
 /**
  * 在new Class的callback中mixin
  * var MyClass = new Class(function() {
  *	Class.mixin(AnotherClass);
  * })
  */
-Class.mixin = function(members, cls, fuck) {
+Class.mixin = function(members, cls) {
 
 	if (!members.__mixins__) members.__mixins__ = [];
 	members.__mixins__.push(cls);
@@ -603,10 +617,35 @@ Class.mixin = function(members, cls, fuck) {
 
 };
 
+Class.MetaClass = function(meta) {
+	var metaclass = function() {
+		var base = Class.initBase(arguments.length > 1? arguments[0] : null);
+		var members = Class.initMembers(arguments[arguments.length - 1]);
+		var cls = Class.create();
+		cls = meta.__new__(cls, null, base, members);
+		cls.__metaclass__ = metaclass;
+		Class.MetaClass.init(cls);
+		return cls;
+	};
+	metaclass.__init__ = meta.__init__;
+	metaclass.__new__ = meta.__new__;
+	return metaclass;
+};
+
+/**
+* 类创建后，执行其metaclass的__init__方法
+*/
+Class.MetaClass.init = function(cls) {
+	cls.__metaclass__.__init__(cls, null, cls.__base__, cls.__members__);
+};
+
 Class.hasProperty = function(obj, name) {
 	return (name in obj.__properties__);
 };
 
+/**
+ * 所有properties
+ */
 Class.getPropertyNames = function(obj) {
 	return Object.keys(obj.__properties__);
 };
@@ -621,10 +660,10 @@ Class.inject = function(cls, host, args) {
 	if (!args) args = [];
 	host.__class__ = cls;
 	host.__properties__ = cls.prototype.__properties__;
-	var p = getInstance(cls);
+	var p = Class.getInstance(cls);
 	object.extend(host, p);
 	args.unshift(host);
-	initMixins(cls, host);
+	Class.initMixins(cls, host);
 	if (cls.initialize) cls.initialize.apply(cls, args);
 };
 
@@ -639,6 +678,25 @@ Class.getChain = function(cls) {
 	}
 	return result;
 };
+
+// 获取父类的实例，用于 cls.prototype = new parent
+Class.getInstance = function(cls) {
+	if (cls === Array || cls === String) return new cls;
+	return new cls(window.PROTOTYPING);
+};
+
+/**
+ * 将一个类的所有子类形成平面数组返回
+ * 会在Class.mixin中用到
+ */
+Class.getAllSubClasses = function(cls, array) {
+	if (!array) array = [];
+	else array.push(cls);
+	var subs = cls.__subclassesarray__;
+	for (var i = 0, l = subs.length; i < l; i++) arguments.callee(subs[i], array);
+	return array;
+};
+
 
 var instancemethod = function(func) {
 	var wrapper = function() {

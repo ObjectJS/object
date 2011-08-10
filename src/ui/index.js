@@ -130,101 +130,104 @@ this.option = function(defaultValue) {
 	return prop;
 };
 
-this.ComponentClass = function(cls, name, base, members) {
+this.component = new Class.MetaClass({
+	__new__: function(cls, name, base, members) {
+		// 默认父类为Component
+		if (!base) base = exports.Component;
+		return Class.__new__(cls, name, base, members);
+	},
+	__init__: function(cls, name, base, members) {
+		// 此时cls中这几个成员有可能有东西，是从base继承过来的
+		// 不过没有意义，因为是保存在class上，而不是instance上
+		// 在继承时必须保证每个类都有自己独立的对象保存这几种信息
+		cls.__mixin__({
+			addons: members.__addons,
+			__defaultOptions : {}, // 默认options
+			__subs : {},
+			__subEvents: {}, // 通过subName_eventType进行注册的事件
+			__onEvents : {}, // 通过oneventtype对宿主component注册的事件
+			__eventHandles: [], // 定义的会触发事件的方法集合
+			__events: {} // 每个会触发事件的方法的默认事件，由addon加入
+		});
 
-	// 此时cls中这几个成员有可能有东西，是从base继承过来的
-	// 不过没有意义，因为是保存在class上，而不是instance上
-	// 在继承时必须保证每个类都有自己独立的对象保存这几种信息
-	cls.__mixin__({
-		addons: members.__addons,
-		__defaultOptions : {}, // 默认options
-		__subs : {},
-		__subEvents: {}, // 通过subName_eventType进行注册的事件
-		__onEvents : {}, // 通过oneventtype对宿主component注册的事件
-		__eventHandles: [], // 定义的会触发事件的方法集合
-		__events: {} // 每个会触发事件的方法的默认事件，由addon加入
-	});
+		cls.mixinComponent(base);
 
-	cls.mixinComponent(base);
+		Object.keys(members).forEach(function(name) {
+			var member = members[name];
+			var eventType, subName;
+			// member有可能是null
+			if (member != null && member.__class__ === property) {
+				if (member.isComponent) {
+					cls.regSub(name, {
+						selector: member.selector,
+						type: member.type || exports.Component,
+						single: member.single,
+						nodeMap: {}, // 相应node的uid对应component，用于在需要通过node找到component时使用
+						rendered: [] // 后来被加入的，而不是首次通过selector选择的node的引用
+					});
+				} else {
+					cls.regDefaultOption(name, member.defaultValue);
+				}
+			} else if (typeof member == 'function') {
+				if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
+					subName = RegExp.$1;
+					eventType = RegExp.$2;
+					cls.regSubEvent(subName, eventType, member);
+					// addon也可以通过这种命名格式为宿主增加事件
+					// 为避免addon的同名方法在mixin时覆盖宿主同名方法，直接在宿主类的原型中删除此类方法
+					delete cls[name];
+					delete cls.prototype[name];
 
-	Object.keys(members).forEach(function(name) {
-		var member = members[name];
-		var eventType, subName;
-		// member有可能是null
-		if (member != null && member.__class__ === property) {
-			if (member.isComponent) {
-				cls.regSub(name, {
-					selector: member.selector,
-					type: member.type || exports.Component,
-					single: member.single,
-					nodeMap: {}, // 相应node的uid对应component，用于在需要通过node找到component时使用
-					rendered: [] // 后来被加入的，而不是首次通过selector选择的node的引用
+				} else if (name.match(/^on([a-zA-Z]+)$/)) {
+					eventType = RegExp.$1;
+					cls.regOnEvent(eventType, member);
+					delete cls[name];
+					delete cls.prototype[name];
+
+				} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
+					eventType = name.slice(1);
+					cls.regHandle(eventType);
+					cls.__mixin__(eventType, events.fireevent(member));
+				}
+			}
+		});
+
+		if (cls.addons) {
+			var __events = {};
+			cls.addons.forEach(function(addon) {
+				Object.keys(addon.__onEvents).forEach(function(eventType) {
+					if (!__events[eventType]) __events[eventType] = [];
+					var eventFunc = addon.__onEvents[eventType];
+					__events[eventType].push(eventFunc);
 				});
-			} else {
-				cls.regDefaultOption(name, member.defaultValue);
-			}
-		} else if (typeof member == 'function') {
-			if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
-				subName = RegExp.$1;
-				eventType = RegExp.$2;
-				cls.regSubEvent(subName, eventType, member);
-				// addon也可以通过这种命名格式为宿主增加事件
-				// 为避免addon的同名方法在mixin时覆盖宿主同名方法，直接在宿主类的原型中删除此类方法
-				delete cls[name];
-				delete cls.prototype[name];
-
-			} else if (name.match(/^on([a-zA-Z]+)$/)) {
-				eventType = RegExp.$1;
-				cls.regOnEvent(eventType, member);
-				delete cls[name];
-				delete cls.prototype[name];
-
-			} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
-				eventType = name.slice(1);
-				cls.regHandle(eventType);
-				cls.__mixin__(eventType, events.fireevent(member));
-			}
-		}
-	});
-
-	if (cls.addons) {
-		var __events = {};
-		cls.addons.forEach(function(addon) {
-			Object.keys(addon.__onEvents).forEach(function(eventType) {
-				if (!__events[eventType]) __events[eventType] = [];
-				var eventFunc = addon.__onEvents[eventType];
-				__events[eventType].push(eventFunc);
 			});
-		});
 
-		// 映射小写事件注册
-		// _showInputing 这种方法在addon中可以通过 onshowinputing 方式进行事件注册
-		cls.__eventHandles.forEach(function(eventType) {
-			var alias = eventType.toLowerCase();
-			if (eventType != alias && __events[alias]) { // 存在全小写注册的事件
-				cls.__events[eventType] = __events[eventType] ? __events[eventType].concat(__events[alias]) : __events[alias];
-			} else if (__events[eventType]) {
-				cls.__events[eventType] = __events[eventType];
-			}
-		});
+			// 映射小写事件注册
+			// _showInputing 这种方法在addon中可以通过 onshowinputing 方式进行事件注册
+			cls.__eventHandles.forEach(function(eventType) {
+				var alias = eventType.toLowerCase();
+				if (eventType != alias && __events[alias]) { // 存在全小写注册的事件
+					cls.__events[eventType] = __events[eventType] ? __events[eventType].concat(__events[alias]) : __events[alias];
+				} else if (__events[eventType]) {
+					cls.__events[eventType] = __events[eventType];
+				}
+			});
+		}
+
+		if (members.__addons) {
+			members.__addons.forEach(function(addon) {
+				cls.mixinComponent(addon);
+			});
+		}
 	}
-
-	if (members.__addons) {
-		members.__addons.forEach(function(addon) {
-			cls.mixinComponent(addon);
-		});
-	}
-
-};
+});
 
 /**
  * UI模块基类，所有UI组件的基本类
  * @class
  * @name ui.Component
  */
-this.Component = new Class(/**@lends ui.Component*/ function() {
-
-	this.__metaclass__ = exports.ComponentClass;
+this.Component = this.component(/**@lends ui.Component*/ function() {
 
 	var getConstructor = function(type) {
 		if (type === 'number') return Number;
