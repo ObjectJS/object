@@ -130,13 +130,9 @@ this.option = function(defaultValue) {
 	return prop;
 };
 
-this.component = new Class.MetaClass({
-	__new__: function(cls, name, base, members) {
-		// 默认父类为Component
-		if (!base) base = exports.Component;
-		return Class.__new__(cls, name, base, members);
-	},
-	__init__: function(cls, name, base, members) {
+// metaclass
+this.__component = new Class({
+	initialize: function(cls, name, base, members) {
 		// 此时cls中这几个成员有可能有东西，是从base继承过来的
 		// 不过没有意义，因为是保存在class上，而不是instance上
 		// 在继承时必须保证每个类都有自己独立的对象保存这几种信息
@@ -227,7 +223,9 @@ this.component = new Class.MetaClass({
  * @class
  * @name ui.Component
  */
-this.Component = this.component(/**@lends ui.Component*/ function() {
+this.Component = new Class(/**@lends ui.Component*/ function() {
+
+	this.__metaclass__ = exports.__component;
 
 	var getConstructor = function(type) {
 		if (type === 'number') return Number;

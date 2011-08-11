@@ -377,46 +377,13 @@ var _nativeExtendable = (function() {
 
 var ArrayClass, StringClass;
 
-// 类
-var Class = this.Class = function() {
-	if (arguments.length < 1) throw new Error('bad arguments');
-	// cls
-	var cls = Class.create();
-
-	// 父类
-	var base = Class.initBase(arguments.length > 1? arguments[0] : null);
-	// 构造器
-	var members = Class.initMembers(arguments[arguments.length - 1]);
-
-	if (base) cls.__metaclass__ = base.__metaclass__;
-
-	if (cls.__metaclass__) {
-		cls = cls.__metaclass__.__new__(cls, name, base, members)
-	} else {
-		cls = Class.__new__(cls, null, base, members);
-	}
-
-	// 执行metaclass的init
-	if (cls.__metaclass__) Class.MetaClass.init(cls);
-
-	return cls;
-};
-
-Class.create = function() {
-	var cls = function(prototyping) {
-		if (prototyping === PROTOTYPING) return this;
-		this.__class__ = cls;
-		Class.initMixins(cls, this);
-		var value = this.initialize? this.initialize.apply(this, arguments) : null;
-		return value;
-	};
-	return cls;
+var type = this.type = function() {
 };
 
 /**
 * 创建一个类的核心过程
 */
-Class.__new__ = function(cls, name, base, members) {
+type.__new__ = function(cls, name, base, members) {
 
 	var mixins = members['@mixins'];
 	if (mixins) {
@@ -425,12 +392,10 @@ Class.__new__ = function(cls, name, base, members) {
 		});
 	}
 
-	if (base) {
-		// 继承的核心
-		cls.prototype = Class.getInstance(base);
-		// Array / String 没有 subclass，需要先判断一下是否存在 subclassesarray
-		if (base.__subclassesarray__) base.__subclassesarray__.push(cls);
-	}
+	// 继承的核心
+	cls.prototype = Class.getInstance(base);
+	// Array / String 没有 subclass，需要先判断一下是否存在 subclassesarray
+	if (base.__subclassesarray__) base.__subclassesarray__.push(cls);
 
 	// Propeties
 	var prototype = cls.prototype;
@@ -438,7 +403,8 @@ Class.__new__ = function(cls, name, base, members) {
 	var baseProperties = prototype.__properties__ || {};
 	prototype.__properties__ = object.extend({}, baseProperties);
 
-	if (base) {
+	// base就两个成员，initialize和__new__，就不for in影响性能了
+	if (base !== type) {
 		for (var property in base) {
 			// 过滤双下划线开头的系统成员和私有成员
 			if (property.indexOf('__') != 0 && cls[property] === undefined) {
@@ -446,6 +412,8 @@ Class.__new__ = function(cls, name, base, members) {
 			}
 		}
 	}
+	cls.__new__ = base.__new__;
+	cls.__metaclass__ = base.__metaclass__;
 
 	// Members
 	Object.keys(members).forEach(function(name) {
@@ -473,6 +441,41 @@ Class.__new__ = function(cls, name, base, members) {
 	cls.prototype.set = setter;
 	cls.prototype._set = nativesetter;
 
+	return cls;
+};
+
+type.initialize = function() {
+};
+
+// 类
+var Class = this.Class = function() {
+	if (arguments.length < 1) throw new Error('bad arguments');
+	// cls
+	var cls = Class.create();
+	// 父类
+	var base = Class.initBase(arguments.length > 1? arguments[0] : type);
+	// 构造器
+	var members = Class.initMembers(arguments[arguments.length - 1]);
+	// metaclass
+	var metaclass;
+	if (members.__metaclass__) metaclass = members.__metaclass__;
+	else if (base.__metaclass__) metaclass = base.__metaclass__;
+	else metaclass = type;
+
+	cls = metaclass.__new__(cls, null, base, members);
+	metaclass.initialize(cls, null, base, members);
+
+	return cls;
+};
+
+Class.create = function() {
+	var cls = function(prototyping) {
+		if (prototyping === PROTOTYPING) return this;
+		this.__class__ = cls;
+		Class.initMixins(cls, this);
+		var value = this.initialize? this.initialize.apply(this, arguments) : null;
+		return value;
+	};
 	return cls;
 };
 
@@ -619,30 +622,6 @@ Class.mixin = function(members, cls) {
 		}
 	});
 
-};
-
-Class.MetaClass = function(meta) {
-	var metaclass = function() {
-		var base = Class.initBase(arguments.length > 1? arguments[0] : null);
-		var members = Class.initMembers(arguments[arguments.length - 1]);
-		var cls = Class.create();
-		cls = meta.__new__(cls, null, base, members);
-		cls.__metaclass__ = metaclass;
-		Class.MetaClass.init(cls);
-		return cls;
-	};
-	metaclass.__init__ = meta.__init__ || function() {};
-	metaclass.__new__ = meta.__new__ || function(cls, name, base, members) {
-		return Class.__new__(cls, name, base, members);
-	};
-	return metaclass;
-};
-
-/**
-* 类创建后，执行其metaclass的__init__方法
-*/
-Class.MetaClass.init = function(cls) {
-	cls.__metaclass__.__init__(cls, null, cls.__base__, cls.__members__);
 };
 
 Class.hasProperty = function(obj, name) {
