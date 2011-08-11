@@ -4,16 +4,16 @@
 		<meta charset="utf-8" />
 		<script src="../pub/object-all.js"></script>
 		<script>
-			object.add('x.a', 'x.b', function(exports, x) {
-				console.log('a');
+			object.add('a', 'b', function(exports, b, c) {
 				exports.a = 1;
 			});
-			object.add('x.b', 'x.a', function(exports, x) {
-				console.log('b');
+			object.add('b', 'c', function(exports, c) {
 				exports.b = 1;
 			});
-			object.use('x.a', function(exports, x) {
-				console.log(x)
+			object.add('c', 'b', function(exports) {
+				exports.c = 1;
+			});
+			object.use('a', function(exports) {
 			});
 		</script>
 	</head>

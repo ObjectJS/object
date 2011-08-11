@@ -907,10 +907,11 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * context 执行方法
 	 * @param pkg 被执行的pkg
 	 * @param modules 保存了此次use运行过程中用到的所有module
+	 * @param stack 保存了模块的执行过程，检测循环依赖
 	 * @param callback 异步方法，执行完毕后调用
 	 * @param options 可选，可用来定制name
 	 */
-	this.executeModule = function(self, pkg, modules, callback, options) {
+	this.executeModule = function(self, pkg, modules, stack, callback, options) {
 		if (!options) options = {};
 
 		var exports = new Module(options.name || pkg.name);
@@ -960,7 +961,14 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 
 			var use = pkg.uses[i];
 
-			self.getModule(use, modules, function(useModule) {
+			stack.push(use); // 开始获取use这个module
+			if (stack.indexOf(use) != stack.length - 1) { // 正在获取的这个module在stack中之前已经获取过了
+				var error = new Error('circular dependencies. [' + stack.join(',') + ']');
+				error.stack = stack;
+				throw error;
+			}
+			self.getModule(use, modules, stack, function(useModule) {
+				stack.pop(); // 此module获取完毕
 				var names, root, member;
 
 				names = use.split('.');
@@ -990,7 +998,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * @param callback 模块获取到以后，通过callback的第一个参数传递回去
 	 * @returns 最终引入的模块
 	 */
-	this.getModule = function(self, name, modules, callback) {
+	this.getModule = function(self, name, modules, stack, callback) {
 		var names = name.split('.');
 
 		/**
@@ -1002,7 +1010,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			name = names[i];
 
 			var next = function(exports) {
-				if (exports) modules[prefix] = exports;
+				modules[prefix] = exports;
 
 				if (pname) modules[pname][name] = modules[prefix];
 
@@ -1021,21 +1029,17 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			} else if (_lib[prefix]) {
 				var pkg = _lib[prefix];
 
-				if (!modules[prefix]) {
-					modules[prefix] = new Module(prefix);
-				}
-
 				// lib中有，但是是file，需要动态加载
 				if (pkg.file) {
 					// 文件加载完毕后，其中执行的 add 会自动把 _lib 中的对象替换掉，file 属性丢失，加入了 execute/name/uses 等属性
 					// 使用缓存
 					self.loadScript(pkg.file, function() {
-						self.executeModule(pkg, modules, next);
+						self.executeModule(pkg, modules, stack, next);
 					}, true);
 
 				// 也有可能是空的模块，是没有 fn 的，executeModule会处理
 				} else {
-					self.executeModule(pkg, modules, next);
+					self.executeModule(pkg, modules, stack, next);
 				}
 
 			// lib中没有
@@ -1118,7 +1122,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		// 之前是直接将window代替exports传递进去，但是在module初始化完毕后会有一个遍历赋值__name__的过程，会导致IE6下出错，且遍历window也会有性能问题
 		// 因此改为传入exports，然后在extend到window上。
 		// 经验是，不要用一个已经有内容、不可控的对象作为executeModule的exports。
-		self.executeModule(module, {}, function(exports) {
+		self.executeModule(module, {}, [], function(exports) {
 			object.extend(window, exports);
 		}, {name: '__main__'});
 	};
@@ -1134,7 +1138,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		var module = _lib[name];
 		if (!module) throw new NoModuleError(name);
 
-		self.executeModule(module, {}, null, {name: '__main__'});
+		self.executeModule(module, {}, [], null, {name: '__main__'});
 	};
 
 });
