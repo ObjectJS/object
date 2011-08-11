@@ -886,7 +886,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * context 执行方法
 	 * @param pkg 被执行的pkg
 	 * @param modules 保存了此次use运行过程中用到的所有module
-	 * @param stack 保存了模块的执行过程，检测循环依赖
+	 * @param stack 保存了模块的依赖路径的栈，检测循环依赖
 	 * @param callback 异步方法，执行完毕后调用
 	 * @param options 可选，可用来定制name
 	 */
@@ -940,6 +940,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 
 			var use = pkg.uses[i];
 
+			// 循环依赖判断
 			stack.push(use); // 开始获取use这个module
 			if (stack.indexOf(use) != stack.length - 1) { // 正在获取的这个module在stack中之前已经获取过了
 				var error = new Error('circular dependencies. [' + stack.join(',') + ']');
