@@ -641,7 +641,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 			tmp.style.display = 'none';
 			document.body.appendChild(tmp);
 		}
-		tmp.innerHTML = str;
+		tmp.innerHTML = str.trim();
 		var result = wrap(tmp.firstChild);
 		if (_needGetDom) tmp.parentNode.removeChild(tmp);
 		return result;
