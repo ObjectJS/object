@@ -939,6 +939,20 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 				return validity[name] === false;
 			});
 
+			self.validationMessage = (function() {
+				// Logic from webkit
+				// http://www.google.com/codesearch#N6Qhr5kJSgQ/WebCore/html/ValidityState.cpp&type=cs
+				// 文案通过Firefox和Chrome测试而来
+				if (validity.customError) return self.__customValidity;
+				if (validity.valueMissing()) return '请填写此字段。';
+				if (validity.typeMismatch()) return '请输入一个url。';
+				if (validity.patternMismatch()) return '请匹配要求的格式。';
+				if (validity.tooLong()) return '请将该文本减少为 4 个字符或更少（您当前使用了28个字符）。';
+				if (validity.rangeUnderflow()) return '值必须大于或等于5。';
+				if (validity.rangeOverflow()) return '值必须小于或等于5。';
+				if (validity.stepMismatch()) return '值无效。';
+			})();
+
 			self.validity = validity;
 
 			return validity.valid;
