@@ -471,16 +471,16 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		} else if (self[methodName]) {
 			nodes = self[methodName](data);
 		} else {
-			self.__initSub(name, self.__querySub(name));
+			nodes = self.__querySub(name);
 		}
 
 		// 如果有返回结果，说明没有使用self.make，而是自己生成了需要的普通node元素，则对返回结果进行一次包装
 		if (nodes) {
 			if (sub.single) {
-				if (Array.isArray(nodes)) throw '这是一个唯一引用元素，请不要返回一个数组';
+				if (Array.isArray(nodes) || nodes.constructor === dom.Elements) throw '这是一个唯一引用元素，请不要返回一个数组';
 				sub.rendered.push(nodes);
 			} else {
-				if (!Array.isArray(nodes)) throw '这是一个多引用元素，请返回一个数组';
+				if (!Array.isArray(nodes) && nodes.constructor !== dom.Elements) throw '这是一个多引用元素，请返回一个数组';
 				nodes = new dom.Elements(nodes);
 				sub.rendered = sub.rendered.concat(nodes);
 			}
