@@ -394,6 +394,7 @@ type.__new__ = function(cls, name, base, members) {
 
 	// 继承的核心
 	cls.prototype = Class.getInstance(base);
+	cls.prototype.constructor = cls;
 	// Array / String 没有 subclass，需要先判断一下是否存在 subclassesarray
 	if (base.__subclassesarray__) base.__subclassesarray__.push(cls);
 
