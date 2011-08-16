@@ -884,6 +884,10 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 			return self.validity;
 		});
 
+		this.setCustomValidity = function(self, message) {
+			self.__customValidity = message;
+		};
+
 		/**
 		 * html5 forms checkValidity
 		 */
@@ -925,11 +929,11 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 					if (n != maxlength) return false;
 					return value.length > n;
 				})(),
-				// 以下四个 firefox 4 beta 也不支持，暂时不支持
+				customError: !!self.__customValidity,
+				// 以下三个 firefox 4 beta 也不支持，暂时不支持
 				rangeUnderflow: false,
 				rangeOverflow: false,
-				stepMismatch: false,
-				customError: false
+				stepMismatch: false
 			};
 			validity.valid = ['valueMissing', 'typeMismatch', 'patternMismatch', 'tooLong', 'rangeUnderflow', 'rangeOverflow', 'stepMismatch', 'customError'].every(function(name) {
 				return validity[name] === false;
