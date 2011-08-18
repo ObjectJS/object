@@ -169,7 +169,8 @@ Array.prototype.reduceRight = Array.prototype.reduceRight || function(callbackfn
 };
 
 String.prototype.trim = String.prototype.trim || function() {
-	return this.replace(/(^\s*)|(\s*$)/g, '');
+	// High Performance JavaScript 中描述此方法较快
+	return this.replace(/^\s\s*/, "").replace(/\s\s*$/, "");
 };
 
 /**
@@ -195,8 +196,9 @@ if ((function TEST(){}).name) {
 	var funcNameRegExp = /^function ([\w$]+)/;
 	Function.__get_name__ = function(func) {
 		// IE 下没有 Function.prototype.name，通过代码获得
-		result = funcNameRegExp.exec(func.toString());
+		var result = funcNameRegExp.exec(func.toString());
 		if (result) return result[1];
+		return '';
 	};
 }
 
@@ -450,13 +452,14 @@ type.initialize = function() {
 
 // 类
 var Class = this.Class = function() {
-	if (arguments.length < 1) throw new Error('bad arguments');
+	var length = arguments.length;
+	if (length < 1) throw new Error('bad arguments');
 	// cls
 	var cls = Class.create();
 	// 父类
-	var base = Class.initBase(arguments.length > 1? arguments[0] : type);
+	var base = Class.initBase(length > 1? arguments[0] : type);
 	// 构造器
-	var members = Class.initMembers(arguments[arguments.length - 1]);
+	var members = Class.initMembers(arguments[length - 1]);
 	// metaclass
 	var metaclass;
 	if (members.__metaclass__) metaclass = members.__metaclass__;
@@ -515,7 +518,7 @@ Class.initMembers = function(members) {
 Class.initMixins = function(cls, instance) {
 	var mixin;
 	if (cls.__mixins__) {
-		for (var i = 0; i < cls.__mixins__.length; i++) {
+		for (var i = 0, l = cls.__mixins__.length; i < l; i++) {
 			mixin = cls.__mixins__[i];
 			mixin.__this__.mixining = cls;
 			if (mixin.initialize) mixin.initialize(instance);
@@ -727,7 +730,7 @@ var property = this.property = function(fget, fset) {
 // 获取一个native function的class形式用于继承
 var createNativeClass = function(source, methodNames) {
 	var cls = new Class(function() {
-		for (var i = 0; i < methodNames.length; i++) {
+		for (var i = 0, l = methodNames.length; i < l; i++) {
 			this[methodNames[i]] = (function(name) {
 				return function() {
 					return source.prototype[name].apply(arguments[0], [].slice.call(arguments, 1));
@@ -830,9 +833,10 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 
 		if (useCache) {
 			var scripts = cls.scripts;
-			for (var i = 0, l = scripts.length; i < l; i++) {
-				if (scripts[i].src == src) {
-					ele = scripts[i];
+			for (var i = 0, script, l = scripts.length; i < l; i++) {
+				script = scripts[i];
+				if (script.src == src) {
+					ele = script;
 					// 连续调用，此脚本正在加载呢
 					if (scripts[i].loading) {
 						// 增加一个回调即可
@@ -948,7 +952,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 				error.stack = stack;
 				throw error;
 			}
-			self.getModule(use, modules, stack, function(useModule) {
+			self.getModule(use, modules, stack, function() {
 				stack.pop(); // 此module获取完毕
 				var names, root, member;
 
@@ -1047,7 +1051,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 
 		// 过滤自己调用自己
 		uses = uses.filter(function(use) {
-			return use.name != ignore;
+			return use != ignore;
 		});
 
 		return uses;
@@ -1069,9 +1073,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		if (typeof uses == 'function') {
 			context = uses;
 			uses = [];
+		} else {
+			uses = self.getUses(uses, name);
 		}
-
-		uses = self.getUses(uses, name);
 
 		// 建立前缀占位模块
 		self.makePrefixPackage(name);
@@ -1104,7 +1108,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		// 因此改为传入exports，然后在extend到window上。
 		// 经验是，不要用一个已经有内容、不可控的对象作为executeModule的exports。
 		self.executeModule(module, {}, [], function(exports) {
-			object.extend(window, exports);
+			for (var property in exports) {
+				if (property != '__name__' && window[property] === undefined) window[property] = exports[property];
+			}
 		}, {name: '__main__'});
 	};
 
@@ -1113,7 +1119,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * @param name 执行的入口模块名称
 	 * @param options 传入参数
 	 */ 
-	this.execute = function(self, name, options) {
+	this.execute = function(self, name) {
 		self.loadLib();
 
 		var module = _lib[name];
@@ -1127,4 +1133,3 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 })();
 
 object.bind(window);
-
