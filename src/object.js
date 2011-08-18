@@ -457,9 +457,26 @@ var Class = this.Class = function() {
 	// cls
 	var cls = Class.create();
 	// 父类
-	var base = Class.initBase(length > 1? arguments[0] : type);
+	var base = length > 1? arguments[0] : type;
+	if (base) {
+		// IE不能extend native function，用相应的class包装一下
+		if (!_nativeExtendable) {
+			if (base === Array) {
+				base = ArrayClass;
+			} else if (base === String) {
+				base = StringClass;
+			}
+		}
+	}
+
 	// 构造器
-	var members = Class.initMembers(arguments[length - 1]);
+	var members = arguments[length - 1];
+	if (members instanceof Function) {
+		var f = members;
+		members = {};
+		f.call(members);
+	}
+
 	// metaclass
 	var metaclass;
 	if (members.__metaclass__) metaclass = members.__metaclass__;
@@ -481,35 +498,6 @@ Class.create = function() {
 		return value;
 	};
 	return cls;
-};
-
-/**
-* 针对不能extend native function的浏览器，转换相应native function为Class
-*/
-Class.initBase = function(base) {
-	if (base) {
-		// IE不能extend native function，用相应的class包装一下
-		if (!_nativeExtendable) {
-			if (base === Array) {
-				base = ArrayClass;
-			} else if (base === String) {
-				base = StringClass;
-			}
-		}
-	}
-	return base;
-};
-
-/**
-* 将用户书写的function类members变成object
-*/
-Class.initMembers = function(members) {
-	if (members instanceof Function) {
-		var f = members;
-		members = {};
-		f.call(members);
-	}
-	return members;
 };
 
 /**
