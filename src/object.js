@@ -385,7 +385,8 @@ var type = this.type = function() {
 /**
 * 创建一个类的核心过程
 */
-type.__new__ = function(cls, name, base, dict) {
+type.__new__ = function(metaclass, name, base, dict) {
+	var cls = Class.create();
 
 	var mixins = dict['__mixins__'] || dict['@mixins'];
 	if (mixins) {
@@ -446,19 +447,6 @@ type.__new__ = function(cls, name, base, dict) {
 
 	cls.__base__ = base;
 	cls.__dict__ = dict;
-	cls.__subclassesarray__ = [];
-	cls.__subclasses__ = subclassesgetter;
-	cls.__mixin__ = mixiner;
-	// 支持 this.parent 调用父级同名方法
-	cls.__this__ = {
-		mixining: null,
-		base: cls.__base__,
-		parent: function() {
-			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
-			var name = arguments.callee.caller.__name__;
-			return cls.__base__[name].apply(cls.__base__, arguments);
-		}
-	};
 	cls.prototype.get = getter;
 	cls.prototype.set = setter;
 	cls.prototype._set = nativesetter;
@@ -473,8 +461,6 @@ type.initialize = function() {
 var Class = this.Class = function() {
 	var length = arguments.length;
 	if (length < 1) throw new Error('bad arguments');
-	// cls
-	var cls = Class.create();
 	// 父类
 	var base = length > 1? arguments[0] : type;
 	if (base) {
@@ -502,7 +488,7 @@ var Class = this.Class = function() {
 	else if (base.__metaclass__) metaclass = base.__metaclass__;
 	else metaclass = type;
 
-	cls = metaclass.__new__(cls, null, base, dict);
+	var cls = metaclass.__new__(metaclass, null, base, dict);
 	metaclass.initialize(cls, null, base, dict);
 
 	return cls;
@@ -515,6 +501,19 @@ Class.create = function() {
 		Class.initMixins(cls, this);
 		var value = this.initialize? this.initialize.apply(this, arguments) : null;
 		return value;
+	};
+	cls.__subclassesarray__ = [];
+	cls.__subclasses__ = subclassesgetter;
+	cls.__mixin__ = mixiner;
+	// 支持 this.parent 调用父级同名方法
+	cls.__this__ = {
+		mixining: null,
+		base: cls.__base__,
+		parent: function() {
+			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
+			var name = arguments.callee.caller.__name__;
+			return cls.__base__[name].apply(cls.__base__, arguments);
+		}
 	};
 	return cls;
 };
@@ -533,7 +532,6 @@ Class.initMixins = function(cls, instance) {
 		}
 	}
 };
-
 
 /**
  * 生成类的所有class成员
