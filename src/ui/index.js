@@ -132,12 +132,12 @@ this.option = function(defaultValue) {
 
 // metaclass
 this.__component = new Class({
-	initialize: function(cls, name, base, members) {
+	initialize: function(cls, name, base, dict) {
 		// 此时cls中这几个成员有可能有东西，是从base继承过来的
 		// 不过没有意义，因为是保存在class上，而不是instance上
 		// 在继承时必须保证每个类都有自己独立的对象保存这几种信息
 		cls.__mixin__({
-			addons: members.__addons,
+			addons: dict.__addons,
 			__defaultOptions : {}, // 默认options
 			__subs : {},
 			__subEvents: {}, // 通过subName_eventType进行注册的事件
@@ -148,8 +148,8 @@ this.__component = new Class({
 
 		cls.mixinComponent(base);
 
-		Object.keys(members).forEach(function(name) {
-			var member = members[name];
+		Object.keys(dict).forEach(function(name) {
+			var member = dict[name];
 			var eventType, subName;
 			// member有可能是null
 			if (member != null && member.__class__ === property) {
@@ -210,8 +210,8 @@ this.__component = new Class({
 			});
 		}
 
-		if (members.__addons) {
-			members.__addons.forEach(function(addon) {
+		if (dict.__addons) {
+			dict.__addons.forEach(function(addon) {
 				cls.mixinComponent(addon);
 			});
 		}
@@ -655,12 +655,12 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 });
 
-this.addon = function(members, Addon) {
-	if (!members.__addons) {
-		members.__addons = [];
+this.addon = function(dict, Addon) {
+	if (!dict.__addons) {
+		dict.__addons = [];
 	}
-	members.__addons.push(Addon);
-	Class.mixin(members, Addon);
+	dict.__addons.push(Addon);
+	Class.mixin(dict, Addon);
 };
 
 /**
