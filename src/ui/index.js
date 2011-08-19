@@ -131,22 +131,87 @@ this.option = function(defaultValue) {
 };
 
 // metaclass
-this.__component = new Class({
-	initialize: function(cls, name, base, dict) {
-		// 此时cls中这几个成员有可能有东西，是从base继承过来的
-		// 不过没有意义，因为是保存在class上，而不是instance上
-		// 在继承时必须保证每个类都有自己独立的对象保存这几种信息
-		cls.__mixin__({
-			addons: dict.__addons,
-			__defaultOptions : {}, // 默认options
-			__subs : {},
-			__subEvents: {}, // 通过subName_eventType进行注册的事件
-			__onEvents : {}, // 通过oneventtype对宿主component注册的事件
-			__eventHandles: [], // 定义的会触发事件的方法集合
-			__events: {} // 每个会触发事件的方法的默认事件，由addon加入
-		});
+this.__component = new Class(function() {
 
-		cls.mixinComponent(base);
+	var mixinComponent = function(cls, comp) {
+
+		if (comp && comp.addons) {
+			cls.addons.push.apply(cls.addons, comp.addons);
+		}
+
+		if (comp && comp.__defaultOptions) {
+			Object.keys(comp.__defaultOptions).forEach(function(name) {
+				regDefaultOption(cls, name, comp.__defaultOptions[name]);
+			});
+		}
+
+		if (comp && comp.__subs) {
+			Object.keys(comp.__subs).forEach(function(name) {
+				regSub(cls, name, comp.__subs[name]);
+			});
+		}
+
+		if (comp && comp.__subEvents) {
+			Object.keys(comp.__subEvents).forEach(function(subName) {
+				Object.keys(comp.__subEvents[subName]).forEach(function(eventType) {
+					comp.__subEvents[subName][eventType].forEach(function(eventFunc) {
+						regSubEvent(cls, subName, eventType, eventFunc);
+					});
+				});
+			});
+		}
+
+		if (comp && comp.__onEvents) {
+			Object.keys(comp.__onEvents).forEach(function(eventType) {
+				regOnEvent(cls, eventType, comp.__onEvents[eventType]);
+			});
+		}
+
+		if (comp && comp.__eventHandles) {
+			comp.__eventHandles.forEach(function(eventType) {
+				regHandle(cls, eventType);
+			});
+		}
+
+	};
+
+	var regSub = function(cls, name, descriptor) {
+		var subs = cls.__subs;
+		if (!subs[name]) subs[name] = descriptor;
+	};
+
+	var regDefaultOption = function(cls, name, value) {
+		var defaultOptions = cls.__defaultOptions;
+		if (!defaultOptions[name]) defaultOptions[name] = value;
+	};
+
+	var regSubEvent = function(cls, subName, eventType, eventFunc) {
+		var subEvents = cls.__subEvents;
+		if (!subEvents[subName]) subEvents[subName] = {};
+		var subEvent = subEvents[subName];
+		if (!subEvent[eventType]) subEvent[eventType] = [];
+		subEvent[eventType].push(eventFunc);
+	};
+
+	var regOnEvent = function(cls, eventType, eventFunc) {
+		var onEvents = cls.__onEvents;
+		if (!onEvents[eventType]) onEvents[eventType] = eventFunc;
+	};
+
+	var regHandle = function(cls, eventType) {
+		var eventHandles = cls.__eventHandles;
+		if (eventHandles.indexOf(eventType) == -1) eventHandles.push(eventType);
+	};
+
+	this.__new__ = function(cls, name, base, dict) {
+
+		dict.addons = dict.__addons;
+		dict.__defaultOptions = {}; // 默认options
+		dict.__subs = {};
+		dict.__subEvents = {}; // 通过subName_eventType进行注册的事件
+		dict.__onEvents = {}; // 通过oneventtype对宿主component注册的事件
+		dict.__eventHandles = []; // 定义的会触发事件的方法集合
+		dict.__events = {}; // 每个会触发事件的方法的默认事件，由addon加入
 
 		Object.keys(dict).forEach(function(name) {
 			var member = dict[name];
@@ -154,7 +219,7 @@ this.__component = new Class({
 			// member有可能是null
 			if (member != null && member.__class__ === property) {
 				if (member.isComponent) {
-					cls.regSub(name, {
+					regSub(dict, name, {
 						selector: member.selector,
 						type: member.type || exports.Component,
 						single: member.single,
@@ -162,31 +227,36 @@ this.__component = new Class({
 						rendered: [] // 后来被加入的，而不是首次通过selector选择的node的引用
 					});
 				} else {
-					cls.regDefaultOption(name, member.defaultValue);
+					regDefaultOption(dict, name, member.defaultValue);
 				}
 			} else if (typeof member == 'function') {
 				if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
 					subName = RegExp.$1;
 					eventType = RegExp.$2;
-					cls.regSubEvent(subName, eventType, member);
+					regSubEvent(dict, subName, eventType, member);
 					// addon也可以通过这种命名格式为宿主增加事件
 					// 为避免addon的同名方法在mixin时覆盖宿主同名方法，直接在宿主类的原型中删除此类方法
-					delete cls[name];
-					delete cls.prototype[name];
+					delete dict[name];
 
 				} else if (name.match(/^on([a-zA-Z]+)$/)) {
 					eventType = RegExp.$1;
-					cls.regOnEvent(eventType, member);
-					delete cls[name];
-					delete cls.prototype[name];
+					regOnEvent(dict, eventType, member);
+					delete dict[name];
 
 				} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
 					eventType = name.slice(1);
-					cls.regHandle(eventType);
-					cls.__mixin__(eventType, events.fireevent(member));
+					regHandle(dict, eventType);
+					dict[eventType] = events.fireevent(member);
 				}
 			}
 		});
+
+		return type.__new__(cls, name, base, dict);
+	};
+
+	this.initialize = function(cls, name, base, dict) {
+
+		mixinComponent(cls, base);
 
 		if (cls.addons) {
 			var __events = {};
@@ -212,10 +282,10 @@ this.__component = new Class({
 
 		if (dict.__addons) {
 			dict.__addons.forEach(function(addon) {
-				cls.mixinComponent(addon);
+				mixinComponent(cls, addon);
 			});
 		}
-	}
+	};
 });
 
 /**
@@ -268,9 +338,6 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		self.__initEvents();
 		self.__initSubs();
 		self.init();
-	};
-
-	this._init = function(self) {
 	};
 
 	/**
@@ -414,6 +481,60 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		return sub.single? self._node.getElement(sub.selector) : self._node.getElements(sub.selector);
 	};
 
+	this.__setOption = function(self, name, value) {
+		var pname = '_' + name;
+		self[pname] = value;
+		self._set(name, value);
+	};
+
+	this._init = function(self) {
+	};
+
+	/**
+	 * 弹出验证错误信息
+	 */
+	this._invalid = function(self, msg) {
+		if (!msg) msg = '输入错误';
+		alert(msg);
+	};
+
+	/**
+	 * 弹出出错信息
+	 */
+	this._error = function(self, msg) {
+		if (!msg) msg = '出错啦！';
+		alert(msg);
+	};
+
+	/**
+	 * 重置一个component，回到初始状态，删除所有render的元素。
+	 */
+	this._reset = function(self) {
+		// 清空所有render进来的新元素
+		Object.keys(self.__subs).forEach(function(name) {
+			var sub = self.__subs[name];
+			var pname = '_' + name;
+			sub.rendered.forEach(function(node) {
+				var comp = sub.nodeMap[node.uid];
+				delete sub.nodeMap[node.uid];
+				node.dispose();
+				if (sub.single) {
+					self[name] = self[pname] = null;
+				} else {
+					self[name].splice(self[name].indexOf(comp), 1); // 去掉
+					self[pname].splice(self[pname].indexOf(node), 1); // 去掉
+				}
+			});
+			if (!sub.single) {
+				self[name].forEach(function(comp) {
+					comp.reset();
+				});
+			} else if (self[name]) {
+				self[name].reset();
+			}
+		});
+	};
+
 	this.getOption = function(self, name) {
 		var pname = '_' + name;
 		if (self[pname] === undefined) {
@@ -440,12 +561,6 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			}
 		})(self, name, value);
 	});
-
-	this.__setOption = function(self, name, value) {
-		var pname = '_' + name;
-		self[pname] = value;
-		self._set(name, value);
-	};
 
 	/**
 	 * 渲染一组subcomponent
@@ -535,120 +650,11 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	};
 
 	/**
-	 * 弹出验证错误信息
-	 */
-	this._invalid = function(self, msg) {
-		if (!msg) msg = '输入错误';
-		alert(msg);
-	};
-
-	/**
-	 * 弹出出错信息
-	 */
-	this._error = function(self, msg) {
-		if (!msg) msg = '出错啦！';
-		alert(msg);
-	};
-
-	/**
-	 * 重置一个component，回到初始状态，删除所有render的元素。
-	 */
-	this._reset = function(self) {
-		// 清空所有render进来的新元素
-		Object.keys(self.__subs).forEach(function(name) {
-			var sub = self.__subs[name];
-			var pname = '_' + name;
-			sub.rendered.forEach(function(node) {
-				var comp = sub.nodeMap[node.uid];
-				delete sub.nodeMap[node.uid];
-				node.dispose();
-				if (sub.single) {
-					self[name] = self[pname] = null;
-				} else {
-					self[name].splice(self[name].indexOf(comp), 1); // 去掉
-					self[pname].splice(self[pname].indexOf(node), 1); // 去掉
-				}
-			});
-			if (!sub.single) {
-				self[name].forEach(function(comp) {
-					comp.reset();
-				});
-			} else if (self[name]) {
-				self[name].reset();
-			}
-		});
-	};
-
-	/**
 	 * 获取包装的节点
 	 */
 	this.getNode = function(self) {
 		return self._node;
 	};
-
-	this.regSub = classmethod(function(cls, name, descriptor) {
-		cls.__subs[name] = descriptor;
-	});
-
-	this.regDefaultOption = classmethod(function(cls, name, value) {
-		cls.__defaultOptions[name] = value;
-	});
-
-	this.regSubEvent = classmethod(function(cls, subName, eventType, eventFunc) {
-		if (!cls.__subEvents[subName]) cls.__subEvents[subName] = {};
-		if (!cls.__subEvents[subName][eventType]) cls.__subEvents[subName][eventType] = [];
-		cls.__subEvents[subName][eventType].push(eventFunc);
-	});
-
-	this.regOnEvent = classmethod(function(cls, eventType, eventFunc) {
-		cls.__onEvents[eventType] = eventFunc;
-	});
-
-	this.regHandle = classmethod(function(cls, eventType) {
-		cls.__eventHandles.push(eventType);
-	});
-
-	this.mixinComponent = classmethod(function(cls, comp) {
-
-		if (comp && comp.addons) {
-			cls.addons.push.apply(cls.addons, comp.addons);
-		}
-
-		if (comp && comp.__defaultOptions) {
-			Object.keys(comp.__defaultOptions).forEach(function(name) {
-				cls.regDefaultOption(name, comp.__defaultOptions[name]);
-			});
-		}
-
-		if (comp && comp.__subs) {
-			Object.keys(comp.__subs).forEach(function(name) {
-				cls.regSub(name, comp.__subs[name]);
-			});
-		}
-
-		if (comp && comp.__subEvents) {
-			Object.keys(comp.__subEvents).forEach(function(subName) {
-				Object.keys(comp.__subEvents[subName]).forEach(function(eventType) {
-					comp.__subEvents[subName][eventType].forEach(function(eventFunc) {
-						cls.regSubEvent(subName, eventType, eventFunc);
-					});
-				});
-			});
-		}
-
-		if (comp && comp.__onEvents) {
-			Object.keys(comp.__onEvents).forEach(function(eventType) {
-				cls.regOnEvent(eventType, comp.__onEvents[eventType]);
-			});
-		}
-
-		if (comp && comp.__eventHandles) {
-			comp.__eventHandles.forEach(function(eventType) {
-				cls.regHandle(eventType);
-			});
-		}
-
-	});
 
 	this.define = staticmethod(exports.define);
 	this.define1 = staticmethod(exports.define1);
