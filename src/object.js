@@ -385,12 +385,31 @@ var type = this.type = function() {
 /**
 * 创建一个类的核心过程
 */
-type.__new__ = function(cls, name, base, members) {
+type.__new__ = function(cls, name, base, dict) {
 
-	var mixins = members['@mixins'];
+	var mixins = dict['__mixins__'] || dict['@mixins'];
 	if (mixins) {
 		mixins.forEach(function(mixin) {
-			Class.mixin(members, mixin);
+			Object.keys(mixin.prototype).forEach(function(name) {
+
+				// 这3个需要过滤掉，是为了支持property加入的内置成员
+				// initialize也需要过滤，当mixin多个class的时候，initialize默认为最后一个，这种行为没意义
+				// 过滤掉双下划线命名的系统成员和私有成员
+				if (['get', 'set', 'initialize'].indexOf(name) !== -1 || name.indexOf('__') == 0) return;
+				if (dict[name] !== undefined) return; // 不要覆盖自定义的
+
+				var member = mixin.prototype[name];
+
+				if (typeof member == 'function') {
+					if (member.__class__ === instancemethod) {
+						dict[name] = member.im_func;
+					} else {
+						dict[name] = member;
+					}
+				} else {
+					dict[name] = member;
+				}
+			});
 		});
 	}
 
@@ -418,15 +437,15 @@ type.__new__ = function(cls, name, base, members) {
 	cls.__new__ = base.__new__;
 	cls.__metaclass__ = base.__metaclass__;
 
-	// Members
-	Object.keys(members).forEach(function(name) {
-		var member = members[name];
+	// Dict
+	Object.keys(dict).forEach(function(name) {
+		var member = dict[name];
 		Class.buildPrototype(cls, name, member);
 		Class.buildMember(cls, name, member);
 	});
 
 	cls.__base__ = base;
-	cls.__members__ = members;
+	cls.__dict__ = dict;
 	cls.__subclassesarray__ = [];
 	cls.__subclasses__ = subclassesgetter;
 	cls.__mixin__ = mixiner;
@@ -470,21 +489,21 @@ var Class = this.Class = function() {
 	}
 
 	// 构造器
-	var members = arguments[length - 1];
-	if (members instanceof Function) {
-		var f = members;
-		members = {};
-		f.call(members);
+	var dict = arguments[length - 1];
+	if (dict instanceof Function) {
+		var f = dict;
+		dict = {};
+		f.call(dict);
 	}
 
 	// metaclass
 	var metaclass;
-	if (members.__metaclass__) metaclass = members.__metaclass__;
+	if (dict.__metaclass__) metaclass = dict.__metaclass__;
 	else if (base.__metaclass__) metaclass = base.__metaclass__;
 	else metaclass = type;
 
-	cls = metaclass.__new__(cls, null, base, members);
-	metaclass.initialize(cls, null, base, members);
+	cls = metaclass.__new__(cls, null, base, dict);
+	metaclass.initialize(cls, null, base, dict);
 
 	return cls;
 };
@@ -585,35 +604,12 @@ Class.buildPrototype = function(cls, name, member) {
 /**
  * 在new Class的callback中mixin
  * var MyClass = new Class(function() {
- *	Class.mixin(AnotherClass);
+ *	Class.mixin(this, AnotherClass);
  * })
  */
-Class.mixin = function(members, cls) {
-
-	if (!members.__mixins__) members.__mixins__ = [];
-	members.__mixins__.push(cls);
-
-	Object.keys(cls.prototype).forEach(function(name) {
-
-		// 这3个需要过滤掉，是为了支持property加入的内置成员
-		// initialize也需要过滤，当mixin多个class的时候，initialize默认为最后一个，这种行为没意义
-		// 过滤掉双下划线命名的系统成员和私有成员
-		if (['get', 'set', 'initialize'].indexOf(name) !== -1 || name.indexOf('__') == 0) return;
-		if (members[name] !== undefined) return; // 不要覆盖自定义的
-
-		var member = cls.prototype[name];
-
-		if (typeof member == 'function') {
-			if (member.__class__ === instancemethod) {
-				members[name] = member.im_func;
-			} else {
-				members[name] = member;
-			}
-		} else {
-			members[name] = member;
-		}
-	});
-
+Class.mixin = function(dict, cls) {
+	if (!dict.__mixins__) dict.__mixins__ = [];
+	dict.__mixins__.push(cls);
 };
 
 Class.hasProperty = function(obj, name) {
