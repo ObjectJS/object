@@ -345,6 +345,7 @@ var mixiner = overloadSetter(function(name, member) {
 	// 由于ie没有 __proto__ 属性，因此需要遍历，否则可以通过
 	// SubClass.__proto__ = Parent
 	// 实现自动的继承机制
+	// TODO property的处理！
 	if (!(name in this.prototype)) {
 		var classes = Class.getAllSubClasses(this); 
 		classes.forEach(function(one) {
@@ -540,7 +541,7 @@ Class.initMixins = function(cls, instance) {
  * 用一个统一的方法虽然会在调用的时候影响效率，但是提高了mixin时的效率，使得通过AClass.__mixin__覆盖某已存在方法时不需要修改所有subclasses的对应方法了
  */
 Class.buildMember = function(cls, name, member) {
-	if (name == '__metaclass__' || typeof member != 'function') {
+	if (name == '__metaclass__' || typeof member != 'function' || member.__class__ === property) {
 		cls[name] = member;
 	} else {
 		cls[name] = function(self) {
