@@ -205,6 +205,13 @@ this.__component = new Class(function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 
+		if (!dict._dict) {
+			dict._dict = Object.keys(dict);
+			if (base._dict) {
+				dict._dict = base._dict.concat(dict._dict);
+			}
+		}
+
 		dict.addons = dict.__addons;
 		dict.__defaultOptions = {}; // 默认options
 		dict.__subs = {};
@@ -213,13 +220,20 @@ this.__component = new Class(function() {
 		dict.__eventHandles = []; // 定义的会触发事件的方法集合
 		dict.__events = {}; // 每个会触发事件的方法的默认事件，由addon加入
 
-		Object.keys(dict).forEach(function(name) {
-			var member = dict[name];
+		return type.__new__(cls, name, base, dict);
+	};
+
+	this.initialize = function(cls, name, base, dict) {
+
+		cls._dict.forEach(function(name) {
+			if (['get', 'set', 'initialize'].indexOf(name) !== -1 || name.indexOf('__') == 0) return;
+
+			var member = cls[name];
 			var eventType, subName;
 			// member有可能是null
 			if (member != null && member.__class__ === property) {
 				if (member.isComponent) {
-					regSub(dict, name, {
+					regSub(cls, name, {
 						selector: member.selector,
 						type: member.type || exports.Component,
 						single: member.single,
@@ -227,36 +241,25 @@ this.__component = new Class(function() {
 						rendered: [] // 后来被加入的，而不是首次通过selector选择的node的引用
 					});
 				} else {
-					regDefaultOption(dict, name, member.defaultValue);
+					regDefaultOption(cls, name, member.defaultValue);
 				}
 			} else if (typeof member == 'function') {
 				if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
 					subName = RegExp.$1;
 					eventType = RegExp.$2;
-					regSubEvent(dict, subName, eventType, member);
-					// addon也可以通过这种命名格式为宿主增加事件
-					// 为避免addon的同名方法在mixin时覆盖宿主同名方法，直接在宿主类的原型中删除此类方法
-					delete dict[name];
+					regSubEvent(cls, subName, eventType, cls.prototype[name].im_func);
 
 				} else if (name.match(/^on([a-zA-Z]+)$/)) {
 					eventType = RegExp.$1;
-					regOnEvent(dict, eventType, member);
-					delete dict[name];
+					regOnEvent(cls, eventType, cls.prototype[name].im_func);
 
 				} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
 					eventType = name.slice(1);
-					regHandle(dict, eventType);
-					dict[eventType] = events.fireevent(member);
+					regHandle(cls, eventType);
+					cls.__mixin__(eventType, events.fireevent(cls.prototype[name].im_func));
 				}
 			}
 		});
-
-		return type.__new__(cls, name, base, dict);
-	};
-
-	this.initialize = function(cls, name, base, dict) {
-
-		mixinComponent(cls, base);
 
 		if (cls.addons) {
 			var __events = {};
@@ -296,6 +299,8 @@ this.__component = new Class(function() {
 this.Component = new Class(/**@lends ui.Component*/ function() {
 
 	this.__metaclass__ = exports.__component;
+
+	this._dict = ['_init', '_reset', '_invalid', '_error'];
 
 	var getConstructor = function(type) {
 		if (type === 'number') return Number;
@@ -666,7 +671,7 @@ this.addon = function(dict, Addon) {
 		dict.__addons = [];
 	}
 	dict.__addons.push(Addon);
-	Class.mixin(dict, Addon);
+	// TODO 非绑定事件方法的注册
 };
 
 /**
