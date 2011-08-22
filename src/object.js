@@ -842,7 +842,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			if (pkg.fn) {
 				var returnValue = pkg.fn.apply(exports, args);
 				if (returnValue) {
-					if(typeof returnValue === 'object' || typeof returnValue === 'function') {
+					if (typeof returnValue === 'object' || typeof returnValue === 'function') {
 						returnValue.toString = Module.prototype.toString;
 						returnValue.__name__ = exports.__name__;
 					}
