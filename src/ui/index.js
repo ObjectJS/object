@@ -140,8 +140,8 @@ this.__component = new Class(function() {
 		}
 
 		if (comp && comp.__defaultOptions) {
-			Object.keys(comp.__defaultOptions).forEach(function(name) {
-				regDefaultOption(cls, name, comp.__defaultOptions[name]);
+			comp.__defaultOptions.forEach(function(name) {
+				regDefaultOption(cls, name);
 			});
 		}
 
@@ -180,9 +180,9 @@ this.__component = new Class(function() {
 		if (!subs[name]) subs[name] = descriptor;
 	};
 
-	var regDefaultOption = function(cls, name, value) {
+	var regDefaultOption = function(cls, name) {
 		var defaultOptions = cls.__defaultOptions;
-		if (!defaultOptions[name]) defaultOptions[name] = value;
+		if (defaultOptions.indexOf(name) == -1) defaultOptions.push(name);
 	};
 
 	var regSubEvent = function(cls, subName, eventType, eventFunc) {
@@ -206,12 +206,31 @@ this.__component = new Class(function() {
 	this.__new__ = function(cls, name, base, dict) {
 
 		dict.addons = dict.__addons;
-		dict.__defaultOptions = {}; // 默认options
+		dict.__defaultOptions = []; // 默认options
 		dict.__subs = {};
 		dict.__subEvents = {}; // 通过subName_eventType进行注册的事件
 		dict.__onEvents = {}; // 通过oneventtype对宿主component注册的事件
 		dict.__eventHandles = []; // 定义的会触发事件的方法集合
 		dict.__events = {}; // 每个会触发事件的方法的默认事件，由addon加入
+
+		if (dict.__addons) {
+			dict.__addons.forEach(function(addon) {
+				Object.keys(addon).forEach(function(name) {
+					if (['initialize'].indexOf(name) !== -1 || name.indexOf('__') == 0) return;
+					if (dict[name] !== undefined) return; // 不要覆盖自定义的
+
+					var member = addon.prototype[name];
+
+					if (typeof member == 'function' && member.__class__ === instancemethod) { // instancemethod
+						dict[name] = member.im_func;
+					} else if (member === undefined) { // property
+						dict[name] = addon[name];
+					} else {
+						dict[name] = member;
+					}
+				});
+			});
+		}
 
 		Object.keys(dict).forEach(function(name) {
 			var member = dict[name];
@@ -316,7 +335,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				};
 			}
 			var data = {};
-			Object.keys(self.__defaultOptions).forEach(function(key) {
+			self.__defaultOptions.forEach(function(key) {
 				if (options[key] === undefined) data[key] = self.get(key);
 			});
 			extend(data, options);
@@ -364,10 +383,10 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			self._options[name] = options[name];
 		});
 
-		Object.keys(self.__defaultOptions).forEach(function(name) {
+		self.__defaultOptions.forEach(function(name) {
 			// 从dom获取配置
 			var data = self._node.getData(name.toLowerCase()),
-			defaultValue = self.__defaultOptions[name],
+			defaultValue = self.__properties__[name].defaultValue,
 			value;
 
 			if (data) {
@@ -539,7 +558,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	this.getOption = function(self, name) {
 		var pname = '_' + name;
 		if (self[pname] === undefined) {
-			self[pname] = self.__defaultOptions[name];
+			self[pname] = self.__properties__[name].defaultValue;
 		}
 		return self[pname];
 	};
@@ -667,7 +686,6 @@ this.addon = function(dict, Addon) {
 		dict.__addons = [];
 	}
 	dict.__addons.push(Addon);
-	Class.mixin(dict, Addon);
 };
 
 /**
