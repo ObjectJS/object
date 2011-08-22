@@ -97,8 +97,10 @@ this.define = function(selector, type, single) {
 	});
 	prop.isComponent = true;
 	prop.selector = selector;
-	prop.type = type;
+	prop.type = type || exports.Component;
 	prop.single = single;
+	prop.nodeMap = {}; // 相应node的uid对应component，用于在需要通过node找到component时使用
+	prop.rendered = []; // 后来被加入的，而不是首次通过selector选择的node的引用
 	return prop;
 };
 
@@ -146,8 +148,8 @@ this.__component = new Class(function() {
 		}
 
 		if (comp && comp.__subs) {
-			Object.keys(comp.__subs).forEach(function(name) {
-				regSub(cls, name, comp.__subs[name]);
+			comp.__subs.forEach(function(name) {
+				regSub(cls, name);
 			});
 		}
 
@@ -162,8 +164,8 @@ this.__component = new Class(function() {
 		}
 
 		if (comp && comp.__onEvents) {
-			Object.keys(comp.__onEvents).forEach(function(eventType) {
-				regOnEvent(cls, eventType, comp.__onEvents[eventType]);
+			comp.__onEvents.forEach(function(eventType) {
+				regOnEvent(cls, eventType);
 			});
 		}
 
@@ -175,9 +177,9 @@ this.__component = new Class(function() {
 
 	};
 
-	var regSub = function(cls, name, descriptor) {
+	var regSub = function(cls, name) {
 		var subs = cls.__subs;
-		if (!subs[name]) subs[name] = descriptor;
+		if (subs.indexOf(name) == -1) subs.push(name);
 	};
 
 	var regDefaultOption = function(cls, name) {
@@ -193,9 +195,9 @@ this.__component = new Class(function() {
 		subEvent[eventType].push(eventFunc);
 	};
 
-	var regOnEvent = function(cls, eventType, eventFunc) {
+	var regOnEvent = function(cls, eventType) {
 		var onEvents = cls.__onEvents;
-		if (!onEvents[eventType]) onEvents[eventType] = eventFunc;
+		if (onEvents.indexOf(eventType) == -1) onEvents.push(eventType);
 	};
 
 	var regHandle = function(cls, eventType) {
@@ -207,9 +209,9 @@ this.__component = new Class(function() {
 
 		dict.addons = dict.__addons;
 		dict.__defaultOptions = []; // 默认options
-		dict.__subs = {};
+		dict.__subs = [];
 		dict.__subEvents = {}; // 通过subName_eventType进行注册的事件
-		dict.__onEvents = {}; // 通过oneventtype对宿主component注册的事件
+		dict.__onEvents = []; // 通过oneventtype对宿主component注册的事件
 		dict.__eventHandles = []; // 定义的会触发事件的方法集合
 		dict.__events = {}; // 每个会触发事件的方法的默认事件，由addon加入
 
@@ -219,18 +221,24 @@ this.__component = new Class(function() {
 					if (['initialize'].indexOf(name) !== -1 || name.indexOf('__') == 0) return;
 					if (dict[name] !== undefined) return; // 不要覆盖自定义的
 
-					var member = addon.prototype[name];
+					var member = addon[name];
 
-					if (typeof member == 'function' && member.__class__ === instancemethod) { // instancemethod
-						dict[name] = member.im_func;
-					} else if (member === undefined) { // property
-						dict[name] = addon[name];
+					if (typeof member == 'function') {
+						if (member.__class__ === instancemethod) { // instancemethod
+							dict[name] = addon.prototype[name].im_func;
+						} else if (member.__class__ === property) { // property
+							dict[name] = addon[name];
+						}
 					} else {
 						dict[name] = member;
 					}
 				});
 			});
 		}
+		return type.__new__(cls, name, base, dict);
+	};
+
+	this.initialize = function(cls, name, base, dict) {
 
 		Object.keys(dict).forEach(function(name) {
 			var member = dict[name];
@@ -238,51 +246,38 @@ this.__component = new Class(function() {
 			// member有可能是null
 			if (member != null && member.__class__ === property) {
 				if (member.isComponent) {
-					regSub(dict, name, {
-						selector: member.selector,
-						type: member.type || exports.Component,
-						single: member.single,
-						nodeMap: {}, // 相应node的uid对应component，用于在需要通过node找到component时使用
-						rendered: [] // 后来被加入的，而不是首次通过selector选择的node的引用
-					});
+					regSub(cls, name);
 				} else {
-					regDefaultOption(dict, name, member.defaultValue);
+					regDefaultOption(cls, name);
 				}
 			} else if (typeof member == 'function') {
 				if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
 					subName = RegExp.$1;
 					eventType = RegExp.$2;
-					regSubEvent(dict, subName, eventType, member);
+					regSubEvent(cls, subName, eventType, member);
 					// addon也可以通过这种命名格式为宿主增加事件
 					// 为避免addon的同名方法在mixin时覆盖宿主同名方法，直接在宿主类的原型中删除此类方法
-					delete dict[name];
 
 				} else if (name.match(/^on([a-zA-Z]+)$/)) {
 					eventType = RegExp.$1;
-					regOnEvent(dict, eventType, member);
-					delete dict[name];
+					regOnEvent(cls, eventType);
 
 				} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
 					eventType = name.slice(1);
-					regHandle(dict, eventType);
-					dict[eventType] = events.fireevent(member);
+					regHandle(cls, eventType);
+					cls.__mixin__(eventType, events.fireevent(member));
 				}
 			}
 		});
-
-		return type.__new__(cls, name, base, dict);
-	};
-
-	this.initialize = function(cls, name, base, dict) {
 
 		mixinComponent(cls, base);
 
 		if (cls.addons) {
 			var __events = {};
 			cls.addons.forEach(function(addon) {
-				Object.keys(addon.__onEvents).forEach(function(eventType) {
+				addon.__onEvents.forEach(function(eventType) {
 					if (!__events[eventType]) __events[eventType] = [];
-					var eventFunc = addon.__onEvents[eventType];
+					var eventFunc = addon.prototype['on' + eventType].im_func;
 					__events[eventType].push(eventFunc);
 				});
 			});
@@ -415,8 +410,8 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	};
 
 	this.__initSubs = function(self) {
-		Object.keys(self.__subs).forEach(function(name) {
-			var sub = self.__subs[name];
+		self.__subs.forEach(function(name) {
+			var sub = self.__properties__[name];
 
 			// 此时的option还是prototype上的，在sub初始化时会被浅拷贝
 			// 从options获取子元素的模板信息
@@ -445,7 +440,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	this.__initSub = function(self, name, nodes) {
 		if (!self._node) return null;
 
-		var sub = self.__subs[name];
+		var sub = self.__properties__[name];
 		var comps;
 		var options = self._options[name];
 
@@ -476,7 +471,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	 * 将一个comp的信息注册到__subs上
 	 */
 	this.__fillSub = function(self, name, comp) {
-		var sub = self.__subs[name];
+		var sub = self.__properties__[name];
 		var node = comp._node;
 		sub.nodeMap[String(node.uid)] = comp;
 		var events = self.__subEvents[name];
@@ -497,7 +492,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	* 获取sub的节点
 	*/
 	this.__querySub = function(self, name) {
-		var sub = self.__subs[name];
+		var sub = self.__properties__[name];
 		return sub.single? self._node.getElement(sub.selector) : self._node.getElements(sub.selector);
 	};
 
@@ -531,8 +526,8 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	 */
 	this._reset = function(self) {
 		// 清空所有render进来的新元素
-		Object.keys(self.__subs).forEach(function(name) {
-			var sub = self.__subs[name];
+		self.__subs.forEach(function(name) {
+			var sub = self.__properties__[name];
 			var pname = '_' + name;
 			sub.rendered.forEach(function(node) {
 				var comp = sub.nodeMap[node.uid];
@@ -589,7 +584,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	 */
 	this.render = function(self, name, data) {
 
-		var sub = self.__subs[name];
+		var sub = self.__properties__[name];
 		var methodName = 'render' + string.capitalize(name);
 		var method2Name = name + 'Render';
 		var nodes;
@@ -630,7 +625,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	* @param data 模板数据
 	*/
 	this.make = function(self, name, data) {
-		var sub = self.__subs[name];
+		var sub = self.__properties__[name];
 		var pname = '_' + name;
 		var options = {};
 		var extendOptions = self._options[name];
@@ -665,8 +660,8 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	 * 设置subcomponent的template
 	 */
 	this.setTemplate = function(self, name, template, section) {
-		self.__subs[name].template = template;
-		self.__subs[name].section = section;
+		self.__properties__[name].template = template;
+		self.__properties__[name].section = section;
 	};
 
 	/**
