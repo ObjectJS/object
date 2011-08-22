@@ -341,20 +341,16 @@ var nativesetter = function(prop, value) {
  * 会被放到 cls.__mixin__
  */
 var mixiner = overloadSetter(function(name, member) {
-	// 通过mixin创建新的成员，而不是修改已存在的成员，需要在继承链上所有的class实现
-	// 由于ie没有 __proto__ 属性，因此需要遍历，否则可以通过
-	// SubClass.__proto__ = Parent
-	// 实现自动的继承机制
-	// TODO property的处理！
-	if (!(name in this.prototype)) {
+	var c = member.__class__;
+	if (!c && typeof member == 'function') c = instancemethod;
+	var prototype = this.prototype;
+	if (!(name in prototype) || (prototype[name].__class__ && prototype[name].__class__ !== c)) {
 		var classes = Class.getAllSubClasses(this); 
 		classes.forEach(function(one) {
-			Class.buildMember(one, name, member);
+			Class.build(one, name, member);
 		});
 	}
-	// member有可能是方法，也有可能是属性，需要每次都进行mixin的，而不是仅仅在没有此成员时进行mixin，否则将无法修改属性
-	Class.buildMember(this, name, member);
-	Class.buildPrototype(this, name, member);
+	Class.build(this, name, member);
 });
 
 /**
@@ -397,17 +393,13 @@ type.__new__ = function(metaclass, name, base, dict) {
 				// 这3个需要过滤掉，是为了支持property加入的内置成员
 				// initialize也需要过滤，当mixin多个class的时候，initialize默认为最后一个，这种行为没意义
 				// 过滤掉双下划线命名的系统成员和私有成员
-				if (['get', 'set', 'initialize'].indexOf(name) !== -1 || name.indexOf('__') == 0) return;
+				if (['get', 'set', '_set', 'initialize'].indexOf(name) !== -1 || name.indexOf('__') == 0) return;
 				if (dict[name] !== undefined) return; // 不要覆盖自定义的
 
 				var member = mixin.prototype[name];
 
-				if (typeof member == 'function') {
-					if (member.__class__ === instancemethod) {
-						dict[name] = member.im_func;
-					} else {
-						dict[name] = member;
-					}
+				if (typeof member == 'function' && member.__class__ === instancemethod) {
+					dict[name] = member.im_func;
 				} else {
 					dict[name] = member;
 				}
@@ -442,8 +434,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 	// Dict
 	Object.keys(dict).forEach(function(name) {
 		var member = dict[name];
-		Class.buildPrototype(cls, name, member);
-		Class.buildMember(cls, name, member);
+		Class.build(cls, name, member);
 	});
 
 	cls.__base__ = base;
@@ -535,66 +526,57 @@ Class.initMixins = function(cls, instance) {
 };
 
 /**
- * 生成类的所有class成员
- * 所有的class对应到prototype上的method都是通过这个方法获得的
- * 可以动态根据prototype中方法的类型传递不同参数
- * 用一个统一的方法虽然会在调用的时候影响效率，但是提高了mixin时的效率，使得通过AClass.__mixin__覆盖某已存在方法时不需要修改所有subclasses的对应方法了
+ * 生成类的所有成员
  */
-Class.buildMember = function(cls, name, member) {
-	if (name == '__metaclass__' || typeof member != 'function' || member.__class__ === property) {
-		cls[name] = member;
-	} else {
-		cls[name] = function(self) {
-			var prototype = this.prototype[name];
-			var func = prototype.im_func;
-			var args;
-
-			if (prototype.__class__ === instancemethod) {
-				return func.apply(this.__this__, arguments);
-
-			} else if (prototype.__class__ === classmethod) {
-				args = [].slice.call(arguments, 0);
-				args.unshift(this); // 第一个参数是cls
-				return func.apply(this.__this__, args);
-
-			} else { // staticmethod
-				return func.apply(this.__this__, arguments);
-			}
-		};
-	}
-};
-
-/**
- * 在创建类的过程中生成类的所有prototype
- */
-Class.buildPrototype = function(cls, name, member) {
+Class.build = function(cls, name, member) {
 	var prototype = cls.prototype;
 
 	// 这里的member指向new Class参数的书写的对象/函数
 
+	if (name == '__metaclass__') {
+		cls[name] = member;
+
 	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
-	if (member == null) {
-		prototype[name] = member;
+	} else if (member == null) {
+		cls[name] = prototype[name] = member;
 
 	// 先判断最常出现的instancemethod
-	} else if (member.__class__ === undefined && typeof member == 'function') { // this.a = function() {}
+	// this.a = function() {}
+	} else if (member.__class__ === undefined && typeof member == 'function') {
 		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
 		member.__name__ = name;
+		cls[name] = function() {
+			return this.prototype[name].im_func.apply(this.__this__, arguments);
+		};
 		prototype[name] = instancemethod(member);
 
-	} else if (member.__class__ === classmethod) { // this.a = classmethod(function() {})
+	// this.a = classmethod(function() {})
+	} else if (member.__class__ === classmethod) {
 		member.im_func.__name__ = name;
+		cls[name] = function() {
+			var args = [].slice.call(arguments, 0);
+			args.unshift(this); // 第一个参数是cls
+			return this.prototype[name].im_func.apply(this.__this__, args);
+		};
 		prototype[name] = member;
 
-	} else if (member.__class__ === staticmethod) { // this.a = staticmethod(function() {})
+	// this.a = staticmethod(function() {})
+	} else if (member.__class__ === staticmethod) {
 		member.im_func.__name__ = name;
+		cls[name] = function() {
+			return this.prototype[name].im_func.apply(this.__this__, arguments);
+		};
 		prototype[name] = member;
 
-	} else if (member.__class__ === property) { // this.a = property(function fget() {}, function fset() {})
+	// this.a = property(function fget() {}, function fset() {})
+	} else if (member.__class__ === property) {
 		member.__name__ = name;
+		cls[name] = member;
 		prototype.__properties__[name] = member;
 
-	} else { // this.a = someObject
+	// this.a = someObject
+	} else {
+		cls[name] = member;
 		prototype[name] = member;
 	}
 
@@ -670,7 +652,7 @@ Class.getAllSubClasses = function(cls, array) {
 };
 
 
-var instancemethod = function(func) {
+var instancemethod = this.instancemethod = function(func) {
 	var wrapper = function() {
 		var args = [].slice.call(arguments, 0);
 		args.unshift(this);
