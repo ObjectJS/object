@@ -466,7 +466,8 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				events[eventType].forEach(function(eventFunc) {
 					node.addEvent(eventType, function(event) {
 						var comp = sub.nodeMap[String(node.uid)];
-						eventFunc(self, event, comp);
+						var args = [self, event, comp].concat(event._args);
+						eventFunc.apply(self, args)
 					});
 				});
 			});
