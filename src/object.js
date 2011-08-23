@@ -1090,3 +1090,4 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 })();
 
 object.bind(window);
+
