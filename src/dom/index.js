@@ -290,7 +290,7 @@ var ElementClassList = this.ElementClassList = new Class(Array, /**@lends dom.El
 	};
 
 	this.add = function(self, token) {
-		self._ele.className += (' ' + token);
+		if (!self.contains(token)) self._ele.className += (' ' + token); // 根据规范，不允许重复添加
 	};
 
 	this.remove = function(self, token) {
@@ -878,32 +878,14 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 	});
 
 	if (!_supportHTML5Forms) {
+		/* TODO */
+		// autofocus
+		// willvalidate
+		// formnovalidate
 
 		this.validity = property(function(self) {
-			self.checkValidity();
-			return self.validity;
-		});
-
-		/**
-		 * html5 forms checkValidity
-		 */
-		this.checkValidity = function(self) {
-			/*
-			 * required
-			 * pattern
-			 * min
-			 * max
-			 * step
-			 */
-			/*
-			 * text
-			 * search
-			 * url
-			 * tel
-			 * email
-			 * password
-			 */
-
+			// required pattern min max step
+			// text search url tel email password
 			var value = self.get('value');
 			
 			var validity = {
@@ -925,21 +907,62 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 					if (n != maxlength) return false;
 					return value.length > n;
 				})(),
-				// 以下四个 firefox 4 beta 也不支持，暂时不支持
+				customError: !!self.__customValidity,
+				// 以下三个 firefox 4 beta 也不支持，暂时不支持
 				rangeUnderflow: false,
 				rangeOverflow: false,
-				stepMismatch: false,
-				customError: false
+				stepMismatch: false
 			};
 			validity.valid = ['valueMissing', 'typeMismatch', 'patternMismatch', 'tooLong', 'rangeUnderflow', 'rangeOverflow', 'stepMismatch', 'customError'].every(function(name) {
 				return validity[name] === false;
 			});
+			self.__validationMessage = (function() {
+				if (validity.valid) return '';
+				// Logic from webkit
+				// http://www.google.com/codesearch#N6Qhr5kJSgQ/WebCore/html/ValidityState.cpp&type=cs
+				// 文案通过Firefox和Chrome测试而来
+				// 虽然有可能同时不满足多种验证，但是message只输出第一个
+				if (validity.customError) return self.__customValidity;
+				if (validity.valueMissing) return '请填写此字段。';
+				if (validity.typeMismatch) return '请输入一个' + self.getAttribute('type') + '。';
+				if (validity.patternMismatch) return '请匹配要求的格式。';
+				if (validity.tooLong) return '请将该文本减少为 ' + self.getAttribute('maxlength') + ' 个字符或更少（您当前使用了' + self.get('value').length + '个字符）。';
+				if (validity.rangeUnderflow) return '值必须大于或等于' + self.getAttribute('min') + '。';
+				if (validity.rangeOverflow) return '值必须小于或等于' + self.getAttribute('max') + '。';
+				if (validity.stepMismatch) return '值无效。';
+			})();
+			self._set('validationMessage', self.__validationMessage);
 
-			self.validity = validity;
+			self._set('validity', validity);
+			return validity;
+		});
 
-			return validity.valid;
+		this.validationMessage = property(function(self) {
+			self.get('validity');
+			return self.__validationMessage;
+		});
+
+		this.setCustomValidity = function(self, message) {
+			self.__customValidity = message;
+			self.get('validity');
 		};
 
+		/**
+		 * html5 forms checkValidity
+		 */
+		this.checkValidity = function(self) {
+			self.get('validity');
+			return self.validity.valid;
+		};
+
+	} else {
+		this.validity = property(function(self) {
+			return self.validity;
+		});
+
+		this.validationMessage = property(function(self) {
+			return self.validationMessage;
+		});
 	}
 
 	/**
