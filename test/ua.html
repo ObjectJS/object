@@ -1,26 +1,26 @@
 <!doctype html>
 <html>
-<head>
-<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7" />
-<meta charset="utf-8" />
-<script src="http://s.xnimg.cn/n/core/base-all.js" type="text/javascript"></script>	
-</head>
-<body>
-<div>
-	<!--[if IE 7]>
-	浏览器是IE7
-	<![endif]-->
-	<!--[if IE 8]>
-	浏览器是IE8
-	<![endif]-->
-</div>
-<script>
-	document.write(navigator.userAgent + '<br />')
-	object.use('ua, ua.extra', function(exports, ua) {
-		document.write('ieshell' + ua.ua.ieshell + '<br />');
-		document.write(ua.ua.core + ua.ua[ua.ua.core] + '<br />');
-		document.write(ua.ua.shell + ua.ua[ua.ua.shell] + '<br />');
-	});
-</script>
-</body>
+	<head>
+		<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7" />
+		<meta charset="utf-8" />
+		<script src="http://s.xnimg.cn/n/core/base-all.js" type="text/javascript"></script>	
+	</head>
+	<body>
+		<div>
+			<!--[if IE 7]>
+			浏览器是IE7
+			<![endif]-->
+			<!--[if IE 8]>
+			浏览器是IE8
+			<![endif]-->
+		</div>
+		<script>
+			document.write(navigator.userAgent + '<br />')
+			object.use('ua, ua.extra', function(exports, ua) {
+				document.write('ieshell' + ua.ua.ieshell + '<br />');
+				document.write(ua.ua.core + ua.ua[ua.ua.core] + '<br />');
+				document.write(ua.ua.shell + ua.ua[ua.ua.shell] + '<br />');
+			});
+		</script>
+	</body>
 </html>

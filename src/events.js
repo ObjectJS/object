@@ -42,22 +42,19 @@ this.fireevent = function(arg1) {
 
 		// 根据eventDataNames生成eventData，每一个参数对应一个eventData
 		var eventData = {};
-		// 保存func被调用时的所有参数（除了self）
-		var args = Array.prototype.slice.call(arguments, 1);
 		if (eventDataNames) {
 			for (var i = 0; i < eventDataNames.length; i++) {
 				// 名字对应方法的参数，从第2个参数开始，因为第一个是self
 				eventData[eventDataNames[i]] = arguments[i + 1];
 			}
 		}
-		// 默认有一个_args的data，
-		eventData._args = args;
 
 		var event = self.fireEvent(name, eventData, self);
 
 		// 执行 xxx_createEvent 方法，可用于定制event
 		var createEventMethod = self[nativeName + '_createEvent'];
 		if (createEventMethod) {
+			var args = Array.prototype.slice.call(arguments, 1);
 			args.unshift(event);
 			createEventMethod.apply(self, args);
 		}

@@ -1,8 +1,5 @@
 <package id="object" url="http://objectjs.org/object">
 
-	<publish dir="pub">
-	</publish>
-
 	<library dir="lib">
 	</library>
 
