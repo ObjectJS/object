@@ -370,28 +370,23 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			}
 
 			// 注册 option_change 等事件
-			var fakeEventType = '__option_' + eventType + '_' + name;
-			var methodName = name + '_' + eventType;
-
-			var events = self.__subEvents[name];
-			if (events) {
-				events.forEach(function(eventType) {
-					self.addEvent(fakeEventType, function(event) {
-						self[methodName](event.value);
+			var bindEvents = function(events, cls) {
+				if (events) {
+					events.forEach(function(eventType) {
+						var fakeEventType = '__option_' + eventType + '_' + name;
+						var methodName = name + '_' + eventType;
+						self.addEvent(fakeEventType, function(event) {
+							if (cls) cls[methodName](self, event.value);
+							else self[methodName](event.value);
+						});
 					});
-				});
-			}
+				}
+			};
 
+			bindEvents(self.__subEvents[name]);
 			if (self.addons) {
 				self.addons.forEach(function(addon) {
-					var events = addon.__subEvents[name];
-					if (events) {
-						events.forEach(function(eventType) {
-							self.addEvent(fakeEventType, function(event) {
-								addon[methodName](self, event.value);
-							});
-						});
-					}
+					bindEvents(addon.__subEvents[name], addon);
 				});
 			}
 
@@ -464,27 +459,24 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		var node = comp._node;
 		self.__addNodeMap(name, String(node.uid), comp);
 		var comp = self.__nodeMap[name][String(node.uid)];
-		var methodName = name + '_' + eventType;
 
-		var events = self.__subEvents[name];
-		if (events) {
-			events.forEach(function(eventType) {
-				node.addEvent(eventType, function(event) {
-					self[methodName].apply(self, [event, comp].concat(event._args));
+		// 注册 option_change 等事件
+		var bindEvents = function(events, cls) {
+			if (events) {
+				events.forEach(function(eventType) {
+					var methodName = name + '_' + eventType;
+					node.addEvent(eventType, function(event) {
+						if (cls) cls[methodName].apply(cls, [self, event, comp].concat(event._args));
+						else self[methodName].apply(self, [event, comp].concat(event._args));
+					});
 				});
-			});
-		}
+			}
+		};
 
+		bindEvents(self.__subEvents[name]);
 		if (self.addons) {
 			self.addons.forEach(function(addon) {
-				var events = addon.__subEvents[name];
-				if (events) {
-					events.forEach(function(eventType) {
-						node.addEvent(eventType, function(event) {
-							addon[methodName].apply(addon, [self, event, comp].concat(event._args));
-						});
-					});
-				}
+				bindEvents(addon.__subEvents[name], addon);
 			});
 		}
 	};
