@@ -413,6 +413,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 		Class.build(cls, name, member);
 	});
 
+	// Mixin
 	var mixins = dict['__mixins__'] || dict['@mixins'];
 	if (mixins) {
 		mixins.forEach(function(mixin) {

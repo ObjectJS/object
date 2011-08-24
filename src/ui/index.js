@@ -151,6 +151,12 @@ this.__component = new Class(function() {
 			});
 		}
 
+		if (comp && comp.__eventHandles) {
+			comp.__eventHandles.forEach(function(eventType) {
+				regHandle(cls, eventType);
+			});
+		}
+
 		if (comp && comp.__subEvents) {
 			Object.keys(comp.__subEvents).forEach(function(subName) {
 				Object.keys(comp.__subEvents[subName]).forEach(function(eventType) {
@@ -162,12 +168,6 @@ this.__component = new Class(function() {
 		if (comp && comp.__onEvents) {
 			comp.__onEvents.forEach(function(eventType) {
 				regOnEvent(cls, eventType);
-			});
-		}
-
-		if (comp && comp.__eventHandles) {
-			comp.__eventHandles.forEach(function(eventType) {
-				regHandle(cls, eventType);
 			});
 		}
 
@@ -207,23 +207,6 @@ this.__component = new Class(function() {
 		dict.__onEvents = []; // 通过oneventtype对宿主component注册的事件
 		dict.__eventHandles = []; // 定义的会触发事件的方法集合
 
-		if (dict.addons) {
-			dict.addons.forEach(function(addon) {
-				addon.__defaultOptions.forEach(function(name) {
-					if (dict[name] !== undefined) return; // 不要覆盖自定义的
-					dict[name] = addon[name];
-				});
-				addon.__subs.forEach(function(name) {
-					if (dict[name] !== undefined) return; // 不要覆盖自定义的
-					dict[name] = addon[name];
-				});
-				addon.__eventHandles.forEach(function(name) {
-					if (dict[name] !== undefined) return; // 不要覆盖自定义的
-					dict[name] = addon.prototype[name].im_func;
-				});
-				// onEvents和subEvents在宿主中处理，方法不添加到宿主类上
-			});
-		}
 		return type.__new__(cls, name, base, dict);
 	};
 
@@ -258,6 +241,32 @@ this.__component = new Class(function() {
 				}
 			}
 		});
+
+		if (dict.addons) {
+			dict.addons.forEach(function(comp) {
+				if (comp && comp.__defaultOptions) {
+					comp.__defaultOptions.forEach(function(name) {
+						regDefaultOption(cls, name);
+						cls.__mixin__(name, comp[name]);
+					});
+				}
+
+				if (comp && comp.__subs) {
+					comp.__subs.forEach(function(name) {
+						regSub(cls, name);
+						cls.__mixin__(name, comp[name]);
+					});
+				}
+
+				if (comp && comp.__eventHandles) {
+					comp.__eventHandles.forEach(function(eventType) {
+						regHandle(cls, eventType);
+						cls.__mixin__(name, comp[name]);
+					});
+				}
+				// onEvents和subEvents在宿主中处理，方法不添加到宿主类上
+			});
+		}
 
 		mixinComponent(cls, base);
 	};
