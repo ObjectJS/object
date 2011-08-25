@@ -175,12 +175,34 @@ this.__component = new Class(function() {
 
 	var regSub = function(cls, name) {
 		var subs = cls.__subs;
-		if (subs.indexOf(name) == -1) subs.push(name);
+		if (subs.indexOf(name) == -1) {
+			subs.push(name);
+			return true;
+		}
 	};
 
 	var regDefaultOption = function(cls, name) {
 		var defaultOptions = cls.__defaultOptions;
-		if (defaultOptions.indexOf(name) == -1) defaultOptions.push(name);
+		if (defaultOptions.indexOf(name) == -1) {
+			defaultOptions.push(name);
+			return true;
+		}
+	};
+
+	var regHandle = function(cls, eventType) {
+		var eventHandles = cls.__eventHandles;
+		if (eventHandles.indexOf(eventType) == -1) {
+			eventHandles.push(eventType);
+			return true;
+		}
+	};
+
+	var regMethod = function(cls, methodName) {
+		var methods = cls.__methods;
+		if (methods.indexOf(methodName) == -1) {
+			methods.push(methodName);
+			return true;
+		}
 	};
 
 	var regSubEvent = function(cls, subName, eventType) {
@@ -194,74 +216,98 @@ this.__component = new Class(function() {
 		if (onEvents.indexOf(eventType) == -1) onEvents.push(eventType);
 	};
 
-	var regHandle = function(cls, eventType) {
-		var eventHandles = cls.__eventHandles;
-		if (eventHandles.indexOf(eventType) == -1) eventHandles.push(eventType);
-	};
-
 	this.__new__ = function(cls, name, base, dict) {
 
-		dict.__defaultOptions = []; // 默认options
-		dict.__subs = [];
-		dict.__subEvents = {}; // 通过subName_eventType进行注册的事件
-		dict.__onEvents = []; // 通过oneventtype对宿主component注册的事件
-		dict.__eventHandles = []; // 定义的会触发事件的方法集合
+		if (dict.__metaclass__) {
+			dict.__defaultOptions = [];
+			dict.__subs = [];
+			dict.__subEvents = {};
+			dict.__onEvents = [];
+			dict.__eventHandles = ['init', 'reset', 'invalid', 'error'];
+			dict.__methods = [];
+		} else {
+			dict.__defaultOptions = []; // 默认options
+			dict.__subs = [];
+			dict.__subEvents = {}; // 通过subName_eventType进行注册的事件
+			dict.__onEvents = []; // 通过oneventtype对宿主component注册的事件
+			dict.__eventHandles = []; // 定义的会触发事件的方法集合
+			dict.__methods = [];
+		}
 
 		return type.__new__(cls, name, base, dict);
 	};
 
 	this.initialize = function(cls, name, base, dict) {
 
-		Object.keys(dict).forEach(function(name) {
-			var member = dict[name];
-			var eventType, subName;
-			// member有可能是null
-			if (member != null && member.__class__ === property) {
-				if (member.isComponent) {
-					regSub(cls, name);
-				} else {
-					regDefaultOption(cls, name);
-				}
-			} else if (typeof member == 'function') {
-				if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
-					subName = RegExp.$1;
-					eventType = RegExp.$2;
-					regSubEvent(cls, subName, eventType, member);
-					// addon也可以通过这种命名格式为宿主增加事件
-					// 为避免addon的同名方法在mixin时覆盖宿主同名方法，直接在宿主类的原型中删除此类方法
+		if (!dict.__metaclass__) {
+			Object.keys(dict).forEach(function(name) {
+				if (name == 'initialize' || name.indexOf('__') == 0) return;
 
-				} else if (name.match(/^on([a-zA-Z]+)$/)) {
-					eventType = RegExp.$1;
-					regOnEvent(cls, eventType);
+				var member = dict[name];
+				var eventType, subName;
+				// member有可能是null
+				if (member != null && member.__class__ === property) {
+					if (member.isComponent) {
+						regSub(cls, name);
+					} else {
+						regDefaultOption(cls, name);
+					}
+				} else if (typeof member == 'function') {
+					if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
+						subName = RegExp.$1;
+						eventType = RegExp.$2;
+						regSubEvent(cls, subName, eventType);
+						// addon也可以通过这种命名格式为宿主增加事件
+						// 为避免addon的同名方法在mixin时覆盖宿主同名方法，直接在宿主类的原型中删除此类方法
 
-				} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
-					eventType = name.slice(1);
-					regHandle(cls, eventType);
-					cls.__mixin__(eventType, events.fireevent(member));
+					} else if (name.match(/^on([a-zA-Z]+)$/)) {
+						eventType = RegExp.$1;
+						regOnEvent(cls, eventType);
+
+					} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
+						eventType = name.slice(1);
+						regHandle(cls, eventType);
+					} else {
+						regMethod(cls, name);
+					}
 				}
-			}
+			});
+		}
+
+		cls.__eventHandles.forEach(function(eventType) {
+			cls.__mixin__(eventType, events.fireevent(function() {
+				cls['_' + eventType].apply(cls, arguments);
+			}));
 		});
 
 		if (dict.addons) {
 			dict.addons.forEach(function(comp) {
 				if (comp && comp.__defaultOptions) {
 					comp.__defaultOptions.forEach(function(name) {
-						regDefaultOption(cls, name);
-						cls.__mixin__(name, comp[name]);
+						if (regDefaultOption(cls, name)) cls.__mixin__(name, comp[name]);
 					});
 				}
 
 				if (comp && comp.__subs) {
 					comp.__subs.forEach(function(name) {
-						regSub(cls, name);
-						cls.__mixin__(name, comp[name]);
+						if (regSub(cls, name)) cls.__mixin__(name, comp[name]);
 					});
 				}
 
 				if (comp && comp.__eventHandles) {
 					comp.__eventHandles.forEach(function(eventType) {
-						regHandle(cls, eventType);
-						cls.__mixin__(name, comp[name]);
+						if (regHandle(cls, eventType)) {
+							cls.__mixin__(eventType, comp.prototype[eventType].im_func);
+							cls.__mixin__('_' + eventType, comp.prototype['_' + eventType].im_func);
+						}
+					});
+				}
+
+				if (comp && comp.__methods) {
+					comp.__methods.forEach(function(methodName) {
+						if (regMethod(cls, methodName)) {
+							cls.__mixin__(methodName, comp.prototype[methodName].im_func);
+						}
 					});
 				}
 				// onEvents和subEvents在宿主中处理，方法不添加到宿主类上
