@@ -159,7 +159,7 @@ this.__component = new Class(function() {
 
 		if (comp && comp.__subEvents) {
 			Object.keys(comp.__subEvents).forEach(function(subName) {
-				Object.keys(comp.__subEvents[subName]).forEach(function(eventType) {
+				comp.__subEvents[subName].forEach(function(eventType) {
 					regSubEvent(cls, subName, eventType);
 				});
 			});
@@ -772,5 +772,3 @@ this.setOptionTo = function(current, name, value) {
 };
 
 });
-
-
