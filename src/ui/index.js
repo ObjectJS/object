@@ -721,3 +721,4 @@ this.setOptionTo = function(current, name, value) {
 };
 
 });
+
