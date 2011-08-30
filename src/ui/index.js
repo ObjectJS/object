@@ -158,6 +158,7 @@ this.__component = new Class(function() {
 				if (member != null && member.__class__ === property) {
 					if (member.isComponent) {
 						dict.__subs.push(name);
+
 					} else {
 						dict.__defaultOptions.push(name);
 					}
