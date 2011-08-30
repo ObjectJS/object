@@ -52,4 +52,3 @@ this.getFlashVersion = function(){
 }
 
 });
-
