@@ -339,16 +339,53 @@ var nativesetter = function(prop, value) {
  * MyClass.__mixin__(name, value);
  * MyClass.__mixin__({name1: value1, name2: value2})
  * 会被放到 cls.__mixin__
+ * 子类不会被覆盖
  */
 var mixiner = overloadSetter(function(name, member) {
-	var prototype = this.prototype;
-	if (!(name in prototype) || !(member && member.__class__ === instancemethod && prototype[name].__class__ === instancemethod)) {
-		var classes = Class.getAllSubClasses(this); 
-		classes.forEach(function(one) {
-			Class.build(one, name, member);
-		});
+	var cls = this;
+	var prototype = cls.prototype;
+
+	// 这里的member指向new Class参数的书写的对象/函数
+
+	if (name == '__metaclass__') {
+		cls[name] = member;
+
+	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
+	} else if (member == null) {
+		cls[name] = prototype[name] = member;
+
+	// 先判断最常出现的instancemethod
+	// this.a = function() {}
+	} else if (member.__class__ === undefined && typeof member == 'function') {
+		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
+		member.__name__ = name;
+		cls[name] = function() {
+			return this.prototype[name].im_func.apply(this.__this__, arguments);
+		};
+		cls[name].__class__ = instancemethod;
+		prototype[name] = instancemethod(member);
+
+	// this.a = classmethod(function() {})
+	} else if (member.__class__ === classmethod) {
+		member.im_func.__name__ = name;
+		cls[name] = prototype[name] = member;
+
+	// this.a = staticmethod(function() {})
+	} else if (member.__class__ === staticmethod) {
+		member.im_func.__name__ = name;
+		cls[name] = prototype[name] = member;
+
+	// this.a = property(function fget() {}, function fset() {})
+	} else if (member.__class__ === property) {
+		member.__name__ = name;
+		cls[name] = member;
+		prototype.__properties__[name] = member;
+
+	// this.a = someObject
+	} else {
+		cls[name] = member;
+		prototype[name] = member;
 	}
-	Class.build(this, name, member);
 });
 
 /**
@@ -408,10 +445,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 	cls.__metaclass__ = base.__metaclass__;
 
 	// Dict
-	Object.keys(dict).forEach(function(name) {
-		var member = dict[name];
-		Class.build(cls, name, member);
-	});
+	cls.__mixin__(dict);
 
 	// Mixin
 	var mixins = dict['__mixins__'] || dict['@mixins'];
@@ -428,9 +462,9 @@ type.__new__ = function(metaclass, name, base, dict) {
 				var member = mixin.prototype[name];
 
 				if (typeof member == 'function' && member.__class__ === instancemethod) {
-					Class.build(cls, name, member.im_func);
+					cls.__mixin__(name, member.im_func);
 				} else {
-					Class.build(cls, name, member);
+					cls.__mixin__(name, member);
 				}
 			});
 		});
@@ -522,56 +556,6 @@ Class.initMixins = function(cls, instance) {
 			mixin.__this__.mixining = null;
 		}
 	}
-};
-
-/**
- * 生成类的所有成员
- */
-Class.build = function(cls, name, member) {
-	var prototype = cls.prototype;
-
-	// 这里的member指向new Class参数的书写的对象/函数
-
-	if (name == '__metaclass__') {
-		cls[name] = member;
-
-	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
-	} else if (member == null) {
-		cls[name] = prototype[name] = member;
-
-	// 先判断最常出现的instancemethod
-	// this.a = function() {}
-	} else if (member.__class__ === undefined && typeof member == 'function') {
-		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
-		member.__name__ = name;
-		cls[name] = function() {
-			return this.prototype[name].im_func.apply(this.__this__, arguments);
-		};
-		cls[name].__class__ = instancemethod;
-		prototype[name] = instancemethod(member);
-
-	// this.a = classmethod(function() {})
-	} else if (member.__class__ === classmethod) {
-		member.im_func.__name__ = name;
-		cls[name] = prototype[name] = member;
-
-	// this.a = staticmethod(function() {})
-	} else if (member.__class__ === staticmethod) {
-		member.im_func.__name__ = name;
-		cls[name] = prototype[name] = member;
-
-	// this.a = property(function fget() {}, function fset() {})
-	} else if (member.__class__ === property) {
-		member.__name__ = name;
-		cls[name] = member;
-		prototype.__properties__[name] = member;
-
-	// this.a = someObject
-	} else {
-		cls[name] = member;
-		prototype[name] = member;
-	}
-
 };
 
 /**
