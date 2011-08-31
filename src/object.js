@@ -360,9 +360,10 @@ var mixiner = overloadSetter(function(name, member) {
 		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
 		member.__name__ = name;
 		cls[name] = function() {
-			return this.prototype[name].im_func.apply(this.__this__, arguments);
+			return member.apply(this.__this__, arguments);
 		};
 		cls[name].__class__ = instancemethod;
+		cls[name].im_func = member;
 		prototype[name] = instancemethod(member);
 
 	// this.a = classmethod(function() {})
