@@ -1,28 +1,40 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<script type="text/javascript" src="http://xnimg.cn/n/core/base-all.js"></script>
-<script>
-	object.use('dom, ui', function(exports, dom, ui) {
-
-		var MyComponent = new Class(ui.Component, function() {
-			this.title = ui.define('.title');
-			this.foo = ui.option('haha');
-		});
-
-		var template = '<div class="text"><h3 class="title">{{foo}}</h3></div>';
-		var c = new MyComponent(template, {
-			foo: 'jij'
-		});
-
-		dom.ready(function() {
-			document.body.appendChild(c.getNode());
-		});
-
-	});
-</script>
+<script type="text/javascript" src="../pub/object-all.js"></script>
+<script type="text/javascript" src="ui.js"></script>
+<style>
+	.active {
+		border: 1px solid #F90;
+	}
+</style>
 </head>
 <body>
+<div id="publisher">
+	<div id="publisher-func-selector">
+		<span class="close-button">关闭</span>
+		<ul>
+			<li id="publisher-status-trigger">状态</li>
+			<li id="publisher-share-trigger">分享</li>
+			<li id="publisher-photo-trigger">照片</li>
+		</ul>
+	</div>
+	<div id="publisher-status-box" style="display:none">
+		<div class="status-publisher">
+			status publisher
+		</div>
+	</div>
+	<div id="publisher-share-box" style="display:none">
+		<div class="share-publisher">
+			share publisher
+		</div>
+	</div>
+	<div id="publisher-photo-box" style="display:none">
+		<div class="photo-publisher">
+			photo publisher
+		</div>
+	</div>
+</div>
 </body>
 </html>
 

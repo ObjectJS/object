@@ -1,0 +1,38 @@
+<html>
+<head>
+<script type="text/javascript" src="../src/object.js"></script>
+<script>
+	object.add('x.a', function(exports) {
+		exports.aa = 1;
+	});
+	object.add('x.b', 'x.a', function(exports, x) {
+		exports.bb = 1;
+		return {
+			bb: 2
+		}
+	});
+	object.add('x.c', function(exports) {
+		return function() {
+		}
+	});
+	object.add('x.d', function(exports) {
+		return "test"
+	});
+	object.add('x.e', function(exports) {
+		return 111
+	});
+	object.add('x.f', function(exports) {
+		return new Date();
+	});
+	object.use('sys, x.a, x.b, x.c, x.d, x.e, x.f', function(exports, sys, x) {
+		console.log(sys.modules);
+	});
+</script>
+<script>
+</script>
+</head>
+<body>
+
+</body>
+</html>
+

@@ -50,21 +50,23 @@
 				
 					<li><a href="../symbols/dom.Elements.html">dom<span class='break'> </span>.<span class='break'> </span>Elements</a></li>
 				
-					<li><a href="../symbols/dom.event.html">dom<span class='break'> </span>.<span class='break'> </span>event</a></li>
-				
 					<li><a href="../symbols/dom.FormElement.html">dom<span class='break'> </span>.<span class='break'> </span>FormElement</a></li>
 				
 					<li><a href="../symbols/dom.FormItemElement.html">dom<span class='break'> </span>.<span class='break'> </span>FormItemElement</a></li>
 				
 					<li><a href="../symbols/dom.Window.html">dom<span class='break'> </span>.<span class='break'> </span>Window</a></li>
 				
+					<li><a href="../symbols/events.html">events</a></li>
+				
+					<li><a href="../symbols/Function.html">Function</a></li>
+				
 					<li><a href="../symbols/mvc.html">mvc</a></li>
 				
 					<li><a href="../symbols/net.html">net</a></li>
 				
-					<li><a href="../symbols/Object.html">Object</a></li>
-				
 					<li><a href="../symbols/object.html">object</a></li>
+				
+					<li><a href="../symbols/Object.html">Object</a></li>
 				
 					<li><a href="../symbols/object.Loader.html">object<span class='break'> </span>.<span class='break'> </span>Loader</a></li>
 				
@@ -88,7 +90,9 @@
 				
 					<li><a href="../symbols/ui.decorators.html">ui<span class='break'> </span>.<span class='break'> </span>decorators</a></li>
 				
-					<li><a href="../symbols/ui.ForeNextControl.html">ui<span class='break'> </span>.<span class='break'> </span>ForeNextControl</a></li>
+					<li><a href="../symbols/ui.nav.html">ui<span class='break'> </span>.<span class='break'> </span>nav</a></li>
+				
+					<li><a href="../symbols/ui.nav.ForeNextControl.html">ui<span class='break'> </span>.<span class='break'> </span>nav<span class='break'> </span>.<span class='break'> </span>ForeNextControl</a></li>
 				
 					<li><a href="../symbols/uiold.html">uiold</a></li>
 				
@@ -107,7 +111,7 @@
 		
 		Documentation generator: <a href="http://code.google.com/p/jsdoc-toolkit/" target="_blank">JsDoc Toolkit</a> 2.4.0<br />
 		Template: <a href="http://www.thebrightlines.com/2010/05/06/new-template-for-jsdoctoolkit-codeview/" target="_blank">Codeview</a> 1.2<br />
-		Generated on: 2011-1-28 16:11
+		Generated on: 2011-6-14 18:33
 	</div>
 </div>
 
@@ -130,7 +134,7 @@
 					
 					
 					
-						<li>Defined in: <a href="../symbols/src/d__works_renren_static_object_trunk_src__object.js.html">object.js</a></li>
+						<li>Defined in: <a href="../symbols/src/d__works_workspace_objectjs.org_object_src__object.js.html">object.js</a></li>
 					
 						
 				</ul>
@@ -163,6 +167,39 @@
 			</div>
 		
 		
+		
+			
+			
+				<div class="props">
+					<table class="summaryTable" cellspacing="0" summary="A summary of the fields documented in the class object.Loader.">
+						<caption class="sectionTitle">Field Summary</caption>
+						
+						<thead>
+							<tr>
+								<th scope="col">Field Attributes</th>
+								<th scope="col">Field Name and Description</th>
+							</tr>
+						</thead>
+						
+						<tbody>
+							
+								<tr>
+									<td class="attributes">&nbsp;</td>
+									<td class="nameDescription">
+										<div class="fixedFont">
+										<b><a href="../symbols/object.Loader.html#loadScript">loadScript</a></b>
+										</div>
+										<div class="description">加载一个script, 执行callback
+有冲突检测，如果连续调用两次loadScript同一src的话，则第二个调用会等第一个完毕后直接执行callback，不会加载两次。</div>
+									</td>
+								</tr>
+							
+						</tbody>
+					</table>
+				</div>
+			
+			
+			
 		
 <!--
 #### METHODS SUMMARY
@@ -308,18 +345,6 @@
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/object.Loader.html#loadScript">loadScript</a></b>(src, callback, callback)
-										</div>
-										<div class="description">加载一个script, 执行callback
-有冲突检测，如果连续调用两次loadScript同一src的话，则第二个调用会等第一个完毕后直接执行callback，不会加载两次。</div>
-									</td>
-								</tr>
-							
-								<tr
-									 class='item8'
-								>
-									<td class="attributes">&nbsp;</td>
-									<td class="nameDescription">
 										<div class="fixedFont"><b><a href="../symbols/object.Loader.html#makePrefixPackage">makePrefixPackage</a></b>(self, name)
 										</div>
 										<div class="description">建立前缀模块
@@ -328,7 +353,7 @@
 								</tr>
 							
 								<tr
-									 class='item9'
+									 class='item8'
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
@@ -383,6 +408,39 @@ uses参数书写有一个技巧，写在后面的module在运行时可以通过r
 <!--
 #### FIELD DETAILS
 -->
+		
+			<div class="details props">
+				<div class="innerProps">
+					<h2 class="sectionTitle">
+						Field Detail
+					</h2>
+					
+					
+						<div class="fixedFont heading" id="loadScript">
+							<span class='lighter'>
+							
+							</span>
+							
+							
+							
+							<b>loadScript</b>							
+						</div>
+						
+						<div class="description">
+							加载一个script, 执行callback
+有冲突检测，如果连续调用两次loadScript同一src的话，则第二个调用会等第一个完毕后直接执行callback，不会加载两次。
+							
+							
+							
+						</div>
+						
+						
+							
+						
+						
+					
+				</div>
+			</div>
 		
 <!--
 #### METHOD DETAILS
@@ -832,59 +890,6 @@ uses参数书写有一个技巧，写在后面的module在运行时可以通过r
 							<li 
 								 class='item7'
 							>
-								<div class="fixedFont heading" id="loadScript">
-									<span class='lighter'>
-									
-									</span>
-									
-									
-									
-									<b>loadScript</b>(src, callback, callback)
-								</div>
-								
-								<div class="description">
-									加载一个script, 执行callback
-有冲突检测，如果连续调用两次loadScript同一src的话，则第二个调用会等第一个完毕后直接执行callback，不会加载两次。
-									
-									
-									
-									
-								</div>
-								
-								
-								
-								
-									<dl class="detailList params">
-										<dt class="heading">Parameters:</dt>
-										
-											<dt>
-												<b>src</b>
-												
-											</dt>
-											<dd>地址</dd>
-										
-											<dt>
-												<b>callback</b>
-												
-											</dt>
-											<dd>callback函数</dd>
-										
-											<dt>
-												<b>callback</b>
-												
-											</dt>
-											<dd></dd>
-										
-									</dl>
-								
-								
-								
-								<div class="hr"></div>
-							</li>
-						
-							<li 
-								 class='item8'
-							>
 								<div class="fixedFont heading" id="makePrefixPackage">
 									<span class='lighter'>
 									
@@ -930,7 +935,7 @@ uses参数书写有一个技巧，写在后面的module在运行时可以通过r
 							</li>
 						
 							<li 
-								 class='item9'
+								 class='item8'
 							>
 								<div class="fixedFont heading" id="use">
 									<span class='lighter'>

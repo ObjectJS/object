@@ -290,7 +290,7 @@ var ElementClassList = this.ElementClassList = new Class(Array, /**@lends dom.El
 	};
 
 	this.add = function(self, token) {
-		self._ele.className += (' ' + token);
+		if (!self.contains(token)) self._ele.className += (' ' + token); // 根据规范，不允许重复添加
 	};
 
 	this.remove = function(self, token) {
@@ -641,7 +641,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 			tmp.style.display = 'none';
 			document.body.appendChild(tmp);
 		}
-		tmp.innerHTML = str;
+		tmp.innerHTML = str.trim();
 		var result = wrap(tmp.firstChild);
 		if (_needGetDom) tmp.parentNode.removeChild(tmp);
 		return result;
@@ -736,16 +736,29 @@ this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 	 */
 	this.toQueryString = function(self) {
 		var queryString = [];
+
+		function addItem(name, value) {
+			if (typeof value != 'undefined') queryString.push(encodeURIComponent(name) + '=' + encodeURIComponent(value));
+		}
+
 		self.getElements('input, select, textarea, output').forEach(function(el) {
 			var type = el.type;
 			if (!el.name || el.disabled || type == 'submit' || type == 'reset' || type == 'file' || type == 'image') return;
 
-			var value = (el.tagName.toLowerCase() == 'select') ? el.getSelected().map(function(opt) {
-				// IE
-				return wrap(opt).get('value');
-			}) : ((type == 'radio' || type == 'checkbox') && !el.checked) ? null : el.get('value');
+			if (el.tagName.toLowerCase() == 'select') {
+				el.getSelected().map(function(opt) {
+					// IE
+					var value = wrap(opt).get('value');
+					addItem(el.name, value);
+				});
+			} else if (type == 'radio' || type == 'checkbox') {
+				if (el.checked) {
+					addItem(el.name, el.get('value'));
+				}
+			} else {
+				addItem(el.name, el.get('value'));
+			}
 
-			if (typeof value != 'undefined') queryString.push(encodeURIComponent(el.name) + '=' + encodeURIComponent(value));
 		});
 		return queryString.join('&');
 	};
@@ -865,32 +878,14 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 	});
 
 	if (!_supportHTML5Forms) {
+		/* TODO */
+		// autofocus
+		// willvalidate
+		// formnovalidate
 
 		this.validity = property(function(self) {
-			self.checkValidity();
-			return self.validity;
-		});
-
-		/**
-		 * html5 forms checkValidity
-		 */
-		this.checkValidity = function(self) {
-			/*
-			 * required
-			 * pattern
-			 * min
-			 * max
-			 * step
-			 */
-			/*
-			 * text
-			 * search
-			 * url
-			 * tel
-			 * email
-			 * password
-			 */
-
+			// required pattern min max step
+			// text search url tel email password
 			var value = self.get('value');
 			
 			var validity = {
@@ -912,21 +907,62 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 					if (n != maxlength) return false;
 					return value.length > n;
 				})(),
-				// 以下四个 firefox 4 beta 也不支持，暂时不支持
+				customError: !!self.__customValidity,
+				// 以下三个 firefox 4 beta 也不支持，暂时不支持
 				rangeUnderflow: false,
 				rangeOverflow: false,
-				stepMismatch: false,
-				customError: false
+				stepMismatch: false
 			};
 			validity.valid = ['valueMissing', 'typeMismatch', 'patternMismatch', 'tooLong', 'rangeUnderflow', 'rangeOverflow', 'stepMismatch', 'customError'].every(function(name) {
 				return validity[name] === false;
 			});
+			self.__validationMessage = (function() {
+				if (validity.valid) return '';
+				// Logic from webkit
+				// http://www.google.com/codesearch#N6Qhr5kJSgQ/WebCore/html/ValidityState.cpp&type=cs
+				// 文案通过Firefox和Chrome测试而来
+				// 虽然有可能同时不满足多种验证，但是message只输出第一个
+				if (validity.customError) return self.__customValidity;
+				if (validity.valueMissing) return '请填写此字段。';
+				if (validity.typeMismatch) return '请输入一个' + self.getAttribute('type') + '。';
+				if (validity.patternMismatch) return '请匹配要求的格式。';
+				if (validity.tooLong) return '请将该文本减少为 ' + self.getAttribute('maxlength') + ' 个字符或更少（您当前使用了' + self.get('value').length + '个字符）。';
+				if (validity.rangeUnderflow) return '值必须大于或等于' + self.getAttribute('min') + '。';
+				if (validity.rangeOverflow) return '值必须小于或等于' + self.getAttribute('max') + '。';
+				if (validity.stepMismatch) return '值无效。';
+			})();
+			self._set('validationMessage', self.__validationMessage);
 
-			self.validity = validity;
+			self._set('validity', validity);
+			return validity;
+		});
 
-			return validity.valid;
+		this.validationMessage = property(function(self) {
+			self.get('validity');
+			return self.__validationMessage;
+		});
+
+		this.setCustomValidity = function(self, message) {
+			self.__customValidity = message;
+			self.get('validity');
 		};
 
+		/**
+		 * html5 forms checkValidity
+		 */
+		this.checkValidity = function(self) {
+			self.get('validity');
+			return self.validity.valid;
+		};
+
+	} else {
+		this.validity = property(function(self) {
+			return self.validity;
+		});
+
+		this.validationMessage = property(function(self) {
+			return self.validationMessage;
+		});
 	}
 
 	/**

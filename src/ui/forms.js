@@ -114,7 +114,7 @@ this.SelectionInput = new Class(ui.Component, function() {
 
 		// css 必须设置line-height，否则在webkit中取到的是 normal
 		self.oneLineHeight = parseInt(style.lineHeight);
-		console.log('line height', self.oneLineHeight);
+		//console.log('line height', self.oneLineHeight);
 
 		// 包装
 		var selectionWrapper = document.createElement('div');

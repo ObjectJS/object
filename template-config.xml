@@ -1,4 +1,7 @@
-<package url="http://svn.d.xiaonei.com/frontend/static/object/">
+<package id="object" url="http://objectjs.org/object">
+
+	<publish dir="pub">
+	</publish>
 
 	<library dir="lib">
 	</library>
@@ -6,6 +9,7 @@
 	<source dir="src">
 		<combine path="object-all.js">
 			<include path="../lib/slick/Slick.Parser.js" />
+			<include path="../lib/jeresig-sizzle-68ff471/sizzle.js" />
 			<include path="../lib/janl-mustache.js-d2feae3/mustache.js" />
 			<include path="../lib/json2.js" />
 			<include path="object.js" />
@@ -24,3 +28,4 @@
 	</source>
 
 </package>
+
