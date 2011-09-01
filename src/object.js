@@ -327,21 +327,17 @@ var setter = function(prop, value) {
 	}
 };
 
-/**
- * 对于支持defineProperty的浏览器，可考虑将此setter不设置任何动作
- */
-var nativesetter = function(prop, value) {
-	this[prop] = value;
+var membergetter = function(name) {
+	return this[name];
 };
 
 /**
- * 动态mixin的方法。可以通过任意class的mixin调用
- * MyClass.__mixin__(name, value);
- * MyClass.__mixin__({name1: value1, name2: value2})
- * 会被放到 cls.__mixin__
+ * MyClass.set(name, value);
+ * MyClass.set({name1: value1, name2: value2})
+ * 会被放到 cls.set
  * 子类不会被覆盖
  */
-var mixiner = overloadSetter(function(name, member) {
+var membersetter = overloadSetter(function(name, member) {
 	var cls = this;
 	var prototype = cls.prototype;
 
@@ -367,12 +363,8 @@ var mixiner = overloadSetter(function(name, member) {
 		prototype[name] = instancemethod(member);
 
 	// this.a = classmethod(function() {})
-	} else if (member.__class__ === classmethod) {
-		member.im_func.__name__ = name;
-		cls[name] = prototype[name] = member;
-
 	// this.a = staticmethod(function() {})
-	} else if (member.__class__ === staticmethod) {
+	} else if (member.__class__ === classmethod || member.__class__ === staticmethod) {
 		member.im_func.__name__ = name;
 		cls[name] = prototype[name] = member;
 
@@ -388,6 +380,13 @@ var mixiner = overloadSetter(function(name, member) {
 		prototype[name] = member;
 	}
 });
+
+/**
+ * 对于支持defineProperty的浏览器，可考虑将此setter不设置任何动作
+ */
+var nativesetter = function(prop, value) {
+	this[prop] = value;
+};
 
 /**
  * 获取一个类的子类
@@ -446,7 +445,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 	cls.__metaclass__ = base.__metaclass__;
 
 	// Dict
-	cls.__mixin__(dict);
+	cls.set(dict);
 
 	// Mixin
 	var mixins = dict['__mixins__'] || dict['@mixins'];
@@ -463,9 +462,9 @@ type.__new__ = function(metaclass, name, base, dict) {
 				var member = mixin.prototype[name];
 
 				if (typeof member == 'function' && member.__class__ === instancemethod) {
-					cls.__mixin__(name, member.im_func);
+					cls.set(name, member.im_func);
 				} else {
-					cls.__mixin__(name, member);
+					cls.set(name, member);
 				}
 			});
 		});
@@ -530,7 +529,8 @@ Class.create = function() {
 	};
 	cls.__subclassesarray__ = [];
 	cls.__subclasses__ = subclassesgetter;
-	cls.__mixin__ = mixiner;
+	cls.__mixin__ = cls.set = membersetter;
+	cls.get = membergetter;
 	// 支持 this.parent 调用父级同名方法
 	cls.__this__ = {
 		mixining: null,

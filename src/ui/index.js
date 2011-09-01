@@ -185,7 +185,7 @@ this.__component = new Class(function() {
 	this.initialize = function(cls, name, base, dict) {
 
 		cls.__handles.forEach(function(eventType) {
-			cls.__mixin__(eventType, events.fireevent(function() {
+			cls.set(eventType, events.fireevent(function() {
 				cls['_' + eventType].apply(cls, arguments);
 			}));
 		});
@@ -200,14 +200,14 @@ this.__component = new Class(function() {
 					var defaultOptions = cls.__defaultOptions;
 					if (defaultOptions.indexOf(name) != -1) return;
 					defaultOptions.push(name);
-					cls.__mixin__(name, comp[name]);
+					cls.set(name, comp[name]);
 				});
 
 				comp.__subs.forEach(function(name) {
 					var subs = cls.__subs;
 					if (subs.indexOf(name) != -1) return;
 					subs.push(name);
-					cls.__mixin__(name, comp[name]);
+					cls.set(name, comp[name]);
 				});
 
 				comp.__handles.forEach(function(eventType) {
@@ -215,15 +215,15 @@ this.__component = new Class(function() {
 					var methodName = '_' + eventType;
 					if (handles.indexOf(eventType) != -1) return;
 					handles.push(eventType);
-					cls.__mixin__(eventType, comp.prototype[eventType].im_func);
-					cls.__mixin__(methodName, comp.prototype[methodName].im_func);
+					cls.set(eventType, comp.prototype[eventType].im_func);
+					cls.set(methodName, comp.prototype[methodName].im_func);
 				});
 
 				comp.__methods.forEach(function(name) {
 					var methods = cls.__methods;
 					if (methods.indexOf(name) != -1) return;
 					methods.push(name);
-					cls.__mixin__(name, comp.prototype[name].im_func);
+					cls.set(name, comp.prototype[name].im_func);
 				});
 				// onEvents和subEvents在宿主中处理，方法不添加到宿主类上
 			});
