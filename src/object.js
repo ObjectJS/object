@@ -327,10 +327,6 @@ var setter = function(prop, value) {
 	}
 };
 
-var membergetter = function(name) {
-	return this[name];
-};
-
 /**
  * MyClass.set(name, value);
  * MyClass.set({name1: value1, name2: value2})
@@ -530,7 +526,6 @@ Class.create = function() {
 	cls.__subclassesarray__ = [];
 	cls.__subclasses__ = subclassesgetter;
 	cls.__mixin__ = cls.set = membersetter;
-	cls.get = membergetter;
 	// 支持 this.parent 调用父级同名方法
 	cls.__this__ = {
 		mixining: null,

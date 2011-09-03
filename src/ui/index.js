@@ -185,8 +185,8 @@ this.__component = new Class(function() {
 	this.initialize = function(cls, name, base, dict) {
 
 		cls.__handles.forEach(function(eventType) {
-			cls.set(eventType, events.fireevent(function() {
-				cls['_' + eventType].apply(cls, arguments);
+			cls.set(eventType, events.fireevent(function(self) {
+				cls.prototype['_' + eventType].apply(self, [].slice.call(arguments, 1));
 			}));
 		});
 
@@ -339,8 +339,8 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				})) {
 					self.addEvent(trueEventType, function(event) {
 						// 将event._args pass 到函数后面
-						var args = [self, event].concat(event._args);
-						addon['on' + eventType].apply(addon, args);
+						var args = [event].concat(event._args);
+						addon.prototype['on' + eventType].apply(self, args);
 					});
 				}
 			});
@@ -380,7 +380,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 						var fakeEventType = '__option_' + eventType + '_' + name;
 						var methodName = name + '_' + eventType;
 						self.addEvent(fakeEventType, function(event) {
-							if (cls) cls[methodName](self, event.value);
+							if (cls) cls.prototype[methodName].call(self, event.value);
 							else self[methodName](event.value);
 						});
 					});
@@ -470,7 +470,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				events.forEach(function(eventType) {
 					var methodName = name + '_' + eventType;
 					node.addEvent(eventType, function(event) {
-						if (cls) cls[methodName].apply(cls, [self, event, comp].concat(event._args));
+						if (cls) cls.prototype[methodName].apply(self, [event, comp].concat(event._args));
 						else self[methodName].apply(self, [event, comp].concat(event._args));
 					});
 				});
