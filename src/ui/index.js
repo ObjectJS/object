@@ -184,83 +184,87 @@ this.__component = new Class(function() {
 
 	this.initialize = function(cls, name, base, dict) {
 
-		cls.__handles.forEach(function(eventType) {
+		var proto = cls.prototype;
+		var baseProto = base.prototype;
+
+		proto.__handles.forEach(function(eventType) {
 			cls.set(eventType, events.fireevent(function(self) {
-				cls.prototype['_' + eventType].apply(self, [].slice.call(arguments, 1));
+				proto['_' + eventType].apply(self, [].slice.call(arguments, 1));
 			}));
 		});
 
-		if (base && base.addons) {
-			cls.addons.push.apply(cls.addons, base.addons);
+		if (base && baseProto.addons) {
+			proto.addons.push.apply(proto.addons, baseProto.addons);
 		}
 
-		if (cls.addons) {
-			cls.addons.forEach(function(comp) {
-				comp.__defaultOptions.forEach(function(name) {
-					var defaultOptions = cls.__defaultOptions;
+		if (proto.addons) {
+			proto.addons.forEach(function(comp) {
+				var compProto = comp.prototype;
+				compProto.__defaultOptions.forEach(function(name) {
+					var defaultOptions = proto.__defaultOptions;
 					if (defaultOptions.indexOf(name) != -1) return;
 					defaultOptions.push(name);
-					cls.set(name, comp[name]);
+					cls.set(name, comp.get(name));
 				});
 
-				comp.__subs.forEach(function(name) {
-					var subs = cls.__subs;
+				compProto.__subs.forEach(function(name) {
+					var subs = proto.__subs;
 					if (subs.indexOf(name) != -1) return;
 					subs.push(name);
-					cls.set(name, comp[name]);
+					cls.set(name, comp.get(name));
 				});
 
-				comp.__handles.forEach(function(eventType) {
-					var handles = cls.__handles;
+				compProto.__handles.forEach(function(eventType) {
+					var handles = proto.__handles;
 					var methodName = '_' + eventType;
 					if (handles.indexOf(eventType) != -1) return;
 					handles.push(eventType);
-					cls.set(eventType, comp.prototype[eventType].im_func);
-					cls.set(methodName, comp.prototype[methodName].im_func);
+					cls.set(eventType, compProto[eventType].im_func);
+					cls.set(methodName, compProto[methodName].im_func);
 				});
 
-				comp.__methods.forEach(function(name) {
-					var methods = cls.__methods;
+				compProto.__methods.forEach(function(name) {
+					var methods = proto.__methods;
 					if (methods.indexOf(name) != -1) return;
 					methods.push(name);
-					cls.set(name, comp.prototype[name].im_func);
+					cls.set(name, compProto[name].im_func);
 				});
 				// onEvents和subEvents在宿主中处理，方法不添加到宿主类上
 			});
 		}
 
 		if (base && base !== type) {
-			base.__defaultOptions.forEach(function(name) {
-				var defaultOptions = cls.__defaultOptions;
+			baseProto.__defaultOptions.forEach(function(name) {
+				var defaultOptions = proto.__defaultOptions;
 				if (defaultOptions.indexOf(name) == -1) defaultOptions.push(name);
 			});
 
-			base.__subs.forEach(function(name) {
-				var subs = cls.__subs;
+			baseProto.__subs.forEach(function(name) {
+				var subs = proto.__subs;
 				if (subs.indexOf(name) == -1) subs.push(name);
 			});
 
-			base.__handles.forEach(function(eventType) {
-				var handles = cls.__handles;
-				if (handles.indexOf(eventType) == -1) cls.__handles.push(eventType);
+			baseProto.__handles.forEach(function(eventType) {
+				var handles = proto.__handles;
+				if (handles.indexOf(eventType) == -1) proto.__handles.push(eventType);
 			});
 
-			base.__methods.forEach(function(name) {
-				var methods = cls.__methods;
+			baseProto.__methods.forEach(function(name) {
+				var methods = proto.__methods;
 				if (methods.indexOf(name) == -1) methods.push(name);
 			});
 
-			Object.keys(base.__subEvents).forEach(function(subName) {
-				var subEvents = cls.__subEvents;
-				base.__subEvents[subName].forEach(function(eventType) {
+			Object.keys(baseProto.__subEvents).forEach(function(subName) {
+				var subEvents = proto.__subEvents;
+				baseProto.__subEvents[subName].forEach(function(eventType) {
 					var subEvent = subEvents[subName];
 					if (subEvent && subEvent.indexOf(eventType) != -1) return;
 					(subEvents[subName] = subEvents[subName] || []).push(eventType);
 				});
 			});
 
-			base.__onEvents.forEach(function(eventType) {
-				var onEvents = cls.__onEvents;
+			baseProto.__onEvents.forEach(function(eventType) {
+				var onEvents = proto.__onEvents;
 				if (onEvents.indexOf(eventType) == -1) onEvents.push(eventType);
 			});
 		}
@@ -328,7 +332,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	this.__initEvents = function(self) {
 		if (!self.addons) return;
 		self.addons.forEach(function(addon) {
-			addon.__onEvents.forEach(function(eventType) {
+			addon.prototype.__onEvents.forEach(function(eventType) {
 				var trueEventType; // 正常大小写的名称
 				if (self.__handles.some(function(handle) {
 					if (handle.toLowerCase() == eventType) {
@@ -390,7 +394,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			bindEvents(self.__subEvents[name]);
 			if (self.addons) {
 				self.addons.forEach(function(addon) {
-					bindEvents(addon.__subEvents[name], addon);
+					bindEvents(addon.prototype.__subEvents[name], addon);
 				});
 			}
 
@@ -480,7 +484,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		bindEvents(self.__subEvents[name]);
 		if (self.addons) {
 			self.addons.forEach(function(addon) {
-				bindEvents(addon.__subEvents[name], addon);
+				bindEvents(addon.prototype.__subEvents[name], addon);
 			});
 		}
 	};

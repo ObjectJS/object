@@ -327,6 +327,20 @@ var setter = function(prop, value) {
 	}
 };
 
+var membergetter = function(name) {
+	var cls = this;
+	var proto = this.prototype;
+	var properties = proto.__properties__;
+	if (name in properties) return properties[name];
+	if (!name in proto) throw new Error('no member named ' + name + '.');
+	var member = proto[name];
+	if (!member) return member;
+	if (member.__class__ = instancemethod) return function() {
+		return member.im_func.apply(cls.__this__, arguments);
+	};
+	return member;
+};
+
 /**
  * MyClass.set(name, value);
  * MyClass.set({name1: value1, name2: value2})
@@ -367,12 +381,10 @@ var membersetter = overloadSetter(function(name, member) {
 	// this.a = property(function fget() {}, function fset() {})
 	} else if (member.__class__ === property) {
 		member.__name__ = name;
-		cls[name] = member;
 		prototype.__properties__[name] = member;
 
 	// this.a = someObject
 	} else {
-		cls[name] = member;
 		prototype[name] = member;
 	}
 });
@@ -446,6 +458,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 	// Mixin
 	var mixins = dict['__mixins__'] || dict['@mixins'];
 	if (mixins) {
+		cls.__mixins__ = mixins;
 		mixins.forEach(function(mixin) {
 			Object.keys(mixin.prototype).forEach(function(name) {
 
@@ -526,6 +539,7 @@ Class.create = function() {
 	cls.__subclassesarray__ = [];
 	cls.__subclasses__ = subclassesgetter;
 	cls.__mixin__ = cls.set = membersetter;
+	cls.get = membergetter;
 	// 支持 this.parent 调用父级同名方法
 	cls.__this__ = {
 		mixining: null,
