@@ -697,7 +697,7 @@ this.ImageElement = new Class(Element, function() {
 this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 
 	this.initialize = function(self) {
-		Element.initialize(self);
+		this.parent(self);
 
 		if (self.elements) {
 			for (var i = 0; i < self.elements.length; i++) {
@@ -788,7 +788,7 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 	})();
 
 	this.initialize = function(self) {
-		Element.initialize(self);
+		this.parent(self);
 
 		if (_needBindPlaceholder && ['INPUT', 'TEXTAREA'].indexOf(self.get('tagName')) !== -1) {
 			self.bindPlaceholder(self);
