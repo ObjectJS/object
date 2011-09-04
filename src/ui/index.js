@@ -45,7 +45,9 @@ this.Components = new Class(Array, /**@lends ui.Components*/ function() {
 			self.push(new type(elements[i], options));
 		}
 
-		Object.keys(type).forEach(function(name) {
+		Object.keys(type.prototype).forEach(function(name) {
+			if (typeof type.prototype[name] != 'function') return;
+
 			self[name] = function() {
 				var element;
 				//var i, arg, args = [];

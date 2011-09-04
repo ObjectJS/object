@@ -353,28 +353,30 @@ var membersetter = overloadSetter(function(name, member) {
 
 	// 这里的member指向new Class参数的书写的对象/函数
 
-	if (name == '__metaclass__') {
+	if (['__new__', '__metaclass__'].indexOf(name) != -1) {
 		cls[name] = member;
 
 	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
 	} else if (member == null) {
-		cls[name] = prototype[name] = member;
+		prototype[name] = member;
 
 	// 先判断最常出现的instancemethod
 	// this.a = function() {}
 	} else if (member.__class__ === undefined && typeof member == 'function') {
 		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
 		member.__name__ = name;
-		cls[name] = function() {
-			return member.apply(this.__this__, arguments);
-		};
-		cls[name].__class__ = instancemethod;
-		cls[name].im_func = member;
 		prototype[name] = instancemethod(member);
 
 	// this.a = classmethod(function() {})
+	} else if (member.__class__ === classmethod) {
+		member.im_func.__name__ = name;
+		cls[name] = prototype[name] = member;
+		if (cls.__subclassesarray__) cls.__subclassesarray__.forEach(function(sub) {
+			sub.set(name, member);
+		});
+
 	// this.a = staticmethod(function() {})
-	} else if (member.__class__ === classmethod || member.__class__ === staticmethod) {
+	} else if (member.__class__ === staticmethod) {
 		member.im_func.__name__ = name;
 		cls[name] = prototype[name] = member;
 
@@ -449,6 +451,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 			}
 		}
 	}
+	cls.__base__ = base;
 	cls.__new__ = base.__new__;
 	cls.__metaclass__ = base.__metaclass__;
 
@@ -479,7 +482,6 @@ type.__new__ = function(metaclass, name, base, dict) {
 		});
 	}
 
-	cls.__base__ = base;
 	cls.__dict__ = dict;
 	cls.prototype.get = getter;
 	cls.prototype.set = setter;
@@ -488,7 +490,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 	return cls;
 };
 
-type.initialize = function() {
+type.initialize = type.prototype.initialize = function() {
 };
 
 // 类
@@ -523,7 +525,7 @@ var Class = this.Class = function() {
 	else metaclass = type;
 
 	var cls = metaclass.__new__(metaclass, null, base, dict);
-	metaclass.initialize(cls, null, base, dict);
+	if (metaclass !== type) metaclass.get('initialize')(cls, null, base, dict);
 
 	return cls;
 };
@@ -547,7 +549,7 @@ Class.create = function() {
 		parent: function() {
 			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
 			var name = arguments.callee.caller.__name__;
-			return cls.__base__[name].apply(cls.__base__, arguments);
+			return cls.__base__.get(name).apply(cls.__base__, arguments);
 		}
 	};
 	return cls;
@@ -562,7 +564,7 @@ Class.initMixins = function(cls, instance) {
 		for (var i = 0, l = cls.__mixins__.length; i < l; i++) {
 			mixin = cls.__mixins__[i];
 			mixin.__this__.mixining = cls;
-			if (mixin.initialize) mixin.initialize(instance);
+			if (mixin.prototype.initialize) mixin.prototype.initialize.call(instance);
 			mixin.__this__.mixining = null;
 		}
 	}
@@ -602,9 +604,8 @@ Class.inject = function(cls, host, args) {
 	host.__properties__ = cls.prototype.__properties__;
 	var p = Class.getInstance(cls);
 	object.extend(host, p);
-	args.unshift(host);
 	Class.initMixins(cls, host);
-	if (cls.initialize) cls.initialize.apply(cls, args);
+	if (cls.prototype.initialize) cls.prototype.initialize.apply(host, args);
 };
 
 /**
