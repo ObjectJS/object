@@ -14,6 +14,7 @@
 			<include path="../lib/json2.js" />
 			<include path="object.js" />
 			<include path="ua/index.js" />
+			<include path="ua/flashdetect.js" />
 			<include path="string.js" />
 			<include path="events.js" />
 			<include path="options.js" />
