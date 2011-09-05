@@ -9,21 +9,20 @@ object.add('ui', 'string, options, dom, events', /**@lends ui*/ function(exports
  */
 var Element = new Class(function() {
 
-	Object.keys(dom.Element.prototype).forEach(function(name) {
-		if (typeof dom.Element.prototype[name] === 'function') {
-			if (['initialize'].indexOf(name) != -1) return;
+	Class.items(dom.Element, function(name, member) {
+		if (['initialize'].indexOf(name) != -1) return;
+		if (typeof dom.Element[name] != 'function') return;
 
-			this[name] = function(self) {
-				var args = [];
-				var arg;
-				// 代理方法支持Component参数
-				for (var i = 1; i < arguments.length; i++) {
-					arg = arguments[i];
-					args.push((arg && arg._node)? arg._node : arg);
-				}
-				return dom.Element.prototype[name].apply(self._node, args);
-			};
-		}
+		this[name] = function(self) {
+			var args = [];
+			var arg;
+			// 代理方法支持Component参数
+			for (var i = 1; i < arguments.length; i++) {
+				arg = arguments[i];
+				args.push((arg && arg._node)? arg._node : arg);
+			}
+			return dom.Element.prototype[name].apply(self._node, args);
+		};
 	}, this);
 
 });

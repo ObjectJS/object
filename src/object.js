@@ -337,19 +337,24 @@ var membersetter = overloadSetter(function(name, member) {
 	var cls = this;
 	var prototype = cls.prototype;
 
-	// 所有子类cls上加入
-	if (cls.__subclassesarray__) cls.__subclassesarray__.forEach(function(sub) {
-		// TODO
-		if (!name in sub || cls[name].__class__ !== member.__class__) sub.set(name, member);
-	});
-
 	// 这里的member指向new Class参数的书写的对象/函数
 
 	if (['__new__', '__metaclass__'].indexOf(name) != -1) {
 		cls[name] = member;
+		return
+	}
+
+	// 所有子类cls上加入
+	// TODO
+	//var rewrite = !!(name in cls && (typeof cls[name] != 'function' || cls[name].im_func.__class__ !== member.__class__));
+	//if (cls.__subclassesarray__) cls.__subclassesarray__.forEach(function(sub) {
+		//if (!name in sub || rewrite) {
+			//sub.set(name, member);
+		//}
+	//});
 
 	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
-	} else if (member == null) {
+	if (member == null) {
 		cls[name] = prototype[name] = member;
 
 	// 先判断最常出现的instancemethod
@@ -357,26 +362,22 @@ var membersetter = overloadSetter(function(name, member) {
 	} else if (member.__class__ === undefined && typeof member == 'function') {
 		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
 		member.__name__ = name;
-		cls[name] = function() {
-			return member.apply(cls.__this__, arguments);
-		};
-		prototype[name] = instancemethod(member);
-
-	// this.a = classmethod(function() {})
-	} else if (member.__class__ === classmethod) {
-		member.im_func.__name__ = name;
-		cls[name] = prototype[name] = member;
-
-	// this.a = staticmethod(function() {})
-	} else if (member.__class__ === staticmethod) {
-		member.im_func.__name__ = name;
-		cls[name] = prototype[name] = member;
+		cls[name] = instancemethod(member);
+		prototype[name] = instancemethod(member, true);
+		cls[name].__name__ = prototype[name].__name__ = name;
 
 	// this.a = property(function fget() {}, function fset() {})
 	} else if (member.__class__ === property) {
 		member.__name__ = name;
 		cls[name] = member;
 		prototype.__properties__[name] = member;
+
+	// this.a = classmethod(function() {})
+	// this.a = staticmethod(function() {})
+	} else if (member.__class__ === classmethod || member.__class__ === staticmethod) {
+		member.im_func.__name__ = name;
+		member.__name__ = name;
+		cls[name] = prototype[name] = member;
 
 	// this.a = someObject
 	} else {
@@ -630,11 +631,23 @@ Class.getAllSubClasses = function(cls, array) {
 	return array;
 };
 
-var instancemethod = this.instancemethod = function(func) {
-	var wrapper = function() {
+/**
+* 遍历一个类成员
+*/
+Class.items = function(cls, callback, bind) {
+	Object.keys(cls).forEach(function(name) {
+		if (name.indexOf('__') == 0 || ['get', 'set'].indexOf(name) != -1) return;
+		callback.call(this, name, cls[name]);
+	}, bind);
+};
+
+var instancemethod = function(func, bound) {
+	var wrapper = bound? function() {
 		var args = [].slice.call(arguments, 0);
 		args.unshift(this);
 		return func.apply(this.__class__.__this__, args);
+	} : function() {
+		return this.prototype[func.__name__].im_func.apply(this.__this__, arguments);
 	};
 	wrapper.__class__ = arguments.callee;
 	wrapper.im_func = func;
@@ -673,7 +686,7 @@ var classmethod = this.classmethod = function(func) {
 };
 
 var property = this.property = function(fget, fset) {
-	var p = function () {};
+	var p = {};
 	p.__class__ = arguments.callee;
 	p.fget = fget;
 	p.fset = fset;
