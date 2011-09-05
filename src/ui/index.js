@@ -206,14 +206,14 @@ this.__component = new Class(function() {
 					var defaultOptions = proto.__defaultOptions;
 					if (defaultOptions.indexOf(name) != -1) return;
 					defaultOptions.push(name);
-					cls.set(name, comp.get(name));
+					cls.set(name, comp[name]);
 				});
 
 				compProto.__subs.forEach(function(name) {
 					var subs = proto.__subs;
 					if (subs.indexOf(name) != -1) return;
 					subs.push(name);
-					cls.set(name, comp.get(name));
+					cls.set(name, comp[name]);
 				});
 
 				compProto.__handles.forEach(function(eventType) {

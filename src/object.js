@@ -327,20 +327,6 @@ var setter = function(prop, value) {
 	}
 };
 
-var membergetter = function(name) {
-	var cls = this;
-	var proto = this.prototype;
-	var properties = proto.__properties__;
-	if (name in properties) return properties[name];
-	if (!name in proto) throw new Error('no member named ' + name + '.');
-	var member = proto[name];
-	if (!member) return member;
-	if (member.__class__ = instancemethod) return function() {
-		return member.im_func.apply(cls.__this__, arguments);
-	};
-	return member;
-};
-
 /**
  * MyClass.set(name, value);
  * MyClass.set({name1: value1, name2: value2})
@@ -351,6 +337,12 @@ var membersetter = overloadSetter(function(name, member) {
 	var cls = this;
 	var prototype = cls.prototype;
 
+	// 所有子类cls上加入
+	if (cls.__subclassesarray__) cls.__subclassesarray__.forEach(function(sub) {
+		// TODO
+		if (!name in sub || cls[name].__class__ !== member.__class__) sub.set(name, member);
+	});
+
 	// 这里的member指向new Class参数的书写的对象/函数
 
 	if (['__new__', '__metaclass__'].indexOf(name) != -1) {
@@ -358,22 +350,22 @@ var membersetter = overloadSetter(function(name, member) {
 
 	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
 	} else if (member == null) {
-		prototype[name] = member;
+		cls[name] = prototype[name] = member;
 
 	// 先判断最常出现的instancemethod
 	// this.a = function() {}
 	} else if (member.__class__ === undefined && typeof member == 'function') {
 		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
 		member.__name__ = name;
+		cls[name] = function() {
+			return member.apply(cls.__this__, arguments);
+		};
 		prototype[name] = instancemethod(member);
 
 	// this.a = classmethod(function() {})
 	} else if (member.__class__ === classmethod) {
 		member.im_func.__name__ = name;
 		cls[name] = prototype[name] = member;
-		if (cls.__subclassesarray__) cls.__subclassesarray__.forEach(function(sub) {
-			sub.set(name, member);
-		});
 
 	// this.a = staticmethod(function() {})
 	} else if (member.__class__ === staticmethod) {
@@ -383,11 +375,12 @@ var membersetter = overloadSetter(function(name, member) {
 	// this.a = property(function fget() {}, function fset() {})
 	} else if (member.__class__ === property) {
 		member.__name__ = name;
+		cls[name] = member;
 		prototype.__properties__[name] = member;
 
 	// this.a = someObject
 	} else {
-		prototype[name] = member;
+		cls[name] = prototype[name] = member;
 	}
 });
 
@@ -525,7 +518,7 @@ var Class = this.Class = function() {
 	else metaclass = type;
 
 	var cls = metaclass.__new__(metaclass, null, base, dict);
-	if (metaclass !== type) metaclass.get('initialize')(cls, null, base, dict);
+	metaclass.initialize(cls, null, base, dict);
 
 	return cls;
 };
@@ -541,7 +534,6 @@ Class.create = function() {
 	cls.__subclassesarray__ = [];
 	cls.__subclasses__ = subclassesgetter;
 	cls.__mixin__ = cls.set = membersetter;
-	cls.get = membergetter;
 	// 支持 this.parent 调用父级同名方法
 	cls.__this__ = {
 		mixining: null,
@@ -549,7 +541,7 @@ Class.create = function() {
 		parent: function() {
 			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
 			var name = arguments.callee.caller.__name__;
-			return cls.__base__.get(name).apply(cls.__base__, arguments);
+			return cls.__base__[name].apply(cls.__base__, arguments);
 		}
 	};
 	return cls;
@@ -651,8 +643,11 @@ var instancemethod = this.instancemethod = function(func) {
 
 var staticmethod = this.staticmethod = function(func) {
 	var wrapper = function() {
-		var cls = this.__this__? this : this.__class__;
-		return func.apply(cls.__this__, arguments);
+		if (this.__this__) {
+			return this.prototype[func.__name__].im_func.apply(this.__this__, arguments);
+		} else {
+			return func.apply(this.__class__.__this__, arguments);
+		}
 	};
 	wrapper.__class__ = arguments.callee;
 	wrapper.im_func = func;
@@ -662,9 +657,15 @@ var staticmethod = this.staticmethod = function(func) {
 var classmethod = this.classmethod = function(func) {
 	var wrapper = function() {
 		var args = [].slice.call(arguments, 0);
-		var cls = this.__this__? this : this.__class__; // 可能是在类上调用，也可能是在实例上调用
-		args.unshift(cls);
-		return func.apply(cls.__this__, args);
+		var cls;
+		if (this.__this__) {
+			args.unshift(this);
+			return this.prototype[func.__name__].im_func.apply(this.__this__, args);
+		} else {
+			cls = this.__class__;
+			args.unshift(cls);
+			return func.apply(cls.__this__, args);
+		}
 	};
 	wrapper.__class__ = arguments.callee;
 	wrapper.im_func = func;
