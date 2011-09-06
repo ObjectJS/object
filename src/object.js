@@ -272,7 +272,8 @@ this.add = function() {
 
 (/**@lends _global_*/ function() {
 
-// 仿照 mootools 的overloadSetter，返回一个 key/value 这种形式的function参数的包装，使其支持{key1: value1, key2: value2} 这种形式
+// 仿照 mootools 的overloadSetter
+// 返回一个 key/value 这种形式的function参数的包装，使其支持{key1: value1, key2: value2} 这种传参形式
 var enumerables = true;
 for (var i in {toString: 1}) enumerables = null;
 if (enumerables) enumerables = ['hasOwnProperty', 'valueOf', 'isPrototypeOf', 'propertyIsEnumerable', 'toLocaleString', 'toString', 'constructor'];
@@ -324,6 +325,7 @@ var setter = function(prop, value) {
 
 /**
 * 检测类是否包含某成员
+* 会被放到 cls.has
 */
 var memberchecker = function(name) {
 	var proto = this.prototype;
@@ -331,12 +333,14 @@ var memberchecker = function(name) {
 };
 
 /**
-* 从类上获取成员
-*/
+ * 从类上获取成员
+ * 会被放到cls.get
+ */
 var membergetter = function(name) {
 	var cls = this;
 	var proto = this.prototype;
 	var properties = proto.__properties__;
+	if (name in cls) return cls[name];
 	if (name in properties) return properties[name];
 	if (!name in proto) throw new Error('no member named ' + name + '.');
 	var member = proto[name];
@@ -353,40 +357,49 @@ var membergetter = function(name) {
  */
 var membersetter = overloadSetter(function(name, member) {
 	var cls = this;
-	var prototype = cls.prototype;
+	var proto = cls.prototype;
 
 	// 这里的member指向new Class参数的书写的对象/函数
 
-	if (['__new__', '__metaclass__'].indexOf(name) != -1) {
+	if (['__new__', '__metaclass__', '__mixins__'].indexOf(name) != -1) {
 		cls[name] = member;
 
 	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
 	} else if (member == null) {
-		prototype[name] = member;
+		proto[name] = member;
 
 	// 先判断最常出现的instancemethod
 	// this.a = function() {}
 	} else if (member.__class__ === undefined && typeof member == 'function') {
 		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
 		member.__name__ = name;
-		prototype[name] = instancemethod(member);
-		prototype[name].__name__ = name;
+		proto[name] = instancemethod(member);
+		proto[name].__name__ = name;
+		// 初始化方法放在cls上，metaclass会从cls上进行调用
+		if (name == 'initialize') {
+			cls[name] = instancemethod(member, cls);
+		}
 
 	// this.a = property(function fget() {}, function fset() {})
 	} else if (member.__class__ === property) {
 		member.__name__ = name;
-		prototype.__properties__[name] = member;
+		proto.__properties__[name] = member;
 
 	// this.a = classmethod(function() {})
-	// this.a = staticmethod(function() {})
-	} else if (member.__class__ === classmethod || member.__class__ === staticmethod) {
+	} else if (member.__class__ === classmethod) {
 		member.im_func.__name__ = name;
 		member.__name__ = name;
-		cls[name] = prototype[name] = member;
+		cls[name] = proto[name] = member;
+
+	// this.a = staticmethod(function() {})
+	} else if (member.__class__ === staticmethod) {
+		member.im_func.__name__ = name;
+		member.__name__ = name;
+		cls[name] = proto[name] = member.im_func;
 
 	// this.a = someObject
 	} else {
-		prototype[name] = member;
+		proto[name] = member;
 	}
 
 	var subs = cls.__subclassesarray__;
@@ -446,10 +459,10 @@ type.__new__ = function(metaclass, name, base, dict) {
 	if (base.__subclassesarray__) base.__subclassesarray__.push(cls);
 
 	// Propeties
-	var prototype = cls.prototype;
+	var proto = cls.prototype;
 	// 有可能已经继承了base的__properties__了
-	var baseProperties = prototype.__properties__ || {};
-	prototype.__properties__ = object.extend({}, baseProperties);
+	var baseProperties = proto.__properties__ || {};
+	proto.__properties__ = object.extend({}, baseProperties);
 
 	// base就两个成员，initialize和__new__，就不for in影响性能了
 	if (base !== type) {
@@ -529,8 +542,7 @@ var Class = this.Class = function() {
 	else metaclass = type;
 
 	var cls = metaclass.__new__(metaclass, null, base, dict);
-	if (metaclass === type) metaclass.initialize(cls, null, base, dict);
-	else metaclass.get('initialize')(cls, null, base, dict);
+	metaclass.initialize(cls, null, base, dict);
 
 	return cls;
 };
@@ -657,7 +669,7 @@ Class.keys = function(cls) {
 		// 这3个需要过滤掉，是为了支持property加入的内置成员
 		// initialize也需要过滤，当mixin多个class的时候，initialize默认为最后一个，这种行为没意义
 		// 过滤掉双下划线命名的系统成员和私有成员
-		return !(['get', 'set', '_set', 'initialize'].indexOf(name) !== -1 || name.indexOf('__') == 0);
+		return !(['get', 'set', '_set', 'initialize', 'constructor'].indexOf(name) !== -1 || name.indexOf('__') == 0);
 	}));
 	return keys;
 };
@@ -676,13 +688,7 @@ var instancemethod = function(func, cls) {
 };
 
 var staticmethod = this.staticmethod = function(func) {
-	var wrapper = function() {
-		if (this.__this__) {
-			return this.prototype[func.__name__].im_func.apply(this.__this__, arguments);
-		} else {
-			return func.apply(this.__class__.__this__, arguments);
-		}
-	};
+	var wrapper = function() {};
 	wrapper.__class__ = arguments.callee;
 	wrapper.im_func = func;
 	return wrapper;
