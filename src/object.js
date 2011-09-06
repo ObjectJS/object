@@ -450,6 +450,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 	// Mixin
 	var mixins = dict['__mixins__'] || dict['@mixins'];
 	if (mixins) {
+		cls.__mixins__ = mixins;
 		mixins.forEach(function(mixin) {
 			Object.keys(mixin.prototype).forEach(function(name) {
 
