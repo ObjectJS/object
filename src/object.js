@@ -364,6 +364,9 @@ var membersetter = overloadSetter(function(name, member) {
 	if (['__new__', '__metaclass__', '__mixins__'].indexOf(name) != -1) {
 		cls[name] = member;
 
+	} else if (['__base__'].indexOf(name) != -1) {
+		cls[name] = proto[name] = member;
+
 	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
 	} else if (member == null) {
 		proto[name] = member;
@@ -473,7 +476,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 			}
 		}
 	}
-	cls.__base__ = base;
+	cls.set('__base__', base);
 	cls.__new__ = base.__new__;
 	cls.__metaclass__ = base.__metaclass__;
 
