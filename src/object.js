@@ -10,13 +10,12 @@ var object = this;
  * 遍历一个对象，返回所有的key的数组
  */
 Object.keys = function(o) {
+	var result = [];
+
 	// 在Safari 5.0.2(7533.18.5)中，在这里用for in遍历parent会将prototype属性遍历出来，导致原型被指向一个错误的对象
 	// 经过试验，在Safari下，仅仅通过 obj.prototype.xxx = xxx 这样的方式就会导致 prototype 变成自定义属性，会被 for in 出来
 	// 而其他浏览器仅仅是在重新指向prototype时，类似 obj.prototype = {} 这样的写法才会出现这个情况
 	// 因此，在使用时一定要注意
-
-	var result = [];
-
 	for (var name in o) {
 		if (o.hasOwnProperty(name)) {
 			result.push(name);
@@ -271,10 +270,6 @@ this.add = function() {
 
 })(window);
 
-// prototyping标识符，有此标识符标识则代表new一个类时是为了继承而new的
-// 这个变量需要放到window上，避免重复加载object.js时重复声明的问题
-if (!window.PROTOTYPING) window.PROTOTYPING = {foo: true};
-
 (/**@lends _global_*/ function() {
 
 // 仿照 mootools 的overloadSetter，返回一个 key/value 这种形式的function参数的包装，使其支持{key1: value1, key2: value2} 这种形式
@@ -398,7 +393,7 @@ var membersetter = overloadSetter(function(name, member) {
 	// 所有子类cls上加入
 	if (subs) {
 		subs.forEach(function(sub) {
-			if (!sub.has(name) && cls[name]) {
+			if (!sub.has(name) && name in cls) { // 子类没有且在类上也需要声明
 				sub.set(name, member);
 			}
 		});
@@ -541,8 +536,8 @@ var Class = this.Class = function() {
 };
 
 Class.create = function() {
-	var cls = function(prototyping) {
-		if (prototyping === PROTOTYPING) return this;
+	var cls = function() {
+		if (cls.__prototyping__) return this;
 		this.__class__ = cls;
 		Class.initMixins(cls, this);
 		var value = this.initialize? this.initialize.apply(this, arguments) : null;
@@ -634,7 +629,10 @@ Class.getChain = function(cls) {
 // 获取父类的实例，用于 cls.prototype = new parent
 Class.getInstance = function(cls) {
 	if (cls === Array || cls === String) return new cls;
-	return new cls(window.PROTOTYPING);
+	cls.__prototyping__ = true;
+	var instance = new cls();
+	delete cls.__prototyping__;
+	return instance;
 };
 
 /**
