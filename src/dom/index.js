@@ -65,7 +65,7 @@ this.ready = function(callback) {
 	} else {
 		if ((ua.ua.webkit && ua.ua.webkit < 525) || !document.addEventListener) {
 			window.__domloadHooks.push(callback);
-		} if (document.addEventListener) {
+		} else if (document.addEventListener) {
 			document.addEventListener('DOMContentLoaded', callback, false);
 		}
 	}

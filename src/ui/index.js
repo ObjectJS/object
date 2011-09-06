@@ -9,9 +9,10 @@ object.add('ui', 'string, options, dom, events', /**@lends ui*/ function(exports
  */
 var Element = new Class(function() {
 
-	Class.items(dom.Element, function(name, member) {
+	Class.keys(dom.Element).forEach(function(name) {
+		var member = dom.Element.get(name);
 		if (['initialize'].indexOf(name) != -1) return;
-		if (typeof dom.Element[name] != 'function') return;
+		if (typeof member != 'function') return;
 
 		this[name] = function(self) {
 			var args = [];
@@ -205,14 +206,14 @@ this.__component = new Class(function() {
 					var defaultOptions = proto.__defaultOptions;
 					if (defaultOptions.indexOf(name) != -1) return;
 					defaultOptions.push(name);
-					cls.set(name, comp[name]);
+					cls.set(name, comp.prototype.__properties__[name]);
 				});
 
 				compProto.__subs.forEach(function(name) {
 					var subs = proto.__subs;
 					if (subs.indexOf(name) != -1) return;
 					subs.push(name);
-					cls.set(name, comp[name]);
+					cls.set(name, comp.prototype.__properties__[name]);
 				});
 
 				compProto.__handles.forEach(function(eventType) {
@@ -287,7 +288,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		else if (type === 'boolean') return Boolean;
 	};
 
-	Class.mixin(this, Element);
+	this.__mixins__ = [Element];
 
 	this.initialize = function(self, node, options) {
 		// 如果是在mixin中，代表自己正在被当作一个addon

@@ -327,6 +327,23 @@ var setter = function(prop, value) {
 	}
 };
 
+var memberchecker = function(name) {
+	var proto = this.prototype;
+	return !!(name in proto || name in proto.__properties__);
+};
+
+var membergetter = function(name) {
+	var cls = this;
+	var proto = this.prototype;
+	var properties = proto.__properties__;
+	if (name in properties) return properties[name];
+	if (!name in proto) throw new Error('no member named ' + name + '.');
+	var member = proto[name];
+	if (!member) return member;
+	if (member.__class__ = instancemethod) return instancemethod(member.im_func, this);
+	return member;
+};
+
 /**
  * MyClass.set(name, value);
  * MyClass.set({name1: value1, name2: value2})
@@ -337,39 +354,41 @@ var membersetter = overloadSetter(function(name, member) {
 	var cls = this;
 	var prototype = cls.prototype;
 
+	//var subs = cls.__subclassesarray__;
+	//// 所有子类cls上加入
+	//if (subs) {
+		//subs.forEach(function(sub) {
+			//// sub中不存在此成员或者此成员是从本类继承的
+			//if (!name in sub || sub[name] === cls[name]) {
+				//sub.set(name, member);
+			//}
+		//});
+	//}
+
 	// 这里的member指向new Class参数的书写的对象/函数
 
 	if (['__new__', '__metaclass__'].indexOf(name) != -1) {
 		cls[name] = member;
-		return
-	}
-
-	// 所有子类cls上加入
-	// TODO
-	//var rewrite = !!(name in cls && (typeof cls[name] != 'function' || cls[name].im_func.__class__ !== member.__class__));
-	//if (cls.__subclassesarray__) cls.__subclassesarray__.forEach(function(sub) {
-		//if (!name in sub || rewrite) {
-			//sub.set(name, member);
-		//}
-	//});
 
 	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
-	if (member == null) {
-		cls[name] = prototype[name] = member;
+	} else if (member == null) {
+		cls[name] = member;
+		prototype[name] = member;
 
 	// 先判断最常出现的instancemethod
 	// this.a = function() {}
 	} else if (member.__class__ === undefined && typeof member == 'function') {
 		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
 		member.__name__ = name;
-		cls[name] = instancemethod(member);
-		prototype[name] = instancemethod(member, true);
-		cls[name].__name__ = prototype[name].__name__ = name;
+		//cls[name] = instancemethod(member);
+		//cls[name].__name__ = name;
+		prototype[name] = instancemethod(member);
+		prototype[name].__name__ = name;
 
 	// this.a = property(function fget() {}, function fset() {})
 	} else if (member.__class__ === property) {
 		member.__name__ = name;
-		cls[name] = member;
+		//cls[name] = member;
 		prototype.__properties__[name] = member;
 
 	// this.a = classmethod(function() {})
@@ -381,7 +400,8 @@ var membersetter = overloadSetter(function(name, member) {
 
 	// this.a = someObject
 	} else {
-		cls[name] = prototype[name] = member;
+		//cls[name] = member;
+		prototype[name] = member;
 	}
 });
 
@@ -457,13 +477,8 @@ type.__new__ = function(metaclass, name, base, dict) {
 	if (mixins) {
 		cls.__mixins__ = mixins;
 		mixins.forEach(function(mixin) {
-			Object.keys(mixin.prototype).forEach(function(name) {
-
-				// 这3个需要过滤掉，是为了支持property加入的内置成员
-				// initialize也需要过滤，当mixin多个class的时候，initialize默认为最后一个，这种行为没意义
-				// 过滤掉双下划线命名的系统成员和私有成员
-				if (['get', 'set', '_set', 'initialize'].indexOf(name) !== -1 || name.indexOf('__') == 0) return;
-				if (cls[name] !== undefined) return; // 不要覆盖自定义的
+			Class.keys(mixin).forEach(function(name) {
+				if (cls.has(name)) return; // 不要覆盖自定义的
 
 				var member = mixin.prototype[name];
 
@@ -519,7 +534,8 @@ var Class = this.Class = function() {
 	else metaclass = type;
 
 	var cls = metaclass.__new__(metaclass, null, base, dict);
-	metaclass.initialize(cls, null, base, dict);
+	if (metaclass === type) metaclass.initialize(cls, null, base, dict);
+	else metaclass.get('initialize')(cls, null, base, dict);
 
 	return cls;
 };
@@ -535,6 +551,8 @@ Class.create = function() {
 	cls.__subclassesarray__ = [];
 	cls.__subclasses__ = subclassesgetter;
 	cls.__mixin__ = cls.set = membersetter;
+	cls.get = membergetter;
+	cls.has = memberchecker;
 	// 支持 this.parent 调用父级同名方法
 	cls.__this__ = {
 		mixining: null,
@@ -542,7 +560,7 @@ Class.create = function() {
 		parent: function() {
 			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
 			var name = arguments.callee.caller.__name__;
-			return cls.__base__[name].apply(cls.__base__, arguments);
+			return cls.__base__.get(name).apply(cls.__base__, arguments);
 		}
 	};
 	return cls;
@@ -634,20 +652,29 @@ Class.getAllSubClasses = function(cls, array) {
 /**
 * 遍历一个类成员
 */
-Class.items = function(cls, callback, bind) {
-	Object.keys(cls).forEach(function(name) {
-		if (name.indexOf('__') == 0 || ['get', 'set'].indexOf(name) != -1) return;
-		callback.call(this, name, cls[name]);
-	}, bind);
+Class.keys = function(cls) {
+	var keys = [];
+	Object.keys(cls.prototype.__properties__).forEach(function(name) {
+		keys.push(name);
+	});
+	Object.keys(cls.prototype).forEach(function(name) {
+		// 这3个需要过滤掉，是为了支持property加入的内置成员
+		// initialize也需要过滤，当mixin多个class的时候，initialize默认为最后一个，这种行为没意义
+		// 过滤掉双下划线命名的系统成员和私有成员
+		if (['get', 'set', '_set', 'initialize'].indexOf(name) !== -1 || name.indexOf('__') == 0) return;
+
+		keys.push(name);
+	});
+	return keys;
 };
 
-var instancemethod = function(func, bound) {
-	var wrapper = bound? function() {
+var instancemethod = function(func, cls) {
+	var wrapper = cls? function() {
+		return cls.prototype[func.__name__].im_func.apply(cls.__this__, arguments);
+	} : function() {
 		var args = [].slice.call(arguments, 0);
 		args.unshift(this);
 		return func.apply(this.__class__.__this__, args);
-	} : function() {
-		return this.prototype[func.__name__].im_func.apply(this.__this__, arguments);
 	};
 	wrapper.__class__ = arguments.callee;
 	wrapper.im_func = func;
