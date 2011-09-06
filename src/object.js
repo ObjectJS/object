@@ -327,11 +327,17 @@ var setter = function(prop, value) {
 	}
 };
 
+/**
+* 检测类是否包含某成员
+*/
 var memberchecker = function(name) {
 	var proto = this.prototype;
 	return !!(name in proto || name in proto.__properties__);
 };
 
+/**
+* 从类上获取成员
+*/
 var membergetter = function(name) {
 	var cls = this;
 	var proto = this.prototype;
@@ -354,17 +360,6 @@ var membersetter = overloadSetter(function(name, member) {
 	var cls = this;
 	var prototype = cls.prototype;
 
-	//var subs = cls.__subclassesarray__;
-	//// 所有子类cls上加入
-	//if (subs) {
-		//subs.forEach(function(sub) {
-			//// sub中不存在此成员或者此成员是从本类继承的
-			//if (!name in sub || sub[name] === cls[name]) {
-				//sub.set(name, member);
-			//}
-		//});
-	//}
-
 	// 这里的member指向new Class参数的书写的对象/函数
 
 	if (['__new__', '__metaclass__'].indexOf(name) != -1) {
@@ -372,7 +367,6 @@ var membersetter = overloadSetter(function(name, member) {
 
 	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
 	} else if (member == null) {
-		cls[name] = member;
 		prototype[name] = member;
 
 	// 先判断最常出现的instancemethod
@@ -380,15 +374,12 @@ var membersetter = overloadSetter(function(name, member) {
 	} else if (member.__class__ === undefined && typeof member == 'function') {
 		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
 		member.__name__ = name;
-		//cls[name] = instancemethod(member);
-		//cls[name].__name__ = name;
 		prototype[name] = instancemethod(member);
 		prototype[name].__name__ = name;
 
 	// this.a = property(function fget() {}, function fset() {})
 	} else if (member.__class__ === property) {
 		member.__name__ = name;
-		//cls[name] = member;
 		prototype.__properties__[name] = member;
 
 	// this.a = classmethod(function() {})
@@ -400,8 +391,17 @@ var membersetter = overloadSetter(function(name, member) {
 
 	// this.a = someObject
 	} else {
-		//cls[name] = member;
 		prototype[name] = member;
+	}
+
+	var subs = cls.__subclassesarray__;
+	// 所有子类cls上加入
+	if (subs) {
+		subs.forEach(function(sub) {
+			if (!sub.has(name) && cls[name]) {
+				sub.set(name, member);
+			}
+		});
 	}
 });
 
@@ -651,20 +651,16 @@ Class.getAllSubClasses = function(cls, array) {
 
 /**
 * 遍历一个类成员
+* 获取类成员通过cls.get(name)
 */
 Class.keys = function(cls) {
-	var keys = [];
-	Object.keys(cls.prototype.__properties__).forEach(function(name) {
-		keys.push(name);
-	});
-	Object.keys(cls.prototype).forEach(function(name) {
+	keys = Object.keys(cls.prototype.__properties__);
+	keys = keys.concat(Object.keys(cls.prototype).filter(function(name) {
 		// 这3个需要过滤掉，是为了支持property加入的内置成员
 		// initialize也需要过滤，当mixin多个class的时候，initialize默认为最后一个，这种行为没意义
 		// 过滤掉双下划线命名的系统成员和私有成员
-		if (['get', 'set', '_set', 'initialize'].indexOf(name) !== -1 || name.indexOf('__') == 0) return;
-
-		keys.push(name);
-	});
+		return !(['get', 'set', '_set', 'initialize'].indexOf(name) !== -1 || name.indexOf('__') == 0);
+	}));
 	return keys;
 };
 
