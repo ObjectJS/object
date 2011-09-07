@@ -351,20 +351,26 @@ var membersetter = overloadSetter(function(name, member) {
 	var proto = cls.prototype;
 	var properties = proto.__properties__;
 	var subs = cls.__subclassesarray__;
+	var constructing = cls.__constructing__;
+
+	// 类构建完毕后才进行set，需要先删除之前的成员
+	if (!constructing) {
+		delete cls[name];
+		delete proto[name];
+		delete properties[name];
+	}
 
 	// 这里的member指向new Class参数的书写的对象/函数
 
 	if (['__new__', '__metaclass__', '__mixins__'].indexOf(name) != -1) {
 		cls[name] = member;
 
-	} else if (['__this__', '__mixining__', '__base__'].indexOf(name) != -1) {
+	} else if (['__this__', '__base__'].indexOf(name) != -1) {
 		cls[name] = proto[name] = member;
 
 	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
 	} else if (member == null) {
 		proto[name] = member;
-		delete cls[name];
-		delete properties[name];
 
 	// 先判断最常出现的instancemethod
 	// this.a = function() {}
@@ -376,41 +382,33 @@ var membersetter = overloadSetter(function(name, member) {
 		// 初始化方法放在cls上，metaclass会从cls上进行调用
 		if (name == 'initialize') {
 			cls[name] = instancemethod(member, cls);
-		} else {
-			delete cls[name];
 		}
-		delete properties[name];
 
 	// this.a = property(function fget() {}, function fset() {})
 	} else if (member.__class__ === property) {
 		member.__name__ = name;
 		properties[name] = member;
-		delete cls[name];
-		delete proto[name];
 
 	// this.a = classmethod(function() {})
 	} else if (member.__class__ === classmethod) {
 		member.im_func.__name__ = name;
 		member.__name__ = name;
 		cls[name] = proto[name] = member;
-		delete properties[name];
 
 	// this.a = staticmethod(function() {})
 	} else if (member.__class__ === staticmethod) {
 		member.im_func.__name__ = name;
 		member.__name__ = name;
 		cls[name] = proto[name] = member.im_func;
-		delete properties[name];
 
 	// this.a = someObject
 	} else {
 		proto[name] = member;
-		delete cls[name];
-		delete properties[name];
 	}
 
 	// 所有子类cls上加入
-	if (name in cls && subs) {
+	if (!constructing && name in cls && subs) {
+		console.log(name)
 		subs.forEach(function(sub) {
 			if (!sub[name]) sub.set(name, member);
 		});
@@ -456,6 +454,8 @@ var type = this.type = function() {
 type.__new__ = function(metaclass, name, base, dict) {
 	var cls = Class.create();
 
+	cls.__constructing__ = true;
+
 	// 继承的核心
 	cls.prototype = Class.getInstance(base);
 	cls.prototype.constructor = cls;
@@ -468,7 +468,6 @@ type.__new__ = function(metaclass, name, base, dict) {
 	var baseProperties = proto.__properties__ || {};
 	proto.__properties__ = object.extend({}, baseProperties);
 
-	// base就两个成员，initialize和__new__，就不for in影响性能了
 	if (base !== type) {
 		for (var property in base) {
 			// 过滤双下划线开头的系统成员和私有成员
@@ -510,6 +509,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 			});
 		});
 	}
+	delete cls.__constructing__;
 
 	cls.__dict__ = dict;
 	cls.prototype.get = getter;
@@ -582,9 +582,7 @@ Class.initMixins = function(cls, instance) {
 	if (cls.__mixins__) {
 		for (var i = 0, l = cls.__mixins__.length; i < l; i++) {
 			mixin = cls.__mixins__[i];
-			mixin.set('__mixining__', true);
 			if (mixin.prototype.initialize) mixin.prototype.initialize.call(instance);
-			mixin.set('__mixining__', false);
 		}
 	}
 };
