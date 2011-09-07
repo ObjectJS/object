@@ -31,15 +31,19 @@
 			A.set({
 				prop: {foo: 1},
 				method: function() {
-				}
+					alert('method');
+				},
+				static: staticmethod(function() {
+					alert('static');
+				})
 			});
 
 			c.prop.bar = 2;
+			c.method();
 
-			console.log(C.prop);
+			B.static();
 		};
 		testExtends();
-
 
 		// mixin 测试
 		var testMixin = function() {
@@ -82,7 +86,7 @@
 			console.dir(my.prop)
 			console.dir(my2.prop)
 		};
-		//testMixin();
+		// testMixin();
 
 		// 速度测试
 		var testSpeed = function() {
@@ -96,6 +100,7 @@
 			var MyClass = new Class(proto);
 			console.log(new Date().getTime() - st);
 		}
+		//testSpeed();
 
 	});
 	object.execute('test');

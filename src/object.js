@@ -409,7 +409,7 @@ var membersetter = overloadSetter(function(name, member) {
 	// 所有子类cls上加入
 	if (name in cls && subs) {
 		subs.forEach(function(sub) {
-			if (!sub.has(name)) sub.set(name, member);
+			if (!sub[name]) sub.set(name, member);
 		});
 	}
 });
@@ -495,7 +495,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 		cls.__mixins__ = mixins;
 		mixins.forEach(function(mixin) {
 			Class.keys(mixin).forEach(function(name) {
-				if (cls.has(name)) return; // 不要覆盖自定义的
+				if (cls.get(name)) return; // 不要覆盖自定义的
 
 				var member = mixin.prototype[name];
 
@@ -568,7 +568,6 @@ Class.create = function() {
 	cls.__subclasses__ = subclassesgetter;
 	cls.__mixin__ = cls.set = membersetter;
 	cls.get = membergetter;
-	cls.has = memberchecker;
 	return cls;
 };
 
