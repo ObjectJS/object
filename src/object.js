@@ -349,6 +349,7 @@ var membergetter = function(name) {
 var membersetter = overloadSetter(function(name, member) {
 	var cls = this;
 	var proto = cls.prototype;
+	var properties = proto.__properties__;
 	var subs = cls.__subclassesarray__;
 
 	// 这里的member指向new Class参数的书写的对象/函数
@@ -362,6 +363,8 @@ var membersetter = overloadSetter(function(name, member) {
 	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
 	} else if (member == null) {
 		proto[name] = member;
+		delete cls[name];
+		delete properties[name];
 
 	// 先判断最常出现的instancemethod
 	// this.a = function() {}
@@ -373,28 +376,37 @@ var membersetter = overloadSetter(function(name, member) {
 		// 初始化方法放在cls上，metaclass会从cls上进行调用
 		if (name == 'initialize') {
 			cls[name] = instancemethod(member, cls);
+		} else {
+			delete cls[name];
 		}
+		delete properties[name];
 
 	// this.a = property(function fget() {}, function fset() {})
 	} else if (member.__class__ === property) {
 		member.__name__ = name;
-		proto.__properties__[name] = member;
+		properties[name] = member;
+		delete cls[name];
+		delete proto[name];
 
 	// this.a = classmethod(function() {})
 	} else if (member.__class__ === classmethod) {
 		member.im_func.__name__ = name;
 		member.__name__ = name;
 		cls[name] = proto[name] = member;
+		delete properties[name];
 
 	// this.a = staticmethod(function() {})
 	} else if (member.__class__ === staticmethod) {
 		member.im_func.__name__ = name;
 		member.__name__ = name;
 		cls[name] = proto[name] = member.im_func;
+		delete properties[name];
 
 	// this.a = someObject
 	} else {
 		proto[name] = member;
+		delete cls[name];
+		delete properties[name];
 	}
 
 	// 所有子类cls上加入

@@ -133,7 +133,7 @@ this.option = function(defaultValue) {
 };
 
 // metaclass
-this.__component = new Class(function() {
+var _component = new Class(function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 
@@ -280,7 +280,7 @@ this.__component = new Class(function() {
  */
 this.Component = new Class(/**@lends ui.Component*/ function() {
 
-	this.__metaclass__ = exports.__component;
+	this.__metaclass__ = _component;
 
 	var getConstructor = function(type) {
 		if (type === 'number') return Number;

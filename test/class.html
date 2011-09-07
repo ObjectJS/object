@@ -33,15 +33,15 @@
 				method: function() {
 					alert('method');
 				},
-				static: staticmethod(function() {
-					alert('static');
+				cm: classmethod(function(cls) {
+					alert(cls._name);
 				})
 			});
 
 			c.prop.bar = 2;
 			c.method();
 
-			B.static();
+			C.cm();
 		};
 		testExtends();
 
