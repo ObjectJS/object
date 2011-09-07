@@ -108,7 +108,7 @@ this.wrapEvent = function(e) {
 };
 
 // 事件
-this.Events = new Class(/**@lends object.Event*/ function() {
+this.Events = new Class(/**@lends events.Event*/ function() {
 
 	this.__addEvent = function(self, type, func, cap) {
 		var propertyName = '_event_' + type;
