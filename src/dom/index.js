@@ -1067,7 +1067,9 @@ var Elements = this.Elements = new Class(Array, /**@lends dom.Elements*/ functio
 			self.push(wrap(elements[i]));
 		}
 
-		Object.keys(wrapper).forEach(function(name) {
+		Class.keys(wrapper).forEach(function(name) {
+			if (typeof wrapper.get(name) != 'function') return;
+
 			self[name] = function() {
 				var element;
 				for (var i = 0; i < self.length; i++) {
