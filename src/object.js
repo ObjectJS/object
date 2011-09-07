@@ -324,15 +324,6 @@ var setter = function(prop, value) {
 };
 
 /**
-* 检测类是否包含某成员
-* 会被放到 cls.has
-*/
-var memberchecker = function(name) {
-	var proto = this.prototype;
-	return !!(name in proto || name in proto.__properties__);
-};
-
-/**
  * 从类上获取成员
  * 会被放到cls.get
  */
