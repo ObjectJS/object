@@ -367,7 +367,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 		self.addEvent(type, function(e) {
 			var ele = e.srcElement || e.target;
 			do {
-				if (ele && Element.matchesSelector(ele, selector)) callback.call(wrap(ele), e);
+				if (ele && Element.get('matchesSelector')(ele, selector)) callback.call(wrap(ele), e);
 			} while((ele = ele.parentNode));
 		});
 	};
@@ -497,7 +497,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 		var element = self;
 		do {
-			if (Element.matchesSelector(element, selector)) return wrap(element);
+			if (Element.get('matchesSelector')(element, selector)) return wrap(element);
 		} while ((element = element.parentNode));
 		return null;
 	};

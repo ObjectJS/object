@@ -303,7 +303,7 @@ var overloadSetter = function(func, usePlural) {
 var getter = function(prop) {
 	var property = this.__properties__[prop];
 	if (property && property.fget) {
-		return property.fget.call(this.__class__.__this__, this);
+		return property.fget.call(this.__this__, this);
 	} else {
 		throw 'get not defined property ' + prop;
 	}
@@ -317,7 +317,7 @@ var getter = function(prop) {
 var setter = function(prop, value) {
 	var property = this.__properties__[prop];
 	if (property && property.fset) {
-		property.fset.call(this.__class__.__this__, this, value);
+		property.fset.call(this.__this__, this, value);
 	} else {
 		throw 'set not defined property ' + prop;
 	}
@@ -364,7 +364,7 @@ var membersetter = overloadSetter(function(name, member) {
 	if (['__new__', '__metaclass__', '__mixins__'].indexOf(name) != -1) {
 		cls[name] = member;
 
-	} else if (['__base__'].indexOf(name) != -1) {
+	} else if (['__this__', '__mixining__', '__base__'].indexOf(name) != -1) {
 		cls[name] = proto[name] = member;
 
 	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
@@ -477,6 +477,14 @@ type.__new__ = function(metaclass, name, base, dict) {
 		}
 	}
 	cls.set('__base__', base);
+	// 支持 this.parent 调用父级同名方法
+	cls.set('__this__', {
+		parent: function() {
+			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
+			var name = arguments.callee.caller.__name__;
+			return cls.__base__.get(name).apply(cls.__base__, arguments);
+		}
+	});
 	cls.__new__ = base.__new__;
 	cls.__metaclass__ = base.__metaclass__;
 
@@ -510,7 +518,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 	return cls;
 };
 
-type.initialize = type.prototype.initialize = function() {
+type.initialize = function() {
 };
 
 // 类
@@ -563,16 +571,6 @@ Class.create = function() {
 	cls.__mixin__ = cls.set = membersetter;
 	cls.get = membergetter;
 	cls.has = memberchecker;
-	// 支持 this.parent 调用父级同名方法
-	cls.__this__ = {
-		mixining: null,
-		base: cls.__base__,
-		parent: function() {
-			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
-			var name = arguments.callee.caller.__name__;
-			return cls.__base__.get(name).apply(cls.__base__, arguments);
-		}
-	};
 	return cls;
 };
 
@@ -584,9 +582,9 @@ Class.initMixins = function(cls, instance) {
 	if (cls.__mixins__) {
 		for (var i = 0, l = cls.__mixins__.length; i < l; i++) {
 			mixin = cls.__mixins__[i];
-			mixin.__this__.mixining = cls;
+			mixin.set('__mixining__', true);
 			if (mixin.prototype.initialize) mixin.prototype.initialize.call(instance);
-			mixin.__this__.mixining = null;
+			mixin.set('__mixining__', false);
 		}
 	}
 };
@@ -683,7 +681,7 @@ var instancemethod = function(func, cls) {
 	} : function() {
 		var args = [].slice.call(arguments, 0);
 		args.unshift(this);
-		return func.apply(this.__class__.__this__, args);
+		return func.apply(this.__this__, args);
 	};
 	wrapper.__class__ = arguments.callee;
 	wrapper.im_func = func;

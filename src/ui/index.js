@@ -291,9 +291,6 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	this.__mixins__ = [Element];
 
 	this.initialize = function(self, node, options) {
-		// 如果是在mixin中，代表自己正在被当作一个addon
-		if (this.mixining) return;
-
 		if (!node.nodeType) {
 			if (typeof node == 'string') {
 				node = {
