@@ -358,6 +358,7 @@ var membergetter = function(name) {
 var membersetter = overloadSetter(function(name, member) {
 	var cls = this;
 	var proto = cls.prototype;
+	var subs = cls.__subclassesarray__;
 
 	// 这里的member指向new Class参数的书写的对象/函数
 
@@ -405,13 +406,10 @@ var membersetter = overloadSetter(function(name, member) {
 		proto[name] = member;
 	}
 
-	var subs = cls.__subclassesarray__;
 	// 所有子类cls上加入
-	if (subs) {
+	if (name in cls && subs) {
 		subs.forEach(function(sub) {
-			if (!sub.has(name) && name in cls) { // 子类没有且在类上也需要声明
-				sub.set(name, member);
-			}
+			if (!sub.has(name)) sub.set(name, member);
 		});
 	}
 });

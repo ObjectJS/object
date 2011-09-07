@@ -45,7 +45,7 @@ this.Components = new Class(Array, /**@lends ui.Components*/ function() {
 			self.push(new type(elements[i], options));
 		}
 
-		Object.keys(type.prototype).forEach(function(name) {
+		Class.keys(type).forEach(function(name) {
 			if (typeof type.prototype[name] != 'function') return;
 
 			self[name] = function() {
@@ -206,14 +206,14 @@ this.__component = new Class(function() {
 					var defaultOptions = proto.__defaultOptions;
 					if (defaultOptions.indexOf(name) != -1) return;
 					defaultOptions.push(name);
-					cls.set(name, comp.prototype.__properties__[name]);
+					cls.set(name, comp.get(name));
 				});
 
 				compProto.__subs.forEach(function(name) {
 					var subs = proto.__subs;
 					if (subs.indexOf(name) != -1) return;
 					subs.push(name);
-					cls.set(name, comp.prototype.__properties__[name]);
+					cls.set(name, comp.get(name));
 				});
 
 				compProto.__handles.forEach(function(eventType) {
