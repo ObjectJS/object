@@ -9,21 +9,21 @@ object.add('ui', 'string, options, dom, events', /**@lends ui*/ function(exports
  */
 var Element = new Class(function() {
 
-	Object.keys(dom.Element).forEach(function(name) {
-		if (typeof dom.Element[name] === 'function') {
-			if (['initialize'].indexOf(name) != -1) return;
+	Class.keys(dom.Element).forEach(function(name) {
+		var member = dom.Element.get(name);
+		if (['initialize'].indexOf(name) != -1) return;
+		if (typeof member != 'function') return;
 
-			this[name] = function(self) {
-				var args = [self._node];
-				var arg;
-				// 代理方法支持Component参数
-				for (var i = 1; i < arguments.length; i++) {
-					arg = arguments[i];
-					args.push((arg && arg._node)? arg._node : arg);
-				}
-				return dom.Element[name].apply(dom.Element, args);
-			};
-		}
+		this[name] = function(self) {
+			var args = [];
+			var arg;
+			// 代理方法支持Component参数
+			for (var i = 1; i < arguments.length; i++) {
+				arg = arguments[i];
+				args.push((arg && arg._node)? arg._node : arg);
+			}
+			return dom.Element.prototype[name].apply(self._node, args);
+		};
 	}, this);
 
 });
@@ -45,7 +45,9 @@ this.Components = new Class(Array, /**@lends ui.Components*/ function() {
 			self.push(new type(elements[i], options));
 		}
 
-		Object.keys(type).forEach(function(name) {
+		Class.keys(type).forEach(function(name) {
+			if (typeof type.prototype[name] != 'function') return;
+
 			self[name] = function() {
 				var element;
 				//var i, arg, args = [];
@@ -131,7 +133,7 @@ this.option = function(defaultValue) {
 };
 
 // metaclass
-this.__component = new Class(function() {
+var _component = new Class(function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 
@@ -184,83 +186,87 @@ this.__component = new Class(function() {
 
 	this.initialize = function(cls, name, base, dict) {
 
-		cls.__handles.forEach(function(eventType) {
-			cls.__mixin__(eventType, events.fireevent(function() {
-				cls['_' + eventType].apply(cls, arguments);
+		var proto = cls.prototype;
+		var baseProto = base.prototype;
+
+		proto.__handles.forEach(function(eventType) {
+			cls.set(eventType, events.fireevent(function(self) {
+				proto['_' + eventType].apply(self, [].slice.call(arguments, 1));
 			}));
 		});
 
-		if (base && base.addons) {
-			cls.addons.push.apply(cls.addons, base.addons);
+		if (base && baseProto.addons) {
+			proto.addons.push.apply(proto.addons, baseProto.addons);
 		}
 
-		if (cls.addons) {
-			cls.addons.forEach(function(comp) {
-				comp.__defaultOptions.forEach(function(name) {
-					var defaultOptions = cls.__defaultOptions;
+		if (proto.addons) {
+			proto.addons.forEach(function(comp) {
+				var compProto = comp.prototype;
+				compProto.__defaultOptions.forEach(function(name) {
+					var defaultOptions = proto.__defaultOptions;
 					if (defaultOptions.indexOf(name) != -1) return;
 					defaultOptions.push(name);
-					cls.__mixin__(name, comp[name]);
+					cls.set(name, comp.get(name));
 				});
 
-				comp.__subs.forEach(function(name) {
-					var subs = cls.__subs;
+				compProto.__subs.forEach(function(name) {
+					var subs = proto.__subs;
 					if (subs.indexOf(name) != -1) return;
 					subs.push(name);
-					cls.__mixin__(name, comp[name]);
+					cls.set(name, comp.get(name));
 				});
 
-				comp.__handles.forEach(function(eventType) {
-					var handles = cls.__handles;
+				compProto.__handles.forEach(function(eventType) {
+					var handles = proto.__handles;
 					var methodName = '_' + eventType;
 					if (handles.indexOf(eventType) != -1) return;
 					handles.push(eventType);
-					cls.__mixin__(eventType, comp.prototype[eventType].im_func);
-					cls.__mixin__(methodName, comp.prototype[methodName].im_func);
+					cls.set(eventType, compProto[eventType].im_func);
+					cls.set(methodName, compProto[methodName].im_func);
 				});
 
-				comp.__methods.forEach(function(name) {
-					var methods = cls.__methods;
+				compProto.__methods.forEach(function(name) {
+					var methods = proto.__methods;
 					if (methods.indexOf(name) != -1) return;
 					methods.push(name);
-					cls.__mixin__(name, comp.prototype[name].im_func);
+					cls.set(name, compProto[name].im_func);
 				});
 				// onEvents和subEvents在宿主中处理，方法不添加到宿主类上
 			});
 		}
 
 		if (base && base !== type) {
-			base.__defaultOptions.forEach(function(name) {
-				var defaultOptions = cls.__defaultOptions;
+			baseProto.__defaultOptions.forEach(function(name) {
+				var defaultOptions = proto.__defaultOptions;
 				if (defaultOptions.indexOf(name) == -1) defaultOptions.push(name);
 			});
 
-			base.__subs.forEach(function(name) {
-				var subs = cls.__subs;
+			baseProto.__subs.forEach(function(name) {
+				var subs = proto.__subs;
 				if (subs.indexOf(name) == -1) subs.push(name);
 			});
 
-			base.__handles.forEach(function(eventType) {
-				var handles = cls.__handles;
-				if (handles.indexOf(eventType) == -1) cls.__handles.push(eventType);
+			baseProto.__handles.forEach(function(eventType) {
+				var handles = proto.__handles;
+				if (handles.indexOf(eventType) == -1) proto.__handles.push(eventType);
 			});
 
-			base.__methods.forEach(function(name) {
-				var methods = cls.__methods;
+			baseProto.__methods.forEach(function(name) {
+				var methods = proto.__methods;
 				if (methods.indexOf(name) == -1) methods.push(name);
 			});
 
-			Object.keys(base.__subEvents).forEach(function(subName) {
-				var subEvents = cls.__subEvents;
-				base.__subEvents[subName].forEach(function(eventType) {
+			Object.keys(baseProto.__subEvents).forEach(function(subName) {
+				var subEvents = proto.__subEvents;
+				baseProto.__subEvents[subName].forEach(function(eventType) {
 					var subEvent = subEvents[subName];
 					if (subEvent && subEvent.indexOf(eventType) != -1) return;
 					(subEvents[subName] = subEvents[subName] || []).push(eventType);
 				});
 			});
 
-			base.__onEvents.forEach(function(eventType) {
-				var onEvents = cls.__onEvents;
+			baseProto.__onEvents.forEach(function(eventType) {
+				var onEvents = proto.__onEvents;
 				if (onEvents.indexOf(eventType) == -1) onEvents.push(eventType);
 			});
 		}
@@ -274,7 +280,7 @@ this.__component = new Class(function() {
  */
 this.Component = new Class(/**@lends ui.Component*/ function() {
 
-	this.__metaclass__ = exports.__component;
+	this.__metaclass__ = _component;
 
 	var getConstructor = function(type) {
 		if (type === 'number') return Number;
@@ -282,12 +288,9 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		else if (type === 'boolean') return Boolean;
 	};
 
-	Class.mixin(this, Element);
+	this.__mixins__ = [Element];
 
 	this.initialize = function(self, node, options) {
-		// 如果是在mixin中，代表自己正在被当作一个addon
-		if (this.mixining) return;
-
 		if (!node.nodeType) {
 			if (typeof node == 'string') {
 				node = {
@@ -328,7 +331,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	this.__initEvents = function(self) {
 		if (!self.addons) return;
 		self.addons.forEach(function(addon) {
-			addon.__onEvents.forEach(function(eventType) {
+			addon.prototype.__onEvents.forEach(function(eventType) {
 				var trueEventType; // 正常大小写的名称
 				if (self.__handles.some(function(handle) {
 					if (handle.toLowerCase() == eventType) {
@@ -339,8 +342,8 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				})) {
 					self.addEvent(trueEventType, function(event) {
 						// 将event._args pass 到函数后面
-						var args = [self, event].concat(event._args);
-						addon['on' + eventType].apply(addon, args);
+						var args = [event].concat(event._args);
+						addon.prototype['on' + eventType].apply(self, args);
 					});
 				}
 			});
@@ -380,7 +383,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 						var fakeEventType = '__option_' + eventType + '_' + name;
 						var methodName = name + '_' + eventType;
 						self.addEvent(fakeEventType, function(event) {
-							if (cls) cls[methodName](self, event.value);
+							if (cls) cls.prototype[methodName].call(self, event.value);
 							else self[methodName](event.value);
 						});
 					});
@@ -390,7 +393,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			bindEvents(self.__subEvents[name]);
 			if (self.addons) {
 				self.addons.forEach(function(addon) {
-					bindEvents(addon.__subEvents[name], addon);
+					bindEvents(addon.prototype.__subEvents[name], addon);
 				});
 			}
 
@@ -470,7 +473,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				events.forEach(function(eventType) {
 					var methodName = name + '_' + eventType;
 					node.addEvent(eventType, function(event) {
-						if (cls) cls[methodName].apply(cls, [self, event, comp].concat(event._args));
+						if (cls) cls.prototype[methodName].apply(self, [event, comp].concat(event._args));
 						else self[methodName].apply(self, [event, comp].concat(event._args));
 					});
 				});
@@ -480,7 +483,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		bindEvents(self.__subEvents[name]);
 		if (self.addons) {
 			self.addons.forEach(function(addon) {
-				bindEvents(addon.__subEvents[name], addon);
+				bindEvents(addon.prototype.__subEvents[name], addon);
 			});
 		}
 	};

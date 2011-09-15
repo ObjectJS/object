@@ -28,18 +28,22 @@
 
 			var c = new C();
 
-			A.mixin({
+			A.set({
 				prop: {foo: 1},
 				method: function() {
-				}
+					alert('method');
+				},
+				cm: classmethod(function(cls) {
+					alert(cls._name);
+				})
 			});
 
 			c.prop.bar = 2;
+			c.method();
 
-			console.log(C.prop);
+			C.cm();
 		};
 		testExtends();
-
 
 		// mixin 测试
 		var testMixin = function() {
@@ -82,7 +86,7 @@
 			console.dir(my.prop)
 			console.dir(my2.prop)
 		};
-		//testMixin();
+		// testMixin();
 
 		// 速度测试
 		var testSpeed = function() {
@@ -96,6 +100,7 @@
 			var MyClass = new Class(proto);
 			console.log(new Date().getTime() - st);
 		}
+		//testSpeed();
 
 	});
 	object.execute('test');

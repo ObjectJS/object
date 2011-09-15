@@ -65,7 +65,7 @@ this.ready = function(callback) {
 	} else {
 		if ((ua.ua.webkit && ua.ua.webkit < 525) || !document.addEventListener) {
 			window.__domloadHooks.push(callback);
-		} if (document.addEventListener) {
+		} else if (document.addEventListener) {
 			document.addEventListener('DOMContentLoaded', callback, false);
 		}
 	}
@@ -367,7 +367,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 		self.addEvent(type, function(e) {
 			var ele = e.srcElement || e.target;
 			do {
-				if (ele && Element.matchesSelector(ele, selector)) callback.call(wrap(ele), e);
+				if (ele && Element.get('matchesSelector')(ele, selector)) callback.call(wrap(ele), e);
 			} while((ele = ele.parentNode));
 		});
 	};
@@ -497,7 +497,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 		var element = self;
 		do {
-			if (Element.matchesSelector(element, selector)) return wrap(element);
+			if (Element.get('matchesSelector')(element, selector)) return wrap(element);
 		} while ((element = element.parentNode));
 		return null;
 	};
@@ -697,7 +697,7 @@ this.ImageElement = new Class(Element, function() {
 this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 
 	this.initialize = function(self) {
-		Element.initialize(self);
+		this.parent(self);
 
 		if (self.elements) {
 			for (var i = 0; i < self.elements.length; i++) {
@@ -788,7 +788,7 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 	})();
 
 	this.initialize = function(self) {
-		Element.initialize(self);
+		this.parent(self);
 
 		if (_needBindPlaceholder && ['INPUT', 'TEXTAREA'].indexOf(self.get('tagName')) !== -1) {
 			self.bindPlaceholder(self);
@@ -1067,7 +1067,9 @@ var Elements = this.Elements = new Class(Array, /**@lends dom.Elements*/ functio
 			self.push(wrap(elements[i]));
 		}
 
-		Object.keys(wrapper).forEach(function(name) {
+		Class.keys(wrapper).forEach(function(name) {
+			if (typeof wrapper.get(name) != 'function') return;
+
 			self[name] = function() {
 				var element;
 				for (var i = 0; i < self.length; i++) {
