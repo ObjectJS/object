@@ -237,7 +237,7 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 		var triggerName = 'on' + type.toLowerCase();
 		var event = document.createEvent('Event');
 		event.initEvent(type, false, true);
-		extend(event, eventData);
+		object.extend(event, eventData);
 
 		if (self[triggerName]) {
 			var returnValue = self[triggerName].call(self, event);

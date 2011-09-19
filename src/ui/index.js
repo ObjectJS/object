@@ -301,7 +301,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			self.__defaultOptions.forEach(function(key) {
 				if (options[key] === undefined) data[key] = self.get(key);
 			});
-			extend(data, options);
+			object.extend(data, options);
 
 			var tdata;
 			if (node.section) {
@@ -645,7 +645,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		var pname = '_' + name;
 		var options = {};
 		var extendOptions = self._options[name];
-		extend(options, extendOptions);
+		object.extend(options, extendOptions);
 
 		if (data) {
 			Object.keys(data).forEach(function(key) {
