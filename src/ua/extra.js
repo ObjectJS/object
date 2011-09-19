@@ -66,7 +66,7 @@ if (uamodule) {
 
 	/* Copy end here */
 
-	extend(uamodule.ua, o);
+	object.extend(uamodule.ua, o);
 }
 
 });
