@@ -361,6 +361,7 @@ var membersetter = overloadSetter(function(name, member) {
 	}
 
 	// 这里的member指向new Class参数的书写的对象/函数
+	if (name == '@mixins') name = '__mixins__';
 
 	if (['__new__', '__metaclass__', '__mixins__'].indexOf(name) != -1) {
 		cls[name] = member;
@@ -491,9 +492,8 @@ type.__new__ = function(metaclass, name, base, dict) {
 	cls.set(dict);
 
 	// Mixin
-	var mixins = dict['__mixins__'] || dict['@mixins'];
+	var mixins = cls.__mixins__;
 	if (mixins) {
-		cls.__mixins__ = mixins;
 		mixins.forEach(function(mixin) {
 			Class.keys(mixin).forEach(function(name) {
 				if (cls.get(name)) return; // 不要覆盖自定义的
