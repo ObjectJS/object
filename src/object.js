@@ -408,9 +408,8 @@ var membersetter = overloadSetter(function(name, member) {
 
 	// 所有子类cls上加入
 	if (!constructing && name in cls && subs) {
-		console.log(name)
 		subs.forEach(function(sub) {
-			if (!sub[name]) sub.set(name, member);
+			if (!name in sub) sub.set(name, member);
 		});
 	}
 });
