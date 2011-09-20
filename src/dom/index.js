@@ -25,7 +25,7 @@ function runHooks() {
 		try {
 			f();
 		} catch (e) {
-			throw e;
+			if (XN && XN.DEBUG_MODE) throw e;
 		}
 	});
 	window.__domloadHooks = [];
