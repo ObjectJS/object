@@ -25,6 +25,7 @@ function runHooks() {
 		try {
 			f();
 		} catch (e) {
+			// TODO 去掉XN依赖
 			if (XN && XN.DEBUG_MODE) throw e;
 		}
 	});
