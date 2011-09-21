@@ -35,8 +35,13 @@ function runHooks() {
 if (!window.__domloadHooks) {
 	window.__domLoaded = false;
 	window.__domloadHooks = [];
-	
-	
+
+	if (document.addEventListener) {
+		document.addEventListener('DOMContentLoaded', function() {
+			document.removeEventListener('DOMContentLoaded', arguments.callee, false);
+			window.__domLoaded = true;
+		}, false);
+	}
 
 	var timer = null;
 	if (ua.ua.webkit && ua.ua.webkit < 525) {
@@ -73,7 +78,7 @@ this.ready = function(callback) {
 			window.__domloadHooks.push(callback);
 		}
 	} else if (document.addEventListener) {
-		if (/loaded|complete/.test(document.readyState)) { //dom ready不能用document.body作为标识，改为判断document.readyState
+		if (window.__domLoaded) {
 			callback();
 		} else {
 			document.addEventListener('DOMContentLoaded', callback, false);
