@@ -73,7 +73,7 @@ this.ready = function(callback) {
 			window.__domloadHooks.push(callback);
 		}
 	} else if (document.addEventListener) {
-		if (/loaded|complete/.test(document.readyState)) {
+		if (/loaded|complete/.test(document.readyState)) { //dom ready不能用document.body作为标识，改为判断document.readyState
 			callback();
 		} else {
 			document.addEventListener('DOMContentLoaded', callback, false);
