@@ -35,6 +35,8 @@ function runHooks() {
 if (!window.__domloadHooks) {
 	window.__domLoaded = false;
 	window.__domloadHooks = [];
+	
+	
 
 	var timer = null;
 	if (ua.ua.webkit && ua.ua.webkit < 525) {
@@ -71,7 +73,7 @@ this.ready = function(callback) {
 			window.__domloadHooks.push(callback);
 		}
 	} else if (document.addEventListener) {
-		if (document.body) {
+		if (/loaded|complete/.test(document.readyState)) {
 			callback();
 		} else {
 			document.addEventListener('DOMContentLoaded', callback, false);
