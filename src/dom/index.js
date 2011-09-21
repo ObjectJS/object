@@ -33,6 +33,7 @@ function runHooks() {
 }
 
 if (!window.__domloadHooks) {
+	window.__domLoaded = false;
 	window.__domloadHooks = [];
 
 	var timer = null;
@@ -40,6 +41,7 @@ if (!window.__domloadHooks) {
 		timer = setInterval(function() {
 			if (/loaded|complete/.test(document.readyState)) {
 				clearInterval(timer);
+				window.__domLoaded = true;
 				runHooks();
 			}
 		}, 10); 
@@ -48,6 +50,7 @@ if (!window.__domloadHooks) {
 			try {
 				document.body.doScroll('left');
 				clearInterval(timer);
+				window.__domLoaded = true;
 				runHooks();
 			} catch (e) {}
 		}, 20); 
@@ -61,12 +64,16 @@ if (!window.__domloadHooks) {
  * @param callback 需要执行的callback函数
  */
 this.ready = function(callback) {
-	if (document.body) {
-		callback();
-	} else {
-		if ((ua.ua.webkit && ua.ua.webkit < 525) || !document.addEventListener) {
+	if ((ua.ua.webkit && ua.ua.webkit < 525) || !document.addEventListener) {
+		if (window.__domLoaded) {
+			callback();
+		} else {
 			window.__domloadHooks.push(callback);
-		} else if (document.addEventListener) {
+		}
+	} else if (document.addEventListener) {
+		if (document.body) {
+			callback();
+		} else {
 			document.addEventListener('DOMContentLoaded', callback, false);
 		}
 	}
