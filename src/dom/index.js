@@ -20,18 +20,6 @@ var $uid = this.$uid = (window.ActiveXObject) ? function(item){
 $uid(window);
 $uid(document);
 
-function runHooks() {
-	window.__domloadHooks.forEach(function(f, i) {
-		try {
-			f();
-		} catch (e) {
-			// TODO 去掉XN依赖
-			if (XN && XN.DEBUG_MODE) throw e;
-		}
-	});
-	window.__domloadHooks = [];
-}
-
 if (!window.__domloadHooks) {
 	window.__domLoaded = false;
 	window.__domloadHooks = [];
@@ -64,6 +52,19 @@ if (!window.__domloadHooks) {
 	}
 }
 
+function runHooks() {
+	var callbacks = window.__domloadHooks;
+	while(callbacks[0]) {
+		var f = callbacks.shift();
+		try {
+			f.apply(null, []);
+		} catch (e) {
+			// TODO 去掉XN依赖
+			if (XN && XN.DEBUG_MODE) throw e;
+		}
+	}
+}
+
 /**
  * 在dom加载完毕后执行callback。
  * 不同于 DOMContentLoaded 事件，如果 dom.ready 是在页面已经加载完毕后调用的，同样会执行。
@@ -71,19 +72,28 @@ if (!window.__domloadHooks) {
  * @param callback 需要执行的callback函数
  */
 this.ready = function(callback) {
-	if ((ua.ua.webkit && ua.ua.webkit < 525) || !document.addEventListener) {
-		if (window.__domLoaded) {
-			callback();
-		} else {
-			window.__domloadHooks.push(callback);
-		}
-	} else if (document.addEventListener) {
-		if (window.__domLoaded) {
-			callback();
-		} else {
-			document.addEventListener('DOMContentLoaded', callback, false);
-		}
+	if (window.__domLoaded == true) {
+		callback();
+		return;
 	}
+	//处理DOMContentLoaded触发完毕再动态加载objectjs的情况
+	//此时DOMContentLoaded事件已经触发完毕，为DOMContentLoaded添加的事件不触发，且此时window.__domLoaded依然为false
+	//解决方案：
+	//	参考jQuery的做法，判断readyState是否为complete。
+	//	对于3.6以前的Firefox，不支持readyState的，这里暂时忽略
+	//	http://webreflection.blogspot.com/2009/11/195-chars-to-help-lazy-loading.html
+	//	https://bugzilla.mozilla.org/show_bug.cgi?id=347174
+	if (document.readyState === "complete") {
+		window.__domLoaded = true;
+		runHooks();
+		callback();
+		return;
+	} 
+	if ((ua.ua.webkit && ua.ua.webkit < 525) || !document.addEventListener) {
+		window.__domloadHooks.push(callback);
+	} else if (document.addEventListener) {
+		document.addEventListener('DOMContentLoaded', callback, false);
+	}	
 };
 
 /**
