@@ -54,9 +54,11 @@ if (!window.__domloadHooks) {
 
 function runHooks() {
 	var callbacks = window.__domloadHooks;
+	var fn;
 	while(callbacks[0]) {
 		try {
-			callbacks.shift().apply(null, []);
+			fn = callbacks.shift();
+			fn();
 		} catch (e) {
 			// TODO 去掉XN依赖
 			if (XN && XN.DEBUG_MODE) throw e;
