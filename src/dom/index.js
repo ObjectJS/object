@@ -54,9 +54,11 @@ if (!window.__domloadHooks) {
 
 function runHooks() {
 	var callbacks = window.__domloadHooks;
-	while(callbacks[0]) {
+	var fn;
+	while (callbacks[0]) {
 		try {
-			callbacks.shift().apply(null, []);
+			fn = callbacks.shift();
+			fn();
 		} catch (e) {
 			// TODO 去掉XN依赖
 			if (XN && XN.DEBUG_MODE) throw e;
@@ -82,7 +84,7 @@ this.ready = function(callback) {
 	//	对于3.6以前的Firefox，不支持readyState的，这里暂时忽略
 	//	http://webreflection.blogspot.com/2009/11/195-chars-to-help-lazy-loading.html
 	//	https://bugzilla.mozilla.org/show_bug.cgi?id=347174
-	if (document.readyState === "complete") {
+	if (document.readyState == 'complete') {
 		window.__domLoaded = true;
 		runHooks();
 		callback();
