@@ -20,25 +20,23 @@ var $uid = this.$uid = (window.ActiveXObject) ? function(item){
 $uid(window);
 $uid(document);
 
-function runHooks() {
-	window.__domloadHooks.forEach(function(f, i) {
-		try {
-			f();
-		} catch (e) {
-			throw e;
-		}
-	});
-	window.__domloadHooks = [];
-}
-
 if (!window.__domloadHooks) {
+	window.__domLoaded = false;
 	window.__domloadHooks = [];
+
+	if (document.addEventListener) {
+		document.addEventListener('DOMContentLoaded', function() {
+			document.removeEventListener('DOMContentLoaded', arguments.callee, false);
+			window.__domLoaded = true;
+		}, false);
+	}
 
 	var timer = null;
 	if (ua.ua.webkit && ua.ua.webkit < 525) {
 		timer = setInterval(function() {
 			if (/loaded|complete/.test(document.readyState)) {
 				clearInterval(timer);
+				window.__domLoaded = true;
 				runHooks();
 			}
 		}, 10); 
@@ -47,9 +45,24 @@ if (!window.__domloadHooks) {
 			try {
 				document.body.doScroll('left');
 				clearInterval(timer);
+				window.__domLoaded = true;
 				runHooks();
 			} catch (e) {}
 		}, 20); 
+	}
+}
+
+function runHooks() {
+	var callbacks = window.__domloadHooks;
+	var fn;
+	while (callbacks[0]) {
+		try {
+			fn = callbacks.shift();
+			fn();
+		} catch (e) {
+			// TODO 去掉XN依赖
+			if (XN && XN.DEBUG_MODE) throw e;
+		}
 	}
 }
 
@@ -60,15 +73,28 @@ if (!window.__domloadHooks) {
  * @param callback 需要执行的callback函数
  */
 this.ready = function(callback) {
-	if (document.body) {
+	if (window.__domLoaded == true) {
 		callback();
-	} else {
-		if ((ua.ua.webkit && ua.ua.webkit < 525) || !document.addEventListener) {
-			window.__domloadHooks.push(callback);
-		} else if (document.addEventListener) {
-			document.addEventListener('DOMContentLoaded', callback, false);
-		}
+		return;
 	}
+	//处理DOMContentLoaded触发完毕再动态加载objectjs的情况
+	//此时DOMContentLoaded事件已经触发完毕，为DOMContentLoaded添加的事件不触发，且此时window.__domLoaded依然为false
+	//解决方案：
+	//	参考jQuery的做法，判断readyState是否为complete。
+	//	对于3.6以前的Firefox，不支持readyState的，这里暂时忽略
+	//	http://webreflection.blogspot.com/2009/11/195-chars-to-help-lazy-loading.html
+	//	https://bugzilla.mozilla.org/show_bug.cgi?id=347174
+	if (document.readyState == 'complete') {
+		window.__domLoaded = true;
+		runHooks();
+		callback();
+		return;
+	} 
+	if ((ua.ua.webkit && ua.ua.webkit < 525) || !document.addEventListener) {
+		window.__domloadHooks.push(callback);
+	} else if (document.addEventListener) {
+		document.addEventListener('DOMContentLoaded', callback, false);
+	}	
 };
 
 /**
