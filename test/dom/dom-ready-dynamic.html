@@ -1,0 +1,49 @@
+<!doctype>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<script>
+			function handle() {
+				var el = document.createElement('script');
+				el.type="text/javascript";
+				el.src = "http://xnimg.cn/n/core/object-all.js";
+				el.async = true;
+				if(!!(window.attachEvent && !window.opera)) {
+					el.onreadystatechange = function() {
+						if ( ( this.readyState == 'loaded' || this.readyState == 'complete' )){
+							// IE下事件还会执行
+							// 此时检测doScroll的方法还在继续，__domLoaded赋值操作还没执行，runHooks还没运行
+							// 因此加入事件列表__domloadHooks中
+							// 等doScroll检测成功后，__domLoaded为true，且runHooks运行，事件得以执行
+							object.use('dom', function(exports, dom){
+								dom.ready(function() {
+									// IE 下依然会执行，此时doScroll检测还在继续
+									alert('ready is called');
+								});
+							});
+						}
+					}
+				} else {
+					el.onload = el.onerror = function() {
+						//此时domLoaded是false，但是DOMContentLoaded已经触发完了，不会再将_domLoaded设置为true了
+						//因此FF下，动态加载的内容再也不会触发了。。。
+						//修改内容： 在ready中最前面加入对document.readyState === 'complete'的判断
+						//如果是true，则将__domLoaded设置为true，并且运行runHooks
+						object.use('dom', function(exports, dom){
+							dom.ready(function() {
+								alert('ready is called');
+							});
+						});
+					}
+				}
+				// document.head IE下不能获取
+				document.getElementsByTagName('head')[0].appendChild(el);
+			};
+		</script>
+	</head>
+	<body onload='handle()'>
+		在body onload时动态插入objectjs的代码，并在回调函数中调用dom.ready<br>
+		应该要打印ready is called，如果没有打印，说明在这种情况下有问题
+	</body>
+</html>
+
