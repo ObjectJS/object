@@ -364,14 +364,14 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 		if (self.classList === undefined && self !== document && self !== window) {
 			self.classList = new ElementClassList(self);
 		}
-		//如果此元素标志为可拖拽，但是浏览器不支持HTML5的拖拽时，模拟拖拽的功能
-		if (self.getAttribute('draggable') === true && !_supportHTML5Drag) {
-			
+		if (self.get('draggable') === true){ //&& !_supportHTML5Drag) {
+			//draggble需要触发dragstart drag dragend
+			self.dragAttach();
 		}
-		//如果此元素标志为可放置，但是浏览器不支持HTML5的放置时，模拟放置的功能
-		if (self.getAttribute('draggable') === true && !_supportHTML5Drop) {
-			
-		}
+		//if (self.get('dropzone') != "" && !_supportHTML5Drop) {
+			//dropzone需要触发dragenter dragover dragleave drop
+			//self.dropAttach();
+		//}
 	};
 
 	/**
@@ -380,15 +380,111 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	 */
 	this.draggable = property(
 		function(self){
-			return self.getAttribute('draggable');
+			if(_supportHTML5Drag) {			
+				return self.draggable;
+			} else {
+				//TODO 模拟完成之后给一个标志，返回该标志
+				return true;
+			}			
 		}, 
 		function(self, draggable){
-			self.setAttribute('draggable', draggable);
-			if(draggable == true) {
-				//TODO 让元素模拟拖拽功能
+			if(_supportHTML5Drag) {			
+				self.setAttribute('draggable', draggable);
+			} else {
+				if(draggable == true) {
+					if(!self._dragAttached) {
+						self.dragAttach();
+					}
+				} else {
+					if(self._dragAttached) {
+						self.dragDetach();
+					}
+				}
 			}
 		}
 	);
+
+	this._handleMouseDown = function(self, e) {	
+		self._originX = e.clientX;
+		self._originY = e.clientY;
+		self._xDiff = e.clientX - parseInt(self.style.left);
+		self._yDiff = e.clientY - parseInt(self.style.top);
+		self.fireEvent('draginit', {ele:self, ev:e});
+		var doc = wrap(document);
+		//给document的mousemove 和 mouseup加上事件
+		doc.addEvent('mousemove', checkDraggable, false);
+		doc.addEvent('mouseup', cancel, false);
+
+		function cancel(e) {
+			doc.removeEvent('mousemove', checkDraggable, false);
+			doc.removeEvent('mouseup', cancel, false);
+			self.fireEvent('cancel', {ele:self, ev:e});
+		}
+
+		function checkDraggable(e) {
+			var currentX = e.clientX;
+			var currentY = e.clientY;
+			var distance = Math.round(Math.sqrt(Math.pow(e.clientX - self._originX, 2) + 
+					Math.pow(e.clientY - self._originY, 2)));
+			if(distance > 6) {
+				doc.removeEvent('mousemove', checkDraggable, false);
+				doc.removeEvent('mouseup', cancel, false);
+				doc.addEvent('mousemove', dragging, false);
+				doc.addEvent('mouseup', stop, false);
+				self.fireEvent('dragStart', {ele:self, ev:e});
+			}
+		}
+		function dragging(e) { 
+			self.style.position = 'absolute';
+			self.style.left = (e.clientX - self._xDiff) + 'px';
+			self.style.top = (e.clientY - self._yDiff) + 'px';
+			self.fireEvent('drag', {ele:self, ev:e});
+		}
+		function stop(e) {
+			doc.removeEvent('mousemove', dragging, false);
+			doc.removeEvent('mouseup', stop, false);
+			self.fireEvent('dragend', {ele:self, ev:e});
+		}
+	}
+
+	this.dragAttach = function(self) {
+		self.addEvent('mousedown', self._handleMouseDown, false);
+		self._dragAttached = true;
+	}
+	this.dragDetach = function(self) {
+		self.removeEvent('mousedown', self._handleMouseDown, false);
+		self._dragAttached = false;
+	}
+	this.dropAttach = function(self) {
+	}
+	this.dropDetach = function(self) {
+	}
+	/**
+	 * 定义dropzone的获取和设置方法
+	 * 
+	 */
+	this.dropzone = property(
+		function(self){
+			if(_supportHTML5Drop) {			
+				return self.getAttribute('dropzone');
+			} else {
+				//TODO 模拟完成之后给一个标志，返回该标志
+				return true;
+			}			
+		}, 
+		function(self, dropzone){
+			if(_supportHTML5Drop) {			
+				self.setAttribute('dropzone', dropzone);
+			} else {
+				if(dropzone != '') {
+					//TODO 让元素模拟放置功能
+				} else {
+					//TODO 移除元素的放置功能
+				}
+			}
+		}
+	);
+
 	/*
 	 * 从dom读取数据
 	 */
