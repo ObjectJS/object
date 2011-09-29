@@ -13,21 +13,14 @@
 				}
 				dom.ready(function() {
 					var textarea = dom.wrap(document.getElementById('textarea'));
-					textarea.addEvent('draginit', function(e) {
-						console.log('draginit');
-					}, false);
 					textarea.addEvent('dragstart', function(e) {
-						console.log('dragstart');
 					}, false);
 					textarea.addEvent('drag', function(e) {
-						console.log('drag');
 					}, false);
 					textarea.addEvent('dragend', function(e) {
-						console.log('dragend');
 					}, false);
-					textarea.addEvent('cancel', function(e) {
-						console.log('cancelled');
-					}, false);
+
+
 				});
 			});
 		</script>
@@ -35,6 +28,8 @@
 	<body>
 		<div id="textarea" draggable=true 
 			style='width:100px;height:100px;background:#cccccc;top:10px;left:10px;position:absolute'></div>
-		<textarea id='debug' style='background:#CCC;width:1000px;height:100px;margin-top:200px;'></textarea>
+		<div id="dropzone" dropzone='move' 
+			style='width:500px;height:150px;background:#888888;top:150px;left:10px;position:absolute'></div>
+		<textarea id='debug' style='background:#CCC;width:1000px;height:100px;margin-top:400px;'></textarea>
 	</body>
 </html>

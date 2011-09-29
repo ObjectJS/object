@@ -364,14 +364,14 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 		if (self.classList === undefined && self !== document && self !== window) {
 			self.classList = new ElementClassList(self);
 		}
-		if (self.get('draggable') === true){ //&& !_supportHTML5Drag) {
+		if (self.get('draggable') === true) {// && !_supportHTML5Drag) {
 			//draggble需要触发dragstart drag dragend
 			self.dragAttach();
 		}
-		//if (self.get('dropzone') != "" && !_supportHTML5Drop) {
+		if (self.get('dropzone') != "" && !_supportHTML5Drop) {
 			//dropzone需要触发dragenter dragover dragleave drop
-			//self.dropAttach();
-		//}
+			self.dropAttach();
+		}
 	};
 
 	/**
@@ -385,7 +385,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 			} else {
 				//TODO 模拟完成之后给一个标志，返回该标志
 				return true;
-			}			
+			}
 		}, 
 		function(self, draggable){
 			if(_supportHTML5Drag) {			
@@ -407,8 +407,8 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	this._handleMouseDown = function(self, e) {	
 		self._originX = e.clientX;
 		self._originY = e.clientY;
-		self._xDiff = e.clientX - parseInt(self.style.left);
-		self._yDiff = e.clientY - parseInt(self.style.top);
+			self._xDiff = e.clientX - parseInt(self.style.left);
+			self._yDiff = e.clientY - parseInt(self.style.top);
 		self.fireEvent('draginit', {ele:self, ev:e});
 		var doc = wrap(document);
 		//给document的mousemove 和 mouseup加上事件
@@ -431,7 +431,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 				doc.removeEvent('mouseup', cancel, false);
 				doc.addEvent('mousemove', dragging, false);
 				doc.addEvent('mouseup', stop, false);
-				self.fireEvent('dragStart', {ele:self, ev:e});
+				self.fireEvent('dragstart', {ele:self, ev:e});
 			}
 		}
 		function dragging(e) { 
