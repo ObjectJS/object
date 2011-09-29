@@ -493,7 +493,11 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	*/
 	this.__querySub = function(self, name) {
 		var sub = self.__properties__[name];
-		return sub.single? self._node.getElement(sub.selector) : self._node.getElements(sub.selector);
+		if (typeof sub.selector == 'function') {
+			return sub.selector(self);
+		} else {
+			return sub.single? self._node.getElement(sub.selector) : self._node.getElements(sub.selector);
+		}
 	};
 
 	this.__setOption = function(self, name, value) {
