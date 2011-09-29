@@ -258,12 +258,23 @@ var eval_inner_JS = this.eval_inner_JS = function(ele) {
 	});
 };
 	
-var _needGetDom = (function() {
+var _supportUnknownTags = (function() {
 	// 检测浏览器是否支持通过innerHTML设置未知标签，典型的就是IE不支持
 	var t = document.createElement('div');
 	t.innerHTML = '<TEST_TAG></TEST_TAG>';
 	// IE 下无法获取到自定义的Element，其他浏览器会得到HTMLUnknownElement
-	return (t.firstChild === null);
+	return !(t.firstChild === null);
+})();
+
+var _supportPlaceholder = (function() {
+	return ('placeholder' in document.createElement('input'));
+})();
+var _supportNaturalWH = 'naturalWidth' in document.createElement('img');
+var _supportHTML5Forms = (function() {
+	return ('checkValidity' in document.createElement('input'));
+})();
+var _supportHidden = (function() {
+	return ('hidden' in document.createElement('div'));
 })();
 
 /**
@@ -276,7 +287,7 @@ this.getDom = function(str) {
 	var tmp = document.createElement('div');
 	var result = document.createDocumentFragment();
 
-	if (_needGetDom) {
+	if (!_supportUnknownTags) {
 		tmp.style.display = 'none';
 		document.body.appendChild(tmp);
 	}
@@ -286,7 +297,7 @@ this.getDom = function(str) {
 		result.appendChild(wrap(tmp.firstChild));
 	}
 
-	if (_needGetDom) tmp.parentNode.removeChild(tmp);
+	if (!_supportUnknownTags) tmp.parentNode.removeChild(tmp);
 
 	return result;
 };
@@ -363,6 +374,25 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 			self.classList = new ElementClassList(self);
 		}
 	};
+
+	if (_supportHidden) {
+		this.hidden = property(function(self) {
+			return self.hidden;
+		}, function(self, value) {
+			self.hidden = value;
+		});
+	} else {
+		this.hidden = property(function(self) {
+			return self.style.display == 'none';
+		}, function(self, value) {
+			if (value == true) {
+				if (self.style.display !== 'none') self.__oldDisplay = self.style.display;
+				self.style.display = 'none';
+			} else {
+				self.style.display = self.__oldDisplay || '';
+			}
+		});
+	}
 
 	/*
 	 * 从dom读取数据
@@ -637,12 +667,12 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	 * 为兼容HTML5标签，IE下无法直接使用innerHTML
 	 */
 	this.innerHTML = property(null, function(self, html) {
-		if (_needGetDom) {
+		if (_supportUnknownTags) {
+			self.innerHTML = html;
+		} else {
 			var nodes = exports.getDom(html);
 			self.innerHTML = '';
 			while (nodes.firstChild) self.appendChild(nodes.firstChild);
-		} else {
-			self.innerHTML = html;
 		}
 	});
 
@@ -663,21 +693,19 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	 */
 	this.fromString = staticmethod(function(str) {
 		var tmp = document.createElement('div');
-		if (_needGetDom) {
+		if (!_supportUnknownTags) {
 			tmp.style.display = 'none';
 			document.body.appendChild(tmp);
 		}
 		tmp.innerHTML = str.trim();
 		var result = wrap(tmp.firstChild);
-		if (_needGetDom) tmp.parentNode.removeChild(tmp);
+		if (!_supportUnknownTags) tmp.parentNode.removeChild(tmp);
 		return result;
 	});
 
 });
 
 this.ImageElement = new Class(Element, function() {
-
-	var _supportNatural = 'naturalWidth' in document.createElement('img');
 
 	function _getNaturalSize(img) {
 		var style = img.runtimeStyle;
@@ -697,7 +725,7 @@ this.ImageElement = new Class(Element, function() {
 	};
 
 	this.naturalWidth = property(function(self) {
-		if (_supportNatural) {
+		if (_supportNaturalWH) {
 			return self.naturalWidth;
 		} else {
 			return _getNaturalSize(self).width;
@@ -705,7 +733,7 @@ this.ImageElement = new Class(Element, function() {
 	});
 
 	this.naturalHeight = property(function(self) {
-		if (_supportNatural) {
+		if (_supportNaturalWH) {
 			return self.naturalHeight;
 		} else {
 			return _getNaturalSize(self).height;
@@ -812,18 +840,10 @@ this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
  */
 this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ function() {
 
-	var _needBindPlaceholder = (function() {
-		return !('placeholder' in document.createElement('input'));
-	})();
-
-	var _supportHTML5Forms = (function() {
-		return ('checkValidity' in document.createElement('input'));
-	})();
-
 	this.initialize = function(self) {
 		this.parent(self);
 
-		if (_needBindPlaceholder && ['INPUT', 'TEXTAREA'].indexOf(self.get('tagName')) !== -1) {
+		if (!_supportPlaceholder && ['INPUT', 'TEXTAREA'].indexOf(self.get('tagName')) !== -1) {
 			self.bindPlaceholder(self);
 		}
 	};
@@ -902,7 +922,7 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 			self.value = '';
 		}
 		self.value = value;
-		if (_needBindPlaceholder && !self.value && self.getAttribute('placeholder')) {
+		if (!_supportPlaceholder && !self.value && self.getAttribute('placeholder')) {
 			self.classList.add('placeholder');
 			self.value = self.getAttribute('placeholder');
 			self.setAttribute('autocomplete', 'off');
