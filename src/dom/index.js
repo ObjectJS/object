@@ -693,7 +693,7 @@ this.ImageElement = new Class(Element, function() {
 		return {
 			width: w,
 			height: h
-		}
+		};
 	};
 
 	this.naturalWidth = property(function(self) {
@@ -713,6 +713,27 @@ this.ImageElement = new Class(Element, function() {
 	});
 
 });
+
+function createFormSender(getters) {
+	return function(self, params) {
+		var net = sys.modules['net'];
+		if (net) {
+			xhr = new net.Request({
+				onsuccess: function(event) {
+					self.fireEvent('requestSuccess', {request: event.request});
+				},
+				onerror: function(event) {
+					self.fireEvent('requestError', {request: event.request});
+				}
+			});
+		} else {
+			throw new ModuleRequiredError('net');
+		}
+		xhr.method = getters.method(self);
+		xhr.url = getters.action(self);
+		xhr.send(params);
+	};
+};
 
 /**
  * 表单
@@ -736,25 +757,11 @@ this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 	 * 用ajax发送一个表单
 	 */
 	this.send = function(self, params) {
-		if (!params) {
-			params = self.toQueryString();
-		}
-		var net = sys.modules['net'];
-		if (net) {
-			xhr = new net.Request({
-				onsuccess: function(event) {
-					self.fireEvent('requestSuccess', {request: event.request});
-				},
-				onerror: function(event) {
-					self.fireEvent('requestError', {request: event.request});
-				}
-			});
-		} else {
-			throw new ModuleRequiredError('net');
-		}
-		xhr.method = self.method;
-		xhr.url = self.action;
-		xhr.send(params);
+		if (!params) params = self.toQueryString();
+		createFormSender({
+			method: function(self) {return self.method;},
+			action: function(self) {return self.action;}
+		})(self, params);
 	};
 
 	/**
@@ -1058,6 +1065,22 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 
 });
 
+this.InputElement = new Class(exports.FormItemElement, function() {
+
+	/**
+	 * 用ajax发送一个表单
+	 */
+	this.send = function(self, params) {
+		if (self.type != 'submit') return;
+		if (!params) params = self.form.toQueryString();
+		createFormSender({
+			method: function(self) {return self.getAttribute('formmethod') || self.form.method;},
+			action: function(self) {return self.getAttribute('formaction') || self.form.action;}
+		})(self, params);
+	};
+
+});
+
 /**
  * @class
  * @name dom.Window
@@ -1127,7 +1150,7 @@ var Elements = this.Elements = new Class(Array, /**@lends dom.Elements*/ functio
 var _tagMap = {
 	'IMG': exports.ImageElement,
 	'FORM': exports.FormElement,
-	'INPUT': exports.FormItemElement,
+	'INPUT': exports.InputElement,
 	'TEXTAREA': exports.FormItemElement,
 	'OUTPUT': exports.FormItemElement,
 	'SELECT': exports.FormItemElement,
