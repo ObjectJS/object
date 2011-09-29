@@ -339,6 +339,8 @@ var ElementClassList = this.ElementClassList = new Class(Array, /**@lends dom.El
 
 });
 
+var _supportHTML5Drag = 'draggable' in document.createElement('div');
+var _supportHTML5Drop = 'dropzone' in document.createElement('div');
 /**
  * @class
  * @name dom.Element
@@ -362,8 +364,31 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 		if (self.classList === undefined && self !== document && self !== window) {
 			self.classList = new ElementClassList(self);
 		}
+		//如果此元素标志为可拖拽，但是浏览器不支持HTML5的拖拽时，模拟拖拽的功能
+		if (self.getAttribute('draggable') === true && !_supportHTML5Drag) {
+			
+		}
+		//如果此元素标志为可放置，但是浏览器不支持HTML5的放置时，模拟放置的功能
+		if (self.getAttribute('draggable') === true && !_supportHTML5Drop) {
+			
+		}
 	};
 
+	/**
+	 * 定义draggable的获取和设置方法
+	 * 
+	 */
+	this.draggable = property(
+		function(self){
+			return self.getAttribute('draggable');
+		}, 
+		function(self, draggable){
+			self.setAttribute('draggable', draggable);
+			if(draggable == true) {
+				//TODO 让元素模拟拖拽功能
+			}
+		}
+	);
 	/*
 	 * 从dom读取数据
 	 */
