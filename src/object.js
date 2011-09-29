@@ -268,6 +268,17 @@ this.add = function() {
 	object._loader.add.apply(object._loader, arguments);
 };
 
+// 找不到模块Error
+this.NoModuleError = function(name) {
+	this.message = 'no module named ' + name;
+};
+this.NoModuleError.prototype = new Error();
+
+this.ModuleRequiredError = function(name) {
+	this.message = 'module ' + name + ' required';
+};
+this.ModuleRequiredError.prototype = new Error();
+
 })(window);
 
 (/**@lends _global_*/ function() {
@@ -757,12 +768,6 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		return '<module \'' + this.__name__ + '\'>';
 	};
 
-	// 找不到模块Error
-	function NoModuleError(name) {
-		this.message = 'no module named ' + name;
-	};
-	NoModuleError.prototype = new Error();
-
 	this.scripts = document.getElementsByTagName('script');
 
 	this.initialize = function(self) {
@@ -1021,7 +1026,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 
 			// lib中没有
 			} else {
-				throw new NoModuleError(prefix);
+				throw new object.NoModuleError(prefix);
 			}
 
 		};
@@ -1115,7 +1120,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		self.loadLib();
 
 		var module = _lib[name];
-		if (!module) throw new NoModuleError(name);
+		if (!module) throw new object.NoModuleError(name);
 
 		self.executeModule(module, {}, [], null, {name: '__main__'});
 	};
