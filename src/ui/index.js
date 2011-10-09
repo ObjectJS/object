@@ -343,7 +343,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 					self.addEvent(trueEventType, function(event) {
 						// 将event._args pass 到函数后面
 						var args = [event].concat(event._args);
-						addon.prototype['on' + eventType].apply(self, args);
+						addon.get('on' + eventType)(self, args);
 					});
 				}
 			});
@@ -383,7 +383,13 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 						var fakeEventType = '__option_' + eventType + '_' + name;
 						var methodName = name + '_' + eventType;
 						self.addEvent(fakeEventType, function(event) {
-							if (cls) cls.prototype[methodName].call(self, event.value);
+							// 注意这个self是调用了此addon的类的实例，而不是addon的实例，其__this__并不是addon的；
+							// 必须通过cls调用addon上的方法，在相应方法中才能获取到正确的__this__；
+							// if (cls) cls.prototype[methodName].call(self, event.value);
+							// 上面这种调用方法由于获取的self.__this__，不正确。
+							// 改成下面这种
+							if (cls) cls.get(methodName).call(cls, self, event.value);
+							// 调用自己的
 							else self[methodName](event.value);
 						});
 					});
@@ -473,7 +479,14 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				events.forEach(function(eventType) {
 					var methodName = name + '_' + eventType;
 					node.addEvent(eventType, function(event) {
-						if (cls) cls.prototype[methodName].apply(self, [event, comp].concat(event._args));
+						// 调用addon上的
+						// 注意这个self是调用了此addon的类的实例，而不是addon的实例，其__this__并不是addon的；
+						// 必须通过cls调用addon上的方法，在相应方法中才能获取到正确的__this__；
+						// if (cls) cls.prototype[methodName].apply(self, [event, comp].concat(event._args));
+						// 上面这种调用方法由于获取的self.__this__，不正确。
+						// 改成下面这种
+						if (cls) cls.get(methodName).apply(cls, [self, event, comp].concat(event._args));
+						// 调用自己的
 						else self[methodName].apply(self, [event, comp].concat(event._args));
 					});
 				});
