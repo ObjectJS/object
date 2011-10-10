@@ -111,6 +111,12 @@ this.define1 = function(selector, type) {
 	return exports.define(selector, type, 1);
 };
 
+var getConstructor = function(type) {
+	if (type === 'number') return Number;
+	else if (type === 'string') return String;
+	else if (type === 'boolean') return Boolean;
+};
+
 /**
  * 声明一个option
  * 用法：
@@ -119,7 +125,7 @@ this.define1 = function(selector, type) {
  * });
  * 这样MyComponent实例的myConfig属性值即为默认值1，可通过 set 方法修改
  */
-this.option = function(defaultValue) {
+this.option = function(defaultValue, getter, setter) {
 	var prop;
 	function fget(self) {
 		return self.getOption(prop.__name__);
@@ -128,7 +134,13 @@ this.option = function(defaultValue) {
 		return self.setOption(prop.__name__, value);
 	}
 	prop = property(fget, fset);
+	prop.isOption = true;
 	prop.defaultValue = defaultValue;
+	prop.getter = getter || function(self, name, defaultValue) {
+		var value = self._node.getData(name.toLowerCase());
+		if (value) return getConstructor(typeof defaultValue)(value);
+	};
+	prop.setter = setter;
 	return prop;
 };
 
@@ -160,8 +172,7 @@ var _component = new Class(function() {
 				if (member != null && member.__class__ === property) {
 					if (member.isComponent) {
 						dict.__subs.push(name);
-
-					} else {
+					} else if (member.isOption) {
 						dict.__defaultOptions.push(name);
 					}
 				} else if (typeof member == 'function') {
@@ -284,12 +295,6 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 	this.__metaclass__ = _component;
 
-	var getConstructor = function(type) {
-		if (type === 'number') return Number;
-		else if (type === 'string') return String;
-		else if (type === 'boolean') return Boolean;
-	};
-
 	this.__mixins__ = [Element];
 
 	this.initialize = function(self, node, options) {
@@ -362,13 +367,12 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		});
 
 		self.__defaultOptions.forEach(function(name) {
+			var defs = self.__properties__[name];
 			// 从dom获取配置
-			var data = self._node.getData(name.toLowerCase()),
-			defaultValue = self.__properties__[name].defaultValue,
-			value;
+			var defaultValue = defs.defaultValue;
+			var value = defs.getter(self, name, defaultValue);
 
-			if (data) {
-				value = getConstructor(typeof defaultValue)(data);
+			if (value) {
 				self.__setOption(name, value);
 			// 从options参数获取配置
 			} else if (options[name]) {
