@@ -201,6 +201,8 @@ var _component = new Class(function() {
 
 		if (proto.addons) {
 			proto.addons.forEach(function(comp) {
+				if (!comp) throw new Error('bad addon');
+
 				var compProto = comp.prototype;
 				compProto.__defaultOptions.forEach(function(name) {
 					var defaultOptions = proto.__defaultOptions;
@@ -342,8 +344,8 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				})) {
 					self.addEvent(trueEventType, function(event) {
 						// 将event._args pass 到函数后面
-						var args = [event].concat(event._args);
-						addon.get('on' + eventType)(self, args);
+						var args = [self, event].concat(event._args);
+						addon.get('on' + eventType).apply(addon, args);
 					});
 				}
 			});
