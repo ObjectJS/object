@@ -493,7 +493,8 @@ type.__new__ = function(metaclass, name, base, dict) {
 		parent: function() {
 			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
 			var name = arguments.callee.caller.__name__;
-			return cls.__base__.get(name).apply(cls.__base__, arguments);
+			var base = cls.__base__;
+			return base.get(name).apply(base, arguments);
 		}
 	});
 	cls.__new__ = base.__new__;
