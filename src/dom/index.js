@@ -574,10 +574,10 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 				doc.removeEvent('mousedown', eventStop, false); 
 			}
 			removeDraggingStyle(self);
-			self.fireEvent('dragend', {dragging:self, event:e});
 			if(self._belongTo) {
 				self._belongTo.fireEvent('drop', {dragging:self, event:e});
 			}
+			self.fireEvent('dragend', {dragging:self, event:e});
 			return false;
 		}
 		function cancel(e) {
