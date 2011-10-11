@@ -2,7 +2,7 @@
  * @namespace
  * @name dom
  */
-object.add('dd', 'ua, events, events', /**@lends dom*/ function(exports, ua, events) {
+object.add('dd', 'ua, events', /**@lends dom*/ function(exports, ua, events) {
 
 var _supportHTML5Drag = false;
 var _supportHTML5Drop = false;
