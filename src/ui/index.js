@@ -154,7 +154,7 @@ var _component = new Class(function() {
 			dict.__subs = [];
 			dict.__subEvents = {}; // 通过subName_eventType进行注册的事件
 			dict.__onEvents = []; // 通过oneventtype对宿主component注册的事件 // 通过oneventtype对宿主component注册的事件 // 通过oneventtype对宿主component注册的事件 // 通过oneventtype对宿主component注册的事件
-			dict.__handles = ['init', 'reset', 'invalid', 'error']; // 定义的会触发事件的方法集合
+			dict.__handles = ['init', 'revert', 'invalid', 'error', 'reset']; // 定义的会触发事件的方法集合, reset为兼容处理 Compatible
 			dict.__methods = [];
 		} else {
 			dict.__defaultOptions = [];
@@ -559,7 +559,9 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	/**
 	 * 重置一个component，回到初始状态，删除所有render的元素。
 	 */
-	this._reset = function(self) {
+	this._revert = function(self, methodName) {
+		if (!methodName) methodName = 'revert'; // 兼容reset方法名
+
 		// 清空所有render进来的新元素
 		self.__subs.forEach(function(name) {
 			var sub = self.__properties__[name];
@@ -579,12 +581,21 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			}
 			if (!sub.single) {
 				self[name].forEach(function(comp) {
-					comp.reset();
+					comp[methodName]();
 				});
 			} else if (self[name]) {
-				self[name].reset();
+				self[name][methodName]();
 			}
 		});
+	};
+
+	/**
+	* @deprecated
+	* 用revert代替
+	* 由于form有reset方法，在reset调用时，会fire reset事件，导致意外的表单重置
+	*/
+	this._reset = function(self) {
+		self._revert('reset');
 	};
 
 	this.getOption = function(self, name) {
