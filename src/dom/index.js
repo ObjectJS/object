@@ -490,8 +490,6 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	 * @param self
 	 * @param draggables  : 添加的可拖拽元素，元素本身必须是可拖拽的
 	 * @param isInit 	  : 当前容器是否是这些可拖拽元素的初始容器
-	 *
-	 * TODO 此方法还有待改进
 	 */
 	this.addDraggables = function(self, draggables, isInit) {
 		if(self.__canDrop != true) {
@@ -504,7 +502,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 		for(var i=0,l=draggables.length,current; i<l; i++) {
 			current = draggables[i];
 			if(!current._canDrag) {
-				continue;
+				current.enableDrag();
 			} 
 			//如果新添加元素的容器列表中已经有当前元素了，则不需要重新再添加
 			if(current.__droppables.indexOf(self) == -1) {
@@ -596,6 +594,8 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 		if(ua.ua.chrome) {
 			self.__originX = selfPos.x;
 			self.__originY = selfPos.y;
+			//确保chrome下添加的click事件一定被移除了，这里不会抛出异常
+			self.removeEvent('click', fixChromeClick, false);
 			//console.log(selfPos.x, selfPos.y);
 		}
 		//用于拖拽时，定位元素相对于鼠标指针的位置
@@ -752,15 +752,10 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 		if(ua.ua.chrome) {
 			//获取当前位置(应该放在drop和dropend事件之后，因为在这两个事件中可以继续调整元素的位置)
 			var pos = self.position();
-			//如果没有发生变化，则屏蔽chrome的click事件，避免再次请求
+			//如果没有发生变化，则屏蔽chrome的click事件，避免再次请求页面
 			//console.log(pos.x, pos.y, self.__originX, self.__originY);
 			if(pos.y == self.__originY && pos.x == self.__originX) {
-				self.addEvent('click', function(e) {
-					//阻止触发click事件的继续执行
-					e.preventDefault();
-					e.stopPropagation();
-					self.removeEvent('click', arguments.callee, false);
-				}, false);
+				self.addEvent('click', fixChromeClick, false);
 			}	
 		}
 	}
@@ -783,6 +778,19 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 
 
 	/********************************* DragDrop的辅助方法 ************************************/
+
+	/**
+	 * 为屏蔽Chrome下拖拽再放回原处认为是单击的问题，这里将click事件进行屏蔽
+	 *
+	 * @param e : 事件对象
+	 */
+	function fixChromeClick(e) {
+		//点击以后马上移除
+		this.removeEvent('click', arguments.callee, false);
+		//阻止默认执行和冒泡
+		e.preventDefault();
+		e.stopPropagation();
+	}
 
 	/**
 	 * 为元素增加拖拽时的样式设置
@@ -824,18 +832,26 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	}
 
 	/**
-	 * 获取鼠标的具体位置坐标（ TODO 完善此方法）
+	 * 获取鼠标的具体位置坐标（完善此方法）
 	 *
 	 * @param ev : 事件对象
-	 */
+	 */ 
 	function getMousePos(ev) {
-		if(ev.pageX || ev.pageY) {
-			return {x:ev.pageX, y:ev.pageY};
-		}
+	   /** 
+		* mootools:
+		*  this.page = {
+		   	x: (event.pageX != null) ? event.pageX : event.clientX + doc.scrollLeft,
+		   	y: (event.pageY != null) ? event.pageY : event.clientY + doc.scrollTop
+		   };
+		   this.client = {
+		   	x: (event.pageX != null) ? event.pageX - win.pageXOffset : event.clientX,
+		   	y: (event.pageY != null) ? event.pageY - win.pageYOffset : event.clientY
+		   };
+		*/
 		return {
-			x:ev.clientX + document.body.scrollLeft - document.body.clientLeft,
-			y:ev.clientY + document.body.scrollTop  - document.body.clientTop
-		};
+			x : (ev.pageX != null) ? ev.pageX : ev.clientX + document.body.scrollLeft - document.body.clientLeft,
+			y : (ev.pageY != null) ? ev.pageY : ev.clientY + document.body.scrollTop  - document.body.clientTop
+		};		
 	}
 
 	/**
@@ -847,10 +863,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	 * TODO 目前只是简单的判断了垂直方向的位置，还应该引入更加复杂的判断方式
 	 */
 	function isInContainer(container, dragging) {
-		if(dragging.bottom < container.top || dragging.top > container.bottom) {
-			return false;
-		}
-		return true;
+		return dragging.bottom >= container.top && dragging.top <= container.bottom; 
 	}
 
 	/**
@@ -906,10 +919,10 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	/**
 	 * 获取元素的具体位置信息
 	 *
-	 * @param slef
+	 * @param self
 	 * @return 形如{x:xxx, y:xxx}的位置信息对象，x是横向坐标，y是纵向坐标
 	 *
-	 * 此方法来自网络，需要参考标准获取方法和其他框架内容，再完善 TODO
+	 * 此方法来自网络，需要参考标准获取方法和其他框架内容，再完善 
 	 */
 	this.position = function(self){
 		if(self.parentNode === null || self.style.display == 'none') {
@@ -924,11 +937,11 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 			box = self.getBoundingClientRect();
 			var scrollTop = Math.max(document.documentElement.scrollTop, document.body.scrollTop);
 			var scrollLeft = Math.max(document.documentElement.scrollLeft, document.body.scrollLeft); 
-			return {x:box.left + scrollLeft, y:box.top + scrollTop};
+			return {x : box.left + scrollLeft, y : box.top + scrollTop};
 		} else if(document.getBoxObjectFor) {    // gecko
 			box = document.getBoxObjectFor(self);            
-			var borderLeft = (self.style.borderLeftWidth)?parseInt(self.style.borderLeftWidth):0;
-			var borderTop = (self.style.borderTopWidth)?parseInt(self.style.borderTopWidth):0; 
+			var borderLeft = (self.style.borderLeftWidth) ? parseInt(self.style.borderLeftWidth) : 0;
+			var borderTop = (self.style.borderTopWidth) ? parseInt(self.style.borderTopWidth) : 0; 
 			pos = [box.x - borderLeft, box.y - borderTop];
 		} else {    // safari & opera   
 			pos = [self.offsetLeft, self.offsetTop];
