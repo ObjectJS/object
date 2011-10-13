@@ -367,10 +367,10 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		});
 
 		self.__defaultOptions.forEach(function(name) {
-			var defs = self.__properties__[name];
+			var sub = self.__properties__[name];
 			// 从dom获取配置
-			var defaultValue = defs.defaultValue;
-			var value = defs.getter(self, name, defaultValue);
+			var defaultValue = sub.defaultValue;
+			var value = sub.getter(self, name, defaultValue);
 
 			if (value) {
 				self.__setOption(name, value);
@@ -413,16 +413,11 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	};
 
 	this.__initSubs = function(self) {
+		// TODO 这里修改了__properties__中的成员，导致如果某一个组件实例修改了类，后面的组件就都变化了。
 		self.__subs.forEach(function(name) {
 			var sub = self.__properties__[name];
 
-			// 此时的option还是prototype上的，在sub初始化时会被浅拷贝
-			// 从options获取子元素的模板信息
 			var options = self._options[name];
-			if (options && !sub.template) {
-				sub.template = options.template;
-				sub.section = options.templateSection;
-			}
 			// 从options获取子元素的扩展信息
 			if (options && options.addons) {
 				sub.type = new Class(sub.type, function() {
@@ -431,7 +426,6 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 					}, this);
 				});
 			}
-			var node;
 
 			self.__initSub(name, self.__querySub(name));
 		});
@@ -477,7 +471,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		var sub = self.__properties__[name];
 		var node = comp._node;
 		self.__addNodeMap(name, String(node.uid), comp);
-		var comp = self.__nodeMap[name][String(node.uid)];
+		comp = self.__nodeMap[name][String(node.uid)];
 
 		// 注册 option_change 等事件
 		var bindEvents = function(events, cls) {
@@ -688,8 +682,8 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		}
 
 		var comp = new sub.type({
-			template: sub.template,
-			section: sub.section
+			template: options.template || sub.template,
+			section: options.templateSection || sub.section
 		}, options);
 		var node = comp._node;
 
@@ -710,8 +704,10 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	 * 设置subcomponent的template
 	 */
 	this.setTemplate = function(self, name, template, section) {
-		self.__properties__[name].template = template;
-		self.__properties__[name].section = section;
+		if (!self._options[name]) self._options[name] = {};
+		var options = self._options[name];
+		options.template = template;
+		options.templateSection = section;
 	};
 
 	/**
