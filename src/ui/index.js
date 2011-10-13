@@ -145,7 +145,7 @@ this.option = function(defaultValue, getter, setter) {
 };
 
 // metaclass
-var _component = new Class(function() {
+this.component = new Class(function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 
@@ -293,7 +293,7 @@ var _component = new Class(function() {
  */
 this.Component = new Class(/**@lends ui.Component*/ function() {
 
-	this.__metaclass__ = _component;
+	this.__metaclass__ = exports.component;
 
 	this.__mixins__ = [Element];
 
