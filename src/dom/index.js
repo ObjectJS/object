@@ -760,7 +760,7 @@ function createFormSender(getters) {
 		xhr.method = getters.method(self);
 		xhr.url = getters.action(self);
 		xhr.send(params);
-		return xhr;
+		return xhr._xhr;
 	};
 };
 
