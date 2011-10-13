@@ -675,28 +675,24 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 
 		//计算当前元素的具体位置坐标
 		var selfPos = self.position();
-		var width = parseInt(self.getStyle('width'));
-		var height = parseInt(self.getStyle('height'));
 		var draggingCoordinates = {
 			top: selfPos.y,
 			left: selfPos.x,
-			right: selfPos.x + width,
-			bottom: selfPos.y + height
+			right: selfPos.x + parseInt(self.getStyle('width')),
+			bottom: selfPos.y + parseInt(self.getStyle('height'))
 		}
 
 		//针对每一个容器，检查当前元素是否在容器当中
 		for(var i=0,current,currentPos,containerCoordinates,l=self.__droppables.length; i<l; i++) {
 			current = self.__droppables[i];
 
-			//计算当前容器的边界
+			//计算每一个容器的边界
 			currentPos = current.position();
-			width = parseInt(current.getStyle('width'));
-			height = parseInt(current.getStyle('height'));
 			containerCoordinates = {
 				top: currentPos.y,
 				left: currentPos.x,
-				right: currentPos.x + width,
-				bottom: currentPos.y + height
+				right: currentPos.x + parseInt(current.getStyle('width')),
+				bottom: currentPos.y + parseInt(current.getStyle('height'))
 			}
 			
 			//判断容器的关系
@@ -754,7 +750,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 			var pos = self.position();
 			//如果没有发生变化，则屏蔽chrome的click事件，避免再次请求页面
 			//console.log(pos.x, pos.y, self.__originX, self.__originY);
-			if(pos.y == self.__originY && pos.x == self.__originX) {
+			if(pos.x == self.__originX && pos.y == self.__originY) {
 				self.addEvent('click', fixChromeClick, false);
 			}	
 		}
