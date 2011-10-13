@@ -128,12 +128,13 @@ this.option = function(defaultValue) {
 		return self.setOption(prop.__name__, value);
 	}
 	prop = property(fget, fset);
+	prop.isOption = true;
 	prop.defaultValue = defaultValue;
 	return prop;
 };
 
 // metaclass
-var _component = new Class(function() {
+this.component = new Class(function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 
@@ -161,7 +162,7 @@ var _component = new Class(function() {
 					if (member.isComponent) {
 						dict.__subs.push(name);
 
-					} else {
+					} else if (member.isOption) {
 						dict.__defaultOptions.push(name);
 					}
 				} else if (typeof member == 'function') {
@@ -280,7 +281,7 @@ var _component = new Class(function() {
  */
 this.Component = new Class(/**@lends ui.Component*/ function() {
 
-	this.__metaclass__ = _component;
+	this.__metaclass__ = exports.component;
 
 	var getConstructor = function(type) {
 		if (type === 'number') return Number;
