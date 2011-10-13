@@ -421,7 +421,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 				self.addEvent('mousedown', self._handleMouseDown, false);
 				self.__canDrag = true;
 				//如果已经有归属了，则不再重新计算
-				if(self._belongTo != null) {
+				if(self.__belongTo != null) {
 					return;
 				}
 				//保存所有的容器元素列表
@@ -506,13 +506,12 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 			if(!current._canDrag) {
 				continue;
 			} 
-			if(self.__draggables.indexOf(current != -1)) {
-				continue;
+			//如果新添加元素的容器列表中已经有当前元素了，则不需要重新再添加
+			if(current.__droppables.indexOf(self) == -1) {
+				current.__droppables.push(self);
 			}
-			self.__draggables.push(current);
-			current.addDroppable(self);
 			if(isInit) {
-				current._belongTo = self;
+				current.__belongTo = self;
 			}
 		}
 		return self;
