@@ -340,8 +340,9 @@ var ElementClassList = this.ElementClassList = new Class(Array, /**@lends dom.El
 });
 
 /**
+ * 拖拽模块
  * @class
- * @name dom.Element
+ * @name dom.DragDrop
  */
 var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 
