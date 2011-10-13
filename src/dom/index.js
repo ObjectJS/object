@@ -760,6 +760,7 @@ function createFormSender(getters) {
 		xhr.method = getters.method(self);
 		xhr.url = getters.action(self);
 		xhr.send(params);
+		return xhr;
 	};
 };
 
@@ -786,7 +787,7 @@ this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 	 */
 	this.send = function(self, params) {
 		if (!params) params = self.toQueryString();
-		createFormSender({
+		return createFormSender({
 			method: function(self) {return self.method;},
 			action: function(self) {return self.action;}
 		})(self, params);
@@ -1093,7 +1094,7 @@ this.InputElement = new Class(exports.FormItemElement, function() {
 	this.send = function(self, params) {
 		if (self.type != 'submit') return;
 		if (!params) params = self.form.toQueryString();
-		createFormSender({
+		return createFormSender({
 			method: function(self) {return self.getAttribute('formmethod') || self.form.method;},
 			action: function(self) {return self.getAttribute('formaction') || self.form.action;}
 		})(self, params);
