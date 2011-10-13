@@ -772,10 +772,12 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	 * @param e : 事件对象
 	 */
 	this._cancel = function(self, e) {
+		//去除为document添加的所有事件
 		self._removeEventFromDoc('mousemove', self.__binder.checkDragging, false);
 		self._removeEventFromDoc('mouseup', self.__binder.cancel, false);
 		self._removeEventFromDoc(self.__selectionEventName, returnFalse, false); 
 
+		//触发取消事件（HTML5中没有此事件，Mootools中有）
 		self.fireEvent('cancel', {dragging:self, event:e});	
 	}
 
@@ -788,12 +790,15 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	 * @param element : 拖拽的元素
 	 */
 	function addDraggingStyle(element) {
+		//备份元素在拖拽之前的属性值
 		element.oldStyle = {};
 		var currentStyle = element.style;
 		_modifiedPropertiesByDrag.forEach(function(prop) {
 			element.oldStyle[prop] = currentStyle[prop];
 		});
+		//设置拖拽元素的基本属性
 		element.style.display = 'block';
+		//width和height一定要在设置position属性之前获取
 		element.style.width = parseInt(element.getStyle('width')) + 'px';
 		element.style.height = parseInt(element.getStyle('height')) + 'px';
 		element.style.position = 'absolute';
@@ -866,7 +871,6 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	 * 此方法来自XN.element
 	 */
 	this.getStyle = function(self, style) {
-		//判断IE
 		if(ua.ua.ie) {
 			style = (style == 'float' || style == 'cssFloat') ? 'styleFloat' : style;
 		    var value = self.style[style];
@@ -905,7 +909,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	 * @param slef
 	 * @return 形如{x:xxx, y:xxx}的位置信息对象，x是横向坐标，y是纵向坐标
 	 *
-	 * 此方法来自网络，需要再完善 TODO
+	 * 此方法来自网络，需要参考标准获取方法和其他框架内容，再完善 TODO
 	 */
 	this.position = function(self){
 		if(self.parentNode === null || self.style.display == 'none') {
