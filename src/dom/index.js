@@ -346,9 +346,51 @@ var ElementClassList = this.ElementClassList = new Class(Array, /**@lends dom.El
  */
 var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 
-	//判断浏览器是否支持HTML5的拖拽（ TODO 需要更严谨的判断方式）
-	var _supportHTML5Drag = 'draggable' in document.createElement('div');
-	var _supportHTML5Drop = 'dropzone'  in document.createElement('div');
+	//如何判断浏览器支持HTML5的拖拽(TODO 只需判断一次即可)：
+	//Detecting "draggable' in document.createElement('span') seems like a good idea, but in practice it doesn't work.
+	//iOS claims that draggable is in the element but doesn't allow drag and drop.(Reference: Safari Web Content Guide: Handling Events)
+	//IE9 claims that draggable is NOT in the element, but does allow drag and drop. (Reference: my testing HTML5 drag and drop in IE.)
+	
+	//from http://kangax.github.com/iseventsupported/
+	function isEventSupported(eventName, element) {
+		var TAGNAMES = {
+			'select': 'input', 'change': 'input',
+			'submit': 'form', 'reset': 'form',
+			'error': 'img', 'load': 'img', 'abort': 'img'
+		};
+		element = element || document.createElement(TAGNAMES[eventName] || 'div');
+		eventName = 'on' + eventName;
+		
+		var isSupported = (eventName in element);
+		
+		if (!isSupported) {
+			// if it has no `setAttribute` (i.e. doesn't implement Node interface), try generic element
+			if (!element.setAttribute) {
+				element = document.createElement('div');
+			}
+			if (element.setAttribute && element.removeAttribute) {
+				element.setAttribute(eventName, '');
+				isSupported = typeof element[eventName] == 'function';
+
+				// if property was created, "remove it" (by setting value to `undefined`)
+				if (typeof element[eventName] != 'undefined') {
+					element[eventName] = undef;
+				}
+				element.removeAttribute(eventName);
+			}
+		}
+		
+		element = null;
+		return isSupported;
+	}
+	
+	var iOS = !!navigator.userAgent.match('iPhone OS') || !!navigator.userAgent.match('iPad');
+	//正确的判断方法 from Modernizr.js ：http://modernizr.github.com/Modernizr/annotatedsource.html
+	//var _supportHTML5DragDrop = !iOS && isEventSupported('dragstart') && isEventSupported('drop');
+
+	//判断浏览器是否支持HTML5的拖拽
+	var _supportHTML5Drag = !iOS && isEventSupported('dragstart');
+	var _supportHTML5Drop = !iOS && isEventSupported('drop');
 	//拖拽时会修改拖拽元素的默认样式
 	var _modifiedPropertiesByDrag = ['display', 'position', 'width', 'height', 'border', 
 			'backgroundColor', 'filter', 'opacity', 'zIndex', 'left', 'top'];
@@ -363,6 +405,9 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	}
 
 	this.initialize = function(self) {
+		//设置基本的配置项
+		self.__options = {
+		}
 		//如果draggable元素的值为true，则模拟HTML5的行为，让元素可拖拽，并且触发一系列事件
 		//IMG和A标签在支持HTML5拖拽的浏览器中默认是true的，因此需要特殊处理
 		if (self.get('draggable') == true 
