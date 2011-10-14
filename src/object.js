@@ -479,6 +479,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 	cls.set('__base__', base);
 	// 支持 this.parent 调用父级同名方法
 	cls.set('__this__', {
+		base: base,
 		parent: function() {
 			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
 			var name = arguments.callee.caller.__name__;
