@@ -132,6 +132,10 @@ this.Request = new Class(function() {
 		});
 	};
 
+	this.getResponseHeader = function(self, key) {
+		return self._xhr.getResponseHeader(key);
+	};
+
 	this.setHeader = function(self, name, value) {
 		self.headers[name] = value;
 	};
