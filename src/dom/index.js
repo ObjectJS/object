@@ -265,17 +265,19 @@ var _supportUnknownTags = (function() {
 	// IE 下无法获取到自定义的Element，其他浏览器会得到HTMLUnknownElement
 	return !(t.firstChild === null);
 })();
-
-var _supportPlaceholder = (function() {
-	return ('placeholder' in document.createElement('input'));
-})();
+var _supportPlaceholder = 'placeholder' in document.createElement('input');
 var _supportNaturalWH = 'naturalWidth' in document.createElement('img');
-var _supportHTML5Forms = (function() {
-	return ('checkValidity' in document.createElement('input'));
-})();
-var _supportHidden = (function() {
-	return ('hidden' in document.createElement('div'));
-})();
+var _supportHTML5Forms = 'checkValidity' in document.createElement('input');
+var _supportHidden = 'hidden' in document.createElement('div');
+var _supportMultipleSubmit = 'formAction' in document.createElement('input');
+
+var nativeproperty = function(prop) {
+	return property(function(self) {
+		return self[prop];
+	}, function(self, value) {
+		self._set(prop, value);
+	});
+};
 
 /**
  * 通过一个字符串创建一个Fragment
@@ -376,11 +378,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	};
 
 	if (_supportHidden) {
-		this.hidden = property(function(self) {
-			return self.hidden;
-		}, function(self, value) {
-			self.hidden = value;
-		});
+		this.hidden = nativeproperty('hidden');
 	} else {
 		this.hidden = property(function(self) {
 			return self.style.display == 'none';
@@ -760,7 +758,7 @@ function createFormSender(getters) {
 		xhr.method = getters.method(self);
 		xhr.url = getters.action(self);
 		xhr.send(params);
-		return xhr._xhr;
+		return xhr;
 	};
 };
 
@@ -1087,6 +1085,50 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 });
 
 this.InputElement = new Class(exports.FormItemElement, function() {
+
+	if (_supportMultipleSubmit) {
+		this.formAction = nativeproperty('formAction');
+		this.formEnctype = nativeproperty('formEnctype');
+		this.formMethod = nativeproperty('formMethod');
+		this.formNoValidate = nativeproperty('formNoValidate');
+		this.formTarget = nativeproperty('formTarget');
+
+	} else {
+
+		this.formAction = property(function(self) {
+			return self.formAction;
+		}, function(self, value) {
+			self._set('formAction', value);
+			self.addEvent('click', function() {
+				self.form.action = value;
+			});
+		});
+
+		this.formEnctype = property(function(self) {
+			return self.formEnctype;
+		}, function(self, value) {
+			self._set('formEnctype', value);
+		});
+
+		this.formMethod = property(function(self) {
+			return self.formMethod;
+		}, function(self, value) {
+			self._set('formMethod', value);
+		});
+
+		this.formNoValidate = property(function(self) {
+			return self.formNoValidate;
+		}, function(self, value) {
+			self._set('formNoValidate', value);
+		});
+
+		this.formTarget = property(function(self) {
+			return self.formTarget;
+		}, function(self, value) {
+			self._set('formTarget', value);
+		});
+
+	};
 
 	/**
 	 * 用ajax发送一个表单
