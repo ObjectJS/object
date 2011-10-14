@@ -318,12 +318,8 @@ function isEventSupported(eventName, element) {
 }
 
 var iOS = !!navigator.userAgent.match('iPhone OS') || !!navigator.userAgent.match('iPad');
-//正确的判断方法 from Modernizr.js ：http://modernizr.github.com/Modernizr/annotatedsource.html
-//var _supportHTML5DragDrop = !iOS && isEventSupported('dragstart') && isEventSupported('drop');
-
-//判断浏览器是否支持HTML5的拖拽
-var _supportHTML5Drag = !iOS && isEventSupported('dragstart');
-var _supportHTML5Drop = !iOS && isEventSupported('drop');
+//正确的判断是否支持HTML5的拖拽方法 from Modernizr.js ：http://modernizr.github.com/Modernizr/annotatedsource.html
+var _supportHTML5DragDrop = !iOS && isEventSupported('dragstart') && isEventSupported('drop');
 
 /**
  * 通过一个字符串创建一个Fragment
@@ -419,29 +415,21 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	}
 
 	this.initialize = function(self) {
-		//设置基本的配置项
-		self.__options = {
-			axis : 'XY', 				//X/Y/XY
-			switcher : {
-				type : 'distance', 		//distance/time
-				value : 3
-			}
-		};
 		//如果draggable元素的值为true，则模拟HTML5的行为，让元素可拖拽，并且触发一系列事件
 		//IMG和A标签在支持HTML5拖拽的浏览器中默认是true的，因此需要特殊处理
 		if (self.get('draggable') == true 
 			&& (_autoDraggableTags.indexOf(self.tagName) == -1)) {
 			//需要为document添加事件
-			self.__doc = wrap(document);
+			self.__docForDD = wrap(document);
 			//bind事件，将bind后的函数作为事件监听
-			self.__binder = {
+			self.__binderForDD = {
 				checkDragging : self._checkDragging.bind(self),
-				cancel : self._cancel.bind(self),
+				cancel : self._cancelDrag.bind(self),
 				dragging: self._dragging.bind(self),
-				finish: self._finish.bind(self)
+				finish: self._finishDrag.bind(self)
 			}
 			//为元素添加拖拽的相关行为
-			self.enableDrag();
+			self.set('draggable', true);
 			//屏蔽当前拖拽元素下的A和IMG的拖拽行为，让元素的拖拽行为可以disable
 			self._forbidAutoDraggableNodes();
 		}
@@ -450,22 +438,6 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 			self.set('dropzone', 'default');
 		}
 	};
-
-	/**
-	 * 为元素添加拖拽的相关行为
-	 */
-	this.enableDrag = function(self) {
-		self.set('draggable', true);
-		return self;
-	}
-
-	/**
-	 * 禁用元素的拖拽相关行为
-	 */
-	this.disableDrag = function(self) {
-		self.set('draggable', false);
-		return self;
-	}
 
 	/**
 	 * 定义draggable的获取和设置方法
@@ -482,10 +454,10 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 					return;
 				}
 				//为元素自身添加鼠标点击的监听
-				self.addEvent('mousedown', self._handleMouseDown, false);
+				self.addEvent('mousedown', self._handleMouseDownForDD, false);
 				self.__canDrag = true;
 				//如果已经有归属了，则不再重新计算
-				if(self.__belongTo != null) {
+				if(self.__belongToDroppable	!= null) {
 					return;
 				}
 				//保存所有的容器元素列表
@@ -495,7 +467,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 				while(parent && parent.tagName != 'BODY' && parent.tagName != 'HTML') {
 					if(parent.dropzone != undefined && parent.dropzone != '') {
 						parent = wrap(parent);
-						self.__belongTo = parent;
+						self.__belongToDroppable = parent;
 						self.__droppables.push(parent);
 						break;
 					}
@@ -504,9 +476,9 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 			} else {
 				if(self.__canDrag == true) {
 					//去除自身的鼠标点击监听
-					self.removeEvent('mousedown', self._handleMouseDown, false);
+					self.removeEvent('mousedown', self._handleMouseDownForDD, false);
 					//保留当前所属容器和容器列表，为再次可拖拽做准备
-					//self.__belongTo = null;
+					//self.__belongToDroppable = null;
 					//self.__droppables = null;
 					self.__canDrag = false;
 				}
@@ -538,22 +510,22 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	/**
 	 * 获取容器列表
 	 */	
-	this.getContainerList = function(self) {
+	this.getDroppableList = function(self) {
 		return self.__canDrag ? self.__droppables : null;
 	}
 	/**
 	 * 获取当前所在的容器
 	 */
-	this.getCurrentContainer = function(self) {
-		return self.__canDrag ? self.__belongTo : null;
+	this.getCurrentDroppable = function(self) {
+		return self.__canDrag ? self.__belongToDroppable : null;
 	}
 
 	/**
 	 * 为容器添加其他可拖拽的元素（意味着其他元素可以拖放进入此容器）
 	 *
 	 * @param self
-	 * @param draggables  : 添加的可拖拽元素，元素本身必须是可拖拽的
-	 * @param isInit 	  : 当前容器是否是这些可拖拽元素的初始容器
+	 * @param draggables  添加的可拖拽元素，元素本身必须是可拖拽的
+	 * @param isInit 	  当前容器是否是这些可拖拽元素的初始容器
 	 */
 	this.addDraggables = function(self, draggables, isInit) {
 		if(self.__canDrop != true) {
@@ -573,7 +545,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 				current.__droppables.push(self);
 			}
 			if(isInit) {
-				current.__belongTo = self;
+				current.__belongToDroppable = self;
 			}
 		}
 		return self;
@@ -583,8 +555,8 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	 * 为当前可拖拽元素增加一个新的可放置容器
 	 *
 	 * @param self
-	 * @param droppable : 新增加的容器对象
-	 * @param isInit	: 是否作为初始容器（draggable元素的当前容器）
+	 * @param droppable 新增加的容器对象
+	 * @param isInit	是否作为初始容器（draggable元素的当前容器）
 	 */
 	this.addDroppable = function(self, droppable, isInit) {
 		if(self.__canDrag != true) {
@@ -596,25 +568,35 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 		self.__droppables.push(droppable);
 		if(isInit) {
 			//将此容器作为初始容器
-			self.__belongTo = droppable;
+			self.__belongToDroppable = droppable;
 		}
 		return self;
 	}
 
-	/**
-	 * 屏蔽当前可拖拽元素的所有A，IMG元素的拖拽行为
-	 */
-	this._forbidAutoDraggableNodes = function(self) {
-		if(!_supportHTML5Drag || self.__canDrag != true) {
+	if(_supportHTML5DragDrop) {
+		/**
+		 * 屏蔽当前可拖拽元素的所有A，IMG元素的拖拽行为
+		 */
+		this._forbidAutoDraggableNodes = function(self) {
+			if(self.__canDrag != true) {
+				return self;
+			}
+			//获取子元素
+			var subNodes = getElements(_autoDraggableTags.join(','), self);
+			for(var i=0,l=subNodes.length; i<l; i++) {
+				subNodes[i].draggable = false;
+			}
 			return self;
 		}
-		//获取子元素
-		var subNodes = getElements(_autoDraggableTags.join(','), self);
-		for(var i=0,l=subNodes.length; i<l; i++) {
-			subNodes[i].draggable = false;
+	} else {
+		/**
+		 * 如果不支持HTML5的拖拽，则不需要屏蔽
+		 */
+		this._forbidAutoDraggableNodes = function(self) {
+			return self;
 		}
-		return self;
 	}
+	
 
 	/**
 	 * 考虑框架页对事件addEvent方法的影响，封装为document元素添加事件的方法
@@ -625,7 +607,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 		var addEvent = window.asyncHTMLManager ?
 			window.asyncHTMLManager.dom.Element.prototype.addEvent : self._doc.addEvent;
 
-		addEvent.call(self.__doc, type, callback, bubble);
+		addEvent.call(self.__docForDD, type, callback, bubble);
 	}
 
 	/**
@@ -636,15 +618,15 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 		var removeEvent = window.asyncHTMLManager ?
 			window.asyncHTMLManager.dom.Element.prototype.removeEvent : self._doc.removeEvent;
 
-		removeEvent.call(self.__doc, type, callback, bubble);
+		removeEvent.call(self.__docForDD, type, callback, bubble);
 	}	
 
 	/**
 	 * 处理鼠标的点击以后的拖拽行为
 	 *
-	 * @param e : 点击发生时的事件对象
+	 * @param e 点击发生时的事件对象
 	 */
-	this._handleMouseDown = function(self, e) {	
+	this._handleMouseDownForDD = function(self, e) {	
 		//阻止默认行为，让代码控制拖拽行为
 		if(e.preventDefault) e.preventDefault();
 		if(e.stopPropagation) e.stopPropagation();
@@ -660,7 +642,6 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 			self.__originY = selfPos.y;
 			//确保chrome下添加的click事件一定被移除了，这里不会抛出异常
 			self.removeEvent('click', fixChromeClick, false);
-			//console.log(selfPos.x, selfPos.y);
 		}
 		//用于拖拽时，定位元素相对于鼠标指针的位置
 		self.__deltaX = mousePos.x - selfPos.x;
@@ -670,8 +651,8 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 		//self.fireEvent('draginit', {dragging:self, event:e});
 
 		//给document的mousemove 和 mouseup加上事件
-		self._addEventToDoc('mousemove', self.__binder.checkDragging, false);
-		self._addEventToDoc('mouseup', self.__binder.cancel, false);
+		self._addEventToDoc('mousemove', self.__binderForDD.checkDragging, false);
+		self._addEventToDoc('mouseup', self.__binderForDD.cancel, false);
 
 		//屏蔽拖拽元素的选择行为
 		self.__selectionEventName = ua.ua.ie ? 'selectstart' : 'mousedown';
@@ -681,10 +662,10 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	/**
 	 * 根据鼠标的移动距离，判断是否已经开始拖拽
 	 *
-	 *   初始情况下为document的mousemove方法添加的是checkDragging，判断是否是拖拽操作
-	 *   如果开始拖拽，再将checkDragging改为dragging，正式执行拖拽的功能
+	 * 初始情况下为document的mousemove方法添加的是checkDragging，判断是否是拖拽操作
+	 * 如果开始拖拽，再将checkDragging改为dragging，正式执行拖拽的功能
 	 *
-	 * @param e : 事件对象
+	 * @param e 事件对象
 	 */	
 	this._checkDragging = function(self, e) {
 		//在IE下，如果拖动非常迅速时，鼠标变成禁止符号，这里需要禁止默认事件的发生
@@ -696,12 +677,12 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 		var distance = Math.round(Math.sqrt(Math.pow(mousePos.x - self.__originMouseX, 2) + 
 				Math.pow(mousePos.y - self.__originMouseY, 2)));
 		//说明开始拖拽了
-		if(self.__options.switcher.type == 'distance' && distance > self.__options.switcher.value) {
+		if(distance > 3) {
 			//把mousemove由检查拖拽改为执行拖拽，把mouseup由取消改为完成
-			self._removeEventFromDoc('mousemove', self.__binder.checkDragging, false);
-			self._removeEventFromDoc('mouseup', self.__binder.cancel, false);
-			self._addEventToDoc('mousemove', self.__binder.dragging, false);
-			self._addEventToDoc('mouseup', self.__binder.finish, false);
+			self._removeEventFromDoc('mousemove', self.__binderForDD.checkDragging, false);
+			self._removeEventFromDoc('mouseup', self.__binderForDD.cancel, false);
+			self._addEventToDoc('mousemove', self.__binderForDD.dragging, false);
+			self._addEventToDoc('mouseup', self.__binderForDD.finish, false);
 		
 			//给元素添加拖拽时候的基本样式
 			addDraggingStyle(self);
@@ -714,8 +695,8 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 			//dragstart, drag, dragend是draggable元素的完整生命周期，
 			//但是如果没有dropinit，droppable元素只有dropenter, dropover, dropleave, drop，没有初始状态，不完整
 			//具体示例：如果在拖拽初始时需要创建占位元素，如果没有dropinit，就只能针对每一个元素的dragstart编写代码了
-			if(self.__belongTo) {
-				self.__belongTo.fireEvent('dropinit', {dragging:self, event:e});
+			if(self.__belongToDroppable) {
+				self.__belongToDroppable.fireEvent('dropinit', {dragging:self, event:e});
 			}
 		}
 	}
@@ -723,7 +704,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	/**
 	 * 拖拽时的事件处理方法
 	 *
-	 * @param e : 事件对象
+	 * @param e 事件对象
 	 */
 	this._dragging = function(self, e) {
 		//阻止默认事件
@@ -731,14 +712,8 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 
 		//利用鼠标位置，修改拖拽元素的位置
 		var mousePos = getMousePos(e);
-		if(self.__options.axis == 'XY') {
-			self.style.left = (mousePos.x - self.__deltaX) + 'px';
-			self.style.top  = (mousePos.y - self.__deltaY) + 'px';
-		} else if(self.__options.axis == 'X') {
-			self.style.left = (mousePos.x - self.__deltaX) + 'px';
-		} else if(self.__options.axis == 'Y') {
-			self.style.top  = (mousePos.y - self.__deltaY) + 'px';
-		}
+		self.style.left = (mousePos.x - self.__deltaX) + 'px';
+		self.style.top  = (mousePos.y - self.__deltaY) + 'px';
 		//触发drag事件，遵循HTML5规范
 		self.fireEvent('drag', {dragging:self, event:e});
 
@@ -765,7 +740,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 			}
 			
 			//判断容器的关系
-			if(current == self.__belongTo) {
+			if(current == self.__belongToDroppable) {
 				//如果容器是拖拽元素所属容器
 				if(isInContainer(containerCoordinates, draggingCoordinates)) {
 					//如果还在容器内，说明在所属容器内部移动，触发dragover事件
@@ -773,20 +748,18 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 				} else {
 					//如果不在容器内，说明从所属容器中移出，触发dragleave事件
 					current.fireEvent('dragleave', {from:current, to:null, dragging:self});
-					self.__belongTo = null;
+					self.__belongToDroppable = null;
 				}
-			} else {
-				//如果容器不是拖拽元素所属容器
-				if(isInContainer(containerCoordinates, draggingCoordinates)) {
-					//如果拖拽元素所属容器不为空，说明从拖拽容器中脱离出来了(是不是会跟上面事件触发有重复?试验还没出现这种情况)
-					if(self.__belongTo) {
-						self.__belongTo.fireEvent('dragleave', {from:self.__belongTo, to:current, dragging:self});
-					}
-					//进入此容器了，触发dragenter
-					//注意元素初始情况下会属于某个容器，初始化的时候要记录，避免错误的触发dragenter，mootools貌似没有判断
-					current.fireEvent('dragenter', {from:self.__belongTo, to:current, dragging:self});
-					self.__belongTo = current;
+			//如果容器不是拖拽元素所属容器
+			} else if(isInContainer(containerCoordinates, draggingCoordinates)) {
+				//如果拖拽元素所属容器不为空，说明从拖拽容器中脱离出来了(是不是会跟上面事件触发有重复?试验还没出现这种情况)
+				if(self.__belongToDroppable) {
+					self.__belongToDroppable.fireEvent('dragleave', {from:self.__belongToDroppable, to:current, dragging:self});
 				}
+				//进入此容器了，触发dragenter
+				//注意元素初始情况下会属于某个容器，初始化的时候要记录，避免错误的触发dragenter，mootools貌似没有判断
+				current.fireEvent('dragenter', {from:self.__belongToDroppable, to:current, dragging:self});
+				self.__belongToDroppable = current;
 			}
 		}	
 	}
@@ -795,21 +768,21 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	 * 拖拽完成时调用的方法
 	 *
 	 * @param self
-	 * @param e : 事件对象
+	 * @param e 事件对象
 	 */
-	this._finish= function(self, e) {
+	this._finishDrag = function(self, e) {
 		if(e.preventDefault) e.preventDefault();
 
 		//拖拽已完成，去除给document添加的一系列事件
-		self._removeEventFromDoc('mousemove', self.__binder.dragging, false);
-		self._removeEventFromDoc('mouseup', self.__binder.finish, false);
+		self._removeEventFromDoc('mousemove', self.__binderForDD.dragging, false);
+		self._removeEventFromDoc('mouseup', self.__binderForDD.finish, false);
 		self._removeEventFromDoc(self.__selectionEventName, returnFalse, false); 
 
 		//去除基本的拖拽样式设置
 		removeDraggingStyle(self);
 		//如果元素属于某个容器，则触发该容器的drop事件
-		if(self.__belongTo) {
-			self.__belongTo.fireEvent('drop', {dragging:self, event:e});
+		if(self.__belongToDroppable) {
+			self.__belongToDroppable.fireEvent('drop', {dragging:self, event:e});
 		}
 		//触发dragend事件，按照HTML5的标准，应该在容器drop事件之后触发
 		self.fireEvent('dragend', {dragging:self, event:e});
@@ -818,7 +791,6 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 			//获取当前位置(应该放在drop和dropend事件之后，因为在这两个事件中可以继续调整元素的位置)
 			var pos = self.position();
 			//如果没有发生变化，则屏蔽chrome的click事件，避免再次请求页面
-			//console.log(pos.x, pos.y, self.__originX, self.__originY);
 			if(pos.x == self.__originX && pos.y == self.__originY) {
 				self.addEvent('click', fixChromeClick, false);
 			}	
@@ -829,25 +801,24 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	 * 取消拖拽操作，在checkDragging的过程中已经释放鼠标，说明并不是拖拽
 	 *
 	 * @param self
-	 * @param e : 事件对象
+	 * @param e 事件对象
 	 */
-	this._cancel = function(self, e) {
+	this._cancelDrag = function(self, e) {
 		//去除为document添加的所有事件
-		self._removeEventFromDoc('mousemove', self.__binder.checkDragging, false);
-		self._removeEventFromDoc('mouseup', self.__binder.cancel, false);
+		self._removeEventFromDoc('mousemove', self.__binderForDD.checkDragging, false);
+		self._removeEventFromDoc('mouseup', self.__binderForDD.cancel, false);
 		self._removeEventFromDoc(self.__selectionEventName, returnFalse, false); 
 
 		//触发取消事件（HTML5中没有此事件，Mootools中有）
 		self.fireEvent('cancel', {dragging:self, event:e});	
 	}
 
-
 	/********************************* DragDrop的辅助方法 ************************************/
 
 	/**
 	 * 为屏蔽Chrome下拖拽再放回原处认为是单击的问题，这里将click事件进行屏蔽
 	 *
-	 * @param e : 事件对象
+	 * @param e 事件对象
 	 */
 	function fixChromeClick(e) {
 		//点击以后马上移除
@@ -860,7 +831,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	/**
 	 * 为元素增加拖拽时的样式设置
 	 *
-	 * @param element : 拖拽的元素
+	 * @param element 拖拽的元素
 	 */
 	function addDraggingStyle(element) {
 		//备份元素在拖拽之前的属性值
@@ -887,7 +858,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	/**
 	 * 为元素去除拖拽的样式设置
 	 *
-	 * @param element : 拖拽的元素
+	 * @param element 拖拽的元素
 	 */
 	function removeDraggingStyle(element) {
 		_modifiedPropertiesByDrag.forEach(function(prop) {
@@ -899,7 +870,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	/**
 	 * 获取鼠标的具体位置坐标（完善此方法）
 	 *
-	 * @param ev : 事件对象
+	 * @param ev 事件对象
 	 */ 
 	function getMousePos(ev) {
 	   /** 
@@ -922,10 +893,10 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	/**
 	 * 根据两个坐标位置，判断dragging是否在container中
 	 *
-	 * @param container : 容器
-	 * @param dragging  : 拖拽元素
+	 * @param container 容器
+	 * @param dragging  拖拽元素
 	 *
-	 * TODO 目前只是简单的判断了垂直方向的位置，还应该引入更加复杂的判断方式
+	 * TODO 目前只是简单的判断了垂直方向的位置，还应该引入更加完善的判断方式
 	 */
 	function isInContainer(container, dragging) {
 		return dragging.bottom >= container.top && dragging.top <= container.bottom; 
@@ -942,7 +913,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	 * 获取元素的属性值
 	 *
 	 * @param self
-	 * @param style : 属性名称
+	 * @param style 属性名称
 	 *
 	 * @returns 属性名称对应的属性值
 	 *
