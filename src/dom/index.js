@@ -307,7 +307,7 @@ function isEventSupported(eventName, element) {
 
 			// if property was created, "remove it" (by setting value to `undefined`)
 			if (typeof element[eventName] != 'undefined') {
-				element[eventName] = undef;
+				element[eventName] = undefined;
 			}
 			element.removeAttribute(eventName);
 		}
