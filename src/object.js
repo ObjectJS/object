@@ -511,7 +511,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 			Class.keys(mixin).forEach(function(name) {
 				if (cls.get(name)) return; // 不要覆盖自定义的
 
-				var member = mixin.prototype[name];
+				var member = mixin.get(name);
 
 				if (typeof member == 'function' && member.__class__ === instancemethod) {
 					cls.set(name, member.im_func);

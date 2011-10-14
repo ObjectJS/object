@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<script src="http://xnimg.cn/n/core/object-all.js"></script>
+		<script>
+			object.use('dom', function(exports, dom) {
+				if(typeof console === 'undefined') {
+					window.console = {};
+					window.console.log = function(msg) {
+						document.getElementById('debug').value += msg + '--';
+					}
+				}
+				dom.ready(function() {
+					var textarea = dom.wrap(document.getElementById('textarea'));
+					textarea.addEvent('dragstart', function(e) {
+					}, false);
+					textarea.addEvent('drag', function(e) {
+					}, false);
+					textarea.addEvent('dragend', function(e) {
+					}, false);
+
+
+				});
+			});
+		</script>
+	</head>
+	<body>
+		<div id="textarea" draggable=true 
+			style='width:100px;height:100px;background:#cccccc;top:10px;left:10px;position:absolute'></div>
+		<div id="dropzone" dropzone='move' 
+			style='width:500px;height:150px;background:#888888;top:150px;left:10px;position:absolute'></div>
+		<textarea id='debug' style='background:#CCC;width:1000px;height:100px;margin-top:400px;'></textarea>
+	</body>
+</html>
