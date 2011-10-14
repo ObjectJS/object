@@ -374,7 +374,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 
 				// if property was created, "remove it" (by setting value to `undefined`)
 				if (typeof element[eventName] != 'undefined') {
-					element[eventName] = undef;
+					element[eventName] = undefined;
 				}
 				element.removeAttribute(eventName);
 			}
