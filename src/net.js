@@ -84,7 +84,7 @@ this.Request = new Class(function() {
 	this.send = function(self, params) {
 		exports.ajaxRequest(self.url, function(xhr) {
 			self._xhr = xhr;
-			var eventData = {request: xhr};
+			var eventData = {request: self};
 
 			xhr.onreadystatechange = function() {
 				var xhr = self._xhr;
@@ -96,10 +96,9 @@ this.Request = new Class(function() {
 						//xhr.responseJSON = JSON.parse(xhr.responseText)
 					//}
 
-					// Compatible
-					eventData.responseText = xhr.responseText;
-					eventData.responseXML = xhr.responseXML;
-					//eventData.responseJSON = xhr.responseJSON;
+					self.responseText = xhr.responseText;
+					self.responseXML = xhr.responseXML;
+					//self.responseJSON = xhr.responseJSON;
 
 					if (xhr.status === undefined || xhr.status === 0 || (xhr.status >= 200 && xhr.status < 300)) {
 						self.fireEvent('success', eventData);
