@@ -1049,7 +1049,7 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 			if (!placeholder) return;
 
 			if (input.classList.contains('placeholder')) {
-				if (event.type == 'focus' && input.value === placeholder) {
+				if (event && event.type == 'focus' && input.value === placeholder) {
 					input.value = '';
 				}
 				input.classList.remove('placeholder');
