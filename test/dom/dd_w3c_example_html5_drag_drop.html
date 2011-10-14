@@ -1,0 +1,76 @@
+<p>What fruits do you like?</p>
+<ol ondragstart="dragStartHandler(event)" ondragend="dragEndHandler(event)">
+ <li draggable="true" datavalue="fruit-apple">Apples</li>
+ <li draggable="true" datavalue="fruit-orange">Oranges</li>
+ <li draggable="true" datavalue="fruit-pear">Pears</li>
+</ol>
+<script>
+  var internalDNDType = 'text/x-example'; // set this to something specific to your site
+  function dragStartHandler(event) {
+    if (event.target instanceof HTMLLIElement) {
+      // use the element's data-value="" attribute as the value to be moving:
+      event.dataTransfer.setData(internalDNDType, event.target.datavalue);
+	  //console.log(event.dataTransfer.getData(internalDNDType));
+      event.dataTransfer.effectAllowed = 'move'; // only allow moves
+    } else {
+      event.preventDefault(); // don't allow selection to be dragged
+    }
+}
+
+	function dragEndHandler(event) {
+		//event.target.parentNode.removeChild(event.target);
+	}
+</script>
+
+<p>Drop your favorite fruits below:</p>
+<ol dropzone="move s:text/x-example" ondrop="dropHandler(event)" style='background:#ccc;padding:10px;'>
+</ol>
+<script>
+  var internalDNDType = 'text/x-example'; // set this to something specific to your site
+  function dropHandler(event) {
+	  console.log('in drop');
+    var li = document.createElement('li');
+    var data = event.dataTransfer.getData(internalDNDType);
+    if (data == 'fruit-apple') {
+      li.textContent = 'Apples';
+    } else if (data == 'fruit-orange') {
+      li.textContent = 'Oranges';
+    } else if (data == 'fruit-pear') {
+      li.textContent = 'Pears';
+    } else {
+      li.textContent = 'Unknown Fruit';
+    }
+    event.target.appendChild(li);
+  }
+</script>
+
+
+<p>Drop your favorite fruits below:</p>
+<div id='dropzone' style='width:100px;height:100px;background:#ccc'>
+</div>
+<script>
+  var internalDNDType = 'text/x-example'; // set this to something specific to your site
+	var droppable = document.getElementById('dropzone');
+ 				droppable.addEventListener('dragenter', function(ev) {
+					this.style.backgroundColor = "#FF00FF";
+					return true;
+				}, false);
+
+				droppable.addEventListener('dragover', function(ev) {
+					ev.preventDefault();
+					return true;
+				}, false);
+
+				droppable.addEventListener('dragleave', function(ev) {
+					this.style.backgroundColor = "#ccc";
+					return true;
+				}, false);
+
+				droppable.addEventListener('drop', function(ev) {
+					this.style.backgroundColor = "#ccc";
+					var data = ev.dataTransfer.getData(internalDNDType);
+    				ev.target.innerHTML += data;
+					return false;
+				}, false);
+</script>
+
