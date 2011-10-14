@@ -407,7 +407,12 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	this.initialize = function(self) {
 		//设置基本的配置项
 		self.__options = {
-		}
+			axis : 'XY', 				//X/Y/XY
+			switcher : {
+				type : 'distance', 		//distance/time
+				value : 3
+			}
+		};
 		//如果draggable元素的值为true，则模拟HTML5的行为，让元素可拖拽，并且触发一系列事件
 		//IMG和A标签在支持HTML5拖拽的浏览器中默认是true的，因此需要特殊处理
 		if (self.get('draggable') == true 
@@ -677,7 +682,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 		var distance = Math.round(Math.sqrt(Math.pow(mousePos.x - self.__originMouseX, 2) + 
 				Math.pow(mousePos.y - self.__originMouseY, 2)));
 		//说明开始拖拽了
-		if(distance > 3) {
+		if(self.__options.switcher.type == 'distance' && distance > self.__options.switcher.value) {
 			//把mousemove由检查拖拽改为执行拖拽，把mouseup由取消改为完成
 			self._removeEventFromDoc('mousemove', self.__binder.checkDragging, false);
 			self._removeEventFromDoc('mouseup', self.__binder.cancel, false);
@@ -712,9 +717,14 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 
 		//利用鼠标位置，修改拖拽元素的位置
 		var mousePos = getMousePos(e);
-		self.style.left = (mousePos.x - self.__deltaX) + 'px';
-		self.style.top  = (mousePos.y - self.__deltaY) + 'px';
-
+		if(self.__options.axis == 'XY') {
+			self.style.left = (mousePos.x - self.__deltaX) + 'px';
+			self.style.top  = (mousePos.y - self.__deltaY) + 'px';
+		} else if(self.__options.axis == 'X') {
+			self.style.left = (mousePos.x - self.__deltaX) + 'px';
+		} else if(self.__options.axis == 'Y') {
+			self.style.top  = (mousePos.y - self.__deltaY) + 'px';
+		}
 		//触发drag事件，遵循HTML5规范
 		self.fireEvent('drag', {dragging:self, event:e});
 
