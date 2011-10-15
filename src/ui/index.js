@@ -329,7 +329,15 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		self.__initOptions(options);
 		self.__initEvents();
 		self.__initSubs();
+		self.__initAddons();
 		self.init();
+	};
+
+	this.__initAddons = function(self) {
+		if (!self.addons) return;
+		self.addons.forEach(function(addon) {
+			addon.get('init')(self);
+		});
 	};
 
 	/**
