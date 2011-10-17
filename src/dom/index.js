@@ -1486,7 +1486,9 @@ this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 	 * 用ajax发送一个表单
 	 */
 	this.send = function(self, data) {
-		return self.createRequest().send(data);
+		var request = self.createRequest();
+		request.send(data);
+		return request;
 	};
 
 	/**
@@ -1839,7 +1841,7 @@ this.InputElement = new Class(exports.TextBaseElement, function() {
 	 */
 	this.send = function(self, data) {
 		if (self.type != 'submit') return;
-		self.form.createRequest({
+		var request = self.form.createRequest({
 			method: self.getAttribute('formmethod') || self.form.method,
 			url: self.getAttribute('formaction') || self.form.action,
 			onsuccess: function(event) {
@@ -1848,7 +1850,9 @@ this.InputElement = new Class(exports.TextBaseElement, function() {
 			onerror: function(event) {
 				self.fireEvent('requestError', {request: event.request});
 			}
-		}).send(data);
+		});
+		request.send(data);
+		return request;
 	};
 
 });
