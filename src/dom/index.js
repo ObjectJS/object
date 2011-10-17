@@ -1841,7 +1841,13 @@ this.InputElement = new Class(exports.TextBaseElement, function() {
 		if (self.type != 'submit') return;
 		self.form.createRequest({
 			method: self.getAttribute('formmethod') || self.form.method,
-			url: self.getAttribute('formaction') || self.form.action
+			url: self.getAttribute('formaction') || self.form.action,
+			onsuccess: function(event) {
+				self.fireEvent('requestSuccess', {request: event.request});
+			},
+			onerror: function(event) {
+				self.fireEvent('requestError', {request: event.request});
+			}
 		}).send(data);
 	};
 
