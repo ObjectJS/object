@@ -112,21 +112,32 @@ this.wrapEvent = function(e) {
 // 事件
 this.Events = new Class(/**@lends events.Event*/ function() {
 
-	this.__addEvent = function(self, type, func, cap) {
-		var propertyName = '_event_' + type;
-		if (self[propertyName] === undefined) {
-			self[propertyName] = 0;
-		}
-		self.attachEvent('onpropertychange', function(event) {
-			if (event.propertyName == propertyName) {
-				func();
+	function handle(self, type) {
+		var boss = self.__boss || self;
+		boss.attachEvent('on' + type, function(eventData) {
+			var event = arguments.length > 1? eventData : exports.wrapEvent(window.event);
+			var funcs = self.__eventListeners[type];
+			var natives = self.__nativeEvents[type];
+			if (funcs) {
+				funcs.forEach(function(func) {
+					try {
+						func.call(self, event);
+					} catch(e) {
+					}
+				});
+			}
+			if (natives) {
+				natives.forEach(function(func) {
+					func.call(self, event);
+				});
 			}
 		});
-	};
+	}
 
 	this.initialize = function(self) {
 		if (!self.addEventListener) {
-			self._eventListeners = {};
+			self.__eventListeners = {};
+			self.__nativeEvents = {};
 		}
 		// 自定义事件，用一个隐含div用来触发事件
 		if (!self.addEventListener && !self.attachEvent) {
@@ -173,29 +184,49 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 		var boss = self.__boss || self;
 
 		// 存储此元素的事件
-		if (!self._eventListeners[type]) {
-			self._eventListeners[type] = [];
+		var funcs;
+		if (!self.__eventListeners[type]) {
+			funcs = [];
+			self.__eventListeners[type] = funcs;
+			if (!self.__nativeEvents[type]) {
+				handle(self, type);
+			}
+		} else {
+			funcs = self.__eventListeners[type];
 		}
-		var funcs = self._eventListeners[type];
 
 		// 不允许两次添加同一事件
 		if (funcs.some(function(f) {
-			return f.innerFunc === func;
+			return f === func;
 		})) return;
 
-		// 为IE做事件包装，使回调的func的this指针指向元素本身，并支持preventDefault等
-		// 包装Func，会被attachEvent
-		// 包装Func存储被包装的func，detach的时候，参数是innerFunc，需要通过innerFunc找到wrapperFunc进行detach
-		var wrapperFunc = function(eventData) {
-			var e = arguments.length > 1? eventData : exports.wrapEvent(window.event);
-			func.call(self, e);
-		};
-		wrapperFunc.innerFunc = func;
+		funcs.push(func);
 
-		funcs.push(wrapperFunc);
-
-		boss.attachEvent('on' + type, wrapperFunc);
 	};
+
+	if (!document.addEventListener) {
+		this.addNativeEvent = function(self, type, func) {
+			var boss = self.__boss || self;
+
+			var natives;
+			if (!self.__nativeEvents[type]) {
+				natives = [];
+				self.__nativeEvents[type] = natives;
+				if (!self.__eventListeners[type]) {
+					handle(self, type);
+				}
+			} else {
+				natives = self.__nativeEvents[type];
+			}
+
+			// 不允许两次添加同一事件
+			if (natives.some(function(f) {
+				return f === func;
+			})) return;
+
+			natives.push(func);
+		};
+	}
 
 	/**
 	 * 移除事件
@@ -211,20 +242,16 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 	} : function(self, type, func, cap) {
 		var boss = self.__boss || self;
 
-		if (!self._eventListeners) self._eventListeners = {};
-		var funcs = self._eventListeners[type];
+		if (!self.__eventListeners) self.__eventListeners = {};
+		var funcs = self.__eventListeners[type];
 		if (!funcs) return;
 
-		// func 是 innerFunc，需要找到 wrapperFunc
-		for (var i = 0, wrapperFunc; i < funcs.length; i++) {
-			wrapperFunc = funcs[i];
-			if (wrapperFunc === func || wrapperFunc.innerFunc === func) {
+		for (var i = 0; i < funcs.length; i++) {
+			if (funcs[i] === func) {
 				funcs.splice(i, 1); // 将这个function删除
 				break;
 			}
 		}
-		// 如果没有找到func，虽然此次remove无效，但是根据标准，不应该报错。
-		if (wrapperFunc) boss.detachEvent('on' + type, wrapperFunc);
 	};
 
 	/**
@@ -258,13 +285,21 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 			if (returnValue === false) event.preventDefault();
 		}
 
-		if (!self._eventListeners[type]) return event;
-		var funcs = self._eventListeners[type];
+		if (!self.__eventListeners[type]) return event;
+		var funcs = self.__eventListeners[type];
 		for (var i = 0, j = funcs.length; i < j; i++) {
 			if (funcs[i]) {
 				funcs[i].call(self, event, true);
 			}
 		}
+
+		var natives = self.__nativeEvents[type];
+		if (natives) {
+			natives.forEach(function(func) {
+				func.call(self, event);
+			});
+		}
+
 		return event;
 	};
 });
