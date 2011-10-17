@@ -73,6 +73,7 @@ this.Request = new Class(function() {
 		self.url = options.url || '';
 		self.method = options.method || 'get';
 		self.headers = {};
+		self.data = options.data || null;
 		self._xhr = null;
 
 		self.onSuccess = options.onSuccess;
@@ -81,7 +82,7 @@ this.Request = new Class(function() {
 		self.oncomplete = options.oncomplete;
 	};
 
-	this.send = function(self, params) {
+	this.send = function(self, data) {
 		exports.ajaxRequest(self.url, function(xhr) {
 			self._xhr = xhr;
 			var eventData = {request: self};
@@ -112,10 +113,10 @@ this.Request = new Class(function() {
 			var xhr = self._xhr;
 			var url = self.url;
 
-			// 处理params
-			if (params && self.method == 'get') {
-				url += (url.indexOf('?') != -1 ? '&' : '?') + params;
-				params = null;
+			// 处理data
+			if (data && self.method == 'get') {
+				url += (url.indexOf('?') != -1 ? '&' : '?') + data;
+				data = null;
 			}
 
 			// open
@@ -128,7 +129,7 @@ this.Request = new Class(function() {
 				xhr.setRequestHeader(name, self.headers[name]);
 			}
 
-			self._xhr.send(params);
+			self._xhr.send(data || self.data);
 		});
 	};
 
