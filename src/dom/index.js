@@ -1401,28 +1401,6 @@ this.ImageElement = new Class(Element, function() {
 
 });
 
-function createFormSender(getters) {
-	return function(self, params) {
-		var net = sys.modules['net'];
-		if (net) {
-			xhr = new net.Request({
-				onsuccess: function(event) {
-					self.fireEvent('requestSuccess', {request: event.request});
-				},
-				onerror: function(event) {
-					self.fireEvent('requestError', {request: event.request});
-				}
-			});
-		} else {
-			throw new ModuleRequiredError('net');
-		}
-		xhr.method = getters.method(self);
-		xhr.url = getters.action(self);
-		xhr.send(params);
-		return xhr;
-	};
-};
-
 /**
  * 表单
  * @class
@@ -1482,14 +1460,33 @@ this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 	};
 
 	/**
+	* 根据现有表单，创建一个Request对象
+	*/
+	this.createRequest = function(self, params) {
+		if (!params) params = {};
+		if (!params.method) params.method = self.method;
+		if (!params.url) params.url = self.action;
+		if (!params.data) params.data = self.toQueryString();
+		if (!params.onsuccess) params.onsuccess = function(event) {
+			self.fireEvent('requestSuccess', {request: event.request});
+		};
+		if (!params.onerror) params.onerror = function(event) {
+			self.fireEvent('requestError', {request: event.request});
+		};
+		var net = sys.modules['net'];
+		if (net) {
+			xhr = new net.Request(params);
+		} else {
+			throw new ModuleRequiredError('net');
+		}
+		return xhr;
+	};
+
+	/**
 	 * 用ajax发送一个表单
 	 */
-	this.send = function(self, params) {
-		if (!params) params = self.toQueryString();
-		return createFormSender({
-			method: function(self) {return self.method;},
-			action: function(self) {return self.action;}
-		})(self, params);
+	this.send = function(self, data) {
+		return self.createRequest().send(data);
 	};
 
 	/**
@@ -1840,13 +1837,12 @@ this.InputElement = new Class(exports.TextBaseElement, function() {
 	/**
 	 * 用ajax发送一个表单
 	 */
-	this.send = function(self, params) {
+	this.send = function(self, data) {
 		if (self.type != 'submit') return;
-		if (!params) params = self.form.toQueryString();
-		return createFormSender({
-			method: function(self) {return self.getAttribute('formmethod') || self.form.method;},
-			action: function(self) {return self.getAttribute('formaction') || self.form.action;}
-		})(self, params);
+		self.form.createRequest({
+			method: self.getAttribute('formmethod') || self.form.method,
+			url: self.getAttribute('formaction') || self.form.action
+		}).send(data);
 	};
 
 });
