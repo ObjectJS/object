@@ -116,8 +116,7 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 		var boss = self.__boss || self;
 		boss.attachEvent('on' + type, function(eventData) {
 			var event = arguments.length > 1? eventData : exports.wrapEvent(window.event);
-			var funcs = self.__eventListeners[type];
-			var natives = self.__nativeEvents[type];
+			var funcs = self.__eventListeners? self.__eventListeners[type] : null;
 			if (funcs) {
 				funcs.forEach(function(func) {
 					try {
@@ -126,6 +125,7 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 					}
 				});
 			}
+			var natives = self.__nativeEvents? self.__nativeEvents[type] : null;
 			if (natives) {
 				natives.forEach(function(func) {
 					func.call(self, event);
@@ -185,10 +185,11 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 
 		// 存储此元素的事件
 		var funcs;
+		if (!self.__eventListeners) self.__eventListeners = {};
 		if (!self.__eventListeners[type]) {
 			funcs = [];
 			self.__eventListeners[type] = funcs;
-			if (!self.__nativeEvents[type]) {
+			if (!self.__nativeEvents || !self.__nativeEvents[type]) {
 				handle(self, type);
 			}
 		} else {
@@ -209,10 +210,11 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 			var boss = self.__boss || self;
 
 			var natives;
+			if (!self.__nativeEvents) self.__nativeEvents = {};
 			if (!self.__nativeEvents[type]) {
 				natives = [];
 				self.__nativeEvents[type] = natives;
-				if (!self.__eventListeners[type]) {
+				if (!self.__nativeEvents || !self.__eventListeners[type]) {
 					handle(self, type);
 				}
 			} else {
