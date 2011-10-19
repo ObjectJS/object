@@ -10,6 +10,18 @@
 		<script>
 			$(document).ready(function() {
 				module("class");
+				test('getter/setter', function() {
+				});
+				test('instancemethod', function() {
+				});
+				test('classmethod', function() {
+				});
+				test('staticmethod', function() {
+				});
+				test('property', function() {
+				});
+				test('extend Array/String', function() {
+				});
 				test('new class', function() {
 					//传入一个参数
 					//传入两个参数
@@ -114,7 +126,9 @@
 					}
 					var MyClass = new Class(proto);
 					var time = new Date().getTime() - st;
-					ok(time < 100, 'total time(10000 times) is less than 100ms');
+					ok(time < 100, 'total time(10000 times) is less than 100ms : ' + time + 'ms');
+				});
+				test('Class.xxxMethod', function() {
 				});
 			});
 		</script>
