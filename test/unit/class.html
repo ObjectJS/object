@@ -67,7 +67,7 @@
 				test('extend class', function() {
 					var A = new Class(function() {
 						this.a = function() {return 'a';}
-					});
+					}); 
 					A._name = 'A';
 					var B = new Class(A, function() {
 						this.b = function() {return 'b';}
@@ -98,23 +98,23 @@
 					raises(function() {
 						B.classMethod();
 					},'class method cann not be inheritted from parent class');
-					equal(A.staticMethod(), 'staticmethod', 'staticmethod called');
+					equal(A.staticMethod(), 'staticmethod', 'staticmethod called by A.staticMethod');
 					raises(function() {
 						B.staticMethod()
 					}, 'static method cannot be inheritted from parent class');
 				});
 				test('speed', function() {
-					var testSpeed = function() {
-						var st = new Date().getTime();
-						var proto = {};
-						for (var i = 0; i < 10000; i++) {
-							proto['m' + i] = classmethod(function(self) {
-								alert(this);
-							}.bind(i));
-						}
-						var MyClass = new Class(proto);
-						console.log(new Date().getTime() - st);
+					expect(1);
+					var st = new Date().getTime();
+					var proto = {};
+					for (var i = 0; i < 10000; i++) {
+						proto['m' + i] = classmethod(function(self) {
+							alert(this);
+						}.bind(i));
 					}
+					var MyClass = new Class(proto);
+					var time = new Date().getTime() - st;
+					ok(time < 100, 'total time(10000 times) is less than 100ms');
 				});
 			});
 		</script>
