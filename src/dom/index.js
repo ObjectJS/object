@@ -601,7 +601,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 			return self;
 		}
 	}
-	
+
 
 	/**
 	 * 考虑框架页对事件addEvent方法的影响，封装为document元素添加事件的方法
