@@ -1031,8 +1031,9 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 		// 包装现有元素
 		} else {
 		}
-		self.__eventListeners = {};
-		self.__nativeEvents = {};
+		// self可能是已经包装过的对象，不要将其身上的__eventListeners清除掉
+		if (!self.__eventListeners) self.__eventListeners = {};
+		if (!self.__nativeEvents) self.__nativeEvents = {};
 		if (self.classList === undefined && self !== document && self !== window) {
 			self.classList = new ElementClassList(self);
 		}

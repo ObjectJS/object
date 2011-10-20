@@ -136,8 +136,9 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 
 	this.initialize = function(self) {
 		if (!self.addEventListener) {
-			self.__eventListeners = {};
-			self.__nativeEvents = {};
+			// 在一些情况下，你不知道传进来的self对象的情况，不要轻易的将其身上的__eventListeners清除掉
+			if (!self.__eventListeners) self.__eventListeners = {};
+			if (!self.__nativeEvents) self.__nativeEvents = {};
 		}
 		// 自定义事件，用一个隐含div用来触发事件
 		if (!self.addEventListener && !self.attachEvent) {
