@@ -1804,7 +1804,12 @@ this.TextBaseElement = new Class(exports.FormItemElement, function() {
 			// addNativeEvent，确保此事件在最后执行
 			wrap(self.form).addNativeEvent('submit', function() {
 				if (self.classList.contains('placeholder')) {
+					self.set('_placeholding', false);
 					self.value = '';
+					// 如果此表单提交没有导致浏览器刷新，则会执行以下setTimeout，将placeholder置回
+					setTimeout(function() {
+						checkEmpty();
+					}, 0);
 				}
 			});
 		}
