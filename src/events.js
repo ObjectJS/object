@@ -228,6 +228,10 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 
 			natives.push(func);
 		};
+	} else {
+		this.addNativeEvent = function(self, type, func) {
+			self.addEvent(type, func);
+		};
 	}
 
 	/**
