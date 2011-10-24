@@ -1837,7 +1837,9 @@ this.InputElement = new Class(exports.TextBaseElement, function() {
 			self.set('formNoValidate', self.getAttribute('formnovalidation'));
 			self.set('formTarget', self.getAttribute('formtarget'));
 			self.addNativeEvent('click', function(event) {
-				self.form.__submitButton = self;
+				if (self.type == 'submit') {
+					self.form.__submitButton = self;
+				}
 			});
 		}
 	};
@@ -1848,8 +1850,8 @@ this.InputElement = new Class(exports.TextBaseElement, function() {
 	this.send = function(self, data) {
 		if (self.type != 'submit') return;
 		var request = self.form.createRequest({
-			method: self.getAttribute('formmethod') || self.form.method,
-			url: self.getAttribute('formaction') || self.form.action,
+			method: self.get('formMethod') || self.form.method,
+			url: self.get('formAction') || self.form.action,
 			onsuccess: function(event) {
 				self.fireEvent('requestSuccess', {request: event.request});
 			},
