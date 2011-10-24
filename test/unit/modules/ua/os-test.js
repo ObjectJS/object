@@ -28,6 +28,7 @@ test('simulate userAgent - unknown',function() {
 	});
 });
 
+//http://www.useragentstring.com/
 test('simulate userAgent - windows', function() {
 	var userAgents = [
 	 {core:'windowsnt',	
