@@ -28,6 +28,7 @@ $(document).ready(function() {
 			equal(o.oscore, 'unix', 'x11 is unix');
 		});
 	});
+
 	test('simulate userAgent - windows', function() {
 		var userAgents = [
 		 {core:'windowsnt',	

@@ -7,11 +7,20 @@
 		<script type="text/javascript" src="../../lib/qunit.js"></script>
 	  	<link rel="stylesheet" href="../../lib/qunit.css" type="text/css" media="screen" />
 		
-		<!-- import the module js to be tested -->	
-		<script type="text/javascript" src="../../../../src/ua/os.js"></script>
-		<!-- import test js -->
-		<script type="text/javascript" src="os-test.js"></script>
-
+		<script type="text/javascript">
+			function dynamicLoad(src) {
+				var script = document.createElement('script');
+				script.type = 'text/javascript';
+				script.src = src;
+				document.body.appendChild(script);
+			}
+			$(document).ready(function() {
+				//load module js dynamically
+				dynamicLoad('../../../../src/ua/os.js');
+				//load test js dynamically
+				dynamicLoad('os-test.js');
+			});
+		</script>
 	</head>
 	<body>
 		<h1 id="qunit-header">objectjs unit test -- ua.os</h1>
