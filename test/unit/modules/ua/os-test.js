@@ -15,6 +15,19 @@ $(document).ready(function() {
 		});
 	});
 
+	test('simulate userAgent - unknown',function() {
+		object.use('ua.os', function(exports, ua) {
+			var detectOS = ua.os._detectOS, o;
+			o = detectOS('2321321');
+			equal(o.oscore, 'unknown', 'os core is unknown');
+			o = detectOS('fda');
+			equal(o.oscore, 'unknown', 'os core is unknown');
+			o = detectOS('win');
+			equal(o.oscore, 'windows', 'win is windows');
+			o = detectOS('x11');
+			equal(o.oscore, 'unix', 'x11 is unix');
+		});
+	});
 	test('simulate userAgent - windows', function() {
 		var userAgents = [
 		 {core:'windowsnt',	
@@ -261,6 +274,16 @@ $(document).ready(function() {
 		});
 	});
 
+	test('google caja', function() {
+		object.use('ua.os', function(exports, ua) {
+			var detectOS = ua.os._detectOS, o;
+			navigator.cajaVersion = 1;
+			o = detectOS();
+			equal(o.caja, navigator.cajaVersion, 'caja version is ok');
+		});
+		
+	});
+	
 	function testUserAgentArray(userAgents) {
 		object.use('ua.os', function(exports, ua) {
 			var detectOS = ua.os._detectOS, o;

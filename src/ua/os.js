@@ -22,7 +22,34 @@ if (uamodule) {
 	object.extend(uamodule.ua, o);
 }
 
+//判断对象obj是否是type类型
+function is(obj, type) {
+	type = type.replace(/\b[a-z]/g, function(match){
+		return match.toUpperCase();
+	});
+	return Object.prototype.toString.call(obj) == '[object ' + type + ']';
+}
+
+//断言，如果bool不是true，则抛出异常消息msg
+function assertTrue(bool, msg) {
+	if(!bool) {
+		throw new Error(msg);
+	}
+}
+
+//断言，确保传入的obj不是空，如果为空，则抛出异常消息msg
+function assertNotNull(obj, msg) {
+	if(obj == null) {
+		throw new Error(msg);
+	}
+}
+
 //传入ua，便于模拟ua字符串进行单元测试
+//
+//http://forums.precentral.net/palm-pre-pre-plus/277613-webos-2-1-user-agent.html
+//what is the relationship between webos and palmos????
+//http://www.developer.nokia.com/Community/Wiki/User-Agent_headers_for_Nokia_devices
+//how to handle the NokiaXXXX?
 function detectOS(ua) {
 	ua = ua || navigator.userAgent;
 	ua = ua.toLowerCase();
@@ -44,8 +71,8 @@ function detectOS(ua) {
 	{core: 'windowsnt', 	match: /windows\s2000/, version: 5.0},
 	{core: 'windowsnt', 	match: /winnt/,			version: 4.0},
 	{core: 'windows',		match: /windows me/,	version: 'me'},
-	{core: 'windows',		match: /windows 98/,	version: '98'},
-	{core: 'windows',		match: /windows 95/,	version: '95'},
+	{core: 'windows',		match: /windows 98|win98/,version: '98'},
+	{core: 'windows',		match: /windows 95|win95/,version: '95'},
 	{core: 'windows',		match: /win16/,			version: '3.1'},
 	{core: 'windows/phone',	match: /windows\sphone/,versionRule: /windows phone os ([\d\.]*)/},
 	{core: 'windows/phone',	match: /xblwp7/,		version: 7.0},
@@ -85,40 +112,13 @@ function detectOS(ua) {
 	{core: 'os2' ,			match: function(ua) {
 								return /os\/2|ibm-webexplorer/.test(ua) || navigator.appVersion.indexOf("os/2") != -1;
 							},						version: 'unknown'},
+	{core: 'webos', 		match: /webos/,			versionRule:/webos\/([^\s]*);/},
 	{core: 'palmos',		match: /palmos/,		version: 'unknown'},
-	{core: 'symbian',		match: /symbian|s60|symbos|symbianos|series40|series60/,
+	{core: 'symbian',		match: /symbian|s60|symbos|symbianos|series40|series60|nokian/,
 													versionRule: /symbian(?:os)?\/([\d\.]*);/},
 	{core: 'blackberry',	match: /blackberry|rim\stablet\sos/, 					
-													versionRule: /(?:version\/|blackberry[\d]{4}\/)([\d\.]*)/},
-	{core: 'webos', 		match: /webos/,			versionRule:/webos\/([^\s]*);/}
+													versionRule: /(?:version\/|blackberry[\d]{4}\/)([\d\.]*)/}
 	];
-
-	//http://forums.precentral.net/palm-pre-pre-plus/277613-webos-2-1-user-agent.html
-	//what is the relationship between webos and palmos????
-	//http://www.developer.nokia.com/Community/Wiki/User-Agent_headers_for_Nokia_devices
-	//how to handle the NokiaXXXX?
-
-	//判断对象obj是否是type类型
-	function is(obj, type) {
-		type = type.replace(/\b[a-z]/g, function(match){
-			return match.toUpperCase();
-		});
-		return Object.prototype.toString.call(obj) == '[object ' + type + ']';
-	}
-
-	//断言，如果bool不是true，则抛出异常消息msg
-	function assertTrue(bool, msg) {
-		if(!bool) {
-			throw new Error(msg);
-		}
-	}
-
-	//断言，确保传入的obj不是空，如果为空，则抛出异常消息msg
-	function assertNotNull(obj, msg) {
-		if(obj == null) {
-			throw new Error(msg);
-		}
-	}
 
 	var o = {};
 
@@ -177,6 +177,11 @@ function detectOS(ua) {
 			o[m[0]] = o.ios;
 		}
 	}
+	//判断 Google Caja, from YUI-client
+	if(navigator && navigator.cajaVersion) {
+		o.caja = navigator.cajaVersion;
+	}
+
 	if(!matchFlag) {
 		o.oscore = 'unknown';
 	}
