@@ -1432,7 +1432,6 @@ this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 				// 不是由一个特殊按钮触发的，直接返回
 				if (!self.__submitButton) return;
 
-				event.preventDefault();
 				var button = self.__submitButton;
 				self.__submitButton = null;
 
@@ -1448,7 +1447,8 @@ this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 				if (button.formNoValidate) self.formNoValidate = button.formNoValidate;
 				if (button.formTarget) self.target = button.formTarget;
 
-				self.submit();
+				var preventDefaulted = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
+				if (!preventDefaulted) self.submit();
 
 				// 提交之后再恢复回来
 				self.action = oldAction;
