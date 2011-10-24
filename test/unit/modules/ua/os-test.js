@@ -285,6 +285,38 @@ test('test google caja', function() {
 	
 });
 
+test('test processor', function() {
+	object.use('ua.os', function(exports, ua) {
+		var detectOS = ua.os._detectOS, o;
+		o = detectOS();
+		equal(o.processor, 32, '32-bit processor');
+
+		o = detectOS('Mozilla/5.0 (Windows NT 6.1; WOW64; rv:6.0a2) Gecko/20110613 Firefox/6.0a2');
+		equal(o.processor, 64, '64-bit processor');
+
+		o = detectOS('Mozilla/5.0 (X11; Linux i686 on x86_64; rv:5.0a2) Gecko/20110524 Firefox/5.0a2');
+		equal(o.processor, 64, '64-bit processor');
+
+		o = detectOS('Mozilla/5.0 (X11; U; Linux amd64; en-US; rv:5.0) Gecko/20110619 Firefox/5.0');
+		equal(o.processor, 64, '64-bit processor');
+
+		o = detectOS('Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:5.0) Gecko/20110619 Firefox/5.0');
+		equal(o.processor, 64, '64-bit processor');
+
+		o = detectOS('Mozilla/5.0 (X11; Linux x86_64; rv:5.0) Gecko/20100101 Firefox/5.0 Firefox/5.0');
+		equal(o.processor, 64, '64-bit processor');
+
+		o = detectOS('Mozilla/5.0 (X11; U; OpenBSD sparc64; en-US; rv:1.8.1.6) Gecko/20070816 Firefox/2.0.0.6');
+		equal(o.processor, 64, '64-bit processor');
+
+		o = detectOS('Mozilla/5.0 (X11; U; Linux ppc64; en-US; rv:1.8.1.14) Gecko/20080418 Ubuntu/7.10 (gutsy) ');
+		equal(o.processor, 64, '64-bit processor');
+
+		equal(o.oscore, 'linux', 'is linux');
+		equal(o.linux.ubuntu, 7.10, 'is ubuntu 7.10');
+	});
+});
+
 test('test resolution', function() {
 	object.use('ua.os', function(exports, ua) {
 		var detectOS = ua.os._detectOS, o;
