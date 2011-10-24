@@ -548,10 +548,7 @@ var Class = this.Class = function() {
 	}
 
 	// metaclass
-	var metaclass;
-	if (dict.__metaclass__) metaclass = dict.__metaclass__;
-	else if (base.__metaclass__) metaclass = base.__metaclass__;
-	else metaclass = type;
+	var metaclass = dict.__metaclass__ || base.__metaclass__ || type;
 
 	var cls = metaclass.__new__(metaclass, null, base, dict);
 	metaclass.initialize(cls, null, base, dict);
@@ -578,13 +575,14 @@ Class.create = function() {
 * mixin时调用mixin的initialize方法，保证其中的初始化成员能够被执行
 */
 Class.initMixins = function(cls, instance) {
-	var mixin;
-	if (cls.__mixins__) {
-		for (var i = 0, l = cls.__mixins__.length; i < l; i++) {
-			mixin = cls.__mixins__[i];
-			if (mixin.prototype.initialize) mixin.prototype.initialize.call(instance);
-		}
-	}
+	if (!cls.__mixins__) {
+    	return;
+    }
+    for (var i = 0, l = cls.__mixins__.length, mixin; i < l; i++) {
+    	mixin = cls.__mixins__[i];
+    	if (mixin.prototype.initialize) mixin.prototype.initialize.call(instance);
+    }
+	
 };
 
 /**
@@ -594,7 +592,7 @@ Class.initMixins = function(cls, instance) {
  * })
  */
 Class.mixin = function(dict, cls) {
-	if (!dict.__mixins__) dict.__mixins__ = [];
+	dict.__mixins__ = dict.__mixins__ || [];
 	dict.__mixins__.push(cls);
 };
 
@@ -616,7 +614,7 @@ Class.getPropertyNames = function(obj) {
  * @param args 构造的参数
  */
 Class.inject = function(cls, host, args) {
-	if (!args) args = [];
+	args = args || [];
 	host.__class__ = cls;
 	host.__properties__ = cls.prototype.__properties__;
 	var p = Class.getInstance(cls);
@@ -650,11 +648,20 @@ Class.getInstance = function(cls) {
  * 将一个类的所有子类形成平面数组返回
  * 会在Class.mixin中用到
  */
-Class.getAllSubClasses = function(cls, array) {
-	if (!array) array = [];
-	else array.push(cls);
-	var subs = cls.__subclassesarray__;
-	for (var i = 0, l = subs.length; i < l; i++) arguments.callee(subs[i], array);
+Class.getAllSubClasses = function(cls) {
+    var array = cls.__subclassesarray__;
+    if(!array) {
+        return [];
+    }
+    var queue = [].concat(array), ele=queue.shift(), subs;
+    while(ele != null) {
+    	subs = ele.__subclassesarray__;
+    	if(subs != null) {
+    		queue = queue.concat(subs);
+    		array = array.concat(subs);
+    	}
+    	ele = queue.shift();
+    }
 	return array;
 };
 
@@ -853,6 +860,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			ele.callbacks.forEach(function(callback) {
 				callback(ele);
 			});
+			for(var i=0,l=ele.callbacks.length; i<l; i++) {
+				ele.callbacks[i] = null;
+			}
 			ele.callbacks = null;
 		};
 
