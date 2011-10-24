@@ -112,12 +112,12 @@ function detectOS(ua) {
 	{core: 'os2' ,			match: function(ua) {
 								return /os\/2|ibm-webexplorer/.test(ua) || navigator.appVersion.indexOf("os/2") != -1;
 							},						version: 'unknown'},
-	{core: 'webos', 		match: /webos/,			versionRule:/webos\/([^\s]*);/},
-	{core: 'palmos',		match: /palmos/,		version: 'unknown'},
 	{core: 'symbian',		match: /symbian|s60|symbos|symbianos|series40|series60|nokian/,
 													versionRule: /symbian(?:os)?\/([\d\.]*);/},
 	{core: 'blackberry',	match: /blackberry|rim\stablet\sos/, 					
-													versionRule: /(?:version\/|blackberry[\d]{4}\/)([\d\.]*)/}
+													versionRule: /(?:version\/|blackberry[\d]{4}\/)([\d\.]*)/},
+	{core: 'webos', 		match: /webos/,			versionRule:/webos\/([^\s]*);/},
+	{core: 'palmos',		match: /palmos/,		version: 'unknown'}
 	];
 
 	var o = {};
