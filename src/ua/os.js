@@ -186,6 +186,19 @@ function detectOS(ua) {
 		o.oscore = 'unknown';
 	}
 
+	//wow64  : Windows-On-Windows 64-bit
+	//x64    : 64-bit windows version
+	//win64  : Win32 for 64-Bit-Windows
+	//ia64   : I-tanium 64-bit processor from Intel
+	//sparc64: 64-bit Sun UltraSPARC processor
+	//ppc64  : 64-bit PowerPC microprocessor
+	//x86_64 : 64-bit Intel processor
+	if (/wow64|x64|win64|ia64|x86_64|amd64|sparc64|ppc64/.test(ua)){
+		o.processor = 64;
+	} else {
+		o.processor = 32;
+	}
+	
 	//检测分辨率（devicePixelRatio说明是高密度的显示屏，如iphone）
 	//http://developer.android.com/guide/webapps/targeting.html
 	if(window.devicePixelRatio >= 2) {
