@@ -265,6 +265,11 @@ var _supportUnknownTags = (function() {
 	// IE 下无法获取到自定义的Element，其他浏览器会得到HTMLUnknownElement
 	return !(t.firstChild === null);
 })();
+// 检测在修改了表单元素的name值后是否会同步form.elements的同名成员
+var _supportNamedItemSync = (function() {
+	if (ua.ua.ie < 8) return false;
+	return true;
+})();
 var _supportPlaceholder = 'placeholder' in document.createElement('input');
 var _supportNaturalWH = 'naturalWidth' in document.createElement('img');
 var _supportHTML5Forms = 'checkValidity' in document.createElement('input');
@@ -596,7 +601,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 			return self;
 		}
 	}
-	
+
 
 	/**
 	 * 考虑框架页对事件addEvent方法的影响，封装为document元素添加事件的方法
@@ -1026,7 +1031,9 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 		// 包装现有元素
 		} else {
 		}
-		self._eventListeners = {};
+		// self可能是已经包装过的对象，不要将其身上的__eventListeners清除掉
+		if (!self.__eventListeners) self.__eventListeners = {};
+		if (!self.__nativeEvents) self.__nativeEvents = {};
 		if (self.classList === undefined && self !== document && self !== window) {
 			self.classList = new ElementClassList(self);
 		}
@@ -1395,28 +1402,6 @@ this.ImageElement = new Class(Element, function() {
 
 });
 
-function createFormSender(getters) {
-	return function(self, params) {
-		var net = sys.modules['net'];
-		if (net) {
-			xhr = new net.Request({
-				onsuccess: function(event) {
-					self.fireEvent('requestSuccess', {request: event.request});
-				},
-				onerror: function(event) {
-					self.fireEvent('requestError', {request: event.request});
-				}
-			});
-		} else {
-			throw new ModuleRequiredError('net');
-		}
-		xhr.method = getters.method(self);
-		xhr.url = getters.action(self);
-		xhr.send(params);
-		return xhr;
-	};
-};
-
 /**
  * 表单
  * @class
@@ -1433,17 +1418,78 @@ this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 				wrap(self.elements[i]);
 			}
 		}
+
+		// 用自己的namedItem替换系统提供的，系统提供的在修改了name属性后无法同步
+		if (!_supportNamedItemSync) {
+			self.elements.namedItem = function(name) {
+				return Sizzle('*[name=' + name + ']', self)[0];
+			}
+		}
+
+		// 对于不支持多表单提交的浏览器在所有表单提交时都判断一下是否来源于特殊的提交按钮
+		if (!_supportMultipleSubmit) {
+			self.addNativeEvent('submit', function(event) {
+				// 不是由一个特殊按钮触发的，直接返回
+				if (!self.__submitButton) return;
+
+				var button = self.__submitButton;
+				self.__submitButton = null;
+
+				// 在提交之前，用按钮的属性替换表单的属性
+				var oldAction = self.action;
+				var oldMethod = self.method;
+				var oldEnctype = self.encoding || self.enctype;
+				var oldNoValidate = self.noValidate;
+				var oldTarget = self.target;
+				if (button.formAction) self.action = button.formAction;
+				if (button.formMethod) self.method = button.formMethod;
+				if (button.formEnctype) self.enctype = self.encoding = button.formEnctype;
+				if (button.formNoValidate) self.formNoValidate = button.formNoValidate;
+				if (button.formTarget) self.target = button.formTarget;
+
+				var preventDefaulted = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
+				if (!preventDefaulted) self.submit();
+
+				// 提交之后再恢复回来
+				self.action = oldAction;
+				self.method = oldMethod;
+				self.enctype = self.encoding = oldEnctype;
+				self.formNoValidate = oldNoValidate;
+				self.target = oldTarget;
+			});
+		}
+	};
+
+	/**
+	* 根据现有表单，创建一个Request对象
+	*/
+	this.createRequest = function(self, params) {
+		if (!params) params = {};
+		if (!params.method) params.method = self.method;
+		if (!params.url) params.url = self.action;
+		if (!params.data) params.data = self.toQueryString();
+		if (!params.onsuccess) params.onsuccess = function(event) {
+			self.fireEvent('requestSuccess', {request: event.request});
+		};
+		if (!params.onerror) params.onerror = function(event) {
+			self.fireEvent('requestError', {request: event.request});
+		};
+		var net = sys.modules['net'];
+		if (net) {
+			xhr = new net.Request(params);
+		} else {
+			throw new ModuleRequiredError('net');
+		}
+		return xhr;
 	};
 
 	/**
 	 * 用ajax发送一个表单
 	 */
-	this.send = function(self, params) {
-		if (!params) params = self.toQueryString();
-		return createFormSender({
-			method: function(self) {return self.method;},
-			action: function(self) {return self.action;}
-		})(self, params);
+	this.send = function(self, data) {
+		var request = self.createRequest();
+		request.send(data);
+		return request;
 	};
 
 	/**
@@ -1493,14 +1539,6 @@ this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
  * @extends dom.Element
  */
 this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ function() {
-
-	this.initialize = function(self) {
-		this.parent(self);
-
-		if (!_supportPlaceholder && ['INPUT', 'TEXTAREA'].indexOf(self.get('tagName')) !== -1) {
-			self.bindPlaceholder(self);
-		}
-	};
 
 	this.selectionStart = property(function(self) {
 		if (typeof self.selectionStart == 'number') {
@@ -1694,109 +1732,140 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 		}
 	};
 
+});
+
+// input, textarea
+this.TextBaseElement = new Class(exports.FormItemElement, function() {
+
+	this.initialize = function(self) {
+		this.parent(self);
+
+		if (!_supportPlaceholder) {
+			self.bindPlaceholder();
+		}
+	};
+
+	this.placeholder = property(function(self) {
+		return self.getAttribute('placeholder');
+	}, function(self, value) {
+		self.setAttribute('placeholder', value);
+		if (!_supportPlaceholder) {
+			self.bindPlaceholder();
+			if (self.get('_placeholding')) self.value = value;
+		}
+	});
+
+	this._placeholding = property(function(self) {
+		return self.classList.contains('placeholder');
+	}, function(self, value) {
+		if (value) {
+			self.classList.add('placeholder');
+			self.setAttribute('autocomplete', 'off');
+		} else {
+			self.classList.remove('placeholder');
+			self.removeAttribute('autocomplete');
+		}
+	});
+
 	/**
 	 * bind一个input或者textarea，使其支持placeholder属性
 	 */
-	this.bindPlaceholder = staticmethod(function(input) {
+	this.bindPlaceholder = function(self) {
+		if (self._binded) return;
+		self._binded = true;
+
 		// 通过autocomplete=off避免浏览器记住placeholder
-		function checkEmpty(input, event) {
-			var placeholder = input.getAttribute('placeholder');
+		function checkEmpty(event) {
+			var placeholder = self.get('placeholder');
 			if (!placeholder) return;
 
-			if (input.classList.contains('placeholder')) {
-				if (event && event.type == 'focus' && input.value === placeholder) {
-					input.value = '';
+			if (self.get('_placeholding')) {
+				if (event.type == 'focus' && self.value === placeholder) {
+					self.value = '';
 				}
-				input.classList.remove('placeholder');
-				input.removeAttribute('autocomplete');
+				self.set('_placeholding', false);
 
 			// IE不支持autocomplete=off，刷新页面后value还是placeholder（其他浏览器为空，或者之前用户填写的值），只能通过判断是否相等来处理
-			} else if (!input.value || ((ua.ua.ie == 6 || ua.ua.ie == 7) && !event && input.value == placeholder)) {
-				input.classList.add('placeholder');
-				input.value = placeholder;
-				input.setAttribute('autocomplete', 'off');
+			} else if (!self.value || ((ua.ua.ie == 6 || ua.ua.ie == 7) && !event && self.value == placeholder)) {
+				self.set('_placeholding', true);
+				self.value = placeholder;
 			}
 		}
-		input.addEvent('focus', function(event) {
-			return checkEmpty(event.target, event);
+		self.addNativeEvent('focus', function(event) {
+			return checkEmpty(event);
 		});
-		input.addEvent('blur', function(event) {
-			return checkEmpty(event.target, event);
+		self.addNativeEvent('blur', function(event) {
+			return checkEmpty(event);
 		});
 		// 在IE6下，由于事件执行顺序的问题，当通过send()发送一个表单时，下面这段脚本实际上是不工作的
-		// 也就是说，在send()时，input.value还是placeholder的值，导致把placeholder的值发送出去了
+		// 也就是说，在send()时，self.value还是placeholder的值，导致把placeholder的值发送出去了
 		// 通过在toQueryString中调用get('value')过滤掉placeholder的值
 		// 完美的解决方法大概是需要接管IE6下的事件系统，工程量比较大。
-		if (input.form) {
-			wrap(input.form).addEvent('submit', function() {
-				if (input.classList.contains('placeholder')) {
-					input.value = '';
+		if (self.form) {
+			// addNativeEvent，确保此事件在最后执行
+			wrap(self.form).addNativeEvent('submit', function() {
+				if (self.classList.contains('placeholder')) {
+					self.set('_placeholding', false);
+					self.value = '';
+					// 如果此表单提交没有导致浏览器刷新，则会执行以下setTimeout，将placeholder置回
+					setTimeout(function() {
+						checkEmpty();
+					}, 0);
 				}
 			});
 		}
-		checkEmpty(input);
-	});
+		checkEmpty();
+	};
 
 });
 
-this.InputElement = new Class(exports.FormItemElement, function() {
+this.InputElement = new Class(exports.TextBaseElement, function() {
 
-	if (_supportMultipleSubmit) {
-		this.formAction = nativeproperty('formAction');
-		this.formEnctype = nativeproperty('formEnctype');
-		this.formMethod = nativeproperty('formMethod');
-		this.formNoValidate = nativeproperty('formNoValidate');
-		this.formTarget = nativeproperty('formTarget');
+	this.formAction = nativeproperty('formAction');
+	this.formEnctype = nativeproperty('formEnctype');
+	this.formMethod = nativeproperty('formMethod');
+	this.formNoValidate = nativeproperty('formNoValidate');
+	this.formTarget = nativeproperty('formTarget');
 
-	} else {
+	this.initialize = function(self) {
+		this.parent(self);
 
-		this.formAction = property(function(self) {
-			return self.formAction;
-		}, function(self, value) {
-			self._set('formAction', value);
-			self.addEvent('click', function() {
-				self.form.action = value;
+		if (!_supportMultipleSubmit) {
+			self.set('formAction', self.getAttribute('formaction'));
+			self.set('formEnctype', self.getAttribute('formenctype'));
+			self.set('formMethod', self.getAttribute('formmethod'));
+			self.set('formNoValidate', self.getAttribute('formnovalidation'));
+			self.set('formTarget', self.getAttribute('formtarget'));
+			self.addNativeEvent('click', function(event) {
+				if (self.type == 'submit') {
+					self.form.__submitButton = self;
+				}
 			});
-		});
-
-		this.formEnctype = property(function(self) {
-			return self.formEnctype;
-		}, function(self, value) {
-			self._set('formEnctype', value);
-		});
-
-		this.formMethod = property(function(self) {
-			return self.formMethod;
-		}, function(self, value) {
-			self._set('formMethod', value);
-		});
-
-		this.formNoValidate = property(function(self) {
-			return self.formNoValidate;
-		}, function(self, value) {
-			self._set('formNoValidate', value);
-		});
-
-		this.formTarget = property(function(self) {
-			return self.formTarget;
-		}, function(self, value) {
-			self._set('formTarget', value);
-		});
-
+		}
 	};
 
 	/**
 	 * 用ajax发送一个表单
 	 */
-	this.send = function(self, params) {
+	this.send = function(self, data) {
 		if (self.type != 'submit') return;
-		if (!params) params = self.form.toQueryString();
-		return createFormSender({
-			method: function(self) {return self.getAttribute('formmethod') || self.form.method;},
-			action: function(self) {return self.getAttribute('formaction') || self.form.action;}
-		})(self, params);
+		var request = self.form.createRequest({
+			method: self.get('formMethod') || self.form.method,
+			url: self.get('formAction') || self.form.action,
+			onsuccess: function(event) {
+				self.fireEvent('requestSuccess', {request: event.request});
+			},
+			onerror: function(event) {
+				self.fireEvent('requestError', {request: event.request});
+			}
+		});
+		request.send(data);
+		return request;
 	};
 
+});
+
+this.TextAreaElement = new Class(exports.TextBaseElement, function() {
 });
 
 /**
@@ -1869,7 +1938,7 @@ var _tagMap = {
 	'IMG': exports.ImageElement,
 	'FORM': exports.FormElement,
 	'INPUT': exports.InputElement,
-	'TEXTAREA': exports.FormItemElement,
+	'TEXTAREA': exports.TextAreaElement,
 	'OUTPUT': exports.FormItemElement,
 	'SELECT': exports.FormItemElement,
 	'OPTION': exports.FormItemElement,
