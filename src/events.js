@@ -68,8 +68,7 @@ this.fireevent = function(arg1) {
 		// Gecko 使用 getPreventDefault()
 		// IE 用 returnValue 模拟了 getPreventDefault
 		var preventDefaulted = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
-		if (!preventDefaulted) func.apply(this, arguments);
-		return event;
+		if (!preventDefaulted) return func.apply(this, arguments);
 	};
 
 	if (typeof arg1 == 'function') {
