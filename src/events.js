@@ -295,7 +295,10 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 		var funcs = self.__eventListeners[type];
 		for (var i = 0, j = funcs.length; i < j; i++) {
 			if (funcs[i]) {
-				funcs[i].call(self, event, true);
+					try {
+						funcs[i].call(self, event, true);
+					} catch(e) {
+					}
 			}
 		}
 
