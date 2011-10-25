@@ -290,9 +290,9 @@ var attributeproperty = function(defaultValue, attr) {
 		if (!attr) attr = prop.__name__.toLowerCase();
 		var value = self.getAttribute(attr);
 		return value != null? value : defaultValue;
-	}, function(self) {
+	}, function(self, value) {
 		if (!attr) attr = prop.__name__.toLowerCase();
-		self.setAttribute(attr);
+		self.setAttribute(attr, value);
 	});
 	return prop;
 };
@@ -1454,11 +1454,16 @@ this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 				var oldEnctype = self.encoding || self.enctype;
 				var oldNoValidate = self.noValidate;
 				var oldTarget = self.target;
-				if (button.formAction) self.action = button.formAction;
-				if (button.formMethod) self.method = button.formMethod;
-				if (button.formEnctype) self.enctype = self.encoding = button.formEnctype;
-				if (button.formNoValidate) self.formNoValidate = button.formNoValidate;
-				if (button.formTarget) self.target = button.formTarget;
+				var formAction = button.getAttribute('formaction');
+				var formMethod = button.getAttribute('formmethod');
+				var formEnctype = button.getAttribute('formenctype');
+				var formNoValidate = button.getAttribute('formnovalidate');
+				var formTarget = button.getAttribute('formtarget');
+				if (formAction) self.action = formAction;
+				if (formMethod) self.method = formMethod;
+				if (formEnctype) self.enctype = self.encoding = formEnctype;
+				if (formNoValidate) self.formNoValidate = formNoValidate;
+				if (formTarget) self.target = formTarget;
 
 				var preventDefaulted = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
 				if (!preventDefaulted) {
@@ -1855,11 +1860,6 @@ this.InputElement = new Class(exports.TextBaseElement, function() {
 		this.parent(self);
 
 		if (!_supportMultipleSubmit) {
-			self.set('formAction', self.getAttribute('formaction'));
-			self.set('formEnctype', self.getAttribute('formenctype'));
-			self.set('formMethod', self.getAttribute('formmethod'));
-			self.set('formNoValidate', self.getAttribute('formnovalidation'));
-			self.set('formTarget', self.getAttribute('formtarget'));
 			self.addNativeEvent('click', function(event) {
 				if (self.type == 'submit') {
 					self.form.__submitButton = self;
