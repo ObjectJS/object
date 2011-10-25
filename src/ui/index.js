@@ -202,7 +202,7 @@ this.component = new Class(function() {
 
 		proto.__handles.forEach(function(eventType) {
 			cls.set(eventType, events.fireevent(function(self) {
-				cls.get('_' + eventType).apply(cls, arguments);
+				return cls.get('_' + eventType).apply(cls, arguments);
 			}));
 		});
 
