@@ -276,12 +276,25 @@ var _supportHTML5Forms = 'checkValidity' in document.createElement('input');
 var _supportHidden = 'hidden' in document.createElement('div');
 var _supportMultipleSubmit = 'formAction' in document.createElement('input');
 
-var nativeproperty = function(prop) {
-	return property(function(self) {
-		return self[prop];
+var nativeproperty = function() {
+	var prop = property(function(self) {
+		return self[prop.__name__];
 	}, function(self, value) {
-		self._set(prop, value);
+		self._set(prop.__name__, value);
 	});
+	return prop;
+};
+
+var attributeproperty = function(defaultValue, attr) {
+	var prop = property(function(self) {
+		if (!attr) attr = prop.__name__.toLowerCase();
+		var value = self.getAttribute(attr);
+		return value != null? value : defaultValue;
+	}, function(self) {
+		if (!attr) attr = prop.__name__.toLowerCase();
+		self.setAttribute(attr);
+	});
+	return prop;
 };
 
 //如何判断浏览器支持HTML5的拖拽：
@@ -1040,7 +1053,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	};
 
 	if (_supportHidden) {
-		this.hidden = nativeproperty('hidden');
+		this.hidden = nativeproperty();
 	} else {
 		this.hidden = property(function(self) {
 			return self.style.display == 'none';
@@ -1448,7 +1461,10 @@ this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 				if (button.formTarget) self.target = button.formTarget;
 
 				var preventDefaulted = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
-				if (!preventDefaulted) self.submit();
+				if (!preventDefaulted) {
+					event.preventDefault();
+					self.submit();
+				}
 
 				// 提交之后再恢复回来
 				self.action = oldAction;
@@ -1821,11 +1837,19 @@ this.TextBaseElement = new Class(exports.FormItemElement, function() {
 
 this.InputElement = new Class(exports.TextBaseElement, function() {
 
-	this.formAction = nativeproperty('formAction');
-	this.formEnctype = nativeproperty('formEnctype');
-	this.formMethod = nativeproperty('formMethod');
-	this.formNoValidate = nativeproperty('formNoValidate');
-	this.formTarget = nativeproperty('formTarget');
+	if (_supportMultipleSubmit) {
+		this.formAction = nativeproperty();
+		this.formEnctype = nativeproperty();
+		this.formMethod = nativeproperty();
+		this.formNoValidate = nativeproperty();
+		this.formTarget = nativeproperty();
+	} else {
+		this.formAction = attributeproperty('');
+		this.formEnctype = attributeproperty('application/x-www-form-urlencoded');
+		this.formMethod = attributeproperty('get');
+		this.formNoValidate = attributeproperty(false);
+		this.formTarget = attributeproperty('');
+	}
 
 	this.initialize = function(self) {
 		this.parent(self);
@@ -1850,8 +1874,8 @@ this.InputElement = new Class(exports.TextBaseElement, function() {
 	this.send = function(self, data) {
 		if (self.type != 'submit') return;
 		var request = self.form.createRequest({
-			method: self.get('formMethod') || self.form.method,
-			url: self.get('formAction') || self.form.action,
+			method: self.getAttribute('formmethod') || self.form.method,
+			url: self.getAttribute('formaction') || self.form.action,
 			onsuccess: function(event) {
 				self.fireEvent('requestSuccess', {request: event.request});
 			},
