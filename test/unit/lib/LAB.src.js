@@ -196,7 +196,7 @@
 	// create a clean instance of $LAB
 	function create_sandbox() {
 		var global_defaults = {},
-			can_use_preloading = real_preloading || xhr_or_cache_preloading,
+			can_use_preloading = false,//real_preloading || xhr_or_cache_preloading,
 			queue = [],
 			registry = {},
 			instanceAPI
@@ -221,7 +221,7 @@
 				}
 			}
 			
-			if (registry[script_obj.src].finished) return;
+			if (registry[script_obj.src].finished) registry[script_obj.src] = null;
 			if (!chain_opts[_AllowDuplicates]) registry[script_obj.src].finished = true;
 			
 			script = registry_item.elem || document.createElement("script");
@@ -511,3 +511,13 @@
 	})("addEventListener","DOMContentLoaded");
 
 })(this);
+
+//需要解决$LAB的缓存问题，JS修改以后不需要缓存，但是现在是缓存的	
+$LAB.wait = function() {
+};
+$LAB.script = function(src) {
+	var script = document.createElement('script');
+	script.src = src;
+	document.body.appendChild(script);
+	return $LAB;
+}

@@ -9,7 +9,7 @@ test('modules in object._loader.lib', function() {
 	object.use('test');
 	ok(object._loader.lib.test != null, 'test module exists');
 	ok(object._loader.lib.__anonymous_0__ != null, 'anonymous module exists');
-	ok(object._loader.lib.test.name == 'test', 'module name test pass');
+	equal(object._loader.lib.test.name, 'test', 'module name test pass');
 	ok(object._loader.lib.__anonymous_0__.name == '__anonymous_0__', 'anonymous module name pass');
 });
 
