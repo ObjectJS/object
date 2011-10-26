@@ -1,3 +1,4 @@
 $(document).ready(function() {
-	$LAB.script("object-test.js");
+	var path = $LAB.needPath ? 'object/' : '';
+	$LAB.script(path + "object-test.js");
 });

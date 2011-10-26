@@ -1,6 +1,8 @@
 $(document).ready(function() {
+	var path = $LAB.needPath ? 'class/' : '';
 	$LAB
-		.script('class-test.js').wait()
-		.script('mixin-basic.js').wait()
-		.script('mixin-usage.js').wait();
+		.script(path + 'class-test.js').wait()
+		.script(path + 'mixin-basic.js').wait()
+		.script(path + 'mixin-usage.js').wait()
+		.script(path + 'metaclass.js').wait()
 });

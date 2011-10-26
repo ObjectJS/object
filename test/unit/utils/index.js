@@ -1,3 +1,4 @@
 $(document).ready(function() {
-	$LAB.script('utils-test.js');
+	var path = $LAB.needPath ? 'utils/' : '';
+	$LAB.script(path + 'utils-test.js');
 });

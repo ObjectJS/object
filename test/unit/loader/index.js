@@ -1,3 +1,4 @@
 $(document).ready(function() {
-	$LAB.script("loader-test.js");
+	var path = $LAB.needPath ? 'loader/' : '';
+	$LAB.script(path + "loader-test.js");
 });
