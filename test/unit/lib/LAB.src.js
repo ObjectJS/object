@@ -514,6 +514,7 @@
 
 //需要解决$LAB的缓存问题，JS修改以后不需要缓存，但是现在是缓存的	
 $LAB.wait = function() {
+	return $LAB;
 };
 $LAB.script = function(src) {
 	var script = document.createElement('script');
