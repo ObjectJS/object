@@ -2,6 +2,7 @@ module('metaclass');
 test('make sure metaclass is useful', function() {
 	var metaclass = new Class(function() {
 		this.__new__ = function(cls, name, base, dict) {
+			ok(dict.initialize != null, 'initialize is still in dict');
 			ok(true, '__new__ method in metaclass executed');
 			// can change member in class
 			dict.a = 2;
