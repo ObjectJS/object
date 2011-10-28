@@ -101,6 +101,10 @@ this.Request = new Class(function() {
 					self.responseXML = xhr.responseXML;
 					//self.responseJSON = xhr.responseJSON;
 
+					// Compatible
+					eventData.responseText = xhr.responseText;
+					eventData.responseXML = xhr.responseXML;
+
 					if (xhr.status === undefined || xhr.status === 0 || (xhr.status >= 200 && xhr.status < 300)) {
 						self.fireEvent('success', eventData);
 						if (self.onSuccess) self.onSuccess(eventData);
