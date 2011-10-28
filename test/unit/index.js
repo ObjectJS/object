@@ -2,9 +2,9 @@ $(document).ready(function() {
 	$LAB.needPath = true;
 	var config = [
 		{module:'class', url:'class'},
-		{module:'loader', url:'loader'},
-		{module:'module', url:'module'},
-		{module:'object', url:'object'},
+		{module:'loader',url:'loader'},
+		{module:'module',url:'module'},
+		{module:'object',url:'object'},
 		{module:'utils', url:'utils'},
 		{module:'ua/os', url:'modules/ua/os'}
 	];
