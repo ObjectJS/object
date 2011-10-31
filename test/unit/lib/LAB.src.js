@@ -522,3 +522,32 @@ $LAB.script = function(src) {
 	document.body.appendChild(script);
 	return $LAB;
 }
+$LAB.globals = {};
+$LAB.globals.testEdges = {
+	'null' : null, 
+	'undefined' : undefined, 
+	'false' : false, 
+	'{}' : {}, 
+	'0' : 0, 
+	'NaN' : NaN, 
+	'[]' : [], 
+	'\'\'' : '',
+	'1' : '1',
+	'true' : true,
+	'function(){}' : function() {},
+	'window' : window,
+	'document' : document,
+	'location' : location,
+	'String' : String,
+	'string' : 'string',
+	'Array' : Array,
+	'[1,2]' : [1,2],
+	'Date' : Date,
+	'date' : new Date(),
+	'RegExp' : RegExp,
+	'regexp': /test/g,
+	'{a:1}' : {a:1},
+	'object': object,
+	'Class' : Class,
+	'Loader': Loader
+};

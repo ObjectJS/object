@@ -10,34 +10,7 @@ test('new class', function() {
 });
 
 test('extend from non-class value', function() {
-	var values = {
-		'null' : null, 
-		'undefined' : undefined, 
-		'false' : false, 
-		'{}' : {}, 
-		'0' : 0, 
-		'NaN' : NaN, 
-		'[]' : [], 
-		'\'\'' : '',
-		'1' : '1',
-		'true' : true,
-		'function(){}' : function() {},
-		'window' : window,
-		'document' : document,
-		'location' : location,
-		'String' : String,
-		'string' : 'string',
-		'Array' : Array,
-		'[1,2]' : [1,2],
-		'Date' : Date,
-		'date' : new Date(),
-		'RegExp' : RegExp,
-		'regexp': /test/g,
-		'{a:1}' : {a:1},
-		'object': object,
-		'Class' : Class,
-		'Loader': Loader
-	};
+	var values = $LAB.globals.testEdges;
 	for(var prop in values) {
 		try {
 			new Class(values[prop], function() {});
@@ -245,7 +218,7 @@ test('reference members in class - Object', function() {
 });
 
 test('speed test', function() {
-	return;
+	return; // costs time, do this test seperately;
 	var st = new Date().getTime();
 	var proto = {};
 	for (var i = 0; i < 10000; i++) {
