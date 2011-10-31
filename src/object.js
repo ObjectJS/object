@@ -336,7 +336,7 @@ var membergetter = function(name) {
 	if (!name in proto) throw new Error('no member named ' + name + '.');
 	var member = proto[name];
 	if (!member) return member;
-	if (member.__class__ = instancemethod) return instancemethod(member.im_func, this);
+	if (member.__class__ == instancemethod) return instancemethod(member.im_func, this);
 	return member;
 };
 
