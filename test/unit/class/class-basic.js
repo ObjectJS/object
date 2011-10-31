@@ -345,11 +345,11 @@ test('set after extended by many classes', function() {
 	var A = new Class(function() {
 		this.e = property(function(self){return 1;});
 	});
-	//in one place
+	//assume: in one place
 	A.set('e', 1);
 	var B = new Class(A, function() {});
 
-	//in another place
+	//assume: in another place
 	var C = new Class(A, function() {});
 	var c = new C();
 	try {
@@ -357,17 +357,59 @@ test('set after extended by many classes', function() {
 	} catch (e) {
 		ok(false, 'A.set(e) changed the behavior of C');
 	}
+	A._name = 'A';	
+	B._name = 'B';
+	C._name = 'C';
+	A.set('e', 1);
+	equal(c.e, 1, 'subclass instance attribute changed after parent class called A.set(xxx,value)');
+	var b = new B();
+	equal(b.e, 1, 'subclass attribute changed after A.set(xxx,value)');
+	A.set('f', {prop:1});
+	equal(c.f.prop, 1, 'subclass instance attribute changed after parent class called A.set(xxx,{prop:1})');
+	var b = new B();
+	equal(b.f.prop, 1, 'subclass attribute changed after A.set(xxx,{prop:1})');
+
+	A.set('d', classmethod(function(cls) {
+		return cls._name;
+	}));
+	equal(A.d(), 'A', 'parent A set classmethod d, A.d() should be ok');
+	try {
+		equal(B.d(), 'B', 'parent A set classmethod d, subclass B inherited, B.d() should be ok');
+	} catch (e) {
+		ok(false, 'parent A set classmethod d, subclass B inherited, B.d() should be ok');
+	}
+	try {
+		equal(C.d(), 'C', 'parent A set classmethod d, subclass C inherited, C.d() should be ok');
+	} catch (e) {
+		ok(false, 'parent A set classmethod d, subclass C inherited, C.d() should be ok');
+	}
+
+	A.set('g', staticmethod(function() {
+		return 1;
+	}));
+	equal(A.g(), 1, 'parent A set staticmethod g, A.g() should be ok');
+	try {
+		equal(B.g(), 1, 'parent A set staticmethod g, subclass B inherited, staticmethod B.g() should be ok');
+	} catch (e) {
+		ok(false, 'parent A set staticmethod g, subclass B inherited, B.g() should be ok');
+	}
+	try {
+		equal(C.g(), 1, 'parent A set staticmethod g, subclass C inherited, C.g() should be ok');
+	} catch (e) {
+		ok(false, 'parent A set staticmethod g, subclass C inherited, C.g() should be ok');
+	}
 });
 
 test('instancemethod', function() {
 	ok(typeof instancemethod == 'undefined', 'instancemethod is not public');
 	var A = new Class(function() {
 		this.a = function(self) {
-			ok(self != this, 'self != this in instancemethod, self is the instance, this is an simple Object{base, parent}');
+			ok(self != this, 'self != this in instancemethod, self is the instance, "this" is an simple Object{base, parent}');
 			try {
 				this.parent();
+				ok(true, 'if there is no parent method, this.parent() should not cause an error ');
 			} catch (e) {
-				ok(false, 'if there is no parent method, this.parent() should not cause an error');
+				ok(false, 'if there is no parent method, this.parent() should not cause an error : ' + e);
 			}
 			return 1;
 		};
@@ -429,10 +471,11 @@ test('property', function() {
 	equal(a.get('a'), 2, 'property get and set successfully');
 });
 
-test('name as member of class', function() {
+//set : name/constructor/prototype...
+test('name/constructor/prototype as member of class', function() {
 	//this.name == ...
 	//A.set('name', fdafda);
-});
-
-test('extend Array/String', function() {
+	var A = new Class(function() {});
+	A.set('name', 'A');
+	equal(A.get('name'), 'A', 'name should be ok..');
 });
