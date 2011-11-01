@@ -608,8 +608,6 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		return self[pname];
 	};
 
-	/**
-	 */
 	this.setOption = options.overloadsetter(function(self, name, value) {
 		// 由于overloadsetter是通过name是否为string来判断传递形式是name-value还是{name:value}的
 		// 在回调中为了性能需要直接传的parts，类型为数组，而不是字符串，因此无法通过回调用overloadsetter包装后的方法进行回调

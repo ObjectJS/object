@@ -664,10 +664,10 @@ Class.getAllSubClasses = function(cls) {
     if(!array) {
         return [];
     }
-	var queue = [].concat(array), ele=queue.shift(), subs;
-	while(ele != null) {
+	var queue = [].concat(array), ele = queue.shift(), subs;
+	while (ele != null) {
 		subs = ele.__subclassesarray__;
-		if(subs != null) {
+		if (subs != null) {
 			queue = queue.concat(subs);
 			array = array.concat(subs);
 		}
