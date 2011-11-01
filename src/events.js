@@ -111,6 +111,18 @@ this.wrapEvent = function(e) {
 // 事件
 this.Events = new Class(/**@lends events.Event*/ function() {
 
+	// 在标准浏览器中使用的是系统事件系统，无法保证nativeEvents在事件最后执行。
+	// 需在每次addEvent时，都将nativeEvents的事件删除再添加，保证在事件队列最后，最后才执行。
+	function moveNativeEventsToTail(self, type) {
+		var boss = self.__boss || self;
+		if (self.__nativeEvents && self.__nativeEvents[type]) {
+			// 删除之前加入的
+			boss.removeEventListener(type, self.__nativeEvents[type].run, false);
+			// 重新添加到最后
+			boss.addEventListener(type, self.__nativeEvents[type].run, false);
+		}
+	};
+
 	function handle(self, type) {
 		var boss = self.__boss || self;
 		boss.attachEvent('on' + type, function(eventData) {
@@ -180,6 +192,8 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 		}
 
 		boss.addEventListener(type, func, cap);
+		moveNativeEventsToTail(self, type);
+
 	} : function(self, type, func) {
 		var boss = self.__boss || self;
 
@@ -205,34 +219,45 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 
 	};
 
-	if (!document.addEventListener) {
-		this.addNativeEvent = function(self, type, func) {
-			var boss = self.__boss || self;
+	this.addNativeEvent = document.addEventListener? function(self, type, func) {
+		var boss = self.__boss || self;
+		var natives;
+		if (!self.__nativeEvents) self.__nativeEvents = {};
+		if (!self.__nativeEvents[type]) {
+			natives = [];
+			self.__nativeEvents[type] = natives;
+			self.__nativeEvents[type].run = function(event) {
+				natives.forEach(function(func) {
+					func.call(self, event);
+				});
+			};
+			moveNativeEventsToTail(self, type);
+		} else {
+			natives = self.__nativeEvents[type];
+		}
+		natives.push(func);
 
-			var natives;
-			if (!self.__nativeEvents) self.__nativeEvents = {};
-			if (!self.__nativeEvents[type]) {
-				natives = [];
-				self.__nativeEvents[type] = natives;
-				if (!self.__nativeEvents || !self.__eventListeners[type]) {
-					handle(self, type);
-				}
-			} else {
-				natives = self.__nativeEvents[type];
+	} : function(self, type, func) {
+		var boss = self.__boss || self;
+		var natives;
+		if (!self.__nativeEvents) self.__nativeEvents = {};
+		if (!self.__nativeEvents[type]) {
+			natives = [];
+			self.__nativeEvents[type] = natives;
+			if (!self.__nativeEvents || !self.__eventListeners[type]) {
+				handle(self, type);
 			}
+		} else {
+			natives = self.__nativeEvents[type];
+		}
 
-			// 不允许两次添加同一事件
-			if (natives.some(function(f) {
-				return f === func;
-			})) return;
+		// 不允许两次添加同一事件
+		if (natives.some(function(f) {
+			return f === func;
+		})) return;
 
-			natives.push(func);
-		};
-	} else {
-		this.addNativeEvent = function(self, type, func) {
-			self.addEvent(type, func);
-		};
-	}
+		natives.push(func);
+	};
 
 	/**
 	 * 移除事件
