@@ -268,6 +268,17 @@ this.add = function() {
 	object._loader.add.apply(object._loader, arguments);
 };
 
+// 找不到模块Error
+this.NoModuleError = function(name) {
+	this.message = 'no module named ' + name;
+};
+this.NoModuleError.prototype = new Error();
+
+this.ModuleRequiredError = function(name) {
+	this.message = 'module ' + name + ' required';
+};
+this.ModuleRequiredError.prototype = new Error();
+
 })(window);
 
 (/**@lends _global_*/ function() {
@@ -483,7 +494,8 @@ type.__new__ = function(metaclass, name, base, dict) {
 		parent: function() {
 			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
 			var name = arguments.callee.caller.__name__;
-			return cls.__base__.get(name).apply(cls.__base__, arguments);
+			var base = cls.__base__;
+			return base.get(name).apply(base, arguments);
 		}
 	});
 	cls.__new__ = base.__new__;
@@ -499,7 +511,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 			Class.keys(mixin).forEach(function(name) {
 				if (cls.get(name)) return; // 不要覆盖自定义的
 
-				var member = mixin.prototype[name];
+				var member = mixin.get(name);
 
 				if (typeof member == 'function' && member.__class__ === instancemethod) {
 					cls.set(name, member.im_func);
@@ -576,13 +588,12 @@ Class.create = function() {
 */
 Class.initMixins = function(cls, instance) {
 	if (!cls.__mixins__) {
-    	return;
-    }
-    for (var i = 0, l = cls.__mixins__.length, mixin; i < l; i++) {
-    	mixin = cls.__mixins__[i];
-    	if (mixin.prototype.initialize) mixin.prototype.initialize.call(instance);
-    }
-	
+		return;
+	}
+	for (var i = 0, l = cls.__mixins__.length, mixin; i < l; i++) {
+		mixin = cls.__mixins__[i];
+		if (mixin.prototype.initialize) mixin.prototype.initialize.call(instance);
+	}
 };
 
 /**
@@ -649,19 +660,19 @@ Class.getInstance = function(cls) {
  * 会在Class.mixin中用到
  */
 Class.getAllSubClasses = function(cls) {
-    var array = cls.__subclassesarray__;
+	var array = cls.__subclassesarray__;
     if(!array) {
         return [];
     }
-    var queue = [].concat(array), ele=queue.shift(), subs;
-    while(ele != null) {
-    	subs = ele.__subclassesarray__;
-    	if(subs != null) {
-    		queue = queue.concat(subs);
-    		array = array.concat(subs);
-    	}
-    	ele = queue.shift();
-    }
+	var queue = [].concat(array), ele = queue.shift(), subs;
+	while (ele != null) {
+		subs = ele.__subclassesarray__;
+		if (subs != null) {
+			queue = queue.concat(subs);
+			array = array.concat(subs);
+		}
+		ele = queue.shift();
+	}
 	return array;
 };
 
@@ -764,12 +775,6 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	Module.prototype.toString = function() {
 		return '<module \'' + this.__name__ + '\'>';
 	};
-
-	// 找不到模块Error
-	function NoModuleError(name) {
-		this.message = 'no module named ' + name;
-	};
-	NoModuleError.prototype = new Error();
 
 	this.scripts = document.getElementsByTagName('script');
 
@@ -1032,7 +1037,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 
 			// lib中没有
 			} else {
-				throw new NoModuleError(prefix);
+				throw new object.NoModuleError(prefix);
 			}
 
 		};
@@ -1126,7 +1131,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		self.loadLib();
 
 		var module = _lib[name];
-		if (!module) throw new NoModuleError(name);
+		if (!module) throw new object.NoModuleError(name);
 
 		self.executeModule(module, {}, [], null, {name: '__main__'});
 	};

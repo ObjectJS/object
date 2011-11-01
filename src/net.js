@@ -73,6 +73,7 @@ this.Request = new Class(function() {
 		self.url = options.url || '';
 		self.method = options.method || 'get';
 		self.headers = {};
+		self.data = options.data || null;
 		self._xhr = null;
 
 		self.onSuccess = options.onSuccess;
@@ -81,10 +82,10 @@ this.Request = new Class(function() {
 		self.oncomplete = options.oncomplete;
 	};
 
-	this.send = function(self, params) {
+	this.send = function(self, data) {
 		exports.ajaxRequest(self.url, function(xhr) {
 			self._xhr = xhr;
-			var eventData = {request: xhr};
+			var eventData = {request: self};
 
 			xhr.onreadystatechange = function() {
 				var xhr = self._xhr;
@@ -96,10 +97,13 @@ this.Request = new Class(function() {
 						//xhr.responseJSON = JSON.parse(xhr.responseText)
 					//}
 
+					self.responseText = xhr.responseText;
+					self.responseXML = xhr.responseXML;
+					//self.responseJSON = xhr.responseJSON;
+
 					// Compatible
 					eventData.responseText = xhr.responseText;
 					eventData.responseXML = xhr.responseXML;
-					//eventData.responseJSON = xhr.responseJSON;
 
 					if (xhr.status === undefined || xhr.status === 0 || (xhr.status >= 200 && xhr.status < 300)) {
 						self.fireEvent('success', eventData);
@@ -113,10 +117,12 @@ this.Request = new Class(function() {
 			var xhr = self._xhr;
 			var url = self.url;
 
-			// 处理params
-			if (params && self.method == 'get') {
-				url += (url.indexOf('?') != -1 ? '&' : '?') + params;
-				params = null;
+			if (!data) data = self.data;
+
+			// 处理data
+			if (data && self.method == 'get') {
+				url += (url.indexOf('?') != -1 ? '&' : '?') + data;
+				data = null;
 			}
 
 			// open
@@ -129,8 +135,12 @@ this.Request = new Class(function() {
 				xhr.setRequestHeader(name, self.headers[name]);
 			}
 
-			self._xhr.send(params);
+			self._xhr.send(data);
 		});
+	};
+
+	this.getResponseHeader = function(self, key) {
+		return self._xhr.getResponseHeader(key);
 	};
 
 	this.setHeader = function(self, name, value) {
