@@ -551,3 +551,47 @@ $LAB.globals.testEdges = {
 	'Class' : Class,
 	'Loader': Loader
 };
+
+$LAB.globals.arrayEdges = {
+	'new Array': new Array,
+	'new Array(0)' : new Array(0),
+	'new Array(1)' : new Array(1),
+	'[]': [],
+	'[[]]': [[]],
+	'[\'\']' : [''],
+	'[undefined]' : [undefined],
+	'[null]' : [null],
+	'[NaN]' : [NaN],
+	'[0]' : [0],
+	'[false]' : [false],
+	'[{}]' : [{}],
+	'[Array]' : [Array],
+	'[function(){}]' : [function(){}],
+	'[undefined, undefined]' : [undefined, undefined],
+	'[\'a\', {}, new Array]' : ['a', {}, new Array],
+	'[{a:1}]' : [{a:1}]
+};
+
+$LAB.globals.emptys = [[], NaN, 0, null, undefined, '', {}, 
+	false, new Array, new Object, new Function];
+$LAB.globals.emptysDesc = ['[]','NaN', '0', 'null', 'undefined', '\'\'', '{}', 
+	'false', 'new Array', 'new Object', 'new Function'];
+
+$LAB.globals.objectEdges = {
+	'new Object' : new Object,
+	'new Object(0)' : new Object(0),
+	'new Object({a:1})' : new Object({a:1}),
+	'{}' : {},
+	'{\'\':\'\'}' : {'':''},
+	'{undefined:undefined}' : {undefined:undefined},
+	'{null:null}': {null:null},
+	'{NaN:NaN}': {NaN:NaN},
+	'{0:0}': {0:0},
+	'{false:false}': {false:false},
+	'{Object:Object}': {Object:Object},
+	'{var:1}': {var:1}
+	//'{[]:[]}': {[]:[]},
+	//'{{}:{}}': {{}:{}},
+	//'{function(){}:function(){}}': {function(){}:function(){}},
+	//'{{a:1}:{a:1}}': {{a:1}:{a:1}}
+};

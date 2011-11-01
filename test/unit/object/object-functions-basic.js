@@ -4,15 +4,26 @@ test('extend', function() {
 	var values = $LAB.globals.testEdges;
 	for(var prop in values) {
 		try {
-			object.extend(values[prop], {a:1});
+			var result = object.extend(values[prop], {a:1});
 			var type = typeof values[prop];
-			if(type !== 'object' && type !== 'function') {
+			if(result != null && type !== 'object' && type !== 'function') {
 				ok(false, 'object.extend(' + prop + ') should be considered');
 			} else {
 				ok(true, 'object.extend(' + prop + ') should be considered');
 			}
 		} catch (e) {
 			ok(false, 'object.extend(' + prop + ') should be considered : ' + e);
+		};
+		try {
+			var result = object.extend({}, values[prop]);
+			var type = typeof values[prop];
+			if(result != null && type !== 'object' && type !== 'function') {
+				ok(false, 'object.extend({}, ' + prop + ') should be considered');
+			} else {
+				ok(true, 'object.extend({}, ' + prop + ') should be considered');
+			}
+		} catch (e) {
+			ok(false, 'object.extend({}, ' + prop + ') should be considered : ' + e);
 		};
 	};
 
@@ -41,9 +52,9 @@ test('clone', function() {
 	var values = $LAB.globals.testEdges;
 	for(var prop in values) {
 		try {
-			object.clone(values[prop]);
+			var result = object.clone(values[prop]);
 			var type = typeof values[prop];
-			if(type !== 'object' && type !== 'function') {
+			if(result != null && type !== 'object' && type !== 'function') {
 				ok(false, 'object.clone(' + prop + ') should be considered');
 			} else {
 				ok(true, 'object.clone(' + prop + ') should be considered');

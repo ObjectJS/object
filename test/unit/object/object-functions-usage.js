@@ -107,12 +107,12 @@ test('auto-import parent package', function() {
 });
 
 test('many uses', function() {
-	object.add('a', function(exports) {exports.a = 1});
-	object.add('b', function(exports) {exports.a = 1});
-	object.add('c', function(exports) {exports.a = 1});
-	object.add('d', function(exports) {exports.a = 1});
-	object.add('d.s', function(exports) {exports.a = 1});
-	object.use('a,b,c,d.s', function(exports, a, b, c, d){
+	object.add('many_a', function(exports) {exports.a = 1});
+	object.add('many_b', function(exports) {exports.a = 1});
+	object.add('many_c', function(exports) {exports.a = 1});
+	object.add('many_d', function(exports) {exports.a = 1});
+	object.add('many_d.s', function(exports) {exports.a = 1});
+	object.use('many_a,many_b,many_c,many_d.s', function(exports, a, b, c, d){
 		equal(a.a, 1, 'a is imported');
 		equal(b.a, 1, 'b is imported');
 		equal(c.a, 1, 'c is imported');
