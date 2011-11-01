@@ -512,7 +512,6 @@
 
 })(this);
 
-//需要解决$LAB的缓存问题，JS修改以后不需要缓存，但是现在是缓存的	
 $LAB.wait = function() {
 	return $LAB;
 };
@@ -584,12 +583,12 @@ $LAB.globals.objectEdges = {
 	'{}' : {},
 	'{\'\':\'\'}' : {'':''},
 	'{undefined:undefined}' : {undefined:undefined},
-	'{null:null}': {null:null},
+	//'{null:null}': {null:null},		// not allowed in IE
 	'{NaN:NaN}': {NaN:NaN},
 	'{0:0}': {0:0},
-	'{false:false}': {false:false},
+	//'{false:false}': {false:false},  	// not allowed in IE
 	'{Object:Object}': {Object:Object},
-	'{var:1}': {var:1}
+	//'{var:1}': {var:1}				// not allowed in IE
 	//'{[]:[]}': {[]:[]},
 	//'{{}:{}}': {{}:{}},
 	//'{function(){}:function(){}}': {function(){}:function(){}},

@@ -44,7 +44,9 @@ test('extend Array/String', function() {
 	var b = new B();
 	equal(b.length, 0, 'empty string sub class');
 	ok(b.trim != undefined, 'String methods inherited by B');
-	equal(b.trim.call('  123   '), '123', 'trim method in b is ok');
+	if(b.trim != undefined) {
+		equal(b.trim.call('  123   '), '123', 'trim method in b is ok');
+	}
 });
 
 test('A complete Class', function() {
