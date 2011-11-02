@@ -538,7 +538,7 @@ $LAB.globals.testEdges = {
 	'document' : document,
 	'location' : location,
 	'String' : String,
-	'string' : 'string',
+	'\'string\'' : 'string',
 	'Array' : Array,
 	'[1,2]' : [1,2],
 	'Date' : Date,
