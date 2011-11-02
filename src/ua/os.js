@@ -220,7 +220,7 @@ function detectOS(ua) {
 			//通过屏幕的高度和宽度的值大小，来判断是横向还是纵向
 			o.orientation = window.innerWidth > window.innerHeight ? 'profile' : 'landscape';
 		} else {
-			o.orientation = window.screen.availWidth > window.screen.availHeight ? 'profile' : 'landscape';
+			o.orientation = window.screen.width > window.screen.height ? 'profile' : 'landscape';
 		}
 	} else {
 		o.orientation = 'unknown';
