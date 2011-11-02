@@ -755,8 +755,6 @@ StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "inde
  */
 this.Loader = new Class(/**@lends object.Loader*/ function() {
 
-	var _lib;
-
 	// 模块
 	function Module(name) {
 		this.__name__ = name;
@@ -779,14 +777,12 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		self.lib = {};
 		self.anonymousModuleCount = 0;
 
-		_lib = self.lib;
-
 		self.add('sys', function(exports) {
 		});
 	};
 
 	/**
-	 * 查找页面中的标记script标签，更新 _lib
+	 * 查找页面中的标记script标签，更新 self.lib
 	 */
 	this.loadLib = function(self) {
 		var scripts = self.scripts;
@@ -794,12 +790,12 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			script = scripts[i];
 			module = script.getAttribute('data-module');
 			if (!module) continue;
-			if (_lib[module]) continue;
+			if (self.lib[module]) continue;
 
 			// 建立前缀package
 			self.makePrefixPackage(module);
 
-			_lib[module] = {file: script.getAttribute('data-src'), name: module};
+			self.lib[module] = {file: script.getAttribute('data-src'), name: module};
 		}
 	};
 
@@ -812,7 +808,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		for (var i = 0, prefix, l = names.length - 1; i < l; i++) {
 			prefix = names.slice(0, i + 1).join('.');
 			// 说明这个module是空的
-			if (_lib[prefix] == undefined) _lib[prefix] = {
+			if (self.lib[prefix] == undefined) self.lib[prefix] = {
 				name: prefix
 			};
 		}
@@ -1014,12 +1010,12 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 				next(modules[prefix]);
 
 			// lib 中有
-			} else if (_lib[prefix]) {
-				var pkg = _lib[prefix];
+			} else if (self.lib[prefix]) {
+				var pkg = self.lib[prefix];
 
 				// lib中有，但是是file，需要动态加载
 				if (pkg.file) {
-					// 文件加载完毕后，其中执行的 add 会自动把 _lib 中的对象替换掉，file 属性丢失，加入了 execute/name/uses 等属性
+					// 文件加载完毕后，其中执行的 add 会自动把 self.lib 中的对象替换掉，file 属性丢失，加入了 execute/name/uses 等属性
 					// 使用缓存
 					self.loadScript(pkg.file, function() {
 						self.executeModule(pkg, modules, stack, next);
@@ -1070,7 +1066,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	this.add = function(self, name, uses, context) {
 
 		// 不允许重复添加。
-		if (_lib[name] && _lib[name].fn) return null;
+		if (self.lib[name] && self.lib[name].fn) return null;
 
 		// uses 参数是可选的
 		if (typeof uses == 'function') {
@@ -1085,8 +1081,8 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 
 		// lib中存储的是function
 		// 注意别给覆盖了，有可能是有 file 成员的
-		var pkg = _lib[name];
-		if (!pkg) pkg = _lib[name] = {};
+		var pkg = self.lib[name];
+		if (!pkg) pkg = self.lib[name] = {};
 		pkg.name = name;
 		pkg.uses = uses;
 		pkg.fn = context;
@@ -1125,7 +1121,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	this.execute = function(self, name) {
 		self.loadLib();
 
-		var module = _lib[name];
+		var module = self.lib[name];
 		if (!module) throw new NoModuleError(name);
 
 		self.executeModule(module, {}, [], null, {name: '__main__'});
