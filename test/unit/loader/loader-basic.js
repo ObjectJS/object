@@ -9,7 +9,7 @@ module('loader-loadScript', {teardown: function() {
 }});
 
 function emptyCallback(){};
-var emptyJS = $LAB.needPath ? 'loader/' : '' + 'empty.js';
+var emptyJS = ($LAB.needPath ? 'loader/' : '') + 'empty.js';
 
 test('loadScript basic test', function() {
 	ok(Loader.loadScript, 'loadScript is visible in Loader');

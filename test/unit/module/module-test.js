@@ -4,12 +4,12 @@ test('modules in object._loader.lib', function() {
 	raises(function() {
 		object.use('not_defined_module', function(exports){});
 	}, 'use not defined module, should raise error');
-	object.add('test', function(exports){});
+	object.add('test_object_add', function(exports){});
 	ok(object._loader.lib.sys != null, 'sys module exists after object.add is called');
-	object.use('test');
-	ok(object._loader.lib.test != null, 'test module exists');
+	object.use('test_object_add', function(exports, test) {});
+	ok(object._loader.lib.test_object_add != null, 'test_object_add module exists');
 	ok(object._loader.lib.__anonymous_0__ != null, 'anonymous module exists');
-	equal(object._loader.lib.test.name, 'test', 'module name test pass');
+	equal(object._loader.lib.test_object_add.name, 'test_object_add', 'module name test pass');
 	ok(object._loader.lib.__anonymous_0__.name == '__anonymous_0__', 'anonymous module name pass');
 });
 
