@@ -308,3 +308,31 @@ test('mixin an list of classes', function() {
 	equal(d.a, 1, 'a should be 1 after Class.mixin(this, A, B)');
 	equal(d.b, 1, 'b should be 1 after Class.mixin(this, A, B)');
 });
+
+test('initialize in mixin should be function', function() {
+	var mixin = new Class(function() {
+		this.initialize = true;
+	});
+	try {
+		var A = new Class(function() {
+			Class.mixin(this, mixin);
+		});
+		var a = new A();
+		ok(true, 'initialize can be other non-false value');
+	} catch (e) {
+		ok(false, 'initialize can be other non-false value : ' + e);
+	}
+
+	var mixin = new Class(function() {
+		this.initialize = 1;
+	});
+	try {
+		var A = new Class(function() {
+			Class.mixin(this, mixin);
+		});
+		var a = new A();
+		ok(true, 'initialize can be other non-false value');
+	} catch (e) {
+		ok(false, 'initialize can be other non-false value : ' + e);
+	}
+});

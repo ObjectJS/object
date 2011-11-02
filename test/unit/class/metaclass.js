@@ -323,3 +323,17 @@ test('throw uncatched error in __metaclass__', function() {
 		ok(false, 'error in __mataclass__ should be handled : ' + e);
 	}
 });
+
+test('metaclass is other non-false value, not function', function() {
+	var trues = $LAB.globals.trues;
+	for(var i=0,l=trues.length; i<l; i++) {
+		try {
+			new Class(function() {
+				this.__metaclass__ = trues[i];
+			});
+			ok(true, '__metaclass__ is ' + trues[i] + ', which should not cause an error');
+		} catch (e) {
+			ok(false, '__metaclass__ is ' + trues[i] + ', which should not cause an error : ' + e);
+		};
+	}
+});

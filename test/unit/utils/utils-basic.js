@@ -100,6 +100,10 @@ test('Array.indexOf', function() {
 	equal(a.indexOf(undefined), 1, 'indexOf(undefined) is ok');
 	var a = [undefined, null, undefined];
 	equal(a.indexOf(null), 1, 'indexOf(null) is ok');
+	var a = [undefined, null, undefined, '', [], 0];
+	equal(a.indexOf(0), 5, 'indexOf(0) is ok');
+	var a = [1,2];
+	equal(a.indexOf('1'), -1, '\'1\' can not be found in [1,2], even though 1 == \'1\'');
 	var a = [1,2,1];
 	equal(a.indexOf(1), 0, 'choose the first match one');
 	var obj = {a:1};
@@ -307,7 +311,7 @@ test('Class.mixin', function() {
 			ok(false, 'Class.mixin(' + prop + ', {}) is ok : ' + e);
 		}
 	}
-	var trues = [true, ' ', 1, {}, function(){}];
+	var trues = $LAB.globals.trues;
 	for(var i=0,l=trues.length; i<l; i++) {
 		var dict = {__mixins__: trues[i]};	
 		try {

@@ -576,6 +576,7 @@ $LAB.globals.emptys = [[], NaN, 0, null, undefined, '', {},
 $LAB.globals.emptysDesc = ['[]','NaN', '0', 'null', 'undefined', '\'\'', '{}', 
 	'false', 'new Array', 'new Object', 'new Function'];
 
+$LAB.globals.trues = [true, ' ', 1, {}, {'':''}, function(){}];
 $LAB.globals.objectEdges = {
 	'new Object' : new Object,
 	'new Object(0)' : new Object(0),
