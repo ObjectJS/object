@@ -5,6 +5,9 @@
 object.add('ua', /**@lends ua*/ function(exports) {
 
 	var numberify = this.numberify = function(s) {
+		if(!s || typeof s != 'string') {
+			return s;
+		}
 		var c = 0;
 		// convert '1.2.3.4' to 1.234
 		return parseFloat(s.replace(/\./g, function() {

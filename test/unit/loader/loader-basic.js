@@ -3,7 +3,7 @@ module('loader-loadScript', {teardown: function() {
 	var scripts = Sizzle('script');
 	for(var i=0;i<scripts.length; i++) {
 		if(scripts[i].callbacks) {
-			document.head.removeChild(scripts[i]);
+			if(document.head) document.head.removeChild(scripts[i]);
 		}
 	}
 }});
@@ -93,7 +93,7 @@ test('getUses-basic', function() {
 });
 
 test('getUses-use', function() {
-	var loader = new Loader();
+	var loader = object._loader;
 	var uses = loader.getUses('1,2,3,4,5', '1');
 	equal(uses.length, 4, 'getUses works well');
 	equal(uses.indexOf('1'), -1, '1 is ignored as promised');
@@ -101,7 +101,7 @@ test('getUses-use', function() {
 });
 
 test('getUses-ignore', function() {
-	var loader = new Loader();
+	var loader = object._loader;
 	var uses = loader.getUses('1', '1');
 	equal(uses.length, 0, 'getUses works well');
 	var uses = loader.getUses('1', 1);
@@ -148,7 +148,7 @@ module("loader-loadLib", {teardown: function() {
 		if(scripts[i].getAttribute('data-module') 
 			|| scripts[i].getAttribute('data-src')
 			|| scripts[i].callbacks) {
-			document.head.removeChild(scripts[i]);
+			if(document.head) document.head.removeChild(scripts[i]);
 		}
 	}
 }});

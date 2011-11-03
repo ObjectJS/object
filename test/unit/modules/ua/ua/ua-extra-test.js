@@ -85,7 +85,7 @@ var userAgents = [
 	str : 'QQBrowser. 11.2.2',
 	shell : 'qqbrowser',
 	shell_version: 1.22 
-},
+}
 ]
 test('ua.extra.shell/shell_version', function() {
 	object.use('ua.extra, sys', function(exports, ua, sys) {
