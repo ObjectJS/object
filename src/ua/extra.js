@@ -50,17 +50,17 @@ object.add('ua.extra', 'sys', function(exports, sys) {
 				o[shell] = 0;
 			}
 		// TT
-		} else if (m = ua.match(/TencentTraveler\s([\d.]*)/)) {
+		} else if (m = ua.match(/TencentTraveler\s([\d\.]*)/)) {
 			o[shell = 'tt'] = m[1] ? numberify(m[1]) : 0;
 		// TheWorld
 		// 无法识别世界之窗极速版
 		} else if (m = ua.match(/TheWorld/)) {
 			o[shell = 'theworld'] = 3; // issue: TheWorld 2.x cannot be recognised, so if recognised default set verstion number to 3
 		// Sogou
-		} else if (m = ua.match(/SE\s([\d.]*)/)) {
+		} else if (m = ua.match(/SE\s([\d\.]*)/)) {
 			o[shell = 'sogou'] = m[1] ? numberify(m[1]) : 0;
 		// QQBrowser
-		} else if (m = ua.match(/QQBrowser.([\d.]*)/)) {
+		} else if (m = ua.match(/QQBrowser.([\d\.]*)/)) {
 			o[shell = 'qqbrowser'] = m[1] ? numberify(m[1]) : 0;
 		}
 
