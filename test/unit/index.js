@@ -6,7 +6,8 @@ $(document).ready(function() {
 		{module:'module',url:'module'},
 		{module:'object',url:'object'},
 		{module:'utils', url:'utils'},
-		{module:'ua/os', url:'modules/ua/os'}
+		{module:'ua/os', url:'modules/ua/os'},
+		{module:'ua/ua', url:'modules/ua/ua'}
 	];
 	for(var i=0,l=config.length; i<l; i++) {
 		$LAB.script(config[i].url + '/index.js');
