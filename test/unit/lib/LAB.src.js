@@ -536,6 +536,8 @@ $LAB.globals.testEdges = {
 	'function(){}' : function() {},
 	'window' : window,
 	'document' : document,
+	'document.createElement(\'div\')' : document.createElement('div'),
+	'document.createElement(\'object\')' : document.createElement('object'),
 	'location' : location,
 	'String' : String,
 	'\'string\'' : 'string',

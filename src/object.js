@@ -704,7 +704,7 @@ var classmethod = this.classmethod = function(func) {
 	var wrapper = function() {
 		var args = [].slice.call(arguments, 0);
 		var cls;
-		if (this.__this__) {
+		if (typeof this == 'function') {
 			args.unshift(this);
 			return this.prototype[func.__name__].im_func.apply(this.__this__, args);
 		} else {
@@ -822,12 +822,11 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * @param callback callback函数
 	 */
 	this.loadScript = classmethod(function(cls, src, callback, useCache) {
-
 		useCache = !!useCache;
 		var ele;
 
 		if (useCache) {
-			var scripts = cls.scripts;
+			var scripts = cls.get('scripts');
 			for (var i = 0, script, l = scripts.length; i < l; i++) {
 				script = scripts[i];
 				if (script.src == src) {
@@ -1064,7 +1063,6 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * @param context 这个function会在调用module时调用，并将module通过参数传入context，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
 	 */
 	this.add = function(self, name, uses, context) {
-
 		// 不允许重复添加。
 		if (self.lib[name] && self.lib[name].fn) return null;
 
@@ -1076,6 +1074,12 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			uses = self.getUses(uses, name);
 		}
 
+		if (self.lib[name] && self.lib[name].file) {
+			delete self.lib[name].file;
+			self.lib[name].fn = context;
+			self.lib[name].uses = uses;
+			return;
+		}
 		// 建立前缀占位模块
 		self.makePrefixPackage(name);
 
