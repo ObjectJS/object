@@ -1,6 +1,5 @@
 /**
- * @namespace
- * @name urlparser
+ * @module
  */
 object.add('urlparse', /**@lends urlparser*/ function() {
 

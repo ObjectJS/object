@@ -1,6 +1,5 @@
 /**
- * @namespace
- * @name dom
+ * @module
  */
 object.add('dom', 'ua, events, string, dd, sys', /**@lends dom*/ function(exports, ua, events, string, dd, sys) {
 
@@ -368,7 +367,6 @@ this.getDom = function(str) {
  * html5 classList api
  * @class
  * @name dom.ElementClassList
- * @extends Array
  */
 var ElementClassList = this.ElementClassList = new Class(Array, /**@lends dom.ElementClassList*/ function() {
 
@@ -1912,7 +1910,6 @@ var Document = this.Document = new Class(Element, /**@lends dom.Document*/ funct
  * 一个包装类，实现Element方法的统一调用
  * @class
  * @name dom.Elements
- * @extends Array
  */
 var Elements = this.Elements = new Class(Array, /**@lends dom.Elements*/ function() {
 

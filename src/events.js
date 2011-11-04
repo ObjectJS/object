@@ -1,6 +1,5 @@
 /**
- * @namespace
- * @name events
+ * @module
  */
 object.add('events', 'ua', /**@lends events*/ function(exports, ua) {
 
