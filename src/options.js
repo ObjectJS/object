@@ -1,7 +1,4 @@
-/**
- * @module
- */
-object.add('options', /**@lends options*/ function(exports) {
+object.add('options', function(exports) {
 
 // 仿照 mootools 的overloadSetter，返回一个 key/value 这种形式的function参数的包装，使其支持{key1: value1, key2: value2} 这种形式
 var enumerables = true;
@@ -49,7 +46,6 @@ this.overloadsetter = function(func) {
  *	param2: 2
  * });
  * 来设定默认值，没有设置过默认值的成员不会输出
- * @class
  */
 this.Arguments = new Class(function() {
 
@@ -71,7 +67,6 @@ this.Arguments = new Class(function() {
 
 /**
  * 参数
- * @class
  */
 this.Options = new Class({
 

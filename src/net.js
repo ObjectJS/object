@@ -1,8 +1,4 @@
-/**
- * @namespace
- * @name net
- */
-object.add('net', 'dom, events', /**@lends net*/ function(exports, dom, events) {
+object.add('net', 'dom, events', function(exports, dom, events) {
 
 var ajaxProxies = this.ajaxProxies = {};
 
@@ -63,7 +59,7 @@ this.ping = function(url) {
  * @param {string} options.url 要请求的url
  * @param {string} options.method get/post
  * @param {function} options.onsuccess 请求成功后的回调,参数是封装过的ajax对象
- * param {function} options.onerror 请求失败后的回调
+ * @param {function} options.onerror 请求失败后的回调
  */
 this.Request = new Class(function() {
 

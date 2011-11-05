@@ -1,7 +1,4 @@
-/**
- * @module
- */
-object.add('dom', 'ua, events, string, dd, sys', /**@lends dom*/ function(exports, ua, events, string, dd, sys) {
+object.add('dom', 'ua, events, string, dd, sys', function(exports, ua, events, string, dd, sys) {
 
 window.UID = 1;
 var storage = {};
@@ -365,10 +362,8 @@ this.getDom = function(str) {
 
 /**
  * html5 classList api
- * @class
- * @name dom.ElementClassList
  */
-var ElementClassList = this.ElementClassList = new Class(Array, /**@lends dom.ElementClassList*/ function() {
+var ElementClassList = this.ElementClassList = new Class(Array, function() {
 
 	this.initialize = function(self, ele) {
 		self.length = 0; // for Array
@@ -412,10 +407,8 @@ var ElementClassList = this.ElementClassList = new Class(Array, /**@lends dom.El
 
 /**
  * 拖拽模块
- * @class
- * @name dom.DragDrop
  */
-var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
+var DragDrop = this.DragDrop = new Class(function() {
 
 	//拖拽时会修改拖拽元素的默认样式
 	var _modifiedPropertiesByDrag = ['display', 'position', 'width', 'height', 'border', 
@@ -1024,11 +1017,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	};
 });
 
-/**
- * @class
- * @name dom.Element
- */
-var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
+var Element = this.Element = new Class(function() {
 
 	Class.mixin(this, events.Events);
 	Class.mixin(this, DragDrop);
@@ -1415,11 +1404,8 @@ this.ImageElement = new Class(Element, function() {
 
 /**
  * 表单
- * @class
- * @name dom.FormElement
- * @extends dom.Element
  */
-this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
+this.FormElement = new Class(Element, function() {
 
 	this.initialize = function(self) {
 		this.parent(self);
@@ -1553,11 +1539,8 @@ this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 
 /**
  * textarea / input / textarea / select / option
- * @class
- * @name dom.FormItemElement
- * @extends dom.Element
  */
-this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ function() {
+this.FormItemElement = new Class(Element, function() {
 
 	this.selectionStart = property(function(self) {
 		if (typeof self.selectionStart == 'number') {
@@ -1890,28 +1873,16 @@ this.InputElement = new Class(exports.TextBaseElement, function() {
 this.TextAreaElement = new Class(exports.TextBaseElement, function() {
 });
 
-/**
- * @class
- * @name dom.Window
- * @extends dom.Element
- */
-var Window = this.Window = new Class(Element, /**@lends dom.Window*/ function() {
+var Window = this.Window = new Class(Element, function() {
 });
 
-/**
- * @class
- * @name dom.Document
- * @extends dom.Element
- */
-var Document = this.Document = new Class(Element, /**@lends dom.Document*/ function() {
+var Document = this.Document = new Class(Element, function() {
 });
 
 /**
  * 一个包装类，实现Element方法的统一调用
- * @class
- * @name dom.Elements
  */
-var Elements = this.Elements = new Class(Array, /**@lends dom.Elements*/ function() {
+var Elements = this.Elements = new Class(Array, function() {
 
 	/**
 	 * @param elements native dom elements

@@ -1,8 +1,4 @@
-/**
- * @namespace
- * @name validator
- */
-object.add('validator', /**@lends validator*/ function(exports) {
+object.add('validator', function(exports) {
 
 this.isUrl = function(text) {
 	return /^(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i.test(text);

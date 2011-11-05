@@ -1,12 +1,7 @@
-/**
- * @namespace
- * @name uiold
- */
-object.add('uiold', 'dom', /**@lends uiold*/ function(exports, dom) {
+object.add('uiold', 'dom', function(exports, dom) {
 
 /**
  * UI模块基类
- * @class
  */
 var Component = this.Component = new Class(dom.Element, function() {
 
@@ -145,7 +140,6 @@ var Component = this.Component = new Class(dom.Element, function() {
 
 /**
  * Tab UI
- * @class
  */
 this.TabControl = new Class(Component, function() {
 
@@ -178,9 +172,6 @@ this.TabControl = new Class(Component, function() {
 
 });
 
-/**
- * @class
- */
 this.ForeNextControl = new Class(Component, function() {
 
 	this.initialize = function(self) {

@@ -1,7 +1,4 @@
-/**
- * @module
- */
-object.add('events', 'ua', /**@lends events*/ function(exports, ua) {
+object.add('events', 'ua', function(exports, ua) {
 
 function IEEvent() {
 
@@ -108,7 +105,7 @@ this.wrapEvent = function(e) {
 };
 
 // 事件
-this.Events = new Class(/**@lends events.Event*/ function() {
+this.Events = new Class(function() {
 
 	// 在标准浏览器中使用的是系统事件系统，无法保证nativeEvents在事件最后执行。
 	// 需在每次addEvent时，都将nativeEvents的事件删除再添加，保证在事件队列最后，最后才执行。
@@ -158,7 +155,6 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 
 	/**
 	 * 添加事件
-	 * @param self
 	 * @param type 事件名
 	 * @param func 事件回调
 	 * @param cap 冒泡
@@ -260,7 +256,6 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 
 	/**
 	 * 移除事件
-	 * @param self
 	 * @param type 事件名
 	 * @param func 事件回调
 	 * @param cap 冒泡
@@ -286,7 +281,6 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 
 	/**
 	 * 触发事件
-	 * @param self
 	 * @param type 事件名
 	 * @param eventData 扩展到event对象上的数据
 	 */

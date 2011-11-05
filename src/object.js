@@ -1,8 +1,4 @@
-/**
- * @namespace
- * @name object
- */
-var object = new (/**@lends object*/ function(globalHost) {
+var object = new (function(globalHost) {
 
 var object = this;
 
@@ -281,7 +277,7 @@ this.ModuleRequiredError.prototype = new Error();
 
 })(window);
 
-(/**@lends _global_*/ function() {
+(function() {
 
 // 仿照 mootools 的overloadSetter
 // 返回一个 key/value 这种形式的function参数的包装，使其支持{key1: value1, key2: value2} 这种传参形式

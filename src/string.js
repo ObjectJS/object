@@ -1,8 +1,4 @@
-
-/**
- * @module
- */
-object.add('string', /**@lends string*/ function(exports) {
+object.add('string', function(exports) {
 
 /**
  * 模板

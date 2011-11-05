@@ -1,7 +1,4 @@
-/**
- * @module
- */
-object.add('urlparse', /**@lends urlparser*/ function() {
+object.add('urlparse', function() {
 
 this.urljoin = function(base, url) {
 	var baseparts = urlparse(base);
