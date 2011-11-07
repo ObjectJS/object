@@ -9,7 +9,7 @@ function recoverEnv() {
 		}
 	}
 	for(var prop in object._loader.lib) {
-		if(/module/.test(prop)|| /__anonymous_/.test(prop)) {
+		if(/module/.test(prop)) {
 			delete object._loader.lib[prop];
 		}
 	}
