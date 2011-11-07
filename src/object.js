@@ -790,7 +790,11 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			script = scripts[i];
 			module = script.getAttribute('data-module');
 			if (!module) continue;
-			if (self.lib[module]) continue;
+			//self.lib中的内容可能是makePrefixPackage构造的，只有name
+			//在模块a.b先声明，模块a后声明的情况下，无法获取模块a的内容
+			if (self.lib[module] && (self.lib[module].fn || self.lib[module].file)) {
+				continue;
+			}
 
 			// 建立前缀package
 			self.makePrefixPackage(module);
@@ -829,7 +833,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			var scripts = cls.get('scripts');
 			for (var i = 0, script, l = scripts.length; i < l; i++) {
 				script = scripts[i];
-				if (script.src == src) {
+				//src有可能是相对路径，而script.src是绝对路径，导致不一致
+				if (script.src && 
+						(script.src.indexOf(src) == script.src.length - src.length)) {
 					ele = script;
 					// 连续调用，此脚本正在加载呢
 					if (scripts[i].loading) {
@@ -990,6 +996,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		 */
 		function loadNext(i, pname) {
 			var prefix = names.slice(0, i + 1).join('.');
+			console.log(prefix);
 			name = names[i];
 
 			var next = function(exports) {
@@ -1074,7 +1081,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			uses = self.getUses(uses, name);
 		}
 
-		if (self.lib[name] && self.lib[name].file) {
+		if (context && self.lib[name] && self.lib[name].file) {
 			delete self.lib[name].file;
 			self.lib[name].fn = context;
 			self.lib[name].uses = uses;
