@@ -12,8 +12,10 @@ var get = function(uid) {
 };
 
 var $uid = this.$uid = (window.ActiveXObject) ? function(item){
+	if(item === null || item === undefined) { return item; }
 	return (item.uid || (item.uid = [window.UID++]))[0];
 } : function(item){
+	if(item === null || item === undefined) { return item; }
 	return item.uid || (item.uid = window.UID++);
 };
 
@@ -73,6 +75,9 @@ function runHooks() {
  * @param callback 需要执行的callback函数
  */
 this.ready = function(callback) {
+	if (!callback || typeof callback != 'function') {
+		return;
+	}
 	if (window.__domLoaded == true) {
 		callback();
 		return;
@@ -149,6 +154,9 @@ var wrap = this.wrap = function(node) {
  * @returns {dom.Elements}
  */
 var getElements = this.getElements = function(selector, context) {
+	if (!selector || typeof selector != 'string') {
+		return null;
+	}
 	if (!context) context = document;
 
 	// 解析成Slick Selector对象
@@ -201,6 +209,9 @@ var getElements = this.getElements = function(selector, context) {
  * @returns 一个包装后的结点
  */
 var getElement = this.getElement = function(selector, context) {
+	if (!selector || typeof selector != 'string') {
+		return null;
+	}
 	if (!context) context = document;
 
 	var ele = Sizzle(selector, context)[0];
@@ -221,6 +232,9 @@ this.id = function(id) {
  * 执行某个元素中的script标签
  */
 var eval_inner_JS = this.eval_inner_JS = function(ele) {
+	if (!ele) {
+		return;
+	}
 	var js = [];
 	if (ele.nodeType == 11) { // Fragment
 		for (var i = 0; i < ele.childNodes.length; i++) {
@@ -273,6 +287,9 @@ var _needGetDom = (function() {
  * @name dom.Element.getDom
  */
 this.getDom = function(str) {
+	if (!str || typeof str != 'string') {
+		return null;
+	}
 	var tmp = document.createElement('div');
 	var result = document.createDocumentFragment();
 
@@ -300,6 +317,9 @@ this.getDom = function(str) {
 var ElementClassList = this.ElementClassList = new Class(Array, /**@lends dom.ElementClassList*/ function() {
 
 	this.initialize = function(self, ele) {
+		if (!ele || !ele.className) {
+			return null;
+		}
 		self.length = 0; // for Array
 
 		self._ele = ele;
@@ -348,7 +368,9 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	Class.mixin(this, events.Events);
 
 	this.initialize = function(self, tagName) {
-
+		if (!tagName || typeof tagName != 'string') {
+			return null;
+		}
 		// 直接new Element，用来生成一个新元素
 		if (tagName) {
 			self = document.createElement(tagName);
@@ -1087,7 +1109,10 @@ var Elements = this.Elements = new Class(Array, /**@lends dom.Elements*/ functio
 	 * @param wrapper 这批节点的共有类型，默认为Element
 	 */
 	this.initialize  = function(self, elements, wrapper) {
-		if (!wrapper) wrapper = Element;
+		if(!elements || !Array.isArray(elements)) {
+			return null;
+		}
+		if (!wrapper || typeof wrapper != 'object') wrapper = Element;
 
 		for (var i = 0; i < elements.length; i++) {
 			self.push(wrap(elements[i]));
@@ -1137,6 +1162,9 @@ var _tagMap = {
 
 // 根据ele的tagName返回他所需要的wrapper class
 function getWrapper(tagName) {
+	if (!tagName || typeof tagName != 'string') {
+		return;
+	}
 	var tag = tagName.toUpperCase();
 	var cls = _tagMap[tag];
 	if (cls) return cls;
