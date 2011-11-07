@@ -996,7 +996,6 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		 */
 		function loadNext(i, pname) {
 			var prefix = names.slice(0, i + 1).join('.');
-			console.log(prefix);
 			name = names[i];
 
 			var next = function(exports) {
