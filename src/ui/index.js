@@ -604,6 +604,7 @@ this.Component = new Class(function() {
 
 	/**
 	* 设置option的值
+	* @method
 	* @param name name
 	* @param value value
 	*/
