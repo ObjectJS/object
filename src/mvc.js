@@ -1,7 +1,4 @@
-/**
- * @module
- */
-object.add('mvc', 'events', /**@lends mvc*/ function(exports, events) {
+object.add('mvc', 'events', function(exports, events) {
 
 
 /**

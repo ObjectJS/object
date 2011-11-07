@@ -1,7 +1,4 @@
-/**
- * @module
- */
-object.add('options', /**@lends options*/ function(exports) {
+object.add('options', function(exports) {
 
 // 仿照 mootools 的overloadSetter，返回一个 key/value 这种形式的function参数的包装，使其支持{key1: value1, key2: value2} 这种形式
 var enumerables = true;

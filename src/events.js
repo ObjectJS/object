@@ -1,7 +1,4 @@
-/**
- * @module
- */
-object.add('events', 'ua', /**@lends events*/ function(exports, ua) {
+object.add('events', 'ua', function(exports, ua) {
 
 function IEEvent() {
 

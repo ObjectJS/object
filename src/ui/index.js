@@ -1,12 +1,5 @@
-/**
- * @namespace
- * @name ui
- */
-object.add('ui', 'string, options, dom, events', /**@lends ui*/ function(exports, string, options, dom, events) {
+object.add('ui', 'string, options, dom, events', function(exports, string, options, dom, events) {
 
-/**
- * @class
- */
 var Element = new Class(function() {
 
 	Class.keys(dom.Element).forEach(function(name) {
@@ -287,10 +280,8 @@ this.component = new Class(function() {
 
 /**
  * UI模块基类，所有UI组件的基本类
- * @class
- * @name ui.Component
  */
-this.Component = new Class(/**@lends ui.Component*/ function() {
+this.Component = new Class(function() {
 
 	this.__metaclass__ = exports.component;
 
@@ -613,6 +604,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 
 	/**
 	* 设置option的值
+	* @method
 	* @param name name
 	* @param value value
 	*/

@@ -1,7 +1,4 @@
-/**
- * @module
- */
-object.add('dom', 'ua, events, string, dd, sys', /**@lends dom*/ function(exports, ua, events, string, dd, sys) {
+object.add('dom', 'ua, events, string, dd, sys', function(exports, ua, events, string, dd, sys) {
 
 window.UID = 1;
 var storage = {};
@@ -423,8 +420,6 @@ this.ElementClassList = new Class(Array, function() {
 
 /**
  * 拖拽模块
- * @class
- * @name dom.DragDrop
  */
 this.DragDrop = new Class(function() {
 
@@ -1843,6 +1838,7 @@ this.TextBaseElement = new Class(exports.FormItemElement, function() {
 
 /**
 * input元素的包装类
+* @class
 */
 this.InputElement = new Class(exports.TextBaseElement, function() {
 
@@ -1925,8 +1921,6 @@ this.Document = new Class(exports.Element, function() {
 
 /**
  * 一个包装类，实现Element方法的统一调用
- * @class
- * @name dom.Elements
  */
 this.Elements = new Class(Array, function() {
 

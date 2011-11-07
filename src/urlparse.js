@@ -1,7 +1,4 @@
-/**
- * @module
- */
-object.add('urlparse', /**@lends urlparser*/ function() {
+object.add('urlparse', function() {
 
 /**
 * 合并两段url
