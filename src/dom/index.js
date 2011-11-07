@@ -1,7 +1,4 @@
-/**
- * @module
- */
-object.add('dom', 'ua, events, string, dd, sys', /**@lends dom*/ function(exports, ua, events, string, dd, sys) {
+object.add('dom', 'ua, events, string, dd, sys', function(exports, ua, events, string, dd, sys) {
 
 window.UID = 1;
 var storage = {};
@@ -1843,6 +1840,7 @@ this.TextBaseElement = new Class(exports.FormItemElement, function() {
 
 /**
 * input元素的包装类
+* @class
 */
 this.InputElement = new Class(exports.TextBaseElement, function() {
 
