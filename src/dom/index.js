@@ -420,8 +420,6 @@ this.ElementClassList = new Class(Array, function() {
 
 /**
  * 拖拽模块
- * @class
- * @name dom.DragDrop
  */
 this.DragDrop = new Class(function() {
 
@@ -1923,8 +1921,6 @@ this.Document = new Class(exports.Element, function() {
 
 /**
  * 一个包装类，实现Element方法的统一调用
- * @class
- * @name dom.Elements
  */
 this.Elements = new Class(Array, function() {
 
