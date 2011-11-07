@@ -4,6 +4,9 @@
  */
 object.add('urlparse', /**@lends urlparser*/ function() {
 
+/**
+* 合并两段url
+*/
 this.urljoin = function(base, url) {
 	var baseparts = urlparse(base);
 	var urlparts = urlparse(url);
@@ -30,10 +33,17 @@ this.urljoin = function(base, url) {
 	return urlunparse(output);
 };
 
+/**
+* 解析一个url为 scheme / netloc / path / params / query / fragment 六个部分
+* @see http://docs.python.org/library/urlparse.html
+*/
 var urlparse = this.urlparse = function(url) {
 	return url.match(/^(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))?(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i).slice(1);
 };
 
+/**
+* 将兼容urlparse结果的url部分合并成url
+*/
 var urlunparse = this.urlunparse = function(parts) {
 	var url = '';
 	if (parts[0]) url += parts[0] + '://' + parts[1];

@@ -108,8 +108,22 @@ this.wrapEvent = function(e) {
 	return e;
 };
 
-// 事件
-this.Events = new Class(/**@lends events.Event*/ function() {
+/**
+* 事件系统
+*/
+this.Events = new Class(function() {
+
+	// 在标准浏览器中使用的是系统事件系统，无法保证nativeEvents在事件最后执行。
+	// 需在每次addEvent时，都将nativeEvents的事件删除再添加，保证在事件队列最后，最后才执行。
+	function moveNativeEventsToTail(self, type) {
+		var boss = self.__boss || self;
+		if (self.__nativeEvents && self.__nativeEvents[type]) {
+			// 删除之前加入的
+			boss.removeEventListener(type, self.__nativeEvents[type].run, false);
+			// 重新添加到最后
+			boss.addEventListener(type, self.__nativeEvents[type].run, false);
+		}
+	};
 
 	function handle(self, type) {
 		var boss = self.__boss || self;
@@ -146,12 +160,12 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 	};
 
 	/**
-	 * 添加事件
-	 * @param self
-	 * @param type 事件名
-	 * @param func 事件回调
-	 * @param cap 冒泡
-	 */
+	* 添加事件
+	* @method
+	* @param type 事件名
+	* @param func 事件回调
+	* @param cap 冒泡
+	*/
 	this.addEvent = document.addEventListener? function(self, type, func, cap) {
 		var boss = self.__boss || self;
 
@@ -205,42 +219,59 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 
 	};
 
-	if (!document.addEventListener) {
-		this.addNativeEvent = function(self, type, func) {
-			var boss = self.__boss || self;
+	/**
+	* 添加系统事件，保证事件这些事件会在注册事件调用最后被执行
+	* @method
+	* @param type 事件名
+	* @param func 事件回调
+	*/
+	this.addNativeEvent = document.addEventListener? function(self, type, func) {
+		var boss = self.__boss || self;
+		var natives;
+		if (!self.__nativeEvents) self.__nativeEvents = {};
+		if (!self.__nativeEvents[type]) {
+			natives = [];
+			self.__nativeEvents[type] = natives;
+			self.__nativeEvents[type].run = function(event) {
+				natives.forEach(function(func) {
+					func.call(self, event);
+				});
+			};
+			moveNativeEventsToTail(self, type);
+		} else {
+			natives = self.__nativeEvents[type];
+		}
+		natives.push(func);
 
-			var natives;
-			if (!self.__nativeEvents) self.__nativeEvents = {};
-			if (!self.__nativeEvents[type]) {
-				natives = [];
-				self.__nativeEvents[type] = natives;
-				if (!self.__nativeEvents || !self.__eventListeners[type]) {
-					handle(self, type);
-				}
-			} else {
-				natives = self.__nativeEvents[type];
+	} : function(self, type, func) {
+		var boss = self.__boss || self;
+		var natives;
+		if (!self.__nativeEvents) self.__nativeEvents = {};
+		if (!self.__nativeEvents[type]) {
+			natives = [];
+			self.__nativeEvents[type] = natives;
+			if (!self.__nativeEvents || !self.__eventListeners[type]) {
+				handle(self, type);
 			}
+		} else {
+			natives = self.__nativeEvents[type];
+		}
 
-			// 不允许两次添加同一事件
-			if (natives.some(function(f) {
-				return f === func;
-			})) return;
+		// 不允许两次添加同一事件
+		if (natives.some(function(f) {
+			return f === func;
+		})) return;
 
-			natives.push(func);
-		};
-	} else {
-		this.addNativeEvent = function(self, type, func) {
-			self.addEvent(type, func);
-		};
-	}
+		natives.push(func);
+	};
 
 	/**
-	 * 移除事件
-	 * @param self
-	 * @param type 事件名
-	 * @param func 事件回调
-	 * @param cap 冒泡
-	 */
+	* 移除事件
+	* @method
+	* @param type 事件名
+	* @param func 事件回调
+	* @param cap 冒泡
+	*/
 	this.removeEvent = document.removeEventListener? function(self, type, func, cap) {
 		var boss = self.__boss || self;
 
@@ -261,11 +292,14 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 	};
 
 	/**
-	 * 触发事件
-	 * @param self
-	 * @param type 事件名
-	 * @param eventData 扩展到event对象上的数据
-	 */
+	* 触发事件
+	* obj.fireEvent('name', {
+	* data: 'value'
+	* });
+	* @method
+	* @param type 事件名
+	* @param eventData 扩展到event对象上的数据
+	*/
 	this.fireEvent = document.dispatchEvent? function(self, type, eventData) {
 		var boss = self.__boss || self;
 

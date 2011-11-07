@@ -29,10 +29,9 @@ var Element = new Class(function() {
 });
 
 /**
- * @class
- * @name ui.Components
- */
-this.Components = new Class(Array, /**@lends ui.Components*/ function() {
+* 一组Component的包装
+*/
+this.Components = new Class(Array, function() {
 
 	/**
 	 * @param elements wrapped dom elements
@@ -600,6 +599,10 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		self._revert('reset');
 	};
 
+	/**
+	* 获取option的值
+	* @param name name
+	*/
 	this.getOption = function(self, name) {
 		var pname = '_' + name;
 		if (self[pname] === undefined) {
@@ -608,6 +611,11 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		return self[pname];
 	};
 
+	/**
+	* 设置option的值
+	* @param name name
+	* @param value value
+	*/
 	this.setOption = options.overloadsetter(function(self, name, value) {
 		// 由于overloadsetter是通过name是否为string来判断传递形式是name-value还是{name:value}的
 		// 在回调中为了性能需要直接传的parts，类型为数组，而不是字符串，因此无法通过回调用overloadsetter包装后的方法进行回调
