@@ -1,14 +1,17 @@
 /**
- * @namespace
- * @name object
- */
-var object = new (/**@lends object*/ function(globalHost) {
+* @namespace
+* @name object
+*/
+/**@class Array*/
+/**@class String*/
+/**@class Function*/
+var object = new (function(globalHost) {
 
 var object = this;
 
 /**
- * 遍历一个对象，返回所有的key的数组
- */
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Object/keys
+*/
 Object.keys = function(o) {
 	var result = [];
 
@@ -32,17 +35,26 @@ Object.keys = function(o) {
 	return result; 
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/isArray
+*/
 Array.isArray = Array.isArray || function(o) {
 	return Object.prototype.toString.call(o) === '[object Array]';
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/forEach
+*/
 Array.prototype.forEach = Array.prototype.forEach || function(fn, bind) {
 	for (var i = 0; i < this.length; i++) {
 		fn.call(bind, this[i], i, this);
 	}
 };
 
-Array.prototype.indexOf = Array.prototype.indexOf || function(str){
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/indexOf
+*/
+Array.prototype.indexOf = Array.prototype.indexOf || function(str) {
 	for (var i = 0; i < this.length; i++) {
 		if (str == this[i]) {
 			return i;
@@ -51,6 +63,9 @@ Array.prototype.indexOf = Array.prototype.indexOf || function(str){
 	return -1;
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/some
+*/
 Array.prototype.some = Array.prototype.some || function(fn, bind) {
 	for (var i = 0, l = this.length; i < l; i++){
 		if ((i in this) && fn.call(bind, this[i], i, this)) return true;
@@ -58,6 +73,9 @@ Array.prototype.some = Array.prototype.some || function(fn, bind) {
 	return false;
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/every
+*/
 Array.prototype.every = Array.prototype.every || function(fn, bind){
 	for (var i = 0, l = this.length; i < l; i++){
 		if ((i in this) && !fn.call(bind, this[i], i, this)) return false;
@@ -65,6 +83,9 @@ Array.prototype.every = Array.prototype.every || function(fn, bind){
 	return true;
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/map
+*/
 Array.prototype.map = Array.prototype.map || function (fn, bind) {
 	var results = [];
 	for (var i = 0, l = this.length; i < l; i++){
@@ -73,6 +94,9 @@ Array.prototype.map = Array.prototype.map || function (fn, bind) {
 	return results;
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/filter
+*/
 Array.prototype.filter = Array.prototype.filter || function(fn, bind){
 	var results = [];
 	for (var i = 0, l = this.length; i < l; i++){
@@ -81,6 +105,9 @@ Array.prototype.filter = Array.prototype.filter || function(fn, bind){
 	return results;
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/reduce
+*/
 Array.prototype.reduce = Array.prototype.reduce || function(fun /*, initialValue */) {
 	"use strict";
 
@@ -124,6 +151,9 @@ Array.prototype.reduce = Array.prototype.reduce || function(fun /*, initialValue
 	return accumulator;
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/reduceRight
+*/
 Array.prototype.reduceRight = Array.prototype.reduceRight || function(callbackfn /*, initialValue */) {
 	"use strict";
 
@@ -167,15 +197,19 @@ Array.prototype.reduceRight = Array.prototype.reduceRight || function(callbackfn
 	return accumulator;
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/trim
+*/
 String.prototype.trim = String.prototype.trim || function() {
 	// High Performance JavaScript 中描述此方法较快
 	return this.replace(/^\s\s*/, "").replace(/\s\s*$/, "");
 };
 
-/**
-* 有些老页面引用了js/compact.js，其中有一个错误的Function.prototype.bind
-*/
+// 有些老页面引用了js/compact.js，其中有一个错误的Function.prototype.bind
 if (!Function.prototype.bind || Function.prototype.bind === window.__hualuOldBind) {
+	/**
+	* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Function/bind
+	*/
 	Function.prototype.bind = function(object) {
 		var method = this;
 		return function() {
@@ -202,11 +236,12 @@ if ((function TEST(){}).name) {
 }
 
 /**
- * 为obj增加properties中的成员
- * @param obj 源
- * @param properties 目标
- * @param ov 是否覆盖，默认true
- */
+* 为obj增加properties中的成员
+* @name object.extend
+* @param obj 源
+* @param properties 目标
+* @param ov 是否覆盖，默认true
+*/
 this.extend = function(obj, properties, ov) {
 	if (ov !== false) ov = true;
 
@@ -223,8 +258,9 @@ this.extend = function(obj, properties, ov) {
 };
 
 /**
- * 浅拷贝
- */
+* 浅拷贝
+* @name object.clone
+*/
 this.clone = function(obj) {
 	var clone = {};
 	for (var key in obj) clone[key] = obj[key];
@@ -232,37 +268,40 @@ this.clone = function(obj) {
 };
 
 /**
- * 将成员引用放到window上
- */
+* 将成员引用放到window上
+* @name object.bind
+*/
 this.bind = function(host) {
 	object.extend(host, object);
 };
 
-
 this._loader = null;
 
 /**
- * use一个module
- * @borrows object.Loader.use
- */
+* use一个module
+* @name object.use
+* @borrows object.Loader.use
+*/
 this.use = function() {
 	if (!object._loader) object._loader = new Loader();
 	object._loader.use.apply(object._loader, arguments);
 };
 
 /**
- * 直接执行一个module，其 __name__ 为 __main__
- * @borrows object.Loader.execute
- */
+* 直接执行一个module，其 __name__ 为 __main__
+* @name object.execute
+* @borrows object.Loader.execute
+*/
 this.execute = function() {
 	if (!object._loader) object._loader = new Loader();
 	object._loader.execute.apply(object._loader, arguments);
 };
 
 /**
- * 添加一个module
- * @borrows object.Loader.add
- */
+* 添加一个module
+* @name object.add
+* @borrows object.Loader.add
+*/
 this.add = function() {
 	if (!object._loader) object._loader = new Loader();
 	object._loader.add.apply(object._loader, arguments);
@@ -625,6 +664,7 @@ Class.getPropertyNames = function(obj) {
  * @param args 构造的参数
  */
 Class.inject = function(cls, host, args) {
+	if (typeof cls != 'function') console.log(arguments.callee.caller)
 	args = args || [];
 	host.__class__ = cls;
 	host.__properties__ = cls.prototype.__properties__;

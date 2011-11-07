@@ -8,7 +8,7 @@ object.add('uiold', 'dom', /**@lends uiold*/ function(exports, dom) {
  * UI模块基类
  * @class
  */
-var Component = this.Component = new Class(dom.Element, function() {
+this.Component = new Class(dom.Element, function() {
 
 	this.initialize = function(self) {
 		dom.Element.initialize(self);
@@ -147,10 +147,10 @@ var Component = this.Component = new Class(dom.Element, function() {
  * Tab UI
  * @class
  */
-this.TabControl = new Class(Component, function() {
+this.TabControl = new Class(exports.Component, function() {
 
 	this.initialize = function(self) {
-		Component.initialize(self);
+		exports.Component.initialize(self);
 
 		self.tabs = dom.getElements('li', self);
 		self.selectedEle = null;
@@ -178,13 +178,10 @@ this.TabControl = new Class(Component, function() {
 
 });
 
-/**
- * @class
- */
-this.ForeNextControl = new Class(Component, function() {
+this.ForeNextControl = new Class(exports.Component, function() {
 
 	this.initialize = function(self) {
-		Component.initialize(self);
+		exports.Component.initialize(self);
 
 		self.total = parseInt(self.getData('total'));
 		self.start = parseInt(self.getData('start')) || 0;
