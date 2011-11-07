@@ -1,6 +1,5 @@
 /**
- * @namespace
- * @name events
+ * @module
  */
 object.add('events', 'ua', /**@lends events*/ function(exports, ua) {
 
@@ -125,6 +124,18 @@ this.Events = new Class(function() {
 		}
 	};
 
+	// 在标准浏览器中使用的是系统事件系统，无法保证nativeEvents在事件最后执行。
+	// 需在每次addEvent时，都将nativeEvents的事件删除再添加，保证在事件队列最后，最后才执行。
+	function moveNativeEventsToTail(self, type) {
+		var boss = self.__boss || self;
+		if (self.__nativeEvents && self.__nativeEvents[type]) {
+			// 删除之前加入的
+			boss.removeEventListener(type, self.__nativeEvents[type].run, false);
+			// 重新添加到最后
+			boss.addEventListener(type, self.__nativeEvents[type].run, false);
+		}
+	};
+
 	function handle(self, type) {
 		var boss = self.__boss || self;
 		boss.attachEvent('on' + type, function(eventData) {
@@ -194,6 +205,8 @@ this.Events = new Class(function() {
 		}
 
 		boss.addEventListener(type, func, cap);
+		moveNativeEventsToTail(self, type);
+
 	} : function(self, type, func) {
 		var boss = self.__boss || self;
 

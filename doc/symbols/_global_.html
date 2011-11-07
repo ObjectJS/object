@@ -44,6 +44,8 @@
 				
 					<li><a href="../symbols/dom.Document.html">dom<span class='break'> </span>.<span class='break'> </span>Document</a></li>
 				
+					<li><a href="../symbols/dom.DragDrop.html">dom<span class='break'> </span>.<span class='break'> </span>DragDrop</a></li>
+				
 					<li><a href="../symbols/dom.Element.html">dom<span class='break'> </span>.<span class='break'> </span>Element</a></li>
 				
 					<li><a href="../symbols/dom.ElementClassList.html">dom<span class='break'> </span>.<span class='break'> </span>ElementClassList</a></li>
@@ -82,6 +84,8 @@
 				
 					<li><a href="../symbols/ua.extra.html">ua<span class='break'> </span>.<span class='break'> </span>extra</a></li>
 				
+					<li><a href="../symbols/ua.os.html">ua<span class='break'> </span>.<span class='break'> </span>os</a></li>
+				
 					<li><a href="../symbols/ui.html">ui</a></li>
 				
 					<li><a href="../symbols/ui.Component.html">ui<span class='break'> </span>.<span class='break'> </span>Component</a></li>
@@ -111,7 +115,7 @@
 		
 		Documentation generator: <a href="http://code.google.com/p/jsdoc-toolkit/" target="_blank">JsDoc Toolkit</a> 2.4.0<br />
 		Template: <a href="http://www.thebrightlines.com/2010/05/06/new-template-for-jsdoctoolkit-codeview/" target="_blank">Codeview</a> 1.2<br />
-		Generated on: 2011-6-14 18:33
+		Generated on: 2011-10-2 11:32
 	</div>
 </div>
 
@@ -161,7 +165,7 @@
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/_global_.html#Class">Class</a></b>()
+										<div class="fixedFont"><b><a href="../symbols/_global_.html#addon">addon</a></b>(dict, Addon)
 										</div>
 										<div class="description"></div>
 									</td>
@@ -172,7 +176,7 @@
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/_global_.html#classmethod">classmethod</a></b>(func)
+										<div class="fixedFont"><b><a href="../symbols/_global_.html#Class">Class</a></b>()
 										</div>
 										<div class="description"></div>
 									</td>
@@ -183,7 +187,7 @@
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/_global_.html#ComponentClass">ComponentClass</a></b>(cls, name, base, members)
+										<div class="fixedFont"><b><a href="../symbols/_global_.html#classmethod">classmethod</a></b>(func)
 										</div>
 										<div class="description"></div>
 									</td>
@@ -232,7 +236,7 @@ MyComponent = new Class(ui.Component, {
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/_global_.html#option">option</a></b>(defaultValue)
+										<div class="fixedFont"><b><a href="../symbols/_global_.html#option">option</a></b>(defaultValue, getter, setter)
 										</div>
 										<div class="description">声明一个option
 用法：
@@ -248,9 +252,9 @@ MyComponent = new Class(ui.Component, {
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/_global_.html#property">property</a></b>(fget, fset)
+										<div class="fixedFont"><b><a href="../symbols/_global_.html#parseOptions">parseOptions</a></b>(options)
 										</div>
-										<div class="description"></div>
+										<div class="description">==> {a: {b: {c:1}}, b: 2}</div>
 									</td>
 								</tr>
 							
@@ -259,7 +263,51 @@ MyComponent = new Class(ui.Component, {
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
+										<div class="fixedFont"><b><a href="../symbols/_global_.html#property">property</a></b>(fget, fset)
+										</div>
+										<div class="description"></div>
+									</td>
+								</tr>
+							
+								<tr
+									 class='item9'
+								>
+									<td class="attributes">&nbsp;</td>
+									<td class="nameDescription">
+										<div class="fixedFont"><b><a href="../symbols/_global_.html#run">run</a></b>(event)
+										</div>
+										<div class="description"></div>
+									</td>
+								</tr>
+							
+								<tr
+									 class='item10'
+								>
+									<td class="attributes">&nbsp;</td>
+									<td class="nameDescription">
+										<div class="fixedFont"><b><a href="../symbols/_global_.html#setOptionTo">setOptionTo</a></b>(current, name, value)
+										</div>
+										<div class="description"></div>
+									</td>
+								</tr>
+							
+								<tr
+									 class='item11'
+								>
+									<td class="attributes">&nbsp;</td>
+									<td class="nameDescription">
 										<div class="fixedFont"><b><a href="../symbols/_global_.html#staticmethod">staticmethod</a></b>(func)
+										</div>
+										<div class="description"></div>
+									</td>
+								</tr>
+							
+								<tr
+									 class='item12'
+								>
+									<td class="attributes">&nbsp;</td>
+									<td class="nameDescription">
+										<div class="fixedFont"><b><a href="../symbols/_global_.html#type">type</a></b>()
 										</div>
 										<div class="description"></div>
 									</td>
@@ -301,6 +349,55 @@ MyComponent = new Class(ui.Component, {
 							<li 
 								 class='item0'
 							>
+								<div class="fixedFont heading" id="addon">
+									<span class='lighter'>
+									
+									</span>
+									
+									
+									
+									<b>addon</b>(dict, Addon)
+								</div>
+								
+								<div class="description">
+									
+									
+									
+										<br />
+										<i>Defined in: </i> <a href="../symbols/src/d__works_workspace_objectjs.org_object_src__ui_index.js.html">index.js</a>.
+									
+									
+									
+								</div>
+								
+								
+								
+								
+									<dl class="detailList params">
+										<dt class="heading">Parameters:</dt>
+										
+											<dt>
+												<b>dict</b>
+												
+											</dt>
+											<dd></dd>
+										
+											<dt>
+												<b>Addon</b>
+												
+											</dt>
+											<dd></dd>
+										
+									</dl>
+								
+								
+								
+								<div class="hr"></div>
+							</li>
+						
+							<li 
+								 class='item1'
+							>
 								<div class="fixedFont heading" id="Class">
 									<span class='lighter'>
 									
@@ -331,7 +428,7 @@ MyComponent = new Class(ui.Component, {
 							</li>
 						
 							<li 
-								 class='item1'
+								 class='item2'
 							>
 								<div class="fixedFont heading" id="classmethod">
 									<span class='lighter'>
@@ -362,67 +459,6 @@ MyComponent = new Class(ui.Component, {
 										
 											<dt>
 												<b>func</b>
-												
-											</dt>
-											<dd></dd>
-										
-									</dl>
-								
-								
-								
-								<div class="hr"></div>
-							</li>
-						
-							<li 
-								 class='item2'
-							>
-								<div class="fixedFont heading" id="ComponentClass">
-									<span class='lighter'>
-									
-									</span>
-									
-									
-									
-									<b>ComponentClass</b>(cls, name, base, members)
-								</div>
-								
-								<div class="description">
-									
-									
-									
-										<br />
-										<i>Defined in: </i> <a href="../symbols/src/d__works_workspace_objectjs.org_object_src__ui_index.js.html">index.js</a>.
-									
-									
-									
-								</div>
-								
-								
-								
-								
-									<dl class="detailList params">
-										<dt class="heading">Parameters:</dt>
-										
-											<dt>
-												<b>cls</b>
-												
-											</dt>
-											<dd></dd>
-										
-											<dt>
-												<b>name</b>
-												
-											</dt>
-											<dd></dd>
-										
-											<dt>
-												<b>base</b>
-												
-											</dt>
-											<dd></dd>
-										
-											<dt>
-												<b>members</b>
 												
 											</dt>
 											<dd></dd>
@@ -596,7 +632,7 @@ MyComponent = new Class(ui.Component, {
 									
 									
 									
-									<b>option</b>(defaultValue)
+									<b>option</b>(defaultValue, getter, setter)
 								</div>
 								
 								<div class="description">
@@ -627,6 +663,18 @@ MyComponent = new Class(ui.Component, {
 											</dt>
 											<dd></dd>
 										
+											<dt>
+												<b>getter</b>
+												
+											</dt>
+											<dd></dd>
+										
+											<dt>
+												<b>setter</b>
+												
+											</dt>
+											<dd></dd>
+										
 									</dl>
 								
 								
@@ -636,6 +684,49 @@ MyComponent = new Class(ui.Component, {
 						
 							<li 
 								 class='item7'
+							>
+								<div class="fixedFont heading" id="parseOptions">
+									<span class='lighter'>
+									
+									</span>
+									
+									
+									
+									<b>parseOptions</b>(options)
+								</div>
+								
+								<div class="description">
+									==> {a: {b: {c:1}}, b: 2}
+									
+									
+										<br />
+										<i>Defined in: </i> <a href="../symbols/src/d__works_workspace_objectjs.org_object_src__ui_index.js.html">index.js</a>.
+									
+									
+									
+								</div>
+								
+								
+								
+								
+									<dl class="detailList params">
+										<dt class="heading">Parameters:</dt>
+										
+											<dt>
+												<b>options</b>
+												
+											</dt>
+											<dd></dd>
+										
+									</dl>
+								
+								
+								
+								<div class="hr"></div>
+							</li>
+						
+							<li 
+								 class='item8'
 							>
 								<div class="fixedFont heading" id="property">
 									<span class='lighter'>
@@ -684,7 +775,105 @@ MyComponent = new Class(ui.Component, {
 							</li>
 						
 							<li 
-								 class='item8'
+								 class='item9'
+							>
+								<div class="fixedFont heading" id="run">
+									<span class='lighter'>
+									
+									</span>
+									
+									
+									
+									<b>run</b>(event)
+								</div>
+								
+								<div class="description">
+									
+									
+									
+										<br />
+										<i>Defined in: </i> <a href="../symbols/src/d__works_workspace_objectjs.org_object_src__events.js.html">events.js</a>.
+									
+									
+									
+								</div>
+								
+								
+								
+								
+									<dl class="detailList params">
+										<dt class="heading">Parameters:</dt>
+										
+											<dt>
+												<b>event</b>
+												
+											</dt>
+											<dd></dd>
+										
+									</dl>
+								
+								
+								
+								<div class="hr"></div>
+							</li>
+						
+							<li 
+								 class='item10'
+							>
+								<div class="fixedFont heading" id="setOptionTo">
+									<span class='lighter'>
+									
+									</span>
+									
+									
+									
+									<b>setOptionTo</b>(current, name, value)
+								</div>
+								
+								<div class="description">
+									
+									
+									
+										<br />
+										<i>Defined in: </i> <a href="../symbols/src/d__works_workspace_objectjs.org_object_src__ui_index.js.html">index.js</a>.
+									
+									
+									
+								</div>
+								
+								
+								
+								
+									<dl class="detailList params">
+										<dt class="heading">Parameters:</dt>
+										
+											<dt>
+												<b>current</b>
+												
+											</dt>
+											<dd></dd>
+										
+											<dt>
+												<b>name</b>
+												
+											</dt>
+											<dd></dd>
+										
+											<dt>
+												<b>value</b>
+												
+											</dt>
+											<dd></dd>
+										
+									</dl>
+								
+								
+								
+								<div class="hr"></div>
+							</li>
+						
+							<li 
+								 class='item11'
 							>
 								<div class="fixedFont heading" id="staticmethod">
 									<span class='lighter'>
@@ -720,6 +909,38 @@ MyComponent = new Class(ui.Component, {
 											<dd></dd>
 										
 									</dl>
+								
+								
+								
+								<div class="hr"></div>
+							</li>
+						
+							<li 
+								 class='item12'
+							>
+								<div class="fixedFont heading" id="type">
+									<span class='lighter'>
+									
+									</span>
+									
+									
+									
+									<b>type</b>()
+								</div>
+								
+								<div class="description">
+									
+									
+									
+										<br />
+										<i>Defined in: </i> <a href="../symbols/src/d__works_workspace_objectjs.org_object_src__object.js.html">object.js</a>.
+									
+									
+									
+								</div>
+								
+								
+								
 								
 								
 								

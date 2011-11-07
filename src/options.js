@@ -1,6 +1,5 @@
 /**
- * @namespace
- * @name options
+ * @module
  */
 object.add('options', /**@lends options*/ function(exports) {
 

@@ -1,6 +1,5 @@
 /**
- * @namespace
- * @name dom
+ * @module
  */
 object.add('dom', 'ua, events, string, dd, sys', /**@lends dom*/ function(exports, ua, events, string, dd, sys) {
 
@@ -1928,7 +1927,6 @@ this.Document = new Class(exports.Element, function() {
  * 一个包装类，实现Element方法的统一调用
  * @class
  * @name dom.Elements
- * @extends Array
  */
 this.Elements = new Class(Array, function() {
 
