@@ -44,17 +44,100 @@ test('return value of module', function() {
 });
 
 test('circular dependency', function() {
-	expect(2);
+	expect(4);
 	raises(function() {
 		object.add('a', 'b', function(exports, b) {});
 		object.add('b', 'a', function(exports, a) {});
 		object.use('a', function(exports, a) {});
-	}, 'should throw circular dependency error');
+	}, 'a->b->a should throw circular dependency error');
+	raises(function() {
+		object.add('c1', 'c2', function(exports, b) {});
+		object.add('c2', 'c3', function(exports, a) {});
+		object.add('c3', 'c2', function(exports, a) {});
+		object.use('c1', function(exports, a) {});
+	}, 'c1->c2->c3->c2 should throw circular dependency error');
 	raises(function() {
 		object.add('c', 'c', function(exports, c) {});
 		object.use('c', function(exports, c) {});
-	}, 'should throw circular dependency error');
+	}, 'c->c should throw circular dependency error');
+
+	object.add('uuua.ooos', function(exports) {});
+	object.add('uuua', 'uuua.ooos', function(exports) {});
+	try {
+		object.use('uuua', function(exports, uuua) {});
+	} catch (e) {
+		ok(false, 'uuua use uuua.ooos will cause an circular dependency error');
+	}
 });
+
+test('string starts/ends with .', function() {
+	object.add('used', function(exports) {});
+	try {
+		object.add('cause_error', '.used', function(exports) {});
+		object.use('cause_error', function(exports, a) {});
+	} catch (e) {
+		ok(false, 'object.add(\'cause_error\', \'.used\') cause an error');
+		delete object._loader.lib['cause_error'];
+	}
+	try {
+		object.add('cause_error', 'used.', function(exports) {});
+		object.use('cause_error', function(exports, a) {});
+	} catch (e) {
+		ok(false, 'object.add(\'cause_error\', \'used.\') cause an error');
+		delete object._loader.lib['cause_error'];
+	}
+	object.add('.cause_error', 'used', function(exports) {});
+	object.use('.cause_error', function(exports, a) {});
+	ok(object._loader.lib[''] == undefined, 'object._loader.lib[\'\'] should be undefined');
+	delete object._loader.lib['.cause_error'];
+	delete object._loader.lib[''];
+
+	object.add('.cause_error.', 'used', function(exports) {});
+	object.use('.cause_error.', function(exports, a) {});
+	ok(object._loader.lib[''] == undefined, 'object._loader.lib[\'\'] should be undefined');
+	ok(object._loader.lib['.cause_error.'] == undefined,'object._loader.lib[\'.cause_error.\'] should be undefined');
+	delete object._loader.lib[''];
+	delete object._loader.lib['.cause_error'];
+	delete object._loader.lib['.cause_error.'];
+});
+
+test('parent module and sub module', function() {
+	object.add('parent', function(exports) {
+		exports.b = 1;
+	});
+	object.add('parent.sub', function(exports) {
+		exports.b = 2;
+	});
+	object.use('parent.sub', function(exports, parent) {
+		equal(parent.b, 1, 'parent module is loaded automatically');
+		equal(parent.sub.b, 2, 'sub module is loaded successfully');
+	});
+	object.add('parent.sub2.sub3', function(exports) {
+		exports.b = 3;
+	});
+	object.use('parent.sub2.sub3', function(exports, parent) {
+		equal(parent.b, 1, 'parent module is loaded');
+		ok(parent.sub2 != null, 'parent.sub2 is not null');
+		ok(parent.sub2.fn === undefined && parent.sub2.file === undefined, 
+			'parent.sub2 is not null, but it is an empty module');
+		equal(parent.sub2.sub3.b, 3, 'parent.sub2.sub3 module is loaded');
+	});
+	delete object._loader.lib['parent.sub2.sub3'];
+	delete object._loader.lib['parent.sub'];
+
+	object.add('parent.sub.sub2.sub', function(exports) {
+		exports.a = 1;
+	});
+	object.use('parent.sub.sub2.sub', function(exports, parent) {
+		equal(parent.sub.sub2.sub.a, 1, 'parent.sub.sub2.sub.a = 1 is ok');
+		equal(parent.sub.fn, undefined, 'parent.sub.fn is undefined');
+		equal(parent.sub.sub2.fn, undefined, 'parent.sub.sub2.fn is undefined');
+	});
+	delete object._loader.lib['parent.sub.sub2.sub'];
+	delete object._loader.lib['parent.sub.sub2'];
+	delete object._loader.lib['parent.sub'];
+});
+
 test('common usage', function() {
 	expect(4);
 	object.add('module1', function(exports) {

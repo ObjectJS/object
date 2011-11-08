@@ -194,6 +194,3 @@ test('use many modules', function() {
 		recoverEnv();
 	});
 });
-//parent module appear after sub module
-//add same script tag, no error, will not get same module file twice
-//add many tags, many files

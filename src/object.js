@@ -688,14 +688,14 @@ var instancemethod = function(func, cls) {
 		args.unshift(this);
 		return func.apply(this.__this__, args);
 	};
-	wrapper.__class__ = arguments.callee;
+	wrapper.__class__ = instancemethod;
 	wrapper.im_func = func;
 	return wrapper;
 };
 
 var staticmethod = this.staticmethod = function(func) {
 	var wrapper = function() {};
-	wrapper.__class__ = arguments.callee;
+	wrapper.__class__ = staticmethod;
 	wrapper.im_func = func;
 	return wrapper;
 };
@@ -713,14 +713,14 @@ var classmethod = this.classmethod = function(func) {
 			return func.apply(cls.__this__, args);
 		}
 	};
-	wrapper.__class__ = arguments.callee;
+	wrapper.__class__ = classmethod;
 	wrapper.im_func = func;
 	return wrapper;
 };
 
 var property = this.property = function(fget, fset) {
 	var p = {};
-	p.__class__ = arguments.callee;
+	p.__class__ = property;
 	p.fget = fget;
 	p.fset = fset;
 	return p;
@@ -996,7 +996,6 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		 */
 		function loadNext(i, pname) {
 			var prefix = names.slice(0, i + 1).join('.');
-			console.log(prefix);
 			name = names[i];
 
 			var next = function(exports) {
