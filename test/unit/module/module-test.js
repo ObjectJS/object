@@ -50,16 +50,24 @@ test('circular dependency', function() {
 		object.add('b', 'a', function(exports, a) {});
 		object.use('a', function(exports, a) {});
 	}, 'a->b->a should throw circular dependency error');
+	delete object._loader.lib['a'];
+	delete object._loader.lib['b'];
+
 	raises(function() {
 		object.add('c1', 'c2', function(exports, b) {});
 		object.add('c2', 'c3', function(exports, a) {});
 		object.add('c3', 'c2', function(exports, a) {});
 		object.use('c1', function(exports, a) {});
 	}, 'c1->c2->c3->c2 should throw circular dependency error');
+	delete object._loader.lib['c1'];
+	delete object._loader.lib['c2'];
+	delete object._loader.lib['c3'];
+
 	raises(function() {
 		object.add('c', 'c', function(exports, c) {});
 		object.use('c', function(exports, c) {});
 	}, 'c->c should throw circular dependency error');
+	delete object._loader.lib['c'];
 
 	object.add('uuua.ooos', function(exports) {});
 	object.add('uuua', 'uuua.ooos', function(exports) {});
@@ -68,6 +76,8 @@ test('circular dependency', function() {
 	} catch (e) {
 		ok(false, 'uuua use uuua.ooos will cause an circular dependency error');
 	}
+	delete object._loader.lib['uuua.ooos'];
+	delete object._loader.lib['uuua'];
 });
 
 test('string starts/ends with .', function() {
@@ -158,4 +168,6 @@ test('common usage', function() {
 		equal(module2.a, 2, 'a in module2 is correct');
 		module2.method();
 	});
+	delete object._loader.lib['module1'];
+	delete object._loader.lib['module2'];
 });
