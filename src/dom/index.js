@@ -1112,7 +1112,7 @@ var Elements = this.Elements = new Class(Array, /**@lends dom.Elements*/ functio
 		if(!elements || !Array.isArray(elements)) {
 			return null;
 		}
-		if (!wrapper || typeof wrapper != 'object') wrapper = Element;
+		if (!wrapper) wrapper = Element;
 
 		for (var i = 0; i < elements.length; i++) {
 			self.push(wrap(elements[i]));
