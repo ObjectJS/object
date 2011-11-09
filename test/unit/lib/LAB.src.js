@@ -597,3 +597,4 @@ $LAB.globals.objectEdges = {
 	//'{function(){}:function(){}}': {function(){}:function(){}},
 	//'{{a:1}:{a:1}}': {{a:1}:{a:1}}
 };
+$LAB.globals.SHOW_TRUE = false;

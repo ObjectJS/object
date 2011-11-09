@@ -169,7 +169,10 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 		boss.addEventListener(type, func, cap);
 	} : function(self, type, func) {
 		var boss = self.__boss || self;
-
+		// IE中报错_eventListeners为空或不是对象
+		if (!self._eventListeners) {
+			self._eventListeners = {};
+		}
 		// 存储此元素的事件
 		if (!self._eventListeners[type]) {
 			self._eventListeners[type] = [];
@@ -234,27 +237,15 @@ this.Events = new Class(/**@lends events.Event*/ function() {
 	this.fireEvent = document.dispatchEvent? function(self, type, eventData) {
 		var boss = self.__boss || self;
 
-		var triggerName = 'on' + type.toLowerCase();
 		var event = document.createEvent('Event');
 		event.initEvent(type, false, true);
 		object.extend(event, eventData);
-
-		if (self[triggerName]) {
-			var returnValue = self[triggerName].call(self, event);
-			if (returnValue === false) event.preventDefault();
-		}
 
 		boss.dispatchEvent(event);
 		return event;
 	} : function(self, type, eventData) {
 		if (!eventData) eventData = {};
-		var triggerName = 'on' + type.toLowerCase();
 		var event = exports.wrapEvent(eventData);
-
-		if (self[triggerName]) {
-			var returnValue = self[triggerName].call(self, event);
-			if (returnValue === false) event.preventDefault();
-		}
 
 		if (!self._eventListeners[type]) return event;
 		var funcs = self._eventListeners[type];

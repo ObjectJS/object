@@ -13,6 +13,30 @@ test('modules in object._loader.lib', function() {
 	ok(object._loader.lib.__anonymous_0__.name == '__anonymous_0__', 'anonymous module name pass');
 });
 
+test('simple use of module', function() {
+	expect(4);
+	object.add('module1', function(exports) {
+		exports.a = 1;
+		exports.method = function() {
+			ok(true, 'method in module1 invoked');
+		};
+	});
+	object.add('module2', 'module1', function(exports, module1) {
+		equal(module1.a, 1, 'a in module1 is correct'); 
+		module1.method();
+		exports.a = 2;
+		exports.method = function() {
+			ok(true, 'method in module2 invoked');
+		};
+	});
+	object.use('module2', function(exports, module2) {
+		equal(module2.a, 2, 'a in module2 is correct');
+		module2.method();
+	});
+	delete object._loader.lib['module1'];
+	delete object._loader.lib['module2'];
+});
+
 test('return value of module', function() {
 	expect(9);
 	object.add('return_number', function(exports) {
@@ -148,26 +172,3 @@ test('parent module and sub module', function() {
 	delete object._loader.lib['parent.sub'];
 });
 
-test('common usage', function() {
-	expect(4);
-	object.add('module1', function(exports) {
-		exports.a = 1;
-		exports.method = function() {
-			ok(true, 'method in module1 invoked');
-		};
-	});
-	object.add('module2', 'module1', function(exports, module1) {
-		equal(module1.a, 1, 'a in module1 is correct'); 
-		module1.method();
-		exports.a = 2;
-		exports.method = function() {
-			ok(true, 'method in module2 invoked');
-		};
-	});
-	object.use('module2', function(exports, module2) {
-		equal(module2.a, 2, 'a in module2 is correct');
-		module2.method();
-	});
-	delete object._loader.lib['module1'];
-	delete object._loader.lib['module2'];
-});

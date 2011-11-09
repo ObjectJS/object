@@ -223,15 +223,24 @@ this.id = function(id) {
 var eval_inner_JS = this.eval_inner_JS = function(ele) {
 	var js = [];
 	if (ele.nodeType == 11) { // Fragment
-		for (var i = 0; i < ele.childNodes.length; i++) {
-			if (ele.childNodes[i].nodeType === 1) {
-				js = js.concat(ele.childNodes[i].getElementsByTagName('script'));
+		for (var i = 0, l=ele.childNodes.length, current; i < l; i++) {
+			current = ele.childNodes[i];
+			if (current.tagName && current.tagName.toUpperCase() == 'SCRIPT') {
+				js.push(current);
+			} else if (current.nodeType === 1) {
+				var subScripts = current.getElementsByTagName('script');
+				if (subScripts.length != 0) {
+					js = js.concat(subScripts);	
+				}
 			}
 		}
 	} else if (ele.nodeType == 1) { // Node
-		js = ele.getElementsByTagName('script');
+		if (ele.tagName && ele.tagName.toUpperCase() == 'SCRIPT') {
+			js.push(ele);
+		} else {
+			js = ele.getElementsByTagName('script');
+		}
 	}
-
 
 	// IE下此句不生效
 	// js = [].slice.call(js, 0);
