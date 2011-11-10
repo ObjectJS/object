@@ -160,7 +160,6 @@ test('dom.id', function() {
 
 //eval_inner_JS
 test('dom.eval_inner_JS', function() {
-	expect(7);
 	object.use('dom', function(exports, dom) {
 		var div = document.createElement('div');
 		//&nbsp; is needed for IE
@@ -183,6 +182,32 @@ test('dom.eval_inner_JS', function() {
 
 		dom.eval_inner_JS(div3);
 		equal(window.a, 3, 'window.a = 3, assigned by script string, after dom.eval_inner_JS(div3)');
+
+		var div4 = document.createElement('div');
+		div4.innerHTML = '<div class="tpl-blank2">&nbsp;</div><script>document.write(\'<div id="by-write" class="by-write"></div>\');</sc' + 'ript>';
+		document.body.appendChild(div4);
+
+		try {
+			dom.eval_inner_JS(div4);
+			equal(document.getElementById('by-write').className, 'by-write', 'an div tag is written to document by script string document.write(<div id=by-write class=by-write></div>)');
+		} catch (e) {
+			ok(false, 'dom.eval_inner_JS(div4), with document.write, should not raise error ' + e);
+		}
+		document.body.removeChild(div4);
+
+		//eval_inner_JS can handle string
+		dom.eval_inner_JS('<script>window.value = 2;</sc' + 'ript>');
+		equal(window.value, 2, 'eval_inner_JS(<script>window.value = 2;</sc' + 'ript>), so window.value = 2 now');
+
+		dom.eval_inner_JS('<div>&nbsp;</div><script>window.value2 = 2;</sc' + 'ript><div></div><script>window.value2 ++;</sc' + 'ript><script>window.value2 ++;</sc' + 'ript><div>&nbsp;</div>');
+		equal(window.value2, 4, 'eval_inner_JS(<div>&nbsp;</div><script>window.value2 = 2;</sc' + 'ript><div></div><script>window.value2 ++;</sc' + 'ript><script>window.value2 ++;</sc' + 'ript><div>&nbsp;</div>), so window.value2 = 4 now');
+		try {
+			delete window.value;
+			delete window.value2;
+			delete window.a;
+		} catch (e) {
+			window.value = window.value2 = window.a = undefined;
+		}
 	});
 });
 

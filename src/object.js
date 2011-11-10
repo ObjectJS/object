@@ -829,30 +829,31 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * @param callback callback函数
 	 */
 	this.loadScript = classmethod(function(cls, src, callback, useCache) {
-		useCache = !!useCache;
-		var ele;
-
-		if (useCache) {
+		if (!src || typeof src != 'string' || !/\.js\s*$/.test(src)) {
+			// throw new Error('wrong script src');
+			return;
+		}
+		src = src.trim();
+		if (!!useCache) {
 			var scripts = cls.get('scripts');
-			for (var i = 0, script, l = scripts.length; i < l; i++) {
+			for (var i = 0, script, src, l = scripts.length; i < l; i++) {
 				script = scripts[i];
 				//src有可能是相对路径，而script.src是绝对路径，导致不一致
 				if (script.src && 
 						(script.src.indexOf(src) == script.src.length - src.length)) {
-					ele = script;
 					// 连续调用，此脚本正在加载呢
-					if (scripts[i].loading) {
+					if (script.loading) {
 						// 增加一个回调即可
-						ele.callbacks.push(callback);
+						script.callbacks.push(callback);
 					} else {
-						callback(ele);
+						callback(script);
 					}
 					return;
 				}
 			}
 		}
 
-		ele = document.createElement('script');
+		var ele = document.createElement('script');
 		ele.type = "text/javascript";
 		ele.src = src;
 		ele.async = true;

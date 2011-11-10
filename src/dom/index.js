@@ -221,6 +221,12 @@ this.id = function(id) {
  * 执行某个元素中的script标签
  */
 var eval_inner_JS = this.eval_inner_JS = function(ele) {
+	if (typeof ele == 'string') {
+		var node = document.createElement('div');
+		// <div>&nbsp;</div> is for IE
+		node.innerHTML = '<div>&nbsp;</div> ' + ele;
+		ele = node;
+	}
 	var js = [];
 	if (ele.nodeType == 11) { // Fragment
 		for (var i = 0, l=ele.childNodes.length, current; i < l; i++) {
@@ -229,8 +235,8 @@ var eval_inner_JS = this.eval_inner_JS = function(ele) {
 				js.push(current);
 			} else if (current.nodeType === 1) {
 				var subScripts = current.getElementsByTagName('script');
-				if (subScripts.length != 0) {
-					js = js.concat(subScripts);	
+				for(var j = 0, subLength = subScripts.length; j < subLength; j++) {
+					js.push(subScripts[j]);
 				}
 			}
 		}
@@ -260,7 +266,11 @@ var eval_inner_JS = this.eval_inner_JS = function(ele) {
 			eval(inner_js);
 			if (__inner_js_out_put.length !== 0) {
 				var tmp = document.createDocumentFragment();
-				$(tmp).appendHTML(__inner_js_out_put.join(''));
+				var div = document.createElement('div');
+				div.innerHTML = __inner_js_out_put.join('');
+				while(div.firstChild) {
+					tmp.appendChild(div.firstChild);
+				}
 				s.parentNode.insertBefore(tmp, s);
 			}
 		}
