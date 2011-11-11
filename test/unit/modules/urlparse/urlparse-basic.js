@@ -11,7 +11,7 @@ test('urlparse module is usable', function() {
 
 test('urlparse.urlparse : basic', function() {
 	object.use('urlparse', function(exports, urlparse) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				urlparse.urlparse(edges[prop]);
@@ -24,7 +24,7 @@ test('urlparse.urlparse : basic', function() {
 
 test('urlparse.urlunparse : basic', function() {
 	object.use('urlparse', function(exports, urlparse) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				urlparse.urlunparse(edges[prop]);
@@ -37,7 +37,7 @@ test('urlparse.urlunparse : basic', function() {
 
 test('urlparse.urljoin : basic', function() {
 	object.use('urlparse', function(exports, urlparse) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				urlparse.urljoin(edges[prop], 'url');

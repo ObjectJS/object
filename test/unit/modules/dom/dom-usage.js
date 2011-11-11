@@ -6,7 +6,7 @@ function assertPropExists(props, obj, desc, showTrue) {
 		if(!(props[i] in obj)) {
 			ok(false, props[i] + ' missed in ' + desc);
 		} else {
-			if(showTrue || $LAB.globals.SHOW_TRUE) {
+			if(showTrue || $UNIT_TEST_CONFIG.SHOW_TRUE) {
 				ok(true, props[i] + ' is mixined in ' + desc);
 			}
 		}
@@ -18,7 +18,7 @@ function assertPropNotExists(props, obj, desc, showTrue) {
 		if(props[i] in obj) {
 			ok(false, props[i] + ' should not exist in ' + desc);
 		} else {
-			if(showTrue || $LAB.globals.SHOW_TRUE) {
+			if(showTrue || $UNIT_TEST_CONFIG.SHOW_TRUE) {
 				ok(true, props[i] + ' is not mixined in ' + desc + ', which is correct');
 			}
 		}

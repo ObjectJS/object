@@ -16,7 +16,7 @@ test('ua.numberify', function() {
 	object.use('ua', function(exports, ua) {
 		var numberify = ua.numberify;
 		
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				numberify(edges[prop]);

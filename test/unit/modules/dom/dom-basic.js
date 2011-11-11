@@ -9,7 +9,7 @@ test('dom imported', function() {
 //$uid
 test('dom.$uid basic', function() {
 	object.use('dom', function(exports, dom) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		var counter = 0, start = window.UID;
 		for(var prop in edges) {
 			try {
@@ -29,7 +29,7 @@ test('dom.$uid basic', function() {
 //ready
 test('dom.ready basic', function() {
 	object.use('dom', function(exports, dom) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				dom.ready(edges[prop]);
@@ -42,7 +42,7 @@ test('dom.ready basic', function() {
 //wrap
 test('dom.wrap basic', function() {
 	object.use('dom', function(exports, dom) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				dom.wrap(edges[prop]);
@@ -55,7 +55,7 @@ test('dom.wrap basic', function() {
 //getElements/getElement
 test('dom.getElements basic', function() {
 	object.use('dom', function(exports, dom) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				dom.getElements(edges[prop]);
@@ -75,7 +75,7 @@ test('dom.getElements basic', function() {
 //id
 test('dom.id basic', function() {
 	object.use('dom', function(exports, dom) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				dom.id(edges[prop]);
@@ -88,7 +88,7 @@ test('dom.id basic', function() {
 //eval_inner_JS
 test('dom.eval_inner_JS basic', function() {
 	object.use('dom', function(exports, dom) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				dom.eval_inner_JS(edges[prop]);
@@ -101,7 +101,7 @@ test('dom.eval_inner_JS basic', function() {
 //getDom
 test('dom.getDom basic', function() {
 	object.use('dom', function(exports, dom) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				dom.getDom(edges[prop]);
@@ -114,7 +114,7 @@ test('dom.getDom basic', function() {
 //ElementClassList
 test('ElementClassList basic', function() {
 	object.use('dom', function(exports, dom) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				new dom.ElementClassList(edges[prop]);
@@ -127,7 +127,7 @@ test('ElementClassList basic', function() {
 //Element
 test('Element basic', function() {
 	object.use('dom', function(exports, dom) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				new dom.Element(edges[prop]);
@@ -140,7 +140,7 @@ test('Element basic', function() {
 //ImageElement
 test('ImageElement basic', function() {
 	object.use('dom', function(exports, dom) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				new dom.ImageElement(edges[prop]);
@@ -153,7 +153,7 @@ test('ImageElement basic', function() {
 //FormElement
 test('FormElement basic', function() {
 	object.use('dom', function(exports, dom) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				new dom.FormElement(edges[prop]);
@@ -166,7 +166,7 @@ test('FormElement basic', function() {
 //FormItemElement
 test('FormItemElement basic', function() {
 	object.use('dom', function(exports, dom) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				new dom.FormItemElement(edges[prop]);
@@ -179,7 +179,7 @@ test('FormItemElement basic', function() {
 //Window/Document
 test('Window basic', function() {
 	object.use('dom', function(exports, dom) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				new dom.Window(edges[prop]);
@@ -192,7 +192,7 @@ test('Window basic', function() {
 //Elements
 test('Elements basic', function() {
 	object.use('dom', function(exports, dom) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				new dom.Elements(edges[prop]);

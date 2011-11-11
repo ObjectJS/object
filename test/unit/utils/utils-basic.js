@@ -1,6 +1,6 @@
 module("util-Object-basic");
 test('Object.keys', function() {
-	var values = $LAB.globals.testEdges;
+	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
 		try {
 			var objs = Object.keys(values[prop]);
@@ -26,13 +26,13 @@ test('Object.keys', function() {
 module("util-Array-basic");
 
 test('function exists in arrays', function() {
-	var arrays = $LAB.globals.arrayEdges;
+	var arrays = $UNIT_TEST_CONFIG.arrayEdges;
 	for(var prop in arrays) {
 		ok(arrays[prop].forEach != null, 'forEach is ok for ' + prop);
 	}
 });
 test('Array.isArray', function() {
-	var values = $LAB.globals.testEdges;
+	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
 		try {
 			var flag = Array.isArray(values[prop]);
@@ -40,7 +40,7 @@ test('Array.isArray', function() {
 			ok(false, 'Array.isArray(' + prop + ') should be considered : ' + e);
 		};
 	};
-	var arrays = $LAB.globals.arrayEdges;
+	var arrays = $UNIT_TEST_CONFIG.arrayEdges;
 	for(var prop in arrays) {
 		ok(Array.isArray(arrays[prop]), prop + ' is an array ');
 	}
@@ -114,9 +114,9 @@ test('Array.indexOf', function() {
 	var a = [1, Function];
 	equal(a.indexOf(Function), 1, 'indexOf(Function) is ok');
 
-	var array = $LAB.globals.emptys;
-	var desc = $LAB.globals.emptysDesc;
-	for(var i=0,l=$LAB.globals.emptys.length; i<l; i++) {
+	var array = $UNIT_TEST_CONFIG.emptys;
+	var desc = $UNIT_TEST_CONFIG.emptysDesc;
+	for(var i=0,l=$UNIT_TEST_CONFIG.emptys.length; i<l; i++) {
 		equal(i, array.indexOf(array[i]), desc[i] + ' is ok with indexOf');
 	}
 });
@@ -202,8 +202,8 @@ test('Function.bind', function() {
 		}).bind();
 	binder();
 
-	var emptys = $LAB.globals.emptys;
-	var descs = $LAB.globals.emptysDesc;
+	var emptys = $UNIT_TEST_CONFIG.emptys;
+	var descs = $UNIT_TEST_CONFIG.emptysDesc;
 	for(var i=0,l=emptys.length; i<l; i++) {
 		if(typeof emptys[i] == 'number' && isNaN(emptys[i])) {
 			ok(true, 'NaN bind has no effect');
@@ -262,7 +262,7 @@ test('Class.create', function() {
 });
 
 test('Class.initMixins', function() {
-	var values = $LAB.globals.testEdges;
+	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
 		try {
 			Class.initMixins(values[prop]);
@@ -294,7 +294,7 @@ test('Class.initMixins', function() {
 });
 
 test('Class.mixin', function() {
-	var values = $LAB.globals.testEdges;
+	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
 		try {
 			new Class(function() {
@@ -311,7 +311,7 @@ test('Class.mixin', function() {
 			ok(false, 'Class.mixin(' + prop + ', {}) is ok : ' + e);
 		}
 	}
-	var trues = $LAB.globals.trues;
+	var trues = $UNIT_TEST_CONFIG.trues;
 	for(var i=0,l=trues.length; i<l; i++) {
 		var dict = {__mixins__: trues[i]};	
 		try {
@@ -324,7 +324,7 @@ test('Class.mixin', function() {
 });
 
 test('Class.hasProperty', function() {
-	var values = $LAB.globals.testEdges;
+	var values = $UNIT_TEST_CONFIG.testEdges;
 	var obj = {__properties__: {'a':1}};
 	for(var prop in values) {
 		try {
@@ -348,7 +348,7 @@ test('Class.hasProperty', function() {
 });
 
 test('Class.getPropertyNames', function() {
-	var values = $LAB.globals.testEdges;
+	var values = $UNIT_TEST_CONFIG.testEdges;
 	var obj = {__properties__: {'a':1}};
 	for(var prop in values) {
 		try {
@@ -379,7 +379,7 @@ test('Class.inject', function() {
 });
 
 test('Class.getChain', function() {
-	var values = $LAB.globals.testEdges;
+	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
 		try {
 			Class.getChain(values[prop]);
@@ -399,7 +399,7 @@ test('Class.getChain', function() {
 });
 
 test('Class.getInstance', function() {
-	var values = $LAB.globals.testEdges;
+	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
 		try {
 			Class.getInstance(values[prop]);
@@ -416,7 +416,7 @@ test('Class.getInstance', function() {
 });
 
 test('Class.getAllSubClasses', function() {
-	var values = $LAB.globals.testEdges;
+	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
 		try {
 			Class.getAllSubClasses(values[prop]);

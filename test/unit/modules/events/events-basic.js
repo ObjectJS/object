@@ -37,7 +37,7 @@ test('events is usable', function() {
 
 test('events.wrapEvent', function() {
 	object.use('events', function(exports, events) {
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				events.wrapEvent(edges[prop]);
@@ -74,7 +74,7 @@ test('events.addEvent', function() {
 		} catch (e) {
 			ok(false, 'a.addEvent(e, function() {}, false) throw error : ' + e);
 		}
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				a.addEvent(edges[prop], function(){}, true);
@@ -124,7 +124,7 @@ test('events.removeEvent', function() {
 		} catch (e) {
 			ok(false, 'a.removeEvent(e, function() {}, false) throw error : ' + e);
 		}
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				a.removeEvent(edges[prop], function(){}, true);
@@ -170,7 +170,7 @@ test('events.fireEvent', function() {
 			ok(false, 'a.fireEvent(e, {a:1}) throw error : ' + e);
 		}
 		
-		var edges = $LAB.globals.testEdges;
+		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
 				a.fireEvent(edges[prop], {a:1});

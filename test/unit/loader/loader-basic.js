@@ -10,7 +10,7 @@ module('loader-loadScript', {teardown: function() {
 }});
 
 function emptyCallback(){};
-var emptyJS = ($LAB.needPath ? 'loader/' : '') + 'empty.js';
+var emptyJS = ($UNIT_TEST_CONFIG.needPath ? 'loader/' : '') + 'empty.js';
 
 test('loadScript basic test', function() {
 	ok(Loader.loadScript, 'loadScript is visible in Loader');
@@ -73,7 +73,7 @@ test('loadScript with/without cache', function() {
 module("loader-getUses");
 test('getUses-basic', function() {
 	var loader = new Loader();
-	var edges = $LAB.globals.testEdges;
+	var edges = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in edges) {
 		try {
 			loader.getUses(edges[prop]);
@@ -118,7 +118,7 @@ test('getUses-ignore', function() {
 module("loader-makePrefixPackage");
 test('makePrefixPackage-basic', function() {
 	var loader = new Loader();
-	var edges = $LAB.globals.testEdges;
+	var edges = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in edges) {
 		try {
 			loader.makePrefixPackage(edges[prop]);
@@ -208,7 +208,7 @@ test('add-basic', function() {
 		loader.add('name');
 	}, 'more arguments needed');
 
-	var edges = $LAB.globals.testEdges;
+	var edges = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in edges) {
 		try {
 			loader.add(edges[prop], ['a']);
@@ -283,7 +283,7 @@ test('use-usage', function() {
 module("loader-execute");
 test('execute-basic', function() {
 	var loader = new Loader();
-	var edges = $LAB.globals.testEdges;
+	var edges = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in edges) {
 		try {
 			loader.execute(edges[prop], ['a']);

@@ -1,7 +1,7 @@
 module("object-functions-basic");
 
 test('extend', function() {
-	var values = $LAB.globals.testEdges;
+	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
 		try {
 			var result = object.extend(values[prop], {a:1});
@@ -49,7 +49,7 @@ test('extend', function() {
 
 test('clone', function() {
 	QUnit.reset();
-	var values = $LAB.globals.testEdges;
+	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
 		try {
 			var result = object.clone(values[prop]);
@@ -67,7 +67,7 @@ test('clone', function() {
 
 test('bind', function() {
 	QUnit.reset();
-	var values = $LAB.globals.testEdges;
+	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
 		try {
 			object.bind(values[prop]);
@@ -85,7 +85,7 @@ test('bind', function() {
 
 test('use', function() {
 	QUnit.reset();
-	var values = $LAB.globals.testEdges;
+	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
 		try {
 			object.use(values[prop]);
@@ -104,7 +104,7 @@ test('use', function() {
 
 test('add', function() {
 	QUnit.reset();
-	var values = $LAB.globals.testEdges;
+	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
 		try {
 			object.add(values[prop]);
@@ -123,7 +123,7 @@ test('add', function() {
 
 test('execute', function() {
 	QUnit.reset();
-	var values = $LAB.globals.testEdges;
+	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
 		try {
 			object.execute(values[prop]);
