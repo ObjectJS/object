@@ -1,9 +1,10 @@
+var head = document.getElementsByTagName('head')[0];
 module('loader-loadScript', {teardown: function() {
 	// remove inserted script tag after every test case finished
 	var scripts = Sizzle('script');
 	for(var i=0;i<scripts.length; i++) {
 		if(scripts[i].callbacks) {
-			if(document.head) document.head.removeChild(scripts[i]);
+			head.removeChild(scripts[i]);
 		}
 	}
 }});
@@ -168,7 +169,7 @@ test('loadLib', function() {
 	var script = document.createElement('script');
 	script.setAttribute('data-module', 'test_module');
 	script.setAttribute('data-src', emptyJS);
-	document.head.appendChild(script);
+	head.appendChild(script);
 	var len3 = loader.scripts.length;
 	equal(len1 + 2, len3, 'when new script inserted, loader.scripts should be added automatically');
 	loader.loadLib();
@@ -179,20 +180,20 @@ test('loadLib', function() {
 
 	var script = document.createElement('script');
 	script.setAttribute('data-src', 'test_module_null_data-module');
-	document.head.appendChild(script);
+	head.appendChild(script);
 	loader.loadLib();
 	ok(Object.keys(loader.lib).length == 2, 'new script tag inserted, but no data-module attribute, so no new module added');
 
 	var script = document.createElement('script');
 	script.setAttribute('data-module', 'test_module_null_data-src');
-	document.head.appendChild(script);
+	head.appendChild(script);
 	loader.loadLib();
 	ok(Object.keys(loader.lib).length == 2, 'new script tag inserted, but no data-src attribute, so no new module added');
 
 	var script = document.createElement('script');
 	script.setAttribute('data-module', 'test_module_wrong_data-src');
 	script.setAttribute('data-src', 'not-correct-js-file-url');
-	document.head.appendChild(script);
+	head.appendChild(script);
 	loader.loadLib();
 	ok(Object.keys(loader.lib).length == 2, 'new script tag inserted, but data-src attribute is wrong, so no new module added');
 });

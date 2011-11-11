@@ -105,6 +105,22 @@ test('nested mixin', function() {
 	equal(c.a, 1, 'nested mixin property is ok');
 });
 
+//mixin subclass, parent should be also mixined
+test('mixin subclass(parent)', function() {
+	var A = new Class(function() {
+		this.a = 1;
+	});
+	var B = new Class(A, function() {
+		this.b = 1;
+	});
+	var C = new Class(function() {
+		Class.mixin(this, B);
+	});
+	var c = new C();
+	equal(c.a, 1, 'attribute a in parent should be mixined');
+	equal(c.b, 1, 'attribute b in subclass should be mixined');
+});
+
 //circular mixin B.mixin(A), A.mixin(B)
 test('circular mixin', function() {
 	var A = new Class(function(){
