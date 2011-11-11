@@ -10,7 +10,7 @@ test('new class', function() {
 });
 
 test('extend from non-class value', function() {
-	var values = $LAB.globals.testEdges;
+	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
 		try {
 			new Class(values[prop], function() {});

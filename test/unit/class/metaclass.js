@@ -325,7 +325,7 @@ test('throw uncatched error in __metaclass__', function() {
 });
 
 test('metaclass is other non-false value, not function', function() {
-	var trues = $LAB.globals.trues;
+	var trues = $UNIT_TEST_CONFIG.trues;
 	for(var i=0,l=trues.length; i<l; i++) {
 		try {
 			new Class(function() {
