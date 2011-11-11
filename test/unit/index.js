@@ -10,7 +10,8 @@ $(document).ready(function() {
 		{module:'ua/ua', url:'modules/ua/ua'},
 		{module:'ua/flashdetect', url:'modules/ua/flashdetect'},
 		{module:'dom', url:'modules/dom'},
-		{module:'events', url:'modules/events'}
+		{module:'events', url:'modules/events'},
+		{module:'urlparse', url:'modules/urlparse'}
 	];
 	for(var i=0,l=config.length; i<l; i++) {
 		$LAB.script(config[i].url + '/index.js');

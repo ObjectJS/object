@@ -1,0 +1,179 @@
+module('events-usage');
+
+test('events.wrapEvent', function(){
+});
+
+test('events.fireevent', function() {
+	expect(13);
+	object.use('events', function(exports, events) {
+		var A = new Class(function() {
+			Class.mixin(this, events.Events);
+			this.a = events.fireevent(function() {
+				ok(true, 'a method is called');
+			});
+			this.b = events.fireevent(['data1', 'data2'])(function() {
+				ok(true, 'b method is called');
+			});
+			this.c = events.fireevent('my-event-name', ['data1', 'data2'])(function() {
+				ok(true, 'c method is called');
+			});
+			this.d = events.fireevent('a', ['data1'])(function() {
+				ok(true, 'd method is called');
+			});
+		});
+		var a = new A();
+
+		// normal
+		a.addEvent('a', function(e) {
+			a.removeEvent('a', arguments.callee);
+			ok(true, 'event a fired');
+		}, false);
+		a.a();
+
+		// prevent default
+		a.addEvent('a', function(e) {
+			a.removeEvent('a', arguments.callee);
+			e.preventDefault();
+			ok(true, 'event a fired, and default method is prevented');
+		});
+		a.a();
+
+		//fireevent([])
+		a.addEvent('b', function(e) {
+			a.removeEvent('b', arguments.callee);
+			equal(e.data1, 1, 'e.data1 is 1 in event b : fireevent([])');
+			equal(e.data2, 2, 'e.data2 is 2 in event b : fireevent([])');
+		}, false);
+		a.b(1,2);
+
+		//fireevent('', [])
+		a.addEvent('my-event-name', function(e) {
+			a.removeEvent('my-event-name', arguments.callee);
+			equal(e.data1, 1, 'e.data1 is 1 in event c : fireevent(str, [])');
+			equal(e.data2, 2, 'e.data2 is 2 in event c : fireevent(str, [])');
+		}, false);
+		a.c(1,2);
+
+		//fireevent('', []) eventName is already exist
+		a.addEvent('a', function(e) {
+			ok(ok, 'a should not be called, data1 = ' + e.data1);
+		}, false);
+		a.a();
+		a.d('d');
+	});
+});
+
+test('events.Events: addEvent/removeEvent/fireEvent', function() {
+	expect(5)
+	object.use('events, dom', function(exports, events, dom) {
+		var A = new Class(function() {
+			Class.mixin(this, events.Events);
+		});
+		var a = new A();
+		//event: not-exist
+		a.addEvent('not-exist', function(e) {
+			a.removeEvent('not-exist', arguments.callee);
+			ok(true, 'not-exist event handler executed');
+		}, false);
+		a.fireEvent('not-exist');
+
+		//event: not-exist, two handlers
+		a.addEvent('not-exist-2', function(e) {
+			ok(true, 'not-exist-2 event handler 1 executed (both handler 1 and 2)');
+			a.removeEvent('not-exist-2', arguments.callee);
+		}, false);
+		a.addEvent('not-exist-2', function(e) {
+			// not execute in IE
+			ok(true, 'not-exist-2 event handler 2 executed (both handler 1 and 2)');
+			a.removeEvent('not-exist-2', arguments.callee);
+		}, false);
+		a.fireEvent('not-exist-2');
+
+		var counter = 0;
+		var handler = function(e) {
+			counter ++;
+			ok(true, 'handler should execute only once');
+			equal(counter, 1, 'handler executed only once, correct');
+		}
+
+		// remove not-exist handler
+		try {
+			a.removeEvent('e', handler, false);
+			ok(true, 'remove not-exist event handler should not cause error');
+		} catch (e) {
+			ok(true, 'remove not-exist event handler should not cause error : ' + e);
+		}
+
+		// remove from not-exist event
+		try {
+			a.removeEvent('not-exist-event-name', handler, false);
+			ok(true, 'remove handler from not-exist event name should not cause error');
+		} catch (e) {
+			ok(true, 'remove handler from not-exist event name should not cause error : ' + e);
+		}
+
+		// add the same event handler
+		a.addEvent('e', handler, false);
+		a.addEvent('e', handler, false);
+
+	});
+});
+
+test('events.Events: play with the standard', function() {
+	expect(9)
+	object.use('events, dom', function(exports, events, dom) {
+		var A = new Class(function() {
+			Class.mixin(this, events.Events);
+		});
+		var a = new A();
+		// on-e should not be executed when fire self-defined event : e
+		var counter1 = 0;
+		a.one = function() {
+			ok(false, 'a.on-e should not be executed when event e fired : in handler');
+			counter1 ++;
+		}
+		a.fireEvent('e');
+		equal(counter1, 0, 'a.on-e should not be executed when event e fired');
+
+		// standard event : click on obj
+		var counter2 = 0;
+		a.onclick = function() {
+			counter2 ++;
+			ok(false, 'standard event(click) on obj should not be fired manually');
+		}
+		equal(counter2, 0, 'standard event(click) on obj should not be fired manually');
+		a.addEvent('click', function() {
+			ok(true, 'standard event(click) should be fired manually');
+		}, false);
+		a.fireEvent('click');
+
+		// standard event : click on div
+		var div = dom.wrap(document.createElement('div'));
+		div.onclick = function() {
+			// not execute in IE
+			ok(true, 'div.onclick is executed, which is not executed in IE');
+		};
+		div.addEvent('click', function(e) {
+			e.preventDefault();
+			ok(true, 'standard event(click) on div should be fired manually');
+		}, false);
+		div.fireEvent('click');
+
+		// throw error in event handler
+		var counter3 = 0;
+		a.addEvent('fire-error', function() {
+			ok(true, 'fire event fire-error, should not stop the event chain - handler 1');
+			counter3 ++;
+			throw new Error('throw error in handler');
+		}, false);
+		a.addEvent('fire-error', function() {
+			counter3 ++;
+			ok(true, 'fire event fire-error, should not stop the event chain - handler 2');
+		}, false);
+		// can not get the error in this way, because error is throwed from another function
+		raises(function() {
+			a.fireEvent('fire-error');
+		}, 'should raise error after fireEvent(fire-error), but should not stop the event chain');
+		equal(counter3, 2, 'should not stop the event chain');
+	});
+});
