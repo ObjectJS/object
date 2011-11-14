@@ -18,7 +18,8 @@
 							object.use('dom', function(exports, dom){
 								dom.ready(function() {
 									// IE 下依然会执行，此时doScroll检测还在继续
-									alert('ready is called');
+									//alert('ready is called');
+									document.getElementById('test').value = 'true';
 								});
 							});
 						}
@@ -29,9 +30,14 @@
 						//因此FF下，动态加载的内容再也不会触发了。。。
 						//修改内容： 在ready中最前面加入对document.readyState === 'complete'的判断
 						//如果是true，则将__domLoaded设置为true，并且运行runHooks
-						object.use('dom', function(exports, dom){
+						object.use('dom, ua', function(exports, dom, ua){
 							dom.ready(function() {
-								alert('ready is called');
+								document.getElementById('test').value = 'true';
+								// can not access window.parent in iframe in Chrome
+								// so if your browser is chrome, open xxxx.html with your browser to test dom.ready
+								if(ua.ua.chrome > 5) {
+									alert('dom.ready is ok');
+								}
 							});
 						});
 					}
@@ -42,6 +48,7 @@
 		</script>
 	</head>
 	<body onload='handle()'>
+		<input type='text' id='test' value='none'/>
 		在body onload时动态插入objectjs的代码，并在回调函数中调用dom.ready<br>
 		应该要打印ready is called，如果没有打印，说明在这种情况下有问题
 	</body>
