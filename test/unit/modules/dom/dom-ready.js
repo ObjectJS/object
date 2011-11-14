@@ -1,4 +1,5 @@
 module('dom.ready')
+var path = $LAB.needPath ? 'modules/dom/' : '';
 
 // can not access window.parent in iframe in Chrome
 // so if your browser is chrome, open xxxx.html with your browser to test dom.ready
@@ -11,7 +12,7 @@ function createIframeWithCallback(src, callback) {
 	var iframe = document.createElement('iframe');
 	//iframe.style.border = '1px solid red';
 	iframe.style.display = 'none';
-	iframe.src = src;
+	iframe.src = path + src;
 	document.body.appendChild(iframe);
 	if (iframe.attachEvent) {
 		iframe.attachEvent('onload', callback);
