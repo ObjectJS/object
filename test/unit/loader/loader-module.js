@@ -32,6 +32,7 @@ var module1JS_request_file_once = path + 'module1-request-file-once.js';
 var moduleAJS_abc = path + 'moduleABC-a.js'
 var moduleBJS_abc = path + 'moduleABC-b.js'
 var moduleCJS_abc = path + 'moduleABC-c.js'
+var module_manyModules = path + 'one-file-many-modules.js';
 
 function addModuleScriptToHead(name, src) {
 	var script = document.createElement('script');
@@ -63,6 +64,23 @@ test('add script as module', function() {
 	});
 });
 
+test('add script as module, but is another module', function() {
+	recoverEnv();
+	addModuleScriptToHead('module1', module2JS_seperate);
+	var loader = object._loader;
+	loader.loadLib();
+	stop();
+	// for global error throwed in callback of executeModule
+	var oldError = window.onerror;
+	window.onerror = function(a,b,c) {
+		start();
+		ok(true, 'error occurred when data-module is module1, data-src file is about module2');
+		window.onerror = oldError;
+		return true;
+	};
+	loader.use('module1', function(exports, module1) {});
+});
+
 test('file module1 depends on file module2', function() {
 	recoverEnv();
 	addModuleScriptToHead('module1', module1JS_depends);
@@ -74,6 +92,30 @@ test('file module1 depends on file module2', function() {
 		start();
 		equal(module1.a, 1, 'module1.a is ok : 1');
 		equal(module1.b, 2, 'module1.b, from module2.b is ok : 2');
+	});
+});
+
+test('one module file, many modules', function() {
+	recoverEnv();
+	addModuleScriptToHead('module1', module_manyModules);
+	addModuleScriptToHead('module2', module_manyModules);
+	addModuleScriptToHead('module3', module_manyModules);
+	var loader = object._loader;
+	loader.loadLib();
+	window.oneFileManyModules_load_times = 0;
+	stop();
+	loader.use('module1', function(exports, module1) {
+		start();
+		equal(module1.a, 1, 'module1.a is ok : 1');
+	});
+	loader.use('module2', function(exports, module2) {
+		start();
+		equal(module2.b, 1, 'module2.b is ok : 1');
+	});
+	loader.use('module3', function(exports, module3) {
+		start();
+		equal(module3.c, 1, 'module3.c is ok : 1');
+		equal(window.oneFileManyModules_load_times, 1, 'only load script for once');
 	});
 });
 
@@ -116,14 +158,12 @@ test('file module1 name is module1, file module2 name is the same', function() {
 	addModuleScriptToHead('module1', module1JS_same_name);
 	addModuleScriptToHead('module1', module2JS_same_name);
 	stop();
-	setTimeout(function() {
-		var loader = object._loader;
-		loader.loadLib();
-		loader.use('module1', function(exports, module1) {
-			start();
-			equal(module1.a, 1, 'use module1, will choose the first script tag whose data-module is module1');
-		});
-	}, 200);
+	var loader = object._loader;
+	loader.loadLib();
+	loader.use('module1', function(exports, module1) {
+		start();
+		equal(module1.a, 1, 'use module1, will choose the first script tag whose data-module is module1');
+	});
 });
 
 test('request module file only once', function() {
