@@ -219,6 +219,26 @@ test('reference members in class - Object', function() {
 	equal(a.a.prop, undefined, 'instance of A should not be modified, a.a.prop should be undefined');
 });
 
+test('closure in Class', function() {
+	var Test = new Class(function() {
+		a = {};
+		this.initialize = function(self) {
+			self.a = a;
+		}
+		this.add = function(self, name, value) {
+			self.a[name] = value;    
+		}
+	});
+	var t1 = new Test();
+	t1.add('ok', 'ok');
+	var t2 = new Test();
+	t2.add('ok2', 'ok2');
+	equal(t1.a.ok, 'ok', 't1 add ok, so t1.a.ok is ok');
+	equal(t2.a.ok, undefined, 't2 did not add ok, so t2.a.ok should be undefined');
+	equal(t1.a.ok2, undefined, 't1 did not add ok2, so t1.a.ok2 is should be undefined');
+	equal(t2.a.ok2, 'ok2', 't2 add ok2, so t2.a.ok2 is ok2');
+});
+
 test('speed test', function() {
 	return; // costs time, do this test seperately;
 	var st = new Date().getTime();
