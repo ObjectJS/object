@@ -789,7 +789,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 */
 	this.loadLib = function(self) {
 		var scripts = self.scripts;
-		for (var i = 0, script, module, l = scripts.length; i < l; i++) {
+		for (var i = 0, script, module, src, l = scripts.length; i < l; i++) {
 			script = scripts[i];
 			module = script.getAttribute('data-module');
 			if (!module) continue;
@@ -798,11 +798,13 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			if (self.lib[module] && (self.lib[module].fn || self.lib[module].file)) {
 				continue;
 			}
-
+			src = script.getAttribute('data-src');
+			if (!/\.js\s*$/.test(src)) {
+				continue;
+			}
 			// 建立前缀package
 			self.makePrefixPackage(module);
-
-			self.lib[module] = {file: script.getAttribute('data-src'), name: module};
+			self.lib[module] = {file: src, name: module};
 		}
 	};
 
@@ -811,6 +813,13 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * 比如 a.b.c.d ，会建立 a/a.b/a.b.c 三个空模块，最后一个模块为目标模块，不为空，内容为context
 	 */
 	this.makePrefixPackage = function(self, name) {
+		if (!name || typeof name != 'string') {
+			return;
+		}
+		if (name.indexOf('sys.') == 0) {
+			throw new Error('sys has no sub module');
+		}
+		name = name.replace(/^\.*|\.*$/g, '');
 		var names = name.split('.');
 		for (var i = 0, prefix, l = names.length - 1; i < l; i++) {
 			prefix = names.slice(0, i + 1).join('.');
@@ -830,7 +839,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 */
 	this.loadScript = classmethod(function(cls, src, callback, useCache) {
 		if (!src || typeof src != 'string' || !/\.js\s*$/.test(src)) {
-			// throw new Error('wrong script src');
+			throw new Error('wrong script src');
 			return;
 		}
 		src = src.trim();
@@ -1027,6 +1036,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 					// 文件加载完毕后，其中执行的 add 会自动把 self.lib 中的对象替换掉，file 属性丢失，加入了 execute/name/uses 等属性
 					// 使用缓存
 					self.loadScript(pkg.file, function() {
+						if (pkg.file) {
+							throw new Error(pkg.file + ' do not add ' + pkg.name);
+						}
 						self.executeModule(pkg, modules, stack, next);
 					}, true);
 
@@ -1053,13 +1065,17 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * @param ignore 跳过ignore模块，用来避免自己调用自己
 	 */
 	this.getUses = function(self, uses, ignore) {
+		if (!uses || typeof uses != 'string') {
+			return uses;
+		}
 		if (typeof uses == 'string') {
+			uses = uses.replace(/^,*|,*$/g, '');
 			uses = uses.split(/\s*,\s*/ig);
 		}
 
 		// 过滤自己调用自己
 		uses = uses.filter(function(use) {
-			return use != ignore;
+			return use !== ignore;
 		});
 
 		return uses;
@@ -1073,6 +1089,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * @param context 这个function会在调用module时调用，并将module通过参数传入context，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
 	 */
 	this.add = function(self, name, uses, context) {
+		if (arguments.length < 3) {
+			return;
+		}
 		// 不允许重复添加。
 		if (self.lib[name] && self.lib[name].fn) return null;
 
@@ -1084,6 +1103,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			uses = self.getUses(uses, name);
 		}
 
+		if (!context || typeof context != 'function') {
+			return;
+		}
 		if (context && self.lib[name] && self.lib[name].file) {
 			delete self.lib[name].file;
 			self.lib[name].fn = context;
@@ -1110,6 +1132,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * @param context uses加载后调用，将module通过参数传入context，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
 	 */
 	this.use = function(self, uses, context) {
+		if (!context || typeof context != 'function') {
+			return;
+		}
 		self.loadLib();
 
 		var name = '__anonymous_' + self.anonymousModuleCount + '__';
@@ -1133,6 +1158,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * @param options 传入参数
 	 */ 
 	this.execute = function(self, name) {
+		if (!name || typeof name != 'string') {
+			return;
+		}
 		self.loadLib();
 
 		var module = self.lib[name];
