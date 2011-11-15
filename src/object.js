@@ -789,7 +789,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 */
 	this.loadLib = function(self) {
 		var scripts = self.scripts;
-		for (var i = 0, script, module, src, l = scripts.length; i < l; i++) {
+		for (var i = 0, script, module, l = scripts.length; i < l; i++) {
 			script = scripts[i];
 			module = script.getAttribute('data-module');
 			if (!module) continue;
@@ -798,13 +798,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			if (self.lib[module] && (self.lib[module].fn || self.lib[module].file)) {
 				continue;
 			}
-			src = script.getAttribute('data-src');
-			if (!/\.js\s*$/.test(src)) {
-				continue;
-			}
 			// 建立前缀package
 			self.makePrefixPackage(module);
-			self.lib[module] = {file: src, name: module};
+			self.lib[module] = {file: script.getAttribute('data-src'), name: module};
 		}
 	};
 
@@ -815,9 +811,6 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	this.makePrefixPackage = function(self, name) {
 		if (!name || typeof name != 'string') {
 			return;
-		}
-		if (name.indexOf('sys.') == 0) {
-			throw new Error('should not add sub module for sys');
 		}
 		name = name.replace(/^\.*|\.*$/g, '');
 		var names = name.split('.');
@@ -1094,6 +1087,10 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		}
 		// 不允许重复添加。
 		if (self.lib[name] && self.lib[name].fn) return null;
+
+		if (typeof name == 'string' && name.indexOf('sys.') == 0) {
+			throw new Error('should not add sub module for sys');
+		}
 
 		// uses 参数是可选的
 		if (typeof uses == 'function') {
