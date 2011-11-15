@@ -31,6 +31,12 @@ test('loadScript with url', function() {
 		Loader.loadScript('not-exists-url', emptyCallback);
 	}, 'can not loadScript with not exists url');
 
+	var oldOnError = window.onerror;
+	window.onerror = function() {
+		ok(true, 'not-exists-url.js is not exist');
+		window.onerror = oldOnError;
+		return true;
+	};
 	Loader.loadScript('not-exists-url.js', emptyCallback);
 	//equal(Sizzle('script[src=not-exists-url.js]').length, 0, 'not exists url, script tag should be deleted');
 	stop();
