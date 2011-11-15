@@ -817,7 +817,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			return;
 		}
 		if (name.indexOf('sys.') == 0) {
-			throw new Error('sys has no sub module');
+			throw new Error('should not add sub module for sys');
 		}
 		name = name.replace(/^\.*|\.*$/g, '');
 		var names = name.split('.');
