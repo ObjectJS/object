@@ -22,8 +22,8 @@ var Element = new Class(function() {
 });
 
 /**
-* 一组Component的包装
-*/
+ * 一组Component的包装
+ */
 this.Components = new Class(Array, function() {
 
 	/**
@@ -45,8 +45,8 @@ this.Components = new Class(Array, function() {
 				//var i, arg, args = [];
 				// 代理方法支持Component参数
 				//for (i = 0; i < arguments.length; i++) {
-					//arg = arguments[i];
-					//args.push((arg && arg._node)? arg._node : arg);
+				//arg = arguments[i];
+				//args.push((arg && arg._node)? arg._node : arg);
 				//}
 				for (i = 0; i < self.length; i++) {
 					element = self[i];
@@ -372,11 +372,13 @@ this.Component = new Class(function() {
 
 			if (value) {
 				self.__setOption(name, value);
+			}
 			// 从options参数获取配置
-			} else if (options[name]) {
+			else if (options[name]) {
 				self.__setOption(name, options[name]);
+			}
 			// 默认配置
-			} else {
+			else {
 				self.__setOption(name, defaultValue);
 			}
 
@@ -500,8 +502,8 @@ this.Component = new Class(function() {
 	};
 
 	/**
-	* 获取sub的节点
-	*/
+	 * 获取sub的节点
+	 */
 	this.__querySub = function(self, name) {
 		var sub = self.__properties__[name];
 		if (typeof sub.selector == 'function') {
@@ -582,18 +584,18 @@ this.Component = new Class(function() {
 	};
 
 	/**
-	* @deprecated
-	* 用revert代替
-	* 由于form有reset方法，在reset调用时，会fire reset事件，导致意外的表单重置
-	*/
+	 * @deprecated
+	 * 用revert代替
+	 * 由于form有reset方法，在reset调用时，会fire reset事件，导致意外的表单重置
+	 */
 	this._reset = function(self) {
 		self._revert('reset');
 	};
 
 	/**
-	* 获取option的值
-	* @param name name
-	*/
+	 * 获取option的值
+	 * @param name name
+	 */
 	this.getOption = function(self, name) {
 		var pname = '_' + name;
 		if (self[pname] === undefined) {
@@ -603,11 +605,11 @@ this.Component = new Class(function() {
 	};
 
 	/**
-	* 设置option的值
-	* @method
-	* @param name name
-	* @param value value
-	*/
+	 * 设置option的值
+	 * @method
+	 * @param name name
+	 * @param value value
+	 */
 	this.setOption = options.overloadsetter(function(self, name, value) {
 		// 由于overloadsetter是通过name是否为string来判断传递形式是name-value还是{name:value}的
 		// 在回调中为了性能需要直接传的parts，类型为数组，而不是字符串，因此无法通过回调用overloadsetter包装后的方法进行回调
@@ -670,10 +672,10 @@ this.Component = new Class(function() {
 	};
 
 	/**
-	* 根据subs的type创建一个component，并加入到引用中，这一般是在renderXXX方法中进行调用
-	* @param name
-	* @param data 模板数据
-	*/
+	 * 根据subs的type创建一个component，并加入到引用中，这一般是在renderXXX方法中进行调用
+	 * @param name
+	 * @param data 模板数据
+	 */
 	this.make = function(self, name, data) {
 		var sub = self.__properties__[name];
 		var pname = '_' + name;
