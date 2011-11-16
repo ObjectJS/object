@@ -808,7 +808,6 @@ StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "inde
 /**
  * object的包管理器
  * 这个class依赖于object._lib ，且会修改它
- * @class
  */
 this.Loader = new Class(function() {
 
@@ -1118,6 +1117,7 @@ this.Loader = new Class(function() {
 	/**
 	 * 传入context，context的参数会包含use进来的module
 	 * 创造一个context，内部通过 this.xxx 设置的成员都会在这个 context 下。
+	 *
 	 * @param name 名称
 	 * @param uses 用逗号分隔开的模块名称列表
 	 * @param context 这个function会在调用module时调用，并将module通过参数传入context，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
@@ -1151,6 +1151,7 @@ this.Loader = new Class(function() {
 
 	/**
 	 * use
+	 *
 	 * @param uses 用逗号分隔开的模块名称列表
 	 * @param context uses加载后调用，将module通过参数传入context，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
 	 */
@@ -1174,6 +1175,7 @@ this.Loader = new Class(function() {
 
 	/**
 	 * execute
+	 *
 	 * @param name 执行的入口模块名称
 	 * @param options 传入参数
 	 */ 
