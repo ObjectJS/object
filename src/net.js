@@ -10,6 +10,9 @@ var ajaxProxies = this.ajaxProxies = {};
 // 跨域host必须有ajaxproxy.htm
 // callback唯一参数返回 XMLHttpRequest 对象实例
 this.ajaxRequest = function(url, callback) {
+	if(!callback || typeof callback != 'function') {
+		callback = function(){};
+	}
 	var tmpA = document.createElement('a');
 	tmpA.href = url;
 	var hostname = tmpA.hostname;
