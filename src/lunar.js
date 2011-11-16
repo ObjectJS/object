@@ -1,9 +1,9 @@
 object.add('lunar', function(exports) {
+
 /**
  * 公历农历的互相转换
  * copyright @ http://ctc.qzs.qq.com/qzone/newprofile/scripts/solarlunar.js
  */
-
 var MIN_YEAR = 1891,
 	MAX_YEAR = 2100,
 	SKY=['庚','辛','壬','癸','甲','乙','丙','丁','戊','己'],
@@ -46,12 +46,13 @@ var LUNAR_INFO = [[0,2,9,21936],[6,1,30,9656],[0,2,17,9584],[0,2,6,21168],[5,1,2
 
 /**
  * 将阳历转换为阴历
+ *
  * @param year  公历-年
  * @param month 公历-月
  * @param date  公历-日
  */
 this.convertSolarToLunar = function(year, month, date) {
-    var yearData = LUNAR_INFO[year-MIN_YEAR];
+    var yearData = LUNAR_INFO[year - MIN_YEAR];
     if (year == MIN_YEAR && month <= 2 && date <= 9) {
     	return [MIN_YEAR, '正月', '初一', '辛卯', 1, 1,'兔'];
     }
@@ -61,12 +62,13 @@ this.convertSolarToLunar = function(year, month, date) {
 
 /**
  * 将阴历转换为阳历
+ *
  * @param year  阴历-年
  * @param month 阴历-月，闰月处理：例如如果当年闰五月，那么第二个五月就传六月，相当于阴历有13个月，只是有的时候第13个月的天数为0
  * @param date  阴历-日
  */
 this.convertLunarToSolar = function(year, month, date) {
-    var yearData = LUNAR_INFO[year-MIN_YEAR], 
+    var yearData = LUNAR_INFO[year - MIN_YEAR], 
 		res = new Date(year, yearData[1]-1, yearData[2]), 
 		between = exports.getDaysBetweenLunar(year, month, date);
 
@@ -76,6 +78,7 @@ this.convertLunarToSolar = function(year, month, date) {
 
 /**
  * 判断是否是闰年
+ *
  * @param year
  */
 this.isLeapYear = function(year) {
@@ -84,6 +87,7 @@ this.isLeapYear = function(year) {
 
 /**
  * 获取干支纪年
+ *
  * @param year
  */
 this.getLunarYearName = function(year) {
@@ -92,6 +96,7 @@ this.getLunarYearName = function(year) {
 
 /**
  * 根据阴历年获取生肖
+ *
  * @param year  阴历年
  */
 this.getYearZodiac = function(year) {
@@ -100,6 +105,7 @@ this.getYearZodiac = function(year) {
 
 /**
  * 获取阳历月份的天数
+ *
  * @param year  阳历-年
  * @param month 阳历-月
  */
@@ -111,6 +117,7 @@ this.getSolarMonthDays = function(year, month) {
 
 /**
  * 获取阴历月份的天数
+ *
  * @param year  阴历-年
  * @param month 阴历-月，从一月开始
  */
@@ -121,10 +128,12 @@ this.getLunarMonthDays = function(year, month) {
 
 /**
  * 获取阴历每月的天数的数组
+ *
  * @param year
  */
 this.getLunarMonths = function(year) {
-    var yearData = LUNAR_INFO[year-MIN_YEAR],
+	console.log(year);
+    var yearData = LUNAR_INFO[year - MIN_YEAR],
 		leapMonth = yearData[0],
 		bitArray = (yearData[3]).toString(2).split('');
 	for (var k = 0, klen = 16 - bitArray.length; k < klen; k++) {
@@ -140,6 +149,7 @@ this.getLunarMonths = function(year) {
 
 /**
  * 获取农历每年的月数
+ *
  * @param year 农历年份
  */
 this.getLunarMonthsLength = function(year) {
@@ -148,6 +158,7 @@ this.getLunarMonthsLength = function(year) {
 
 /**
  * 获取农历每年的月份名称列表
+ *
  * @param year 农历年份
  */
 this.getLunarMonthNames = function(year) {
@@ -184,10 +195,11 @@ this.getMaxLunarDates = function() {
  
 /**
  * 获取农历每年的天数
+ *
  * @param year 农历年份
  */
 this.getLunarYearDays = function(year) {
-    var yearData = LUNAR_INFO[year-MIN_YEAR],
+    var yearData = LUNAR_INFO[year - MIN_YEAR],
 		monthArray = exports.getLunarYearMonths(year),
 		len = monthArray.length;
     return (monthArray[len - 1] == 0 ? monthArray[len - 2] : monthArray[len - 1]);
@@ -210,6 +222,7 @@ this.getLunarYearMonths = function(year) {
 
 /**
  * 获取闰月
+ *
  * @param year 阴历年份
  */
 this.getLeapMonth = function(year) {
@@ -222,6 +235,7 @@ this.getLeapMonth = function(year) {
 
 /**
  * 计算阴历日期与正月初一相隔的天数
+ *
  * @param year
  * @param month
  * @param date
@@ -237,6 +251,7 @@ this.getDaysBetweenLunar = function(year, month, date) {
 
 /**
  * 计算2个阳历日期之前的天数
+ *
  * @param year 阳历年
  * @param cmonth
  * @param cdate
@@ -251,6 +266,7 @@ this.getDaysBetweenSolar = function(year, cmonth, cdate, dmonth, ddate) {
 
 /**
  * 根据距离正月初一的天数计算阴历日期
+ *
  * @param year  阳历年
  * @param between 天数
  */
@@ -287,6 +303,7 @@ this.getLunarByBetween = function(year, between) {
 
 /**
  * 获取数字的阴历叫法
+ *
  * @param num  数字
  * @param isMonth 是否是月份的数字
  */

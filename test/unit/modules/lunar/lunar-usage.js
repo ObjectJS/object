@@ -6,6 +6,8 @@ object.use('lunar', function(exports, lunar) {
 
 test("lunar.convertSolarToLunar", function(){
 	console.log(lunar.convertSolarToLunar(2011, 11, 15));
+	console.log(lunar.convertSolarToLunar(1891, 1, 1));
+	console.log(lunar.convertSolarToLunar(1891, 1, 11));
 }); 				
 test("lunar.convertLunarToSolar", function(){});
 test("lunar.isLeapYear", function(){}); 
