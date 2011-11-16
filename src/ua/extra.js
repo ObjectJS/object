@@ -1,7 +1,3 @@
-/**
- * @namespace
- * @name ua.extra
- */
 object.add('ua.extra', 'sys', function(exports, sys) {
 
 	var uamodule = sys.modules['ua'];
