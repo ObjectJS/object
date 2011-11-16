@@ -9,8 +9,8 @@ var MIN_YEAR = 1891,
 	SKY=['庚','辛','壬','癸','甲','乙','丙','丁','戊','己'],
 	EARTH=['申','酉','戌','亥','子','丑','寅','卯','辰','巳','午','未'],
     ZODIAC=['猴','鸡','狗','猪','鼠','牛','虎','兔','龙','蛇','马','羊'],
-	MONTH_HASH=['正月','二月','三月','四月','五月','六月','七月','八月','九月','十月','冬月','腊月'],
-	DATE_HASH=['一','二','三','四','五','六','七','八','九','十'];
+	MONTH_HASH=['', '正月','二月','三月','四月','五月','六月','七月','八月','九月','十月','冬月','腊月'],
+	DATE_HASH=['', '一','二','三','四','五','六','七','八','九','十'];
 
 var LUNAR_INFO = [[0,2,9,21936],  [6,1,30,9656], [0,2,17,9584], [0,2,6,21168], [5,1,26,43344],[0,2,13,59728],
 	[0,2,2,27296], [3,1,22,44368],[0,2,10,43856],[8,1,30,19304],[0,2,19,19168],[0,2,8,42352], [5,1,29,21096],
@@ -163,12 +163,13 @@ this.getLunarMonthsLength = function(year) {
 this.getLunarMonthNames = function(year) {
 	var leapMonth = exports.getLeapMonth(year),
 		monthNames = [],
+		monthHash = MONTH_HASH.slice(1); // remove first element
 		monthSum = (leapMonth == 0 ? 12 : 13);
 	if (leapMonth) {
-		MONTH_HASH.splice(leapMonth, 0, '闰' + MONTH_HASH[leapMonth - 1]);
+		monthHash.splice(leapMonth, 0, '闰' + monthHash[leapMonth - 1]);
 	}
 	for (var i = 0; i < monthSum; i++) {
-		monthNames.push(MONTH_HASH[i]);
+		monthNames.push(monthHash[i]);
 	}
 	return monthNames;
 }
@@ -260,7 +261,7 @@ this.getDaysBetweenLunar = function(year, month, date) {
 this.getDaysBetweenSolar = function(year, cmonth, cdate, dmonth, ddate) {
     var a = new Date(year, cmonth - 1, cdate),
 		b = new Date(year, dmonth - 1, ddate);
-    return Math.ceil((a - b) / 24 / 3600 / 1000);
+    return Math.ceil(Math.abs(a - b) / 24 / 3600 / 1000);
 }
 
 /**
