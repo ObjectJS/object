@@ -27,9 +27,9 @@ test('loadScript with url', function() {
 	//ok(false, 'can not loadScript with empty url, which will cause empty script tag');
 	//ok(false, 'can not loadScript with an non-javascript url');
 	//ok(false, 'can not loadScript with html/jsp/asp...');
-	raises(function() {
-		Loader.loadScript('not-exists-url', emptyCallback);
-	}, 'can not loadScript with not exists url');
+	//raises(function() {
+	//	Loader.loadScript('not-exists-url', emptyCallback);
+	//}, 'can not loadScript with not exists url');
 
 	var oldOnError = window.onerror;
 	window.onerror = function() {
@@ -187,21 +187,24 @@ test('loadLib', function() {
 	var script = document.createElement('script');
 	script.setAttribute('data-src', 'test_module_null_data-module');
 	head.appendChild(script);
+	var oldLength = Object.keys(loader.lib).length;
 	loader.loadLib();
-	ok(Object.keys(loader.lib).length == 2, 'new script tag inserted, but no data-module attribute, so no new module added');
+	equal(Object.keys(loader.lib).length, oldLength, 'new script tag inserted, but no data-module attribute, so no new module added');
 
 	var script = document.createElement('script');
 	script.setAttribute('data-module', 'test_module_null_data-src');
 	head.appendChild(script);
+	var oldLength = Object.keys(loader.lib).length;
 	loader.loadLib();
-	ok(Object.keys(loader.lib).length == 2, 'new script tag inserted, but no data-src attribute, so no new module added');
+	equal(Object.keys(loader.lib).length, oldLength, 'new script tag inserted, but no data-src attribute, so no new module added');
 
 	var script = document.createElement('script');
 	script.setAttribute('data-module', 'test_module_wrong_data-src');
 	script.setAttribute('data-src', 'not-correct-js-file-url');
 	head.appendChild(script);
+	var oldLength = Object.keys(loader.lib).length;
 	loader.loadLib();
-	ok(Object.keys(loader.lib).length == 2, 'new script tag inserted, but data-src attribute is wrong, so no new module added');
+	equal(Object.keys(loader.lib).length, oldLength+1, 'new script tag inserted, data-src is not end with .js');
 });
 
 module("loader-add");
