@@ -48,11 +48,13 @@ asyncTest('dom.ready is usable in iframe', function() {
 				start();
 				ok(true, 'readyCallbackValue_iframe_test is 1');
 				clearInterval(interval);
+				document.body.removeChild(iframe);
 			}
 			if(counter > MAX_INTERVAL_COUNTER) {
 				start();
 				ok(false, 'readyCallbackValue_iframe_test is 1');
 				clearInterval(interval);
+				document.body.removeChild(iframe);
 			}
 		}, 10);
 	});
@@ -73,11 +75,13 @@ asyncTest('dom.ready - dom-ready-normal.html', function() {
 				start();
 				ok(true, 'readyCallbackValue_dom_ready_normal is 1');
 				clearInterval(interval);
+				document.body.removeChild(iframe);
 			}
 			if(counter > MAX_INTERVAL_COUNTER) {
 				start();
 				ok(false, 'readyCallbackValue_dom_ready_normal is 1');
 				clearInterval(interval);
+				document.body.removeChild(iframe);
 			}
 		}, 10);
 	});
@@ -92,7 +96,7 @@ asyncTest('dom.ready - dom-ready-dynamic.html', function() {
 	// when iframe dom is ready, iframe document.body.onload is not executed, 
 	// iframe.onload is executed before iframe body.document.onload, so we must wait
 	var iframe = createIframeWithCallback('dom-ready-dynamic.html', function() {
-		testResultInput = iframe.contentWindow.document.getElementById('test');
+		var testResultInput = iframe.contentWindow.document.getElementById('test');
 		var counter = 0;
 		var interval = setInterval(function() {
 			counter ++;
@@ -100,11 +104,13 @@ asyncTest('dom.ready - dom-ready-dynamic.html', function() {
 			if(counter > MAX_INTERVAL_COUNTER) {
 				start();
 				ok(false, 'load objectjs in document.body.onload, dom.ready is ok');
+				document.body.removeChild(iframe);
 			}
 			if(value == 'true') {
 				start();
 				ok(true, 'load objectjs in document.body.onload, dom.ready is ok');
 				clearInterval(interval);
+				document.body.removeChild(iframe);
 			}
 		}, 10);
 	});
@@ -120,7 +126,7 @@ asyncTest('dom.ready - dom-ready-dynamic-by-button.html', function() {
 	// iframe.onload is executed before iframe body.document.onload, so we must wait
 	var iframe = createIframeWithCallback('dom-ready-dynamic-by-button.html', function() {
 		iframe.contentWindow.document.getElementById('importObjectjs').click();
-		testResultInput = iframe.contentWindow.document.getElementById('test');
+		var testResultInput = iframe.contentWindow.document.getElementById('test');
 		var counter = 0;
 		var interval = setInterval(function() {
 			counter ++;
@@ -129,11 +135,13 @@ asyncTest('dom.ready - dom-ready-dynamic-by-button.html', function() {
 				start();
 				ok(false, 'load objectjs in document.body.onload, dom.ready is ok');
 				clearInterval(interval);
+				document.body.removeChild(iframe);
 			}
 			if(value == 'true') {
 				start();
 				ok(true, 'load objectjs in document.body.onload, dom.ready is ok');
 				clearInterval(interval);
+				document.body.removeChild(iframe);
 			}
 		}, 10);
 	});
