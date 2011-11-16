@@ -12,9 +12,12 @@ $(document).ready(function() {
 		{module:'dom', url:'modules/dom'},
 		{module:'events', url:'modules/events'},
 		{module:'urlparse', url:'modules/urlparse'},
-		{module:'options', url:'modules/options'}
+		{module:'options', url:'modules/options'},
+		{module:'net', url:'modules/net'},
+		{module:'lunar', url:'modules/lunar'},
+		{}
 	];
-	for(var i=0,l=config.length; i<l; i++) {
+	for(var i=0,l=config.length - 1; i<l; i++) {
 		$LAB.script(config[i].url + '/index.js');
 	}
 });
