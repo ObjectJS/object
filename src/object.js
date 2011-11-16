@@ -1,7 +1,7 @@
 /**
-* @namespace
-* @name object
-*/
+ * @namespace
+ * @name object
+ */
 /**@class Array*/
 /**@class String*/
 /**@class Function*/
@@ -10,8 +10,8 @@ var object = new (function(globalHost) {
 var object = this;
 
 /**
-* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Object/keys
-*/
+ * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Object/keys
+ */
 Object.keys = function(o) {
 	var result = [];
 
@@ -36,15 +36,15 @@ Object.keys = function(o) {
 };
 
 /**
-* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/isArray
-*/
+ * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/isArray
+ */
 Array.isArray = Array.isArray || function(o) {
 	return Object.prototype.toString.call(o) === '[object Array]';
 };
 
 /**
-* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/forEach
-*/
+ * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/forEach
+ */
 Array.prototype.forEach = Array.prototype.forEach || function(fn, bind) {
 	for (var i = 0; i < this.length; i++) {
 		fn.call(bind, this[i], i, this);
@@ -52,8 +52,8 @@ Array.prototype.forEach = Array.prototype.forEach || function(fn, bind) {
 };
 
 /**
-* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/indexOf
-*/
+ * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/indexOf
+ */
 Array.prototype.indexOf = Array.prototype.indexOf || function(str) {
 	for (var i = 0; i < this.length; i++) {
 		if (str == this[i]) {
@@ -64,8 +64,8 @@ Array.prototype.indexOf = Array.prototype.indexOf || function(str) {
 };
 
 /**
-* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/some
-*/
+ * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/some
+ */
 Array.prototype.some = Array.prototype.some || function(fn, bind) {
 	for (var i = 0, l = this.length; i < l; i++){
 		if ((i in this) && fn.call(bind, this[i], i, this)) return true;
@@ -74,8 +74,8 @@ Array.prototype.some = Array.prototype.some || function(fn, bind) {
 };
 
 /**
-* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/every
-*/
+ * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/every
+ */
 Array.prototype.every = Array.prototype.every || function(fn, bind){
 	for (var i = 0, l = this.length; i < l; i++){
 		if ((i in this) && !fn.call(bind, this[i], i, this)) return false;
@@ -84,8 +84,8 @@ Array.prototype.every = Array.prototype.every || function(fn, bind){
 };
 
 /**
-* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/map
-*/
+ * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/map
+ */
 Array.prototype.map = Array.prototype.map || function (fn, bind) {
 	var results = [];
 	for (var i = 0, l = this.length; i < l; i++){
@@ -95,8 +95,8 @@ Array.prototype.map = Array.prototype.map || function (fn, bind) {
 };
 
 /**
-* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/filter
-*/
+ * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/filter
+ */
 Array.prototype.filter = Array.prototype.filter || function(fn, bind){
 	var results = [];
 	for (var i = 0, l = this.length; i < l; i++){
@@ -106,8 +106,8 @@ Array.prototype.filter = Array.prototype.filter || function(fn, bind){
 };
 
 /**
-* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/reduce
-*/
+ * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/reduce
+ */
 Array.prototype.reduce = Array.prototype.reduce || function(fun /*, initialValue */) {
 	"use strict";
 
@@ -152,8 +152,8 @@ Array.prototype.reduce = Array.prototype.reduce || function(fun /*, initialValue
 };
 
 /**
-* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/reduceRight
-*/
+ * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/reduceRight
+ */
 Array.prototype.reduceRight = Array.prototype.reduceRight || function(callbackfn /*, initialValue */) {
 	"use strict";
 
@@ -198,8 +198,8 @@ Array.prototype.reduceRight = Array.prototype.reduceRight || function(callbackfn
 };
 
 /**
-* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/trim
-*/
+ * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/trim
+ */
 String.prototype.trim = String.prototype.trim || function() {
 	// High Performance JavaScript 中描述此方法较快
 	return this.replace(/^\s\s*/, "").replace(/\s\s*$/, "");
@@ -208,8 +208,8 @@ String.prototype.trim = String.prototype.trim || function() {
 // 有些老页面引用了js/compact.js，其中有一个错误的Function.prototype.bind
 if (!Function.prototype.bind || Function.prototype.bind === window.__hualuOldBind) {
 	/**
-	* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Function/bind
-	*/
+	 * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Function/bind
+	 */
 	Function.prototype.bind = function(object) {
 		var method = this;
 		return function() {
@@ -224,8 +224,9 @@ if ((function TEST(){}).name) {
 	Function.__get_name__ = function(func) {
 		return func.name;
 	};
+}
 // IE
-} else {
+else {
 	var funcNameRegExp = /^function ([\w$]+)/;
 	Function.__get_name__ = function(func) {
 		// IE 下没有 Function.prototype.name，通过代码获得
@@ -236,12 +237,12 @@ if ((function TEST(){}).name) {
 }
 
 /**
-* 为obj增加properties中的成员
-* @name object.extend
-* @param obj 源
-* @param properties 目标
-* @param ov 是否覆盖，默认true
-*/
+ * 为obj增加properties中的成员
+ * @name object.extend
+ * @param obj 源
+ * @param properties 目标
+ * @param ov 是否覆盖，默认true
+ */
 this.extend = function(obj, properties, ov) {
 	if (ov !== false) ov = true;
 
@@ -258,9 +259,9 @@ this.extend = function(obj, properties, ov) {
 };
 
 /**
-* 浅拷贝
-* @name object.clone
-*/
+ * 浅拷贝
+ * @name object.clone
+ */
 this.clone = function(obj) {
 	var clone = {};
 	for (var key in obj) clone[key] = obj[key];
@@ -268,9 +269,9 @@ this.clone = function(obj) {
 };
 
 /**
-* 将成员引用放到window上
-* @name object.bind
-*/
+ * 将成员引用放到window上
+ * @name object.bind
+ */
 this.bind = function(host) {
 	object.extend(host, object);
 };
@@ -278,30 +279,30 @@ this.bind = function(host) {
 this._loader = null;
 
 /**
-* use一个module
-* @name object.use
-* @borrows object.Loader.use
-*/
+ * use一个module
+ * @name object.use
+ * @borrows object.Loader.use
+ */
 this.use = function() {
 	if (!object._loader) object._loader = new Loader();
 	object._loader.use.apply(object._loader, arguments);
 };
 
 /**
-* 直接执行一个module，其 __name__ 为 __main__
-* @name object.execute
-* @borrows object.Loader.execute
-*/
+ * 直接执行一个module，其 __name__ 为 __main__
+ * @name object.execute
+ * @borrows object.Loader.execute
+ */
 this.execute = function() {
 	if (!object._loader) object._loader = new Loader();
 	object._loader.execute.apply(object._loader, arguments);
 };
 
 /**
-* 添加一个module
-* @name object.add
-* @borrows object.Loader.add
-*/
+ * 添加一个module
+ * @name object.add
+ * @borrows object.Loader.add
+ */
 this.add = function() {
 	if (!object._loader) object._loader = new Loader();
 	object._loader.add.apply(object._loader, arguments);
@@ -320,7 +321,7 @@ this.ModuleRequiredError.prototype = new Error();
 
 })(window);
 
-(/**@lends _global_*/ function() {
+(function() {
 
 // 仿照 mootools 的overloadSetter
 // 返回一个 key/value 这种形式的function参数的包装，使其支持{key1: value1, key2: value2} 这种传参形式
@@ -418,14 +419,15 @@ var membersetter = overloadSetter(function(name, member) {
 
 	} else if (['__this__', '__base__'].indexOf(name) != -1) {
 		cls[name] = proto[name] = member;
-
+	}
 	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
-	} else if (member == null) {
+	else if (member == null) {
 		proto[name] = member;
 
+	}
 	// 先判断最常出现的instancemethod
 	// this.a = function() {}
-	} else if (member.__class__ === undefined && typeof member == 'function') {
+	else if (member.__class__ === undefined && typeof member == 'function') {
 		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
 		member.__name__ = name;
 		proto[name] = instancemethod(member);
@@ -435,25 +437,29 @@ var membersetter = overloadSetter(function(name, member) {
 			cls[name] = instancemethod(member, cls);
 		}
 
+	}
 	// this.a = property(function fget() {}, function fset() {})
-	} else if (member.__class__ === property) {
+	else if (member.__class__ === property) {
 		member.__name__ = name;
 		properties[name] = member;
 
+	}
 	// this.a = classmethod(function() {})
-	} else if (member.__class__ === classmethod) {
+	else if (member.__class__ === classmethod) {
 		member.im_func.__name__ = name;
 		member.__name__ = name;
 		cls[name] = proto[name] = member;
 
+	}
 	// this.a = staticmethod(function() {})
-	} else if (member.__class__ === staticmethod) {
+	else if (member.__class__ === staticmethod) {
 		member.im_func.__name__ = name;
 		member.__name__ = name;
 		cls[name] = proto[name] = member.im_func;
 
+	}
 	// this.a = someObject
-	} else {
+	else {
 		proto[name] = member;
 	}
 
@@ -499,8 +505,8 @@ var type = this.type = function() {
 };
 
 /**
-* 创建一个类的核心过程
-*/
+ * 创建一个类的核心过程
+ */
 type.__new__ = function(metaclass, name, base, dict) {
 	var cls = Class.create();
 
@@ -623,8 +629,8 @@ Class.create = function() {
 };
 
 /**
-* mixin时调用mixin的initialize方法，保证其中的初始化成员能够被执行
-*/
+ * mixin时调用mixin的initialize方法，保证其中的初始化成员能够被执行
+ */
 Class.initMixins = function(cls, instance) {
 	if (!cls.__mixins__) {
 		return;
@@ -665,7 +671,7 @@ Class.getPropertyNames = function(obj) {
  */
 Class.inject = function(cls, host, args) {
 	if (typeof cls != 'function') console.log(arguments.callee.caller)
-	args = args || [];
+		args = args || [];
 	host.__class__ = cls;
 	host.__properties__ = cls.prototype.__properties__;
 	var p = Class.getInstance(cls);
@@ -701,9 +707,9 @@ Class.getInstance = function(cls) {
  */
 Class.getAllSubClasses = function(cls) {
 	var array = cls.__subclassesarray__;
-    if(!array) {
-        return [];
-    }
+	if(!array) {
+		return [];
+	}
 	var queue = [].concat(array), ele = queue.shift(), subs;
 	while (ele != null) {
 		subs = ele.__subclassesarray__;
@@ -717,9 +723,9 @@ Class.getAllSubClasses = function(cls) {
 };
 
 /**
-* 遍历一个类成员
-* 获取类成员通过cls.get(name)
-*/
+ * 遍历一个类成员
+ * 获取类成员通过cls.get(name)
+ */
 Class.keys = function(cls) {
 	keys = Object.keys(cls.prototype.__properties__);
 	keys = keys.concat(Object.keys(cls.prototype).filter(function(name) {
@@ -797,14 +803,14 @@ StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "inde
 
 })();
 
-(/**@lends object*/ function() {
+(function() {
 
 /**
  * object的包管理器
  * 这个class依赖于object._lib ，且会修改它
  * @class
  */
-this.Loader = new Class(/**@lends object.Loader*/ function() {
+this.Loader = new Class(function() {
 
 	var _lib;
 
@@ -967,9 +973,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 
 			// 不输出 __name__ 了，没有大用且影响性能，应该在创建时就指定name
 			//Object.keys(exports).forEach(function(key) {
-				//if (typeof exports[key] == 'function') {
-					//exports[key].__name__ = key;
-				//}
+			//if (typeof exports[key] == 'function') {
+			//exports[key].__name__ = key;
+			//}
 			//});
 
 			if (callback) callback(exports);
@@ -982,8 +988,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			}, true);
 			return;
 
+		}
 		// 在空package或没有uses的情况下直接返回即可。
-		} else if (!pkg.fn || pkg.uses.length === 0) {
+		else if (!pkg.fn || pkg.uses.length === 0) {
 			done();
 			return;
 		}
@@ -1058,8 +1065,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			if (modules[prefix]) {
 				next(modules[prefix]);
 
+			}
 			// lib 中有
-			} else if (_lib[prefix]) {
+			else if (_lib[prefix]) {
 				var pkg = _lib[prefix];
 
 				// lib中有，但是是file，需要动态加载
@@ -1070,13 +1078,15 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 						self.executeModule(pkg, modules, stack, next);
 					}, true);
 
+				}
 				// 也有可能是空的模块，是没有 fn 的，executeModule会处理
-				} else {
+				else {
 					self.executeModule(pkg, modules, stack, next);
 				}
 
+			}
 			// lib中没有
-			} else {
+			else {
 				throw new object.NoModuleError(prefix);
 			}
 
