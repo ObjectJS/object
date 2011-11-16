@@ -15,6 +15,7 @@ this.ajaxRequest = function(url, callback) {
 	var tmpA = document.createElement('a');
 	tmpA.href = url;
 	var hostname = tmpA.hostname;
+	var protocol = tmpA.protocol;
 
 	if (hostname && (hostname != location.hostname)) {
 		var xhr = null;
@@ -24,7 +25,7 @@ this.ajaxRequest = function(url, callback) {
 			iframe.style.display = 'none';
 			dom.ready(function() {
 				document.body.insertBefore(iframe, document.body.firstChild);
-				iframe.src = 'http://' + hostname + '/ajaxproxy.htm';
+				iframe.src = protocol + '//' + hostname + '/ajaxproxy.htm';
 				if (iframe.attachEvent) {
 					iframe.attachEvent('onload', function () {
 						callback(iframe.contentWindow.getTransport());
