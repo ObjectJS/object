@@ -23,7 +23,6 @@
 			<include path="ui/index.js" />
 			<include path="ui/decorators.js" />
 			<include path="urlparse.js" />
-			<include path="lunar.js" />
 			<include path="validator.js" />
 		</combine>
 	</source>
