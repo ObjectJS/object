@@ -14,6 +14,9 @@ var object = this;
 */
 Object.keys = function(o) {
 	var result = [];
+	if (o === undefined || o === null) {
+		return result;
+	}
 
 	// 在Safari 5.0.2(7533.18.5)中，在这里用for in遍历parent会将prototype属性遍历出来，导致原型被指向一个错误的对象
 	// 经过试验，在Safari下，仅仅通过 obj.prototype.xxx = xxx 这样的方式就会导致 prototype 变成自定义属性，会被 for in 出来
