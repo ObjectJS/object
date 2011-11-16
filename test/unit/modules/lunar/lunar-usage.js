@@ -4,10 +4,10 @@ object.use('lunar', function(exports, lunar) {
 	window.lunar = lunar;
 });
 
-test("lunar.solarToLunar", function(){
-	console.log(lunar.solarToLunar(2011, 11, 15));
+test("lunar.convertSolarToLunar", function(){
+	console.log(lunar.convertSolarToLunar(2011, 11, 15));
 }); 				
-test("lunar.lunarToSolar", function(){});
+test("lunar.convertLunarToSolar", function(){});
 test("lunar.isLeapYear", function(){}); 
 test("lunar.getLunarYearName", function() {});
 test("lunar.getYearZodiac", function() {});

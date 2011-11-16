@@ -50,12 +50,13 @@ var LUNAR_INFO = [[0,2,9,21936],[6,1,30,9656],[0,2,17,9584],[0,2,6,21168],[5,1,2
  * @param month 公历-月
  * @param date  公历-日
  */
-this.solarToLunar = function(year,month,date){
+this.convertSolarToLunar = function(year, month, date) {
     var yearData = LUNAR_INFO[year-MIN_YEAR];
-    if(year==MIN_YEAR&&month<=2&&date<=9){
-    	return [MIN_YEAR,'正月','初一','辛卯',1,1,'兔'];
+    if (year == MIN_YEAR && month <= 2 && date <= 9) {
+    	return [MIN_YEAR, '正月', '初一', '辛卯', 1, 1,'兔'];
     }
-    return exports.getLunarByBetween(year,exports.getDaysBetweenSolar(year,month,date,yearData[1],yearData[2]));
+    return exports.getLunarByBetween(year,
+			exports.getDaysBetweenSolar(year, month, date, yearData[1], yearData[2]));
 }
 
 /**
@@ -64,35 +65,37 @@ this.solarToLunar = function(year,month,date){
  * @param month 阴历-月，闰月处理：例如如果当年闰五月，那么第二个五月就传六月，相当于阴历有13个月，只是有的时候第13个月的天数为0
  * @param date  阴历-日
  */
-this.lunarToSolar = function(year,month,date){
-    var yearData = LUNAR_INFO[year-MIN_YEAR],res = new Date(year,yearData[1]-1,yearData[2]),between = exports.getDaysBetweenLunar(year,month,date);
-    res.setDate(res.getDate()+between);
+this.convertLunarToSolar = function(year, month, date) {
+    var yearData = LUNAR_INFO[year-MIN_YEAR], 
+		res = new Date(year, yearData[1]-1, yearData[2]), 
+		between = exports.getDaysBetweenLunar(year, month, date);
 
-    return [res.getFullYear(),res.getMonth()+1,res.getDate()];
+    res.setDate(res.getDate() + between);
+    return [res.getFullYear(), res.getMonth()+1, res.getDate()];
 }
 
 /**
  * 判断是否是闰年
  * @param year
  */
-this.isLeapYear = function(year){
-    return ((year%4==0 && year%100 !=0) || (year%400==0));
+this.isLeapYear = function(year) {
+    return ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0));
 }
 
 /**
  * 获取干支纪年
  * @param year
  */
-this.getLunarYearName = function(year){
-   return SKY[(year+"").charAt(3)]+EARTH[year%12];
+this.getLunarYearName = function(year) {
+   return SKY[(year + "").charAt(3)] + EARTH[year % 12];
 }
 
 /**
  * 根据阴历年获取生肖
  * @param year  阴历年
  */
-this.getYearZodiac = function(year){
-    return ZODIAC[year%12];
+this.getYearZodiac = function(year) {
+    return ZODIAC[year % 12];
 }
 
 /**
@@ -100,8 +103,9 @@ this.getYearZodiac = function(year){
  * @param year  阳历-年
  * @param month 阳历-月
  */
-this.getSolarMonthDays = function(year,month){
-    var monthDaysHash={1:31,2:(exports.isLeapYear(year)?29:28),3:31,4:30,5:31,6:30,7:31,8:31,9:30,10:31,11:30,12:31};
+this.getSolarMonthDays = function(year, month) {
+    var monthDaysHash={1: 31, 2:(exports.isLeapYear(year) ? 29 : 28), 
+		3: 31, 4: 30, 5: 31, 6: 30, 7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31};
     return monthDaysHash[month];
 }
 
@@ -110,22 +114,24 @@ this.getSolarMonthDays = function(year,month){
  * @param year  阴历-年
  * @param month 阴历-月，从一月开始
  */
-this.getLunarMonthDays = function(year,month){
+this.getLunarMonthDays = function(year, month) {
     var monthData = exports.getLunarMonths(year);
-    return monthData[month-1];
+    return monthData[month - 1];
 }
 
 /**
  * 获取阴历每月的天数的数组
  * @param year
  */
-this.getLunarMonths = function(year){
-    var yearData = LUNAR_INFO[year-MIN_YEAR],leapMonth = yearData[0],bitArray = (yearData[3]).toString(2).split('');
-	for(var k=0,klen=16-bitArray.length;k<klen;k++){
+this.getLunarMonths = function(year) {
+    var yearData = LUNAR_INFO[year-MIN_YEAR],
+		leapMonth = yearData[0],
+		bitArray = (yearData[3]).toString(2).split('');
+	for (var k = 0, klen = 16 - bitArray.length; k < klen; k++) {
 		bitArray.unshift('0');
 	}
-	bitArray = bitArray.slice(0,(leapMonth==0?12:13));
-    for(var i=0,len = bitArray.length;i<len;i++){
+	bitArray = bitArray.slice(0, (leapMonth == 0 ? 12 : 13));
+    for (var i = 0, len = bitArray.length; i < len; i++) {
         bitArray[i] = parseInt(bitArray[i]) + 29;
     }
 
@@ -136,7 +142,7 @@ this.getLunarMonths = function(year){
  * 获取农历每年的月数
  * @param year 农历年份
  */
-this.getLunarMonthsLength = function(year){
+this.getLunarMonthsLength = function(year) {
     return exports.getLunarMonths(year).length;
 }
 
@@ -144,14 +150,14 @@ this.getLunarMonthsLength = function(year){
  * 获取农历每年的月份名称列表
  * @param year 农历年份
  */
-this.getLunarMonthNames = function(year){
+this.getLunarMonthNames = function(year) {
 	var leapMonth = exports.getLeapMonth(year),
 		monthNames = [],
-		monthSum = (leapMonth==0?12:13);
-	if(leapMonth){
-		MONTH_HASH.splice(leapMonth,0,'闰'+MONTH_HASH[leapMonth-1]);
+		monthSum = (leapMonth == 0 ? 12 : 13);
+	if (leapMonth) {
+		MONTH_HASH.splice(leapMonth, 0, '闰' + MONTH_HASH[leapMonth - 1]);
 	}
-	for(var i=0;i<monthSum;i++){
+	for (var i = 0; i < monthSum; i++) {
 		monthNames.push(MONTH_HASH[i]);
 	}
 	return monthNames;
@@ -159,16 +165,16 @@ this.getLunarMonthNames = function(year){
 /**
  * 根据阴历年月获取每月天数信息
  */
-this.getLunarDates = function(year, month){
+this.getLunarDates = function(year, month) {
 	var dates=[];
 	var days = exports.getLunarMonthDays(year,month);
-	for(var i=1;i<=days;i++){
-		dates.push(exports.getCapitalNum(i,false));
+	for (var i = 1; i <= days; i++) {
+		dates.push(exports.getCapitalNum(i, false));
 	}
 	return dates;
 }
 
-this.getMaxLunarDates = function(){
+this.getMaxLunarDates = function() {
 	var dates = [];
 	for (var i = 1; i <= 30; i++) {
 		dates.push(exports.getCapitalNum(i, false));
@@ -180,17 +186,22 @@ this.getMaxLunarDates = function(){
  * 获取农历每年的天数
  * @param year 农历年份
  */
-this.getLunarYearDays = function(year){
-    var yearData = LUNAR_INFO[year-MIN_YEAR],monthArray = exports.getLunarYearMonths(year),len = monthArray.length;
-    return (monthArray[len-1]==0?monthArray[len-2]:monthArray[len-1]);
+this.getLunarYearDays = function(year) {
+    var yearData = LUNAR_INFO[year-MIN_YEAR],
+		monthArray = exports.getLunarYearMonths(year),
+		len = monthArray.length;
+    return (monthArray[len - 1] == 0 ? monthArray[len - 2] : monthArray[len - 1]);
 }
 
-this.getLunarYearMonths = function(year){
-    var monthData = exports.getLunarMonths(year),res=[],temp=0,yearData = LUNAR_INFO[year-MIN_YEAR],len = (yearData[0]==0?12:13);
-    for(var i=0;i<len;i++){
-        temp=0;
-        for(var j=0;j<=i;j++){
-            temp+=monthData[j];
+this.getLunarYearMonths = function(year) {
+    var monthData = exports.getLunarMonths(year),
+		res = [], temp = 0, 
+		yearData = LUNAR_INFO[year - MIN_YEAR],
+		len = (yearData[0] == 0 ? 12 : 13);
+    for (var i = 0; i < len; i++) {
+        temp = 0;
+        for (var j = 0; j <= i; j++) {
+            temp += monthData[j];
         }
         res.push(temp);
     }
@@ -201,11 +212,11 @@ this.getLunarYearMonths = function(year){
  * 获取闰月
  * @param year 阴历年份
  */
-this.getLeapMonth = function(year){
-	if (year<MIN_YEAR) {
+this.getLeapMonth = function(year) {
+	if (year < MIN_YEAR) {
 		return 0;
 	}
-    var yearData = LUNAR_INFO[year-MIN_YEAR];
+    var yearData = LUNAR_INFO[year - MIN_YEAR];
     return yearData[0];
 }
 
@@ -215,12 +226,12 @@ this.getLeapMonth = function(year){
  * @param month
  * @param date
  */
-this.getDaysBetweenLunar = function(year,month,date){
-    var yearMonth = exports.getLunarMonths(year),res=0;
-    for(var i=1;i<month;i++){
-        res +=yearMonth[i-1];
+this.getDaysBetweenLunar = function(year, month, date) {
+    var yearMonth = exports.getLunarMonths(year), res = 0;
+    for (var i = 1; i < month; i++) {
+        res += yearMonth[i - 1];
     }
-    res+=date-1;
+    res += date - 1;
     return res;
 }
 
@@ -232,9 +243,10 @@ this.getDaysBetweenLunar = function(year,month,date){
  * @param dmonth 阴历正月对应的阳历月份
  * @param ddate 阴历初一对应的阳历月份
  */
-this.getDaysBetweenSolar = function(year,cmonth,cdate,dmonth,ddate){
-    var a = new Date(year,cmonth-1,cdate),b = new Date(year,dmonth-1,ddate);
-    return Math.ceil((a-b)/24/3600/1000);
+this.getDaysBetweenSolar = function(year, cmonth, cdate, dmonth, ddate) {
+    var a = new Date(year, cmonth - 1, cdate),
+		b = new Date(year, dmonth - 1, ddate);
+    return Math.ceil((a - b) / 24 / 3600 / 1000);
 }
 
 /**
@@ -242,31 +254,32 @@ this.getDaysBetweenSolar = function(year,cmonth,cdate,dmonth,ddate){
  * @param year  阳历年
  * @param between 天数
  */
-this.getLunarByBetween = function(year,between){
-    var lunarArray = [],yearMonth=[],t=0,e=0,leapMonth=0,m='';
-    if(between==0){
-        lunarArray.push(year,'正月','初一');
-    }else{
-        year = between>0?year : (year-1);
+this.getLunarByBetween = function(year, between) {
+    var lunarArray = [], yearMonth = [], t = 0, e = 0, leapMonth = 0, m = '';
+    if (between == 0) {
+        lunarArray.push(year, '正月', '初一');
+    } else {
+        year = between > 0 ? year : (year - 1);
         yearMonth = exports.getLunarYearMonths(year);
         leapMonth = exports.getLeapMonth(year);
-        between = between>0?between : (exports.getLunarYearDays(year)+between);
-        for(var i=0;i<13;i++){
-            if(between==yearMonth[i]){
-                t=i+2;
-                e=1;
+        between = between > 0 ? between : (exports.getLunarYearDays(year) + between);
+        for (var i = 0; i < 13; i++) {
+            if (between == yearMonth[i]) {
+                t = i + 2;
+                e = 1;
                 break;
-            }else if(between<yearMonth[i]){
-                t=i+1;
-                e=between-(yearMonth[i-1]==undefined?0:yearMonth[i-1])+1;
+            } else if (between < yearMonth[i]) {
+                t = i + 1;
+                e = between - (yearMonth[i - 1] == undefined ? 0 : yearMonth[i - 1]) + 1;
                 break;
             }
         }
-        m = (leapMonth!=0&&t==leapMonth+1)?('闰'+exports.getCapitalNum(t-1,true)):exports.getCapitalNum((leapMonth!=0&&leapMonth+1<t?(t-1):t),true);
-        lunarArray.push(year,m,exports.getCapitalNum(e,false));
+        m = (leapMonth != 0 && t == leapMonth + 1) ? ('闰' + exports.getCapitalNum(t - 1, true))
+			: exports.getCapitalNum((leapMonth != 0 && leapMonth + 1 < t ? (t - 1) : t), true);
+        lunarArray.push(year, m, exports.getCapitalNum(e, false));
     }
 	lunarArray.push(exports.getLunarYearName(year));//天干地支
-	lunarArray.push(t,e);
+	lunarArray.push(t, e);
     lunarArray.push(exports.getYearZodiac(year));//12生肖
     
     return lunarArray;
@@ -277,22 +290,22 @@ this.getLunarByBetween = function(year,between){
  * @param num  数字
  * @param isMonth 是否是月份的数字
  */
-this.getCapitalNum = function(num,isMonth){
+this.getCapitalNum = function(num, isMonth) {
     isMonth = isMonth || false;
-    var res='';
+    var res = '';
 
-    if(isMonth){
+    if (isMonth) {
         res = MONTH_HASH[num];
-    }else{
-        if(num<=10){
-            res = '初'+DATE_HASH[num];
-        }else if(num>10&&num<20){
-            res = '十'+DATE_HASH[num-10];
-        }else if(num==20){
+    } else {
+        if (num <= 10) {
+            res = '初' + DATE_HASH[num];
+        } else if (num > 10 && num < 20) {
+            res = '十' + DATE_HASH[num - 10];
+        } else if (num == 20) {
             res = "二十";
-        }else if(num>20&&num<30){
-            res = "廿"+DATE_HASH[num-20];
-        }else if(num==30){
+        } else if (num > 20 && num < 30) {
+            res = "廿" + DATE_HASH[num - 20];
+        } else if (num == 30) {
             res = "三十";
         }
     }
