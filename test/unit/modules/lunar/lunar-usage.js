@@ -21,7 +21,9 @@ test("lunar.getMaxLunarDates", function() {});
 test("lunar.getLunarYearDays", function() {});
 test("lunar.getLunarYearMonths", function() {});
 test("lunar.getLeapMonth", function() {});
-test("lunar.getDaysBetweenLunar", function() {});
+test("lunar.getDaysBetweenLunar", function() {
+	console.log(lunar.getDaysBetweenSolar(
+});
 test("lunar.getDaysBetweenSolar", function() {});
 test("lunar.getLunarByBetween", function() {});
 test("lunar.getCapitalNum", function() {});
