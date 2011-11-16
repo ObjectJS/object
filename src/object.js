@@ -1,14 +1,17 @@
 /**
- * @namespace
- * @name object
- */
-var object = new (/**@lends object*/ function(globalHost) {
+* @namespace
+* @name object
+*/
+/**@class Array*/
+/**@class String*/
+/**@class Function*/
+var object = new (function(globalHost) {
 
 var object = this;
 
 /**
- * 遍历一个对象，返回所有的key的数组
- */
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Object/keys
+*/
 Object.keys = function(o) {
 	var result = [];
 
@@ -32,17 +35,26 @@ Object.keys = function(o) {
 	return result; 
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/isArray
+*/
 Array.isArray = Array.isArray || function(o) {
 	return Object.prototype.toString.call(o) === '[object Array]';
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/forEach
+*/
 Array.prototype.forEach = Array.prototype.forEach || function(fn, bind) {
 	for (var i = 0; i < this.length; i++) {
 		fn.call(bind, this[i], i, this);
 	}
 };
 
-Array.prototype.indexOf = Array.prototype.indexOf || function(str){
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/indexOf
+*/
+Array.prototype.indexOf = Array.prototype.indexOf || function(str) {
 	for (var i = 0; i < this.length; i++) {
 		if (str == this[i]) {
 			return i;
@@ -51,6 +63,9 @@ Array.prototype.indexOf = Array.prototype.indexOf || function(str){
 	return -1;
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/some
+*/
 Array.prototype.some = Array.prototype.some || function(fn, bind) {
 	for (var i = 0, l = this.length; i < l; i++){
 		if ((i in this) && fn.call(bind, this[i], i, this)) return true;
@@ -58,6 +73,9 @@ Array.prototype.some = Array.prototype.some || function(fn, bind) {
 	return false;
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/every
+*/
 Array.prototype.every = Array.prototype.every || function(fn, bind){
 	for (var i = 0, l = this.length; i < l; i++){
 		if ((i in this) && !fn.call(bind, this[i], i, this)) return false;
@@ -65,6 +83,9 @@ Array.prototype.every = Array.prototype.every || function(fn, bind){
 	return true;
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/map
+*/
 Array.prototype.map = Array.prototype.map || function (fn, bind) {
 	var results = [];
 	for (var i = 0, l = this.length; i < l; i++){
@@ -73,6 +94,9 @@ Array.prototype.map = Array.prototype.map || function (fn, bind) {
 	return results;
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/filter
+*/
 Array.prototype.filter = Array.prototype.filter || function(fn, bind){
 	var results = [];
 	for (var i = 0, l = this.length; i < l; i++){
@@ -81,6 +105,9 @@ Array.prototype.filter = Array.prototype.filter || function(fn, bind){
 	return results;
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/reduce
+*/
 Array.prototype.reduce = Array.prototype.reduce || function(fun /*, initialValue */) {
 	"use strict";
 
@@ -124,6 +151,9 @@ Array.prototype.reduce = Array.prototype.reduce || function(fun /*, initialValue
 	return accumulator;
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/reduceRight
+*/
 Array.prototype.reduceRight = Array.prototype.reduceRight || function(callbackfn /*, initialValue */) {
 	"use strict";
 
@@ -167,15 +197,19 @@ Array.prototype.reduceRight = Array.prototype.reduceRight || function(callbackfn
 	return accumulator;
 };
 
+/**
+* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/trim
+*/
 String.prototype.trim = String.prototype.trim || function() {
 	// High Performance JavaScript 中描述此方法较快
 	return this.replace(/^\s\s*/, "").replace(/\s\s*$/, "");
 };
 
-/**
-* 有些老页面引用了js/compact.js，其中有一个错误的Function.prototype.bind
-*/
+// 有些老页面引用了js/compact.js，其中有一个错误的Function.prototype.bind
 if (!Function.prototype.bind || Function.prototype.bind === window.__hualuOldBind) {
+	/**
+	* @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Function/bind
+	*/
 	Function.prototype.bind = function(object) {
 		var method = this;
 		return function() {
@@ -202,11 +236,12 @@ if ((function TEST(){}).name) {
 }
 
 /**
- * 为obj增加properties中的成员
- * @param obj 源
- * @param properties 目标
- * @param ov 是否覆盖，默认true
- */
+* 为obj增加properties中的成员
+* @name object.extend
+* @param obj 源
+* @param properties 目标
+* @param ov 是否覆盖，默认true
+*/
 this.extend = function(obj, properties, ov) {
 	if (ov !== false) ov = true;
 
@@ -223,8 +258,9 @@ this.extend = function(obj, properties, ov) {
 };
 
 /**
- * 浅拷贝
- */
+* 浅拷贝
+* @name object.clone
+*/
 this.clone = function(obj) {
 	var clone = {};
 	for (var key in obj) clone[key] = obj[key];
@@ -232,41 +268,55 @@ this.clone = function(obj) {
 };
 
 /**
- * 将成员引用放到window上
- */
+* 将成员引用放到window上
+* @name object.bind
+*/
 this.bind = function(host) {
 	object.extend(host, object);
 };
 
-
 this._loader = null;
 
 /**
- * use一个module
- * @borrows object.Loader.use
- */
+* use一个module
+* @name object.use
+* @borrows object.Loader.use
+*/
 this.use = function() {
 	if (!object._loader) object._loader = new Loader();
 	object._loader.use.apply(object._loader, arguments);
 };
 
 /**
- * 直接执行一个module，其 __name__ 为 __main__
- * @borrows object.Loader.execute
- */
+* 直接执行一个module，其 __name__ 为 __main__
+* @name object.execute
+* @borrows object.Loader.execute
+*/
 this.execute = function() {
 	if (!object._loader) object._loader = new Loader();
 	object._loader.execute.apply(object._loader, arguments);
 };
 
 /**
- * 添加一个module
- * @borrows object.Loader.add
- */
+* 添加一个module
+* @name object.add
+* @borrows object.Loader.add
+*/
 this.add = function() {
 	if (!object._loader) object._loader = new Loader();
 	object._loader.add.apply(object._loader, arguments);
 };
+
+// 找不到模块Error
+this.NoModuleError = function(name) {
+	this.message = 'no module named ' + name;
+};
+this.NoModuleError.prototype = new Error();
+
+this.ModuleRequiredError = function(name) {
+	this.message = 'module ' + name + ' required';
+};
+this.ModuleRequiredError.prototype = new Error();
 
 })(window);
 
@@ -336,7 +386,7 @@ var membergetter = function(name) {
 	if (!name in proto) throw new Error('no member named ' + name + '.');
 	var member = proto[name];
 	if (!member) return member;
-	if (member.__class__ == instancemethod) return instancemethod(member.im_func, this);
+	if (member.__class__ = instancemethod) return instancemethod(member.im_func, this);
 	return member;
 };
 
@@ -483,7 +533,8 @@ type.__new__ = function(metaclass, name, base, dict) {
 		parent: function() {
 			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
 			var name = arguments.callee.caller.__name__;
-			return cls.__base__.get(name).apply(cls.__base__, arguments);
+			var base = cls.__base__;
+			return base.get(name).apply(base, arguments);
 		}
 	});
 	cls.__new__ = base.__new__;
@@ -576,13 +627,12 @@ Class.create = function() {
 */
 Class.initMixins = function(cls, instance) {
 	if (!cls.__mixins__) {
-    	return;
-    }
-    for (var i = 0, l = cls.__mixins__.length, mixin; i < l; i++) {
-    	mixin = cls.__mixins__[i];
-    	if (mixin.prototype.initialize) mixin.prototype.initialize.call(instance);
-    }
-	
+		return;
+	}
+	for (var i = 0, l = cls.__mixins__.length, mixin; i < l; i++) {
+		mixin = cls.__mixins__[i];
+		if (mixin.prototype.initialize) mixin.prototype.initialize.call(instance);
+	}
 };
 
 /**
@@ -614,6 +664,7 @@ Class.getPropertyNames = function(obj) {
  * @param args 构造的参数
  */
 Class.inject = function(cls, host, args) {
+	if (typeof cls != 'function') console.log(arguments.callee.caller)
 	args = args || [];
 	host.__class__ = cls;
 	host.__properties__ = cls.prototype.__properties__;
@@ -649,19 +700,19 @@ Class.getInstance = function(cls) {
  * 会在Class.mixin中用到
  */
 Class.getAllSubClasses = function(cls) {
-    var array = cls.__subclassesarray__;
+	var array = cls.__subclassesarray__;
     if(!array) {
         return [];
     }
-    var queue = [].concat(array), ele=queue.shift(), subs;
-    while(ele != null) {
-    	subs = ele.__subclassesarray__;
-    	if(subs != null) {
-    		queue = queue.concat(subs);
-    		array = array.concat(subs);
-    	}
-    	ele = queue.shift();
-    }
+	var queue = [].concat(array), ele = queue.shift(), subs;
+	while (ele != null) {
+		subs = ele.__subclassesarray__;
+		if (subs != null) {
+			queue = queue.concat(subs);
+			array = array.concat(subs);
+		}
+		ele = queue.shift();
+	}
 	return array;
 };
 
@@ -671,15 +722,12 @@ Class.getAllSubClasses = function(cls) {
 */
 Class.keys = function(cls) {
 	keys = Object.keys(cls.prototype.__properties__);
-	for(var prop in cls.prototype) {
-		keys.push(prop);
-	}
-	keys = keys.filter(function(name) {
+	keys = keys.concat(Object.keys(cls.prototype).filter(function(name) {
 		// 这3个需要过滤掉，是为了支持property加入的内置成员
 		// initialize也需要过滤，当mixin多个class的时候，initialize默认为最后一个，这种行为没意义
 		// 过滤掉双下划线命名的系统成员和私有成员
 		return !(['get', 'set', '_set', 'initialize', 'constructor'].indexOf(name) !== -1 || name.indexOf('__') == 0);
-	});
+	}));
 	return keys;
 };
 
@@ -691,14 +739,14 @@ var instancemethod = function(func, cls) {
 		args.unshift(this);
 		return func.apply(this.__this__, args);
 	};
-	wrapper.__class__ = instancemethod;
+	wrapper.__class__ = arguments.callee;
 	wrapper.im_func = func;
 	return wrapper;
 };
 
 var staticmethod = this.staticmethod = function(func) {
 	var wrapper = function() {};
-	wrapper.__class__ = staticmethod;
+	wrapper.__class__ = arguments.callee;
 	wrapper.im_func = func;
 	return wrapper;
 };
@@ -707,7 +755,7 @@ var classmethod = this.classmethod = function(func) {
 	var wrapper = function() {
 		var args = [].slice.call(arguments, 0);
 		var cls;
-		if (typeof this == 'function') {
+		if (this.__this__) {
 			args.unshift(this);
 			return this.prototype[func.__name__].im_func.apply(this.__this__, args);
 		} else {
@@ -716,14 +764,14 @@ var classmethod = this.classmethod = function(func) {
 			return func.apply(cls.__this__, args);
 		}
 	};
-	wrapper.__class__ = classmethod;
+	wrapper.__class__ = arguments.callee;
 	wrapper.im_func = func;
 	return wrapper;
 };
 
 var property = this.property = function(fget, fset) {
 	var p = {};
-	p.__class__ = property;
+	p.__class__ = arguments.callee;
 	p.fget = fget;
 	p.fset = fset;
 	return p;
@@ -758,6 +806,8 @@ StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "inde
  */
 this.Loader = new Class(/**@lends object.Loader*/ function() {
 
+	var _lib;
+
 	// 模块
 	function Module(name) {
 		this.__name__ = name;
@@ -765,12 +815,6 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	Module.prototype.toString = function() {
 		return '<module \'' + this.__name__ + '\'>';
 	};
-
-	// 找不到模块Error
-	function NoModuleError(name) {
-		this.message = 'no module named ' + name;
-	};
-	NoModuleError.prototype = new Error();
 
 	this.scripts = document.getElementsByTagName('script');
 
@@ -780,12 +824,14 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 		self.lib = {};
 		self.anonymousModuleCount = 0;
 
+		_lib = self.lib;
+
 		self.add('sys', function(exports) {
 		});
 	};
 
 	/**
-	 * 查找页面中的标记script标签，更新 self.lib
+	 * 查找页面中的标记script标签，更新 _lib
 	 */
 	this.loadLib = function(self) {
 		var scripts = self.scripts;
@@ -793,14 +839,12 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			script = scripts[i];
 			module = script.getAttribute('data-module');
 			if (!module) continue;
-			//self.lib中的内容可能是makePrefixPackage构造的，只有name
-			//在模块a.b先声明，模块a后声明的情况下，无法获取模块a的内容
-			if (self.lib[module] && (self.lib[module].fn || self.lib[module].file)) {
-				continue;
-			}
+			if (_lib[module]) continue;
+
 			// 建立前缀package
 			self.makePrefixPackage(module);
-			self.lib[module] = {file: script.getAttribute('data-src'), name: module};
+
+			_lib[module] = {file: script.getAttribute('data-src'), name: module};
 		}
 	};
 
@@ -809,15 +853,11 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * 比如 a.b.c.d ，会建立 a/a.b/a.b.c 三个空模块，最后一个模块为目标模块，不为空，内容为context
 	 */
 	this.makePrefixPackage = function(self, name) {
-		if (!name || typeof name != 'string') {
-			return;
-		}
-		name = name.replace(/^\.*|\.*$/g, '');
 		var names = name.split('.');
 		for (var i = 0, prefix, l = names.length - 1; i < l; i++) {
 			prefix = names.slice(0, i + 1).join('.');
 			// 说明这个module是空的
-			if (self.lib[prefix] == undefined) self.lib[prefix] = {
+			if (_lib[prefix] == undefined) _lib[prefix] = {
 				name: prefix
 			};
 		}
@@ -831,31 +871,29 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * @param callback callback函数
 	 */
 	this.loadScript = classmethod(function(cls, src, callback, useCache) {
-		if (!src || typeof src != 'string' || !/\.js\s*$/.test(src)) {
-			throw new Error('wrong script src');
-			return;
-		}
-		src = src.trim();
-		if (!!useCache) {
-			var scripts = cls.get('scripts');
-			for (var i = 0, script, src, l = scripts.length; i < l; i++) {
+
+		useCache = !!useCache;
+		var ele;
+
+		if (useCache) {
+			var scripts = cls.scripts;
+			for (var i = 0, script, l = scripts.length; i < l; i++) {
 				script = scripts[i];
-				//src有可能是相对路径，而script.src是绝对路径，导致不一致
-				if (script.src && 
-						(script.src.indexOf(src) == script.src.length - src.length)) {
+				if (script.src == src) {
+					ele = script;
 					// 连续调用，此脚本正在加载呢
-					if (script.loading) {
+					if (scripts[i].loading) {
 						// 增加一个回调即可
-						script.callbacks.push(callback);
+						ele.callbacks.push(callback);
 					} else {
-						callback(script);
+						callback(ele);
 					}
 					return;
 				}
 			}
 		}
 
-		var ele = document.createElement('script');
+		ele = document.createElement('script');
 		ele.type = "text/javascript";
 		ele.src = src;
 		ele.async = true;
@@ -1021,17 +1059,14 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 				next(modules[prefix]);
 
 			// lib 中有
-			} else if (self.lib[prefix]) {
-				var pkg = self.lib[prefix];
+			} else if (_lib[prefix]) {
+				var pkg = _lib[prefix];
 
 				// lib中有，但是是file，需要动态加载
 				if (pkg.file) {
-					// 文件加载完毕后，其中执行的 add 会自动把 self.lib 中的对象替换掉，file 属性丢失，加入了 execute/name/uses 等属性
+					// 文件加载完毕后，其中执行的 add 会自动把 _lib 中的对象替换掉，file 属性丢失，加入了 execute/name/uses 等属性
 					// 使用缓存
 					self.loadScript(pkg.file, function() {
-						if (pkg.file) {
-							throw new Error(pkg.file + ' do not add ' + pkg.name);
-						}
 						self.executeModule(pkg, modules, stack, next);
 					}, true);
 
@@ -1042,7 +1077,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 
 			// lib中没有
 			} else {
-				throw new NoModuleError(prefix);
+				throw new object.NoModuleError(prefix);
 			}
 
 		};
@@ -1058,17 +1093,13 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * @param ignore 跳过ignore模块，用来避免自己调用自己
 	 */
 	this.getUses = function(self, uses, ignore) {
-		if (!uses || typeof uses != 'string') {
-			return uses;
-		}
 		if (typeof uses == 'string') {
-			uses = uses.replace(/^,*|,*$/g, '');
 			uses = uses.split(/\s*,\s*/ig);
 		}
 
 		// 过滤自己调用自己
 		uses = uses.filter(function(use) {
-			return use !== ignore;
+			return use != ignore;
 		});
 
 		return uses;
@@ -1082,15 +1113,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * @param context 这个function会在调用module时调用，并将module通过参数传入context，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
 	 */
 	this.add = function(self, name, uses, context) {
-		if (arguments.length < 3) {
-			return;
-		}
-		// 不允许重复添加。
-		if (self.lib[name] && self.lib[name].fn) return null;
 
-		if (typeof name == 'string' && name.indexOf('sys.') == 0) {
-			throw new Error('should not add sub module for sys');
-		}
+		// 不允许重复添加。
+		if (_lib[name] && _lib[name].fn) return null;
 
 		// uses 参数是可选的
 		if (typeof uses == 'function') {
@@ -1100,22 +1125,13 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			uses = self.getUses(uses, name);
 		}
 
-		if (!context || typeof context != 'function') {
-			return;
-		}
-		if (context && self.lib[name] && self.lib[name].file) {
-			delete self.lib[name].file;
-			self.lib[name].fn = context;
-			self.lib[name].uses = uses;
-			return;
-		}
 		// 建立前缀占位模块
 		self.makePrefixPackage(name);
 
 		// lib中存储的是function
 		// 注意别给覆盖了，有可能是有 file 成员的
-		var pkg = self.lib[name];
-		if (!pkg) pkg = self.lib[name] = {};
+		var pkg = _lib[name];
+		if (!pkg) pkg = _lib[name] = {};
 		pkg.name = name;
 		pkg.uses = uses;
 		pkg.fn = context;
@@ -1129,9 +1145,6 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * @param context uses加载后调用，将module通过参数传入context，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
 	 */
 	this.use = function(self, uses, context) {
-		if (!context || typeof context != 'function') {
-			return;
-		}
 		self.loadLib();
 
 		var name = '__anonymous_' + self.anonymousModuleCount + '__';
@@ -1155,13 +1168,10 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 	 * @param options 传入参数
 	 */ 
 	this.execute = function(self, name) {
-		if (!name || typeof name != 'string') {
-			return;
-		}
 		self.loadLib();
 
-		var module = self.lib[name];
-		if (!module) throw new NoModuleError(name);
+		var module = _lib[name];
+		if (!module) throw new object.NoModuleError(name);
 
 		self.executeModule(module, {}, [], null, {name: '__main__'});
 	};
