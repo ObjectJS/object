@@ -146,7 +146,7 @@ this.component = new Class(function() {
 			dict.__subs = [];
 			dict.__subEvents = {}; // 通过subName_eventType进行注册的事件
 			dict.__onEvents = []; // 通过oneventtype对宿主component注册的事件 // 通过oneventtype对宿主component注册的事件 // 通过oneventtype对宿主component注册的事件 // 通过oneventtype对宿主component注册的事件
-			dict.__handles = ['init', 'revert', 'invalid', 'error', 'reset']; // 定义的会触发事件的方法集合, reset为兼容处理 Compatible
+			dict.__handles = ['init', 'destory', 'invalid', 'error', 'revert', 'reset']; // 定义的会触发事件的方法集合, revert, reset为兼容处理 Compatible
 			dict.__methods = [];
 		} else {
 			dict.__defaultOptions = [];
@@ -553,8 +553,8 @@ this.Component = new Class(function() {
 	/**
 	 * 重置一个component，回到初始状态，删除所有render的元素。
 	 */
-	this._revert = function(self, methodName) {
-		if (!methodName) methodName = 'revert'; // 兼容reset方法名
+	this._destory = function(self, methodName) {
+		if (!methodName) methodName = 'destory'; // 兼容revert, reset方法名
 
 		// 清空所有render进来的新元素
 		self.__subs.forEach(function(name) {
@@ -585,11 +585,19 @@ this.Component = new Class(function() {
 
 	/**
 	 * @deprecated
-	 * 用revert代替
+	 * 用destory代替
+	 */
+	this._revert = function(self) {
+		self._destory('revert');
+	};
+
+	/**
+	 * @deprecated
+	 * 用destory代替
 	 * 由于form有reset方法，在reset调用时，会fire reset事件，导致意外的表单重置
 	 */
 	this._reset = function(self) {
-		self._revert('reset');
+		self._destory('reset');
 	};
 
 	/**
