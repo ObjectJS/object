@@ -352,3 +352,23 @@ test('initialize in mixin should be function', function() {
 		ok(false, 'initialize can be other non-false value : ' + e);
 	}
 });
+
+test('initialize in mixin should be called in parent and sub', function() {
+	expect(4);
+	var counter = 0;
+	var mixin = new Class(function() {
+		this.initialize = function(self) {
+			ok(true, 'mixin called');
+			counter ++;
+		}
+	});
+	var A = new Class(function() {
+		Class.mixin(this, mixin);
+	});
+	var B = new Class(A, function() {});
+
+	var a = new A();
+	equal(counter, 1, 'mixin.initialize called from parent class A');
+	var b = new B();
+	equal(counter, 2, 'mixin.initialize called from sub class B');
+});
