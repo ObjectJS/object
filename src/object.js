@@ -632,12 +632,15 @@ Class.create = function() {
  * mixin时调用mixin的initialize方法，保证其中的初始化成员能够被执行
  */
 Class.initMixins = function(cls, instance) {
-	if (!cls.__mixins__) {
-		return;
+	// 初始化父类的mixin
+	if (cls.__base__) {
+		Class.initMixins(cls.__base__, instance);
 	}
-	for (var i = 0, l = cls.__mixins__.length, mixin; i < l; i++) {
-		mixin = cls.__mixins__[i];
-		if (mixin.prototype.initialize) mixin.prototype.initialize.call(instance);
+	if (cls.__mixins__) {
+		for (var i = 0, l = cls.__mixins__.length, mixin; i < l; i++) {
+			mixin = cls.__mixins__[i];
+			if (mixin.prototype.initialize) mixin.prototype.initialize.call(instance);
+		}
 	}
 };
 
@@ -1034,6 +1037,7 @@ this.Loader = new Class(function() {
 	 *
 	 * @param name pkg name
 	 * @param modules 已引入的module对象列表，会传递给 execute 方法，可以通过sys.modules获取
+	 * @param stack 保存了模块的依赖路径的栈，检测循环依赖
 	 * @param callback 模块获取到以后，通过callback的第一个参数传递回去
 	 * @returns 最终引入的模块
 	 */
