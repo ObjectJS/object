@@ -3,14 +3,19 @@
 <script type="text/javascript" src="../src/object.js"></script>
 <script>
 
-	object.add('test.a', function() {
+	object.add('test.a.b', function() {
+		console.log(this.__name__);
 	});
 
-	object.add('test', 'a', function(exports, a) {
-		console.log(a)
+	object.add('test.a', 'b', function() {
+		console.log(this.__name__);
 	});
 
-	object.execute('test');
+	object.add('test', function() {
+		console.log(this.__name__);
+	});
+
+	object.execute('test.a');
 
 </script>
 <script>

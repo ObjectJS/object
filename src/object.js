@@ -989,7 +989,6 @@ this.Loader = new Class(function() {
 				loadNext(0);
 			}, true);
 			return;
-
 		}
 		// 在空package或没有uses的情况下直接返回即可。
 		else if (!pkg.fn || pkg.uses.length === 0) {
@@ -1001,6 +1000,9 @@ this.Loader = new Class(function() {
 		function loadNext(i) {
 
 			var use = pkg.uses[i];
+
+			var relativeName = pkg.name + '.' + use;
+			if (_lib[relativeName]) use = relativeName;
 
 			// 循环依赖判断
 			stack.push(use); // 开始获取use这个module
