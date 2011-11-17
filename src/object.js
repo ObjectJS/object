@@ -632,7 +632,8 @@ Class.create = function() {
  * mixin时调用mixin的initialize方法，保证其中的初始化成员能够被执行
  */
 Class.initMixins = function(cls, instance) {
-	if (cls.__base__ && cls.__base__.__mixins__) {
+	// 初始化父类的mixin
+	if (cls.__base__) {
 		Class.initMixins(cls.__base__, instance);
 	}
 	if (cls.__mixins__) {
