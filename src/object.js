@@ -1034,6 +1034,7 @@ this.Loader = new Class(function() {
 	 *
 	 * @param name pkg name
 	 * @param modules 已引入的module对象列表，会传递给 execute 方法，可以通过sys.modules获取
+	 * @param stack 保存了模块的依赖路径的栈，检测循环依赖
 	 * @param callback 模块获取到以后，通过callback的第一个参数传递回去
 	 * @returns 最终引入的模块
 	 */
