@@ -503,8 +503,8 @@ var type = this.type = function() {
 };
 
 /**
-* 创建一个类的核心过程
-*/
+ * 创建一个类的核心过程
+ */
 type.__new__ = function(metaclass, name, base, dict) {
 	var cls = Class.create();
 
@@ -627,8 +627,8 @@ Class.create = function() {
 };
 
 /**
-* mixin时调用mixin的initialize方法，保证其中的初始化成员能够被执行
-*/
+ * mixin时调用mixin的initialize方法，保证其中的初始化成员能够被执行
+ */
 Class.initMixins = function(cls, instance) {
 	if (!cls.__mixins__) {
 		return;
@@ -668,7 +668,9 @@ Class.getPropertyNames = function(obj) {
  * @param args 构造的参数
  */
 Class.inject = function(cls, host, args) {
-	if (typeof cls != 'function') console.log(arguments.callee.caller)
+	if (typeof cls != 'function') {
+		throw new Error('cls should be function');
+	};
 	args = args || [];
 	host.__class__ = cls;
 	host.__properties__ = cls.prototype.__properties__;
@@ -705,7 +707,7 @@ Class.getInstance = function(cls) {
  */
 Class.getAllSubClasses = function(cls) {
 	var array = cls.__subclassesarray__;
-    if(!array) {
+    if (!array) {
         return [];
     }
 	var queue = [].concat(array), ele = queue.shift(), subs;
@@ -721,9 +723,9 @@ Class.getAllSubClasses = function(cls) {
 };
 
 /**
-* 遍历一个类成员
-* 获取类成员通过cls.get(name)
-*/
+ * 遍历一个类成员
+ * 获取类成员通过cls.get(name)
+ */
 Class.keys = function(cls) {
 	keys = Object.keys(cls.prototype.__properties__);
 	for (var prop in cls.prototype) {
@@ -805,13 +807,13 @@ StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "inde
 
 })();
 
-(/**@lends object*/ function() {
+(function() {
 
 /**
  * object的包管理器
  * 这个class依赖于object._lib ，且会修改它
  */
-this.Loader = new Class(/**@lends object.Loader*/ function() {
+this.Loader = new Class(function() {
 
 	// 模块
 	function Module(name) {
@@ -866,7 +868,7 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			return;
 		}
 		name = name.replace(/^\.*|\.*$/g, '');
-		if (typeof name == 'string' && name.indexOf('sys.') == 0) {
+		if (name.indexOf('sys.') == 0) {
 			throw new Error('should not add sub module for sys');
 		}
 		var names = name.split('.');
@@ -985,9 +987,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 
 			// 不输出 __name__ 了，没有大用且影响性能，应该在创建时就指定name
 			//Object.keys(exports).forEach(function(key) {
-				//if (typeof exports[key] == 'function') {
-					//exports[key].__name__ = key;
-				//}
+			//	if (typeof exports[key] == 'function') {
+			//  	exports[key].__name__ = key;
+			//  }
 			//});
 
 			if (callback) callback(exports);
@@ -999,9 +1001,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 				loadNext(0);
 			}, true);
 			return;
-
+		}
 		// 在空package或没有uses的情况下直接返回即可。
-		} else if (!pkg.fn || pkg.uses.length === 0) {
+		else if (!pkg.fn || pkg.uses.length === 0) {
 			done();
 			return;
 		}
@@ -1075,9 +1077,9 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 			// 使用缓存中的
 			if (modules[prefix]) {
 				next(modules[prefix]);
-
+			}
 			// lib 中有
-			} else if (self.lib[prefix]) {
+			else if (self.lib[prefix]) {
 				var pkg = self.lib[prefix];
 
 				// lib中有，但是是file，需要动态加载
@@ -1090,14 +1092,14 @@ this.Loader = new Class(/**@lends object.Loader*/ function() {
 						}
 						self.executeModule(pkg, modules, stack, next);
 					}, true);
-
+				}
 				// 也有可能是空的模块，是没有 fn 的，executeModule会处理
-				} else {
+				else {
 					self.executeModule(pkg, modules, stack, next);
 				}
-
+			}
 			// lib中没有
-			} else {
+			else {
 				throw new object.NoModuleError(prefix);
 			}
 
