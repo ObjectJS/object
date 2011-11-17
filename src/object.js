@@ -1192,3 +1192,13 @@ this.Loader = new Class(function() {
 
 })();
 
+/**
+ * 增加window模块，如果其他模块中需要使用或修改window的相关内容，必须显式的依赖window模块
+ * 例如： 
+ *    object.add('test', 'ua, window', function(exports, ua, window) {
+ *        window.globalMember = 1;
+ *    });
+ */
+object.add('window', function(exports) {
+	return window;
+});

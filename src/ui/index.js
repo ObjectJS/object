@@ -22,8 +22,8 @@ var Element = new Class(function() {
 });
 
 /**
-* 一组Component的包装
-*/
+ * 一组Component的包装
+ */
 this.Components = new Class(Array, function() {
 
 	/**
@@ -45,8 +45,8 @@ this.Components = new Class(Array, function() {
 				//var i, arg, args = [];
 				// 代理方法支持Component参数
 				//for (i = 0; i < arguments.length; i++) {
-					//arg = arguments[i];
-					//args.push((arg && arg._node)? arg._node : arg);
+				//arg = arguments[i];
+				//args.push((arg && arg._node)? arg._node : arg);
 				//}
 				for (i = 0; i < self.length; i++) {
 					element = self[i];
@@ -146,7 +146,7 @@ this.component = new Class(function() {
 			dict.__subs = [];
 			dict.__subEvents = {}; // 通过subName_eventType进行注册的事件
 			dict.__onEvents = []; // 通过oneventtype对宿主component注册的事件 // 通过oneventtype对宿主component注册的事件 // 通过oneventtype对宿主component注册的事件 // 通过oneventtype对宿主component注册的事件
-			dict.__handles = ['init', 'revert', 'invalid', 'error', 'reset']; // 定义的会触发事件的方法集合, reset为兼容处理 Compatible
+			dict.__handles = ['init', 'destory', 'invalid', 'error', 'revert', 'reset']; // 定义的会触发事件的方法集合, revert, reset为兼容处理 Compatible
 			dict.__methods = [];
 		} else {
 			dict.__defaultOptions = [];
@@ -372,11 +372,13 @@ this.Component = new Class(function() {
 
 			if (value) {
 				self.__setOption(name, value);
+			}
 			// 从options参数获取配置
-			} else if (options[name]) {
+			else if (options[name]) {
 				self.__setOption(name, options[name]);
+			}
 			// 默认配置
-			} else {
+			else {
 				self.__setOption(name, defaultValue);
 			}
 
@@ -500,8 +502,8 @@ this.Component = new Class(function() {
 	};
 
 	/**
-	* 获取sub的节点
-	*/
+	 * 获取sub的节点
+	 */
 	this.__querySub = function(self, name) {
 		var sub = self.__properties__[name];
 		if (typeof sub.selector == 'function') {
@@ -551,8 +553,8 @@ this.Component = new Class(function() {
 	/**
 	 * 重置一个component，回到初始状态，删除所有render的元素。
 	 */
-	this._revert = function(self, methodName) {
-		if (!methodName) methodName = 'revert'; // 兼容reset方法名
+	this._destory = function(self, methodName) {
+		if (!methodName) methodName = 'destory'; // 兼容revert, reset方法名
 
 		// 清空所有render进来的新元素
 		self.__subs.forEach(function(name) {
@@ -582,18 +584,26 @@ this.Component = new Class(function() {
 	};
 
 	/**
-	* @deprecated
-	* 用revert代替
-	* 由于form有reset方法，在reset调用时，会fire reset事件，导致意外的表单重置
-	*/
-	this._reset = function(self) {
-		self._revert('reset');
+	 * @deprecated
+	 * 用destory代替
+	 */
+	this._revert = function(self) {
+		self._destory('revert');
 	};
 
 	/**
-	* 获取option的值
-	* @param name name
-	*/
+	 * @deprecated
+	 * 用destory代替
+	 * 由于form有reset方法，在reset调用时，会fire reset事件，导致意外的表单重置
+	 */
+	this._reset = function(self) {
+		self._destory('reset');
+	};
+
+	/**
+	 * 获取option的值
+	 * @param name name
+	 */
 	this.getOption = function(self, name) {
 		var pname = '_' + name;
 		if (self[pname] === undefined) {
@@ -603,11 +613,11 @@ this.Component = new Class(function() {
 	};
 
 	/**
-	* 设置option的值
-	* @method
-	* @param name name
-	* @param value value
-	*/
+	 * 设置option的值
+	 * @method
+	 * @param name name
+	 * @param value value
+	 */
 	this.setOption = options.overloadsetter(function(self, name, value) {
 		// 由于overloadsetter是通过name是否为string来判断传递形式是name-value还是{name:value}的
 		// 在回调中为了性能需要直接传的parts，类型为数组，而不是字符串，因此无法通过回调用overloadsetter包装后的方法进行回调
@@ -670,10 +680,10 @@ this.Component = new Class(function() {
 	};
 
 	/**
-	* 根据subs的type创建一个component，并加入到引用中，这一般是在renderXXX方法中进行调用
-	* @param name
-	* @param data 模板数据
-	*/
+	 * 根据subs的type创建一个component，并加入到引用中，这一般是在renderXXX方法中进行调用
+	 * @param name
+	 * @param data 模板数据
+	 */
 	this.make = function(self, name, data) {
 		var sub = self.__properties__[name];
 		var pname = '_' + name;
