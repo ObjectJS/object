@@ -171,9 +171,14 @@ test('events.Events: play with the standard', function() {
 			ok(true, 'fire event fire-error, should not stop the event chain - handler 2');
 		}, false);
 		// can not get the error in this way, because error is throwed from another function
-		raises(function() {
-			a.fireEvent('fire-error');
-		}, 'should raise error after fireEvent(fire-error), but should not stop the event chain');
+        var oldError = window.onerror;
+        window.onerror = function(a,b,c) {
+			start();
+			ok(true, 'should raise error after fireEvent(fire-error), but should not stop the event chain');
+			window.onerror = oldError;
+			return true;
+        };
+		a.fireEvent('fire-error');
 		equal(counter3, 2, 'should not stop the event chain');
 	});
 });
