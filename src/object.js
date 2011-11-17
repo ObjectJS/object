@@ -632,12 +632,14 @@ Class.create = function() {
  * mixin时调用mixin的initialize方法，保证其中的初始化成员能够被执行
  */
 Class.initMixins = function(cls, instance) {
-	if (!cls.__mixins__) {
-		return;
+	if (cls.__base__ && cls.__base__.__mixins__) {
+		Class.initMixins(cls.__base__, instance);
 	}
-	for (var i = 0, l = cls.__mixins__.length, mixin; i < l; i++) {
-		mixin = cls.__mixins__[i];
-		if (mixin.prototype.initialize) mixin.prototype.initialize.call(instance);
+	if (cls.__mixins__) {
+		for (var i = 0, l = cls.__mixins__.length, mixin; i < l; i++) {
+			mixin = cls.__mixins__[i];
+			if (mixin.prototype.initialize) mixin.prototype.initialize.call(instance);
+		}
 	}
 };
 
