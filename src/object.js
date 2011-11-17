@@ -70,7 +70,7 @@ Array.prototype.indexOf = Array.prototype.indexOf || function(str) {
  * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/some
  */
 Array.prototype.some = Array.prototype.some || function(fn, bind) {
-	for (var i = 0, l = this.length; i < l; i++){
+	for (var i = 0, l = this.length; i < l; i++) {
 		if ((i in this) && fn.call(bind, this[i], i, this)) return true;
 	}
 	return false;
@@ -79,8 +79,8 @@ Array.prototype.some = Array.prototype.some || function(fn, bind) {
 /**
  * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/every
  */
-Array.prototype.every = Array.prototype.every || function(fn, bind){
-	for (var i = 0, l = this.length; i < l; i++){
+Array.prototype.every = Array.prototype.every || function(fn, bind) {
+	for (var i = 0, l = this.length; i < l; i++) {
 		if ((i in this) && !fn.call(bind, this[i], i, this)) return false;
 	}
 	return true;
@@ -91,7 +91,7 @@ Array.prototype.every = Array.prototype.every || function(fn, bind){
  */
 Array.prototype.map = Array.prototype.map || function (fn, bind) {
 	var results = [];
-	for (var i = 0, l = this.length; i < l; i++){
+	for (var i = 0, l = this.length; i < l; i++) {
 		if (i in this) results[i] = fn.call(bind, this[i], i, this);
 	}
 	return results;
@@ -100,9 +100,9 @@ Array.prototype.map = Array.prototype.map || function (fn, bind) {
 /**
  * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/filter
  */
-Array.prototype.filter = Array.prototype.filter || function(fn, bind){
+Array.prototype.filter = Array.prototype.filter || function(fn, bind) {
 	var results = [];
-	for (var i = 0, l = this.length; i < l; i++){
+	for (var i = 0, l = this.length; i < l; i++) {
 		if ((i in this) && fn.call(bind, this[i], i, this)) results.push(this[i]);
 	}
 	return results;
@@ -933,7 +933,7 @@ this.Loader = new Class(function() {
 			ele.callbacks.forEach(function(callback) {
 				callback(ele);
 			});
-			for(var i=0,l=ele.callbacks.length; i<l; i++) {
+			for (var i = 0, l = ele.callbacks.length; i < l; i++) {
 				ele.callbacks[i] = null;
 			}
 			ele.callbacks = null;
