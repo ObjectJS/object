@@ -1,4 +1,8 @@
-object.add('ua', function(exports) {
+/**
+* @namespace
+* @name ua
+*/
+object.add('ua', /**@lends ua*/ function(exports) {
 
 	var numberify = this.numberify = function(s) {
 		var c = 0;

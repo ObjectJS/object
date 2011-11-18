@@ -44,8 +44,6 @@
 				
 					<li><a href="../symbols/dom.Document.html">dom<span class='break'> </span>.<span class='break'> </span>Document</a></li>
 				
-					<li><a href="../symbols/dom.DragDrop.html">dom<span class='break'> </span>.<span class='break'> </span>DragDrop</a></li>
-				
 					<li><a href="../symbols/dom.Element.html">dom<span class='break'> </span>.<span class='break'> </span>Element</a></li>
 				
 					<li><a href="../symbols/dom.ElementClassList.html">dom<span class='break'> </span>.<span class='break'> </span>ElementClassList</a></li>
@@ -84,8 +82,6 @@
 				
 					<li><a href="../symbols/ua.extra.html">ua<span class='break'> </span>.<span class='break'> </span>extra</a></li>
 				
-					<li><a href="../symbols/ua.os.html">ua<span class='break'> </span>.<span class='break'> </span>os</a></li>
-				
 					<li><a href="../symbols/ui.html">ui</a></li>
 				
 					<li><a href="../symbols/ui.Component.html">ui<span class='break'> </span>.<span class='break'> </span>Component</a></li>
@@ -115,7 +111,7 @@
 		
 		Documentation generator: <a href="http://code.google.com/p/jsdoc-toolkit/" target="_blank">JsDoc Toolkit</a> 2.4.0<br />
 		Template: <a href="http://www.thebrightlines.com/2010/05/06/new-template-for-jsdoctoolkit-codeview/" target="_blank">Codeview</a> 1.2<br />
-		Generated on: 2011-10-2 11:32
+		Generated on: 2011-6-14 18:33
 	</div>
 </div>
 
@@ -243,7 +239,7 @@
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/object.Loader.html#execute">execute</a></b>(name, options)
+										<div class="fixedFont"><b><a href="../symbols/object.Loader.html#execute">execute</a></b>(name, options, options)
 										</div>
 										<div class="description">execute</div>
 									</td>
@@ -254,7 +250,7 @@
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/object.Loader.html#executeModule">executeModule</a></b>(pkg, modules, stack, callback, options, options)
+										<div class="fixedFont"><b><a href="../symbols/object.Loader.html#executeModule">executeModule</a></b>(pkg, host, modules, callback, options, options)
 										</div>
 										<div class="description">context 执行方法</div>
 									</td>
@@ -265,7 +261,7 @@
 								>
 									<td class="attributes">&nbsp;</td>
 									<td class="nameDescription">
-										<div class="fixedFont"><b><a href="../symbols/object.Loader.html#getModule">getModule</a></b>(name, modules, callback, stack, callback)
+										<div class="fixedFont"><b><a href="../symbols/object.Loader.html#getModule">getModule</a></b>(name, modules, callback, callback)
 										</div>
 										<div class="description">通过一个模块名，获得到相对应的模块对象并通过callback返回</div>
 									</td>
@@ -278,8 +274,47 @@
 									<td class="nameDescription">
 										<div class="fixedFont"><b><a href="../symbols/object.Loader.html#getUses">getUses</a></b>(uses, ignore, ignore)
 										</div>
-										<div class="description">处理传入的uses参数
-在getUses阶段不需要根据名称判断去重（比如自己use自己），因为并不能避免所有冲突，还有循环引用的问题（比如 core use dom, dom use core）</div>
+										<div class="description">处理传入的uses参数，输入格式：
+['module1', {
+	name: 'module2',
+	uses: [
+		{
+			name: 'Member1',
+			as: 'M'
+		},
+		'Member2'
+	]
+}, {
+	name: 'full.module.name',
+	as: 'shortname'
+}, {
+	name: 'somemodule',
+	uses: '*'
+}];
+
+输出格式：
+[{
+	name: 'module1'
+}, {
+	name: 'module2',
+	uses: [
+		{
+			name: 'Member1',
+			as: 'M'
+		}, {
+			name: 'Member2'
+		}
+	]
+}, {
+	name: 'full.module.name',
+	as: 'shortname'
+}, {
+	name: 'somemodule',
+	uses: '*'
+}];
+
+在getUses阶段不需要根据名称判断去重（比如自己use自己），因为并不能避免所有冲突，还有循环引用的问题（比如 core use dom, dom use core）
+因此限定：globalUses 中声明的模块不允许有use</div>
 									</td>
 								</tr>
 							
@@ -324,7 +359,9 @@
 									<td class="nameDescription">
 										<div class="fixedFont"><b><a href="../symbols/object.Loader.html#use">use</a></b>(uses, context, context)
 										</div>
-										<div class="description">use</div>
+										<div class="description">use
+uses参数书写有一个技巧，写在后面的module在运行时可以通过runtime参数得到之前已经引入module的引用
+这对于利用引入对象做处理的模块来说是一个很重要的特性</div>
 									</td>
 								</tr>
 							
@@ -462,7 +499,7 @@
 												<b>context</b>
 												
 											</dt>
-											<dd>这个function会在调用module时调用，并将module通过参数传入context，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列</dd>
+											<dd>这个function会在调用module时调用，并将module通过参数传入context，第一个参数为runtime，后面的参数为每个module的不重复引用，顺序排列</dd>
 										
 											<dt>
 												<b>context</b>
@@ -487,7 +524,7 @@
 									
 									
 									
-									<b>execute</b>(name, options)
+									<b>execute</b>(name, options, options)
 								</div>
 								
 								<div class="description">
@@ -516,6 +553,12 @@
 											</dt>
 											<dd>传入参数</dd>
 										
+											<dt>
+												<b>options</b>
+												
+											</dt>
+											<dd></dd>
+										
 									</dl>
 								
 								
@@ -533,7 +576,7 @@
 									
 									
 									
-									<b>executeModule</b>(pkg, modules, stack, callback, options, options)
+									<b>executeModule</b>(pkg, host, modules, callback, options, options)
 								</div>
 								
 								<div class="description">
@@ -557,16 +600,16 @@
 											<dd>被执行的pkg</dd>
 										
 											<dt>
+												<b>host</b>
+												
+											</dt>
+											<dd>context回调的this指针会指向它</dd>
+										
+											<dt>
 												<b>modules</b>
 												
 											</dt>
 											<dd>保存了此次use运行过程中用到的所有module</dd>
-										
-											<dt>
-												<b>stack</b>
-												
-											</dt>
-											<dd>保存了模块的依赖路径的栈，检测循环依赖</dd>
 										
 											<dt>
 												<b>callback</b>
@@ -603,7 +646,7 @@
 									
 									
 									
-									<b>getModule</b>(name, modules, callback, stack, callback)
+									<b>getModule</b>(name, modules, callback, callback)
 								</div>
 								
 								<div class="description">
@@ -637,12 +680,6 @@
 												
 											</dt>
 											<dd>模块获取到以后，通过callback的第一个参数传递回去</dd>
-										
-											<dt>
-												<b>stack</b>
-												
-											</dt>
-											<dd></dd>
 										
 											<dt>
 												<b>callback</b>
@@ -692,8 +729,47 @@
 								</div>
 								
 								<div class="description">
-									处理传入的uses参数
+									处理传入的uses参数，输入格式：
+['module1', {
+	name: 'module2',
+	uses: [
+		{
+			name: 'Member1',
+			as: 'M'
+		},
+		'Member2'
+	]
+}, {
+	name: 'full.module.name',
+	as: 'shortname'
+}, {
+	name: 'somemodule',
+	uses: '*'
+}];
+
+输出格式：
+[{
+	name: 'module1'
+}, {
+	name: 'module2',
+	uses: [
+		{
+			name: 'Member1',
+			as: 'M'
+		}, {
+			name: 'Member2'
+		}
+	]
+}, {
+	name: 'full.module.name',
+	as: 'shortname'
+}, {
+	name: 'somemodule',
+	uses: '*'
+}];
+
 在getUses阶段不需要根据名称判断去重（比如自己use自己），因为并不能避免所有冲突，还有循环引用的问题（比如 core use dom, dom use core）
+因此限定：globalUses 中声明的模块不允许有use
 									
 									
 									
@@ -873,6 +949,8 @@
 								
 								<div class="description">
 									use
+uses参数书写有一个技巧，写在后面的module在运行时可以通过runtime参数得到之前已经引入module的引用
+这对于利用引入对象做处理的模块来说是一个很重要的特性
 									
 									
 									
@@ -895,7 +973,7 @@
 												<b>context</b>
 												
 											</dt>
-											<dd>uses加载后调用，将module通过参数传入context，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列</dd>
+											<dd>uses加载后调用，将module通过参数传入context，第一个参数为runtime，后面的参数为每个module的不重复引用，顺序排列</dd>
 										
 											<dt>
 												<b>context</b>

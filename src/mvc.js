@@ -1,4 +1,8 @@
-object.add('mvc', 'events', function(exports, events) {
+/**
+ * @namespace
+ * @name mvc
+ */
+object.add('mvc', 'events', /**@lends mvc*/ function(exports, events) {
 
 
 /**

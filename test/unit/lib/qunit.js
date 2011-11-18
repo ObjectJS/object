@@ -6,8 +6,6 @@
  * Copyright (c) 2011 John Resig, Jörn Zaefferer
  * Dual licensed under the MIT (MIT-LICENSE.txt)
  * or GPL (GPL-LICENSE.txt) licenses.
- * Pulled Live from Git Tue Oct 25 04:35:01 UTC 2011
- * Last Commit: ee156923cdb01820e35e6bb579d5cf6bf55736d4
  */
 
 (function(window) {
@@ -114,7 +112,7 @@ Test.prototype = {
 
 			// Restart the tests if they're blocking
 			if ( config.blocking ) {
-				QUnit.start();
+				start();
 			}
 		}
 	},
@@ -1002,9 +1000,7 @@ function extend(a, b) {
 	for ( var prop in b ) {
 		if ( b[prop] === undefined ) {
 			delete a[prop];
-
-		// Avoid "Member not found" error in IE8 caused by setting window.constructor
-		} else if ( prop !== "constructor" || a !== window ) {
+		} else {
 			a[prop] = b[prop];
 		}
 	}

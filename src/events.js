@@ -1,4 +1,8 @@
-object.add('events', 'ua', function(exports, ua) {
+/**
+ * @namespace
+ * @name events
+ */
+object.add('events', 'ua', /**@lends events*/ function(exports, ua) {
 
 function IEEvent() {
 
@@ -64,7 +68,8 @@ this.fireevent = function(arg1) {
 		// Gecko 使用 getPreventDefault()
 		// IE 用 returnValue 模拟了 getPreventDefault
 		var preventDefaulted = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
-		if (!preventDefaulted) return func.apply(this, arguments);
+		if (!preventDefaulted) func.apply(this, arguments);
+		return event;
 	};
 
 	if (typeof arg1 == 'function') {
@@ -104,10 +109,8 @@ this.wrapEvent = function(e) {
 	return e;
 };
 
-/**
-* 事件系统
-*/
-this.Events = new Class(function() {
+// 事件
+this.Events = new Class(/**@lends events.Event*/ function() {
 
 	function handle(self, type) {
 		var boss = self.__boss || self;
@@ -144,12 +147,12 @@ this.Events = new Class(function() {
 	};
 
 	/**
-	* 添加事件
-	* @method
-	* @param type 事件名
-	* @param func 事件回调
-	* @param cap 冒泡
-	*/
+	 * 添加事件
+	 * @param self
+	 * @param type 事件名
+	 * @param func 事件回调
+	 * @param cap 冒泡
+	 */
 	this.addEvent = document.addEventListener? function(self, type, func, cap) {
 		var boss = self.__boss || self;
 
@@ -178,8 +181,6 @@ this.Events = new Class(function() {
 		}
 
 		boss.addEventListener(type, func, cap);
-		moveNativeEventsToTail(self, type);
-
 	} : function(self, type, func) {
 		var boss = self.__boss || self;
 
@@ -235,58 +236,12 @@ this.Events = new Class(function() {
 	}
 
 	/**
-	* 添加系统事件，保证事件这些事件会在注册事件调用最后被执行
-	* @method
-	* @param type 事件名
-	* @param func 事件回调
-	*/
-	this.addNativeEvent = document.addEventListener? function(self, type, func) {
-		var boss = self.__boss || self;
-		var natives;
-		if (!self.__nativeEvents) self.__nativeEvents = {};
-		if (!self.__nativeEvents[type]) {
-			natives = [];
-			self.__nativeEvents[type] = natives;
-			self.__nativeEvents[type].run = function(event) {
-				natives.forEach(function(func) {
-					func.call(self, event);
-				});
-			};
-			moveNativeEventsToTail(self, type);
-		} else {
-			natives = self.__nativeEvents[type];
-		}
-		natives.push(func);
-
-	} : function(self, type, func) {
-		var boss = self.__boss || self;
-		var natives;
-		if (!self.__nativeEvents) self.__nativeEvents = {};
-		if (!self.__nativeEvents[type]) {
-			natives = [];
-			self.__nativeEvents[type] = natives;
-			if (!self.__nativeEvents || !self.__eventListeners[type]) {
-				handle(self, type);
-			}
-		} else {
-			natives = self.__nativeEvents[type];
-		}
-
-		// 不允许两次添加同一事件
-		if (natives.some(function(f) {
-			return f === func;
-		})) return;
-
-		natives.push(func);
-	};
-
-	/**
-	* 移除事件
-	* @method
-	* @param type 事件名
-	* @param func 事件回调
-	* @param cap 冒泡
-	*/
+	 * 移除事件
+	 * @param self
+	 * @param type 事件名
+	 * @param func 事件回调
+	 * @param cap 冒泡
+	 */
 	this.removeEvent = document.removeEventListener? function(self, type, func, cap) {
 		var boss = self.__boss || self;
 
@@ -307,14 +262,11 @@ this.Events = new Class(function() {
 	};
 
 	/**
-	* 触发事件
-	* obj.fireEvent('name', {
-	* data: 'value'
-	* });
-	* @method
-	* @param type 事件名
-	* @param eventData 扩展到event对象上的数据
-	*/
+	 * 触发事件
+	 * @param self
+	 * @param type 事件名
+	 * @param eventData 扩展到event对象上的数据
+	 */
 	this.fireEvent = document.dispatchEvent? function(self, type, eventData) {
 		var boss = self.__boss || self;
 
@@ -344,10 +296,7 @@ this.Events = new Class(function() {
 		var funcs = self.__eventListeners[type];
 		for (var i = 0, j = funcs.length; i < j; i++) {
 			if (funcs[i]) {
-					try {
-						funcs[i].call(self, event, true);
-					} catch(e) {
-					}
+				funcs[i].call(self, event, true);
 			}
 		}
 
