@@ -1,6 +1,5 @@
 /**
- * @namespace
- * @name lunar 公历农历的互相转换模块
+ * 公历农历的互相转换模块
  */
 object.add('lunar', function(exports) {
 
