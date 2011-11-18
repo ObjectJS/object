@@ -51,6 +51,9 @@ var LUNAR_INFO = [[0,2,9,21936],  [6,1,30,9656], [0,2,17,9584], [0,2,6,21168], [
  * @param date  公历-日
  */
 this.convertSolarToLunar = function(year, month, date) {
+	if (month == '' || date == '') {
+		return [year, (month == '' ? '' : exports.getCapitalNum(month, true)), (date == '' ? '' : exports.getCapitalNum(date)), exports.getLunarYearName(year), 0, 0, exports.getYearZodiac(year)];
+	}
     var yearData = LUNAR_INFO[year - MIN_YEAR];
     if (year == MIN_YEAR && month <= 2 && date <= 9) {
     	return [MIN_YEAR, '正月', '初一', '辛卯', 1, 1,'兔'];
@@ -67,6 +70,9 @@ this.convertSolarToLunar = function(year, month, date) {
  * @param date  阴历-日
  */
 this.convertLunarToSolar = function(year, month, date) {
+	if (month == '' || date == '') {
+		return [year, month, date];
+	}
     var yearData = LUNAR_INFO[year - MIN_YEAR], 
 		res = new Date(year, yearData[1] - 1, yearData[2]), 
 		between = exports.getDaysBetweenLunar(year, month, date);
