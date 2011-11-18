@@ -3,12 +3,12 @@
 <script type="text/javascript" src="../src/object.js"></script>
 <script>
 
-	object.add('test.a.b.c', function(exports) {
-		this.name = 'test.a.b.c';
+	object.add('test.a.b', function(exports) {
+		this.name = 'test.a.b';
 		console.log(this.__name__);
 	});
-
-	object.add('test.a', './b.c', function(exports, b) {
+    
+	object.add('test.a', './b', function(exports, b) {
 		this.name = 'test.a';
 		console.log(this.__name__);
 	});
@@ -20,7 +20,9 @@
 
 	/*
 	 * 应该输出
-	 * a.b a __main__
+	 * a.b
+	 * a
+	 * __main__
 	 */
 	// object.execute('test');
 

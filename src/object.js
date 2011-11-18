@@ -817,19 +817,45 @@ StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "inde
 
 (function() {
 
+// 模块
+function Module(name) {
+	this.__name__ = name;
+}
+Module.prototype.toString = function() {
+	return '<module \'' + this.__name__ + '\'>';
+};
+
+function LoaderRuntime(prefix) {
+	/**
+	 * 此次use运行过程中用到的所有module
+	 */
+	this.modules = {};
+
+	/**
+	 * 模块的依赖路径的栈，检测循环依赖
+	 */
+	this.stack = [];
+	
+	/**
+	 * 运行入口模块的名字
+	 */
+	this.prefix = prefix;
+}
+
+LoaderRuntime.prototype.getName = function(name) {
+	if (name.indexOf(this.prefix) == 0) {
+		name = name.slice(this.prefix.length + 1);
+	}
+	return name;
+};
+
+this.LoaderRuntime = LoaderRuntime;
+
 /**
  * object的包管理器
  * 这个class依赖于object._lib ，且会修改它
  */
 this.Loader = new Class(function() {
-
-	// 模块
-	function Module(name) {
-		this.__name__ = name;
-	}
-	Module.prototype.toString = function() {
-		return '<module \'' + this.__name__ + '\'>';
-	};
 
 	this.scripts = document.getElementsByTagName('script');
 
@@ -852,7 +878,7 @@ this.Loader = new Class(function() {
 			script = scripts[i];
 			module = script.getAttribute('data-module');
 			if (!module) continue;
-			//self.lib中的内容可能是makePrefixPackage构造的，只有name
+			//self.lib中的内容可能是makePrefixModule构造的，只有name
 			//在模块a.b先声明，模块a后声明的情况下，无法获取模块a的内容
 			if (self.lib[module] && (self.lib[module].fn || self.lib[module].file)) {
 				continue;
@@ -861,8 +887,8 @@ this.Loader = new Class(function() {
 			if (!src) {
 				continue;
 			}
-			// 建立前缀package
-			self.makePrefixPackage(module);
+			// 建立前缀module
+			self.makePrefixModule(module);
 			self.lib[module] = {file: src, name: module};
 		}
 	};
@@ -871,7 +897,7 @@ this.Loader = new Class(function() {
 	 * 建立前缀模块
 	 * 比如 a.b.c.d ，会建立 a/a.b/a.b.c 三个空模块，最后一个模块为目标模块，不为空，内容为context
 	 */
-	this.makePrefixPackage = function(self, name) {
+	this.makePrefixModule = function(self, name) {
 		if (!name || typeof name != 'string') {
 			return;
 		}
@@ -879,9 +905,9 @@ this.Loader = new Class(function() {
 		if (name.indexOf('sys.') == 0) {
 			throw new Error('should not add sub module for sys');
 		}
-		var names = name.split('.');
-		for (var i = 0, prefix, l = names.length - 1; i < l; i++) {
-			prefix = names.slice(0, i + 1).join('.');
+		var parts = name.split('.');
+		for (var i = 0, prefix, l = parts.length - 1; i < l; i++) {
+			prefix = parts.slice(0, i + 1).join('.');
 			// 说明这个module是空的
 			if (self.lib[prefix] == undefined) self.lib[prefix] = {
 				name: prefix
@@ -965,16 +991,16 @@ this.Loader = new Class(function() {
 	/**
 	 * context 执行方法
 	 *
-	 * @param pkg 被执行的pkg
-	 * @param modules 保存了此次use运行过程中用到的所有module
-	 * @param stack 保存了模块的依赖路径的栈，检测循环依赖
+	 * @param module 被执行的module
+	 * @param name 执行时的name
+	 * @param runtime 运行时对象，modules保存了此次use运行过程中用到的所有module，stack保存了模块的依赖路径的栈，检测循环依赖
 	 * @param callback 异步方法，执行完毕后调用
-	 * @param options 可选，可用来定制name
 	 */
-	this.executeModule = function(self, pkg, modules, stack, callback, options) {
-		if (!options) options = {};
+	this.executeModule = function(self, module, name, runtime, callback) {
+		var modules = runtime.modules;
+		var stack = runtime.stack;
 
-		var exports = new Module(options.name || pkg.name);
+		var exports = new Module(name || module.name);
 		// sys.modules
 		if (exports.__name__ === 'sys') exports.modules = modules;
 
@@ -982,9 +1008,9 @@ this.Loader = new Class(function() {
 		var args = [exports];
 
 		var done = function() {
-			// 空package不需要
-			if (pkg.fn) {
-				var returnValue = pkg.fn.apply(exports, args);
+			// 空module不需要
+			if (module.fn) {
+				var returnValue = module.fn.apply(exports, args);
 				if (returnValue) {
 					if (typeof returnValue === 'object' || typeof returnValue === 'function') {
 						returnValue.toString = Module.prototype.toString;
@@ -1005,14 +1031,14 @@ this.Loader = new Class(function() {
 		};
 
 		// file
-		if (!pkg.fn && pkg.file) {
-			self.loadScript(pkg.file, function() {
+		if (!module.fn && module.file) {
+			self.loadScript(module.file, function() {
 				loadNext(0);
 			}, true);
 			return;
 		}
-		// 在空package或没有uses的情况下直接返回即可。
-		else if (!pkg.fn || pkg.uses.length === 0) {
+		// 在空module或没有uses的情况下直接返回即可。
+		else if (!module.fn || module.uses.length === 0) {
 			done();
 			return;
 		}
@@ -1020,12 +1046,12 @@ this.Loader = new Class(function() {
 		// 主递归函数
 		function loadNext(i) {
 
-			var use = pkg.uses[i];
-			var context = null;
+			var use = module.uses[i];
 			if (use.indexOf('./') == 0) {
-				context = pkg.name;
-				use = use.slice(2);
+				use = module.name + '.' + use.slice(2);
 			}
+			var parts = use.split('.'),
+				context = module.name.split('.');
 
 			// 循环依赖判断
 			stack.push(use); // 开始获取use这个module
@@ -1034,51 +1060,49 @@ this.Loader = new Class(function() {
 				error.stack = stack;
 				throw error;
 			}
-			self.loadModule(context, use, modules, stack, function() {
+			self.loadModule(parts, context, runtime, function(root) {
 				stack.pop(); // 此module获取完毕
-				var names, root, member;
 
-				names = use.split('.');
-				root = modules[names[0]];
-
+				// 非重复引用
 				if (args.indexOf(root) == -1) args.push(root);
 
-				if (i < pkg.uses.length - 1) {
+				if (i < module.uses.length - 1) {
 					loadNext(i + 1);
-				} else if (i == pkg.uses.length - 1) {
+				} else if (i == module.uses.length - 1) {
 					done();
 				}
 
 			});
 
-		};
+		}
 
 		loadNext(0);
-
 	};
 
 	/**
 	 * 通过一个模块名，获得到相对应的模块对象并通过callback返回
 	 * 主要是需要建立对象链
 	 *
-	 * @param context 所获取的module所在路径
-	 * @param name pkg name
-	 * @param modules 已引入的module对象列表，会传递给 execute 方法，可以通过sys.modules获取
-	 * @param stack 保存了模块的依赖路径的栈，检测循环依赖
+	 * @param parts module name parts
+	 * @param {LoaderRuntime} runtime 运行时对象
 	 * @param callback 模块获取到以后，通过callback的第一个参数传递回去
 	 */
-	this.loadModule = function(self, context, name, modules, stack, callback) {
-		var fullname = context? context + '.' + name : name;
-		var parts = fullname.split('.');
+	this.loadModule = function(self, parts, context, runtime, callback) {
+		var modules = runtime.modules;
 
+		for (var i = 0, l = context.length; i < l; i++) {
+			if (!parts[i] || parts[i] !== context[i]) break;
+		}
+		var common = i;
+		
 		/**
 		 * @param i
 		 * @param pname 上一个module的name
 		 */
-		;(function(i, pname) {
-			var loadNext = arguments.callee;
+		;(function loadNext(i, pname) {
 			var part = parts[i];
-			var name = (pname? pname + '.' : '') + part;
+			var fullname = (pname? pname + '.' : '') + part;
+			var name = runtime.getName(fullname);
 
 			var next = function(exports) {
 				modules[name] = exports;
@@ -1088,39 +1112,43 @@ this.Loader = new Class(function() {
 				}
 
 				if (i < parts.length - 1) {
-					loadNext(i + 1, name);
+					loadNext(i + 1, fullname);
 				} else if (i == parts.length - 1) {
-					callback(modules[name]);
+					callback(modules[parts[0]]);
 				}
 			};
 
-			// 使用缓存中的
-			if (modules[name]) {
-				next(modules[name]);
-			}
-			// lib 中有
-			else if (self.lib[name]) {
-				var pkg = self.lib[name];
+			if (i < common) {
+				next({});
+			} else {
+				// 使用缓存中的
+				if (modules[name]) {
+					next(modules[name]);
+				}
+				// lib 中有
+				else if (self.lib[fullname]) {
+					var module = self.lib[fullname];
 
-				// lib中有，但是是file，需要动态加载
-				if (pkg.file) {
-					// 文件加载完毕后，其中执行的 add 会自动把 self.lib 中的对象替换掉，file 属性丢失，加入了 execute/name/uses 等属性
-					// 使用缓存
-					self.loadScript(pkg.file, function() {
-						if (pkg.file) {
-							throw new Error(pkg.file + ' do not add ' + pkg.name);
-						}
-						self.executeModule(pkg, modules, stack, next);
-					}, true);
+					// lib中有，但是是file，需要动态加载
+					if (module.file) {
+						// 文件加载完毕后，其中执行的 add 会自动把 self.lib 中的对象替换掉，file 属性丢失，加入了 execute/name/uses 等属性
+						// 使用缓存
+						self.loadScript(module.file, function() {
+							if (module.file) {
+								throw new Error(module.file + ' do not add ' + module.name);
+							}
+							self.executeModule(module, name, runtime, next);
+						}, true);
+					}
+					// 也有可能是空的模块，是没有 fn 的，executeModule会处理
+					else {
+						self.executeModule(module, name, runtime, next);
+					}
 				}
-				// 也有可能是空的模块，是没有 fn 的，executeModule会处理
+				// lib中没有
 				else {
-					self.executeModule(pkg, modules, stack, next);
+					throw new object.NoModuleError(fullname);
 				}
-			}
-			// lib中没有
-			else {
-				throw new object.NoModuleError(name);
 			}
 
 		})(0);
@@ -1183,17 +1211,17 @@ this.Loader = new Class(function() {
 			return;
 		}
 		// 建立前缀占位模块
-		self.makePrefixPackage(name);
+		self.makePrefixModule(name);
 
 		// lib中存储的是function
 		// 注意别给覆盖了，有可能是有 file 成员的
-		var pkg = self.lib[name];
-		if (!pkg) pkg = self.lib[name] = {};
-		pkg.name = name;
-		pkg.uses = uses;
-		pkg.fn = context;
+		var module = self.lib[name];
+		if (!module) module = self.lib[name] = {};
+		module.name = name;
+		module.uses = uses;
+		module.fn = context;
 
-		return pkg;
+		return module;
 	};
 
 	/**
@@ -1212,22 +1240,18 @@ this.Loader = new Class(function() {
 		self.anonymousModuleCount++;
 		var module = self.add(name, uses, context);
 
-		// 第二个{}参数会被所有相关module通过第一个 exports 参数获取到，实现module获取调用者的信息
-		// 之前是直接将window代替exports传递进去，但是在module初始化完毕后会有一个遍历赋值__name__的过程，会导致IE6下出错，且遍历window也会有性能问题
-		// 因此改为传入exports，然后在extend到window上。
-		// 经验是，不要用一个已经有内容、不可控的对象作为executeModule的exports。
-		self.executeModule(module, {}, [], function(exports) {
+		// 不要用一个已经有内容、不可控的对象作为executeModule的exports。
+		self.executeModule(module, '__main__', new LoaderRuntime(name), function(exports) {
 			for (var property in exports) {
 				if (property != '__name__' && window[property] === undefined) window[property] = exports[property];
 			}
-		}, {name: '__main__'});
+		});
 	};
 
 	/**
 	 * execute
 	 *
 	 * @param name 执行的入口模块名称
-	 * @param options 传入参数
 	 */ 
 	this.execute = function(self, name) {
 		if (!name || typeof name != 'string') {
@@ -1238,7 +1262,7 @@ this.Loader = new Class(function() {
 		var module = self.lib[name];
 		if (!module) throw new object.NoModuleError(name);
 
-		self.executeModule(module, {}, [], null, {name: '__main__'});
+		self.executeModule(module, '__main__', new LoaderRuntime(name));
 	};
 
 });
