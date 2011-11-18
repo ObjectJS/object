@@ -1099,8 +1099,8 @@ this.Loader = new Class(function() {
 				next(modules[name]);
 			}
 			// lib 中有
-			else if (_lib[name]) {
-				var pkg = _lib[name];
+			else if (self.lib[name]) {
+				var pkg = self.lib[name];
 
 				// lib中有，但是是file，需要动态加载
 				if (pkg.file) {
