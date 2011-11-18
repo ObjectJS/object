@@ -1048,7 +1048,6 @@ this.Loader = new Class(function() {
 	 * @param callback 模块获取到以后，通过callback的第一个参数传递回去
 	 */
 	this.loadModule = function(self, context, name, modules, stack, callback) {
-		console.log(context, name);
 		var fullname = context? context + '.' + name : name;
 		var parts = fullname.split('.');
 
