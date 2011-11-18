@@ -1421,6 +1421,7 @@ this.FormElement = new Class(exports.Element, function() {
 				// 不是由一个特殊按钮触发的，直接返回
 				if (!self.__submitButton) return;
 
+				event.preventDefault();
 				var button = self.__submitButton;
 				self.__submitButton = null;
 
@@ -1430,22 +1431,14 @@ this.FormElement = new Class(exports.Element, function() {
 				var oldEnctype = self.encoding || self.enctype;
 				var oldNoValidate = self.noValidate;
 				var oldTarget = self.target;
-				var formAction = button.getAttribute('formaction');
-				var formMethod = button.getAttribute('formmethod');
-				var formEnctype = button.getAttribute('formenctype');
-				var formNoValidate = button.getAttribute('formnovalidate');
-				var formTarget = button.getAttribute('formtarget');
-				if (formAction) self.action = formAction;
-				if (formMethod) self.method = formMethod;
-				if (formEnctype) self.enctype = self.encoding = formEnctype;
-				if (formNoValidate) self.formNoValidate = formNoValidate;
-				if (formTarget) self.target = formTarget;
 
-				var preventDefaulted = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
-				if (!preventDefaulted) {
-					event.preventDefault();
-					self.submit();
-				}
+				if (button.formAction) self.action = button.formAction;
+				if (button.formMethod) self.method = button.formMethod;
+				if (button.formEnctype) self.enctype = self.encoding = button.formEnctype;
+				if (button.formNoValidate) self.formNoValidate = button.formNoValidate;
+				if (button.formTarget) self.target = button.formTarget;
+
+				self.submit();
 
 				// 提交之后再恢复回来
 				self.action = oldAction;
@@ -1534,9 +1527,6 @@ this.FormElement = new Class(exports.Element, function() {
  */
 this.FormItemElement = new Class(exports.Element, function() {
 
-	/**
-	* selectionStart
-	*/
 	this.selectionStart = property(function(self) {
 		if (typeof self.selectionStart == 'number') {
 			return self.selectionStart;
@@ -1743,9 +1733,8 @@ this.FormItemElement = new Class(exports.Element, function() {
 
 });
 
-/**
-* input / textarea 元素的包装类的基类
-*/
+
+// input, textarea
 this.TextBaseElement = new Class(exports.FormItemElement, function() {
 
 	this.initialize = function(self) {
@@ -1756,9 +1745,6 @@ this.TextBaseElement = new Class(exports.FormItemElement, function() {
 		}
 	};
 
-	/**
-	* 占位符
-	*/
 	this.placeholder = property(function(self) {
 		return self.getAttribute('placeholder');
 	}, function(self, value) {
@@ -1769,9 +1755,6 @@ this.TextBaseElement = new Class(exports.FormItemElement, function() {
 		}
 	});
 
-	/**
-	* 是否处于占位符状态
-	*/
 	this._placeholding = property(function(self) {
 		return self.classList.contains('placeholder');
 	}, function(self, value) {
@@ -1832,8 +1815,56 @@ this.TextBaseElement = new Class(exports.FormItemElement, function() {
 			});
 		}
 		checkEmpty();
+
 	};
 
+});
+
+this.InputElement = new Class(exports.TextBaseElement, function() {
+
+	this.formAction = nativeproperty('formAction');
+	this.formEnctype = nativeproperty('formEnctype');
+	this.formMethod = nativeproperty('formMethod');
+	this.formNoValidate = nativeproperty('formNoValidate');
+	this.formTarget = nativeproperty('formTarget');
+
+	this.initialize = function(self) {
+		this.parent(self);
+
+		if (!_supportMultipleSubmit) {
+			self.set('formAction', self.getAttribute('formaction'));
+			self.set('formEnctype', self.getAttribute('formenctype'));
+			self.set('formMethod', self.getAttribute('formmethod'));
+			self.set('formNoValidate', self.getAttribute('formnovalidation'));
+			self.set('formTarget', self.getAttribute('formtarget'));
+			self.addNativeEvent('click', function(event) {
+				self.form.__submitButton = self;
+			});
+		}
+	};
+
+	/**
+	 * 用ajax发送一个表单
+	 */
+	this.send = function(self, data) {
+		if (self.type != 'submit') return;
+		var request = self.form.createRequest({
+			method: self.getAttribute('formmethod') || self.form.method,
+			url: self.getAttribute('formaction') || self.form.action,
+			onsuccess: function(event) {
+				self.fireEvent('requestSuccess', {request: event.request});
+			},
+			onerror: function(event) {
+				self.fireEvent('requestError', {request: event.request});
+			}
+		});
+		request.send(data);
+		return request;
+	};
+
+});
+
+this.TextAreaElement = new Class(exports.TextBaseElement, function() {
 });
 
 /**

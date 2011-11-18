@@ -85,10 +85,6 @@ this.Request = new Class(function() {
 		self.oncomplete = options.oncomplete;
 	};
 
-	/**
-	* 将data作为数据进行发送
-	* @param {string} data 发送的数据
-	*/
 	this.send = function(self, data) {
 		exports.ajaxRequest(self.url, function(xhr) {
 			self._xhr = xhr;
@@ -124,8 +120,6 @@ this.Request = new Class(function() {
 			var xhr = self._xhr;
 			var url = self.url;
 
-			if (!data) data = self.data;
-
 			// 处理data
 			if (data && self.method == 'get') {
 				url += (url.indexOf('?') != -1 ? '&' : '?') + data;
@@ -142,7 +136,7 @@ this.Request = new Class(function() {
 				xhr.setRequestHeader(name, self.headers[name]);
 			}
 
-			self._xhr.send(data);
+			self._xhr.send(data || self.data);
 		});
 	};
 
