@@ -1108,7 +1108,7 @@ this.Loader = new Class(function() {
 				modules[name] = exports;
 
 				if (pname) {
-					modules[pname][part] = modules[name];
+					if (modules[pname]) modules[pname][part] = modules[name];
 				}
 
 				if (i < parts.length - 1) {
@@ -1119,7 +1119,7 @@ this.Loader = new Class(function() {
 			};
 
 			if (i < common) {
-				next({});
+				next();
 			} else {
 				// 使用缓存中的
 				if (modules[name]) {
