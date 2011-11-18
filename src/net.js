@@ -1,18 +1,17 @@
-/**
- * @namespace
- * @name net
- */
 object.add('net', 'dom, events', /**@lends net*/ function(exports, dom, events) {
 
 var ajaxProxies = this.ajaxProxies = {};
 
-// 执行一个可跨域的ajax请求
-// 跨域host必须有ajaxproxy.htm
-// callback唯一参数返回 XMLHttpRequest 对象实例
+/**
+ * 执行一个可跨域的ajax请求
+ * 跨域host必须有ajaxproxy.htm
+ * callback唯一参数返回 XMLHttpRequest 对象实例
+ */
 this.ajaxRequest = function(url, callback) {
 	var tmpA = document.createElement('a');
 	tmpA.href = url;
 	var hostname = tmpA.hostname;
+	var protocol = tmpA.protocol;
 
 	if (hostname && (hostname != location.hostname)) {
 		var xhr = null;
@@ -22,7 +21,7 @@ this.ajaxRequest = function(url, callback) {
 			iframe.style.display = 'none';
 			dom.ready(function() {
 				document.body.insertBefore(iframe, document.body.firstChild);
-				iframe.src = 'http://' + hostname + '/ajaxproxy.htm';
+				iframe.src = protocol + '//' + hostname + '/ajaxproxy.htm';
 				if (iframe.attachEvent) {
 					iframe.attachEvent('onload', function () {
 						callback(iframe.contentWindow.getTransport());
@@ -47,6 +46,10 @@ this.ajaxRequest = function(url, callback) {
 	}
 };
 
+/**
+ * 发送一个请求到url
+ * @param url url
+ */
 this.ping = function(url) {
 	var n = "_net_ping_"+ (new Date()).getTime();
 	var c = window[n] = new Image(); // 把new Image()赋给一个全局变量长期持有
@@ -82,6 +85,10 @@ this.Request = new Class(function() {
 		self.oncomplete = options.oncomplete;
 	};
 
+	/**
+	* 将data作为数据进行发送
+	* @param {string} data 发送的数据
+	*/
 	this.send = function(self, data) {
 		exports.ajaxRequest(self.url, function(xhr) {
 			self._xhr = xhr;
@@ -101,6 +108,10 @@ this.Request = new Class(function() {
 					self.responseXML = xhr.responseXML;
 					//self.responseJSON = xhr.responseJSON;
 
+					// Compatible
+					eventData.responseText = xhr.responseText;
+					eventData.responseXML = xhr.responseXML;
+
 					if (xhr.status === undefined || xhr.status === 0 || (xhr.status >= 200 && xhr.status < 300)) {
 						self.fireEvent('success', eventData);
 						if (self.onSuccess) self.onSuccess(eventData);
@@ -112,6 +123,8 @@ this.Request = new Class(function() {
 			};
 			var xhr = self._xhr;
 			var url = self.url;
+
+			if (!data) data = self.data;
 
 			// 处理data
 			if (data && self.method == 'get') {
@@ -129,14 +142,27 @@ this.Request = new Class(function() {
 				xhr.setRequestHeader(name, self.headers[name]);
 			}
 
-			self._xhr.send(data || self.data);
+			self._xhr.send(data);
 		});
 	};
 
+	/**
+	 * 中断请求
+	 */
+	this.abort = function(self) {
+		self._xhr.abort();
+	};
+
+	/**
+	 * getResponseHeader
+	 */
 	this.getResponseHeader = function(self, key) {
 		return self._xhr.getResponseHeader(key);
 	};
 
+	/**
+	 * setHeader
+	 */
 	this.setHeader = function(self, name, value) {
 		self.headers[name] = value;
 	};

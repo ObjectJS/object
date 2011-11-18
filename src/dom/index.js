@@ -1,8 +1,4 @@
-/**
- * @namespace
- * @name dom
- */
-object.add('dom', 'ua, events, string, dd, sys', /**@lends dom*/ function(exports, ua, events, string, dd, sys) {
+object.add('dom', 'ua, events, string, dd, sys', function(exports, ua, events, string, dd, sys) {
 
 window.UID = 1;
 var storage = {};
@@ -103,24 +99,22 @@ this.ready = function(callback) {
  * form 会使用 FormElement 进行包装
  * input / select 等会使用 FormItemElement 进行包装
  * 包装后的节点成员请参照相应的包装类成员
- * @function
- * @name dom.wrap
  * @param node 一个原生节点
  */
 var wrap = this.wrap = function(node) {
 	if (!node) return null;
 
 	if (Array.isArray(node)) {
-		return new Elements(node);
+		return new exports.Elements(node);
 	} else {
 		// 已经wrap过了
 		if (node._wrapped) return node;
 
 		var wrapper;
 		if (node === window) {
-			wrapper = Window;
+			wrapper = exports.Window;
 		} else if (node === window.document) {
-			wrapper = Document;
+			wrapper = exports.Document;
 		} else if (node.nodeType === 1) {
 			wrapper = getWrapper(node.tagName);
 		} else {
@@ -142,13 +136,11 @@ var wrap = this.wrap = function(node) {
  * 通过selector获取context作用域下的节点集合
  * dom.Elements包装后的节点数组拥有相应最小Element的统一调用方法
  * 比如 forms = dom.getElements('form'); 'send' in forms // true
- * @function
- * @name dom.getElements
  * @param selector 一个css selector
  * @param context 一个节点
  * @returns {dom.Elements}
  */
-var getElements = this.getElements = function(selector, context) {
+this.getElements = function(selector, context) {
 	if (!context) context = document;
 
 	// 解析成Slick Selector对象
@@ -189,18 +181,16 @@ var getElements = this.getElements = function(selector, context) {
 		wrapper = chain[chain.length - 1];
 	}
 
-	return new Elements(eles, wrapper);
+	return new exports.Elements(eles, wrapper);
 };
 
 /**
  * 通过selector获取context作用域下的第一个节点
- * @function
- * @name dom.getElement
  * @param selector 一个css selector
  * @param context 一个节点
  * @returns 一个包装后的结点
  */
-var getElement = this.getElement = function(selector, context) {
+this.getElement = function(selector, context) {
 	if (!context) context = document;
 
 	var ele = Sizzle(selector, context)[0];
@@ -217,9 +207,10 @@ this.id = function(id) {
 };
 
 /**
- * eval inner js
- * 执行某个元素中的script标签
- */
+* eval inner js
+* 执行某个元素中的script标签
+* @param ele script元素
+*/
 var eval_inner_JS = this.eval_inner_JS = function(ele) {
 	var js = [];
 	if (ele.nodeType == 11) { // Fragment
@@ -276,12 +267,25 @@ var _supportHTML5Forms = 'checkValidity' in document.createElement('input');
 var _supportHidden = 'hidden' in document.createElement('div');
 var _supportMultipleSubmit = 'formAction' in document.createElement('input');
 
-var nativeproperty = function(prop) {
-	return property(function(self) {
-		return self[prop];
+var nativeproperty = function() {
+	var prop = property(function(self) {
+		return self[prop.__name__];
 	}, function(self, value) {
-		self._set(prop, value);
+		self._set(prop.__name__, value);
 	});
+	return prop;
+};
+
+var attributeproperty = function(defaultValue, attr) {
+	var prop = property(function(self) {
+		if (!attr) attr = prop.__name__.toLowerCase();
+		var value = self.getAttribute(attr);
+		return value != null? value : defaultValue;
+	}, function(self, value) {
+		if (!attr) attr = prop.__name__.toLowerCase();
+		self.setAttribute(attr, value);
+	});
+	return prop;
 };
 
 //如何判断浏览器支持HTML5的拖拽：
@@ -327,11 +331,9 @@ var iOS = !!navigator.userAgent.match('iPhone OS') || !!navigator.userAgent.matc
 var _supportHTML5DragDrop = !iOS && isEventSupported('dragstart') && isEventSupported('drop');
 
 /**
- * 通过一个字符串创建一个Fragment
- * @function
- * @static
- * @name dom.Element.getDom
- */
+* 通过一个字符串创建一个Fragment
+* @param str html字符串
+*/
 this.getDom = function(str) {
 	var tmp = document.createElement('div');
 	var result = document.createDocumentFragment();
@@ -352,12 +354,9 @@ this.getDom = function(str) {
 };
 
 /**
- * html5 classList api
- * @class
- * @name dom.ElementClassList
- * @extends Array
- */
-var ElementClassList = this.ElementClassList = new Class(Array, /**@lends dom.ElementClassList*/ function() {
+* html5 classList api
+*/
+this.ElementClassList = new Class(Array, function() {
 
 	this.initialize = function(self, ele) {
 		self.length = 0; // for Array
@@ -370,25 +369,45 @@ var ElementClassList = this.ElementClassList = new Class(Array, /**@lends dom.El
     	self._classes  = self._ele.className.replace(/^\s+|\s+$/g, '').split(/\s+/);
 	};
 
+	/**
+	* 切换className
+	* @param token class
+	*/
 	this.toggle = function(self, token) {
 		if (self.contains(token)) self.remove(token);
 		else self.add(token);
 	};
 
+	/**
+	* 增加一个class
+	* @param token class
+	*/
 	this.add = function(self, token) {
 		if (!self.contains(token)) self._ele.className += (' ' + token); // 根据规范，不允许重复添加
 	};
 
+	/**
+	* 删除class
+	* @param token class
+	*/
 	this.remove = function(self, token) {
 		self._ele.className = self._ele.className.replace(new RegExp(token, 'i'), '');
 	};
 
+	/**
+	* 检测是否包含该class
+	* @param token class
+	*/
 	this.contains = function(self, token) {
 		self._loadClasses();
 		if (self._classes.indexOf(token) != -1) return true;
 		else return false;
 	};
 
+	/**
+	* 返回此下标的class
+	* @param {int} i 下标
+	*/
 	this.item = function(self, i) {
 		return self._classes[i] || null;
 	};
@@ -401,10 +420,8 @@ var ElementClassList = this.ElementClassList = new Class(Array, /**@lends dom.El
 
 /**
  * 拖拽模块
- * @class
- * @name dom.DragDrop
  */
-var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
+this.DragDrop = new Class(function() {
 
 	//拖拽时会修改拖拽元素的默认样式
 	var _modifiedPropertiesByDrag = ['display', 'position', 'width', 'height', 'border', 
@@ -528,7 +545,6 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	/**
 	 * 为容器添加其他可拖拽的元素（意味着其他元素可以拖放进入此容器）
 	 *
-	 * @param self
 	 * @param draggables  添加的可拖拽元素，元素本身必须是可拖拽的
 	 * @param isInit 	  当前容器是否是这些可拖拽元素的初始容器
 	 */
@@ -559,7 +575,6 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	/**
 	 * 为当前可拖拽元素增加一个新的可放置容器
 	 *
-	 * @param self
 	 * @param droppable 新增加的容器对象
 	 * @param isInit	是否作为初始容器（draggable元素的当前容器）
 	 */
@@ -587,7 +602,7 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 				return self;
 			}
 			//获取子元素
-			var subNodes = getElements(_autoDraggableTags.join(','), self);
+			var subNodes = exports.getElements(_autoDraggableTags.join(','), self);
 			for(var i=0,l=subNodes.length; i<l; i++) {
 				subNodes[i].draggable = false;
 			}
@@ -772,7 +787,6 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	/**
 	 * 拖拽完成时调用的方法
 	 *
-	 * @param self
 	 * @param e 事件对象
 	 */
 	this._finishDrag = function(self, e) {
@@ -805,7 +819,6 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	/**
 	 * 取消拖拽操作，在checkDragging的过程中已经释放鼠标，说明并不是拖拽
 	 *
-	 * @param self
 	 * @param e 事件对象
 	 */
 	this._cancelDrag = function(self, e) {
@@ -917,7 +930,6 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 	/**
 	 * 获取元素的属性值
 	 *
-	 * @param self
 	 * @param style 属性名称
 	 *
 	 * @returns 属性名称对应的属性值
@@ -959,11 +971,8 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 
 	/**
 	 * 获取元素的具体位置信息
-	 *
-	 * @param self
-	 * @return 形如{x:xxx, y:xxx}的位置信息对象，x是横向坐标，y是纵向坐标
-	 *
 	 * 此方法来自网络，需要参考标准获取方法和其他框架内容，再完善 
+	 * @return 形如{x:xxx, y:xxx}的位置信息对象，x是横向坐标，y是纵向坐标
 	 */
 	this.position = function(self){
 		if(self.parentNode === null || self.style.display == 'none') {
@@ -1014,13 +1023,12 @@ var DragDrop = this.DragDrop = new Class(/**@lends dom.Element*/ function() {
 });
 
 /**
- * @class
- * @name dom.Element
- */
-var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
+* 普通元素的包装
+*/
+this.Element = new Class(function() {
 
 	Class.mixin(this, events.Events);
-	Class.mixin(this, DragDrop);
+	Class.mixin(this, exports.DragDrop);
 
 	this.initialize = function(self, tagName) {
 		// 直接new Element，用来生成一个新元素
@@ -1035,37 +1043,40 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 		if (!self.__eventListeners) self.__eventListeners = {};
 		if (!self.__nativeEvents) self.__nativeEvents = {};
 		if (self.classList === undefined && self !== document && self !== window) {
-			self.classList = new ElementClassList(self);
+			self.classList = new exports.ElementClassList(self);
 		}
 	};
 
-	if (_supportHidden) {
-		this.hidden = nativeproperty('hidden');
-	} else {
-		this.hidden = property(function(self) {
-			return self.style.display == 'none';
-		}, function(self, value) {
-			if (value == true) {
-				if (self.style.display !== 'none') self.__oldDisplay = self.style.display;
-				self.style.display = 'none';
-			} else {
-				self.style.display = self.__oldDisplay || '';
-			}
-		});
-	}
+	/**
+	* 控制显示隐藏
+	*/
+	this.hidden = _supportHidden? nativeproperty() : property(function(self) {
+		return self.style.display == 'none';
+	}, function(self, value) {
+		if (value == true) {
+			if (self.style.display !== 'none') self.__oldDisplay = self.style.display;
+			self.style.display = 'none';
+		} else {
+			self.style.display = self.__oldDisplay || '';
+		}
+	});
 
-	/*
-	 * 从dom读取数据
-	 */
-	this.retrieve = function(self, property, dflt){
+	/**
+	* 从dom读取数据
+	* @param property 数据key
+	* @param defaultValue 若没有，则返回此默认值
+	*/
+	this.retrieve = function(self, property, defaultValue){
 		var storage = get(self.uid), prop = storage[property];
-		if (dflt !== null && prop === null) prop = storage[property] = dflt;
+		if (defaultValue !== null && prop === null) prop = storage[property] = defaultValue;
 		return prop !== null ? prop : null;
 	};
 
 	/**
-	 * 存储数据至dom
-	 */
+	* 存储数据至dom
+	* @param property 数据key
+	* @param value 数据值
+	*/
 	this.store = function(self, property, value){
 		var storage = get(self.uid);
 		storage[property] = value;
@@ -1074,7 +1085,6 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 	/**
 	 * 事件代理
-	 * @param self
 	 * @param selector 需要被代理的子元素selector
 	 * @param type 事件名称
 	 * @param callback 事件回调
@@ -1083,7 +1093,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 		self.addEvent(type, function(e) {
 			var ele = e.srcElement || e.target;
 			do {
-				if (ele && Element.get('matchesSelector')(ele, selector)) callback.call(wrap(ele), e);
+				if (ele && exports.Element.get('matchesSelector')(ele, selector)) callback.call(wrap(ele), e);
 			} while((ele = ele.parentNode));
 		});
 	};
@@ -1091,7 +1101,6 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	/**
 	 * html5 matchesSelector api
 	 * 检测元素是否匹配selector
-	 * @param self
 	 * @param selector css选择符
 	 */
 	this.matchesSelector = function(self, selector) {
@@ -1100,7 +1109,6 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 	/**
 	 * 获取元素上通过 data- 前缀定义的属性值
-	 * @param self
 	 * @param data name
 	 * @return data value
 	 */
@@ -1110,7 +1118,6 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 	/**
 	 * 设置元素的innerHTML
-	 * @param self
 	 * @param str html代码
 	 */
 	this.setHTML = function(self, str) {
@@ -1118,28 +1125,24 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	};
 
 	/**
-	 * @function
-	 * @name dom.Element#setContent
 	 * @borrows dom.Element.setHTML
 	 */
 	this.setContent = this.setHTML;
 
 	/**
 	 * 根据选择器返回第一个符合selector的元素
-	 * @param self
 	 * @param selector css选择符
 	 */
 	this.getElement = function(self, selector) {
-		return getElement(selector, self);
+		return exports.getElement(selector, self);
 	};
 
 	/**
 	 * 根据选择器返回数组
-	 * @param self
 	 * @param selector css选择符
 	 */
 	this.getElements = function(self, selector) {
-		return getElements(selector, self);
+		return exports.getElements(selector, self);
 	};
 
 	var inserters = {
@@ -1161,7 +1164,6 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	inserters.inside = inserters.bottom;
 
 	/**
-	 * @param self
 	 * @param el 被添加的元素
 	 * @param where {'bottom'|'top'|'after'|'before'} 添加的位置
 	 */
@@ -1171,7 +1173,6 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	};
 
 	/**
-	 * @param self
 	 * @param el 被添加的元素
 	 * @param where {'bottom'|'top'|'after'|'before'} 添加的位置
 	 */
@@ -1213,7 +1214,7 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 		var element = self;
 		do {
-			if (Element.get('matchesSelector')(element, selector)) return wrap(element);
+			if (exports.Element.get('matchesSelector')(element, selector)) return wrap(element);
 		} while ((element = element.parentNode));
 		return null;
 	};
@@ -1232,7 +1233,6 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 	/**
 	 * 添加className
-	 * @param self
 	 * @param name
 	 */
 	this.addClass = function(self, name) {
@@ -1241,7 +1241,6 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 	/**
 	 * 移除className
-	 * @param self
 	 * @param name
 	 */
 	this.removeClass = function(self, name) {
@@ -1250,7 +1249,6 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 	/**
 	 * 切换className
-	 * @param self
 	 * @param name
 	 */
 	this.toggleClass = function(self, name) {
@@ -1259,7 +1257,6 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 	/**
 	 * 检查是否拥有className
-	 * @param self
 	 * @param name
 	 */
 	this.hasClass = function(self, name) {
@@ -1268,7 +1265,6 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 	/**
 	 * 设置inline style
-	 * @param self
 	 * @param property
 	 * @param value
 	 */
@@ -1290,7 +1286,6 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 	/**
 	 * 移除自己
-	 * @param self
 	 */
 	this.dispose = function(self) {
 		return (self.parentNode) ? self.parentNode.removeChild(self) : self;
@@ -1298,7 +1293,6 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 	
 	/**
 	 * 隐藏一个元素
-	 * @param self
 	 */
 	this.hide = function(self) {
 		if (self.style.display !== 'none') self.oldDisplay = self.style.display;
@@ -1307,7 +1301,6 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 	/**
 	 * 显示一个元素
-	 * @param self
 	 */
 	this.show = function(self) {
 		self.style.display = self.oldDisplay || '';
@@ -1315,7 +1308,6 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 	/**
 	 * 切换显示
-	 * @param self
 	 */
 	this.toggle = function(self) {
 		if (self.style.display == 'none') self.show();
@@ -1345,11 +1337,8 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 	/**
 	 * 通过一个字符串创建一个包装后的dom节点
-	 * 一下元素无法被处理哦：
+	 * 以下元素无法被处理哦：
 	 * html/head/body/meta/link/script/style
-	 * @function
-	 * @static
-	 * @name dom.Element.fromString
 	 */
 	this.fromString = staticmethod(function(str) {
 		var tmp = document.createElement('div');
@@ -1365,7 +1354,10 @@ var Element = this.Element = new Class(/**@lends dom.Element*/ function() {
 
 });
 
-this.ImageElement = new Class(Element, function() {
+/**
+* img元素的包装
+*/
+this.ImageElement = new Class(exports.Element, function() {
 
 	function _getNaturalSize(img) {
 		var style = img.runtimeStyle;
@@ -1403,12 +1395,9 @@ this.ImageElement = new Class(Element, function() {
 });
 
 /**
- * 表单
- * @class
- * @name dom.FormElement
- * @extends dom.Element
+ * form元素的包装
  */
-this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
+this.FormElement = new Class(exports.Element, function() {
 
 	this.initialize = function(self) {
 		this.parent(self);
@@ -1432,7 +1421,6 @@ this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 				// 不是由一个特殊按钮触发的，直接返回
 				if (!self.__submitButton) return;
 
-				event.preventDefault();
 				var button = self.__submitButton;
 				self.__submitButton = null;
 
@@ -1442,13 +1430,22 @@ this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 				var oldEnctype = self.encoding || self.enctype;
 				var oldNoValidate = self.noValidate;
 				var oldTarget = self.target;
-				if (button.formAction) self.action = button.formAction;
-				if (button.formMethod) self.method = button.formMethod;
-				if (button.formEnctype) self.enctype = self.encoding = button.formEnctype;
-				if (button.formNoValidate) self.formNoValidate = button.formNoValidate;
-				if (button.formTarget) self.target = button.formTarget;
+				var formAction = button.getAttribute('formaction');
+				var formMethod = button.getAttribute('formmethod');
+				var formEnctype = button.getAttribute('formenctype');
+				var formNoValidate = button.getAttribute('formnovalidate');
+				var formTarget = button.getAttribute('formtarget');
+				if (formAction) self.action = formAction;
+				if (formMethod) self.method = formMethod;
+				if (formEnctype) self.enctype = self.encoding = formEnctype;
+				if (formNoValidate) self.formNoValidate = formNoValidate;
+				if (formTarget) self.target = formTarget;
 
-				self.submit();
+				var preventDefaulted = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
+				if (!preventDefaulted) {
+					event.preventDefault();
+					self.submit();
+				}
 
 				// 提交之后再恢复回来
 				self.action = oldAction;
@@ -1533,13 +1530,13 @@ this.FormElement = new Class(Element, /**@lends dom.FormElement*/ function() {
 });
 
 /**
- * textarea / input / textarea / select / option
- * @class
- * @name dom.FormItemElement
- * @extends dom.Element
+ * textarea / input / textarea / select / option 元素的包装
  */
-this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ function() {
+this.FormItemElement = new Class(exports.Element, function() {
 
+	/**
+	* selectionStart
+	*/
 	this.selectionStart = property(function(self) {
 		if (typeof self.selectionStart == 'number') {
 			return self.selectionStart;
@@ -1566,6 +1563,9 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 		}
 	});
         
+	/**
+	* selectionEnd
+	*/
 	this.selectionEnd = property(function(self) {
 		if (typeof self.selectionEnd == 'number') {
 			return self.selectionEnd;
@@ -1592,7 +1592,9 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 		}
 	});
 
-	// for select
+	/**
+	* select元素所有已选择元素
+	*/
 	this.getSelected = function(self) {
 		self.selectedIndex; // Safari 3.2.1
 		var selected = [];
@@ -1602,6 +1604,9 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 		return selected;
 	};
 
+	/**
+	* value，在不支持placeholder的浏览器忽略placeholder的值
+	*/
 	this.value = property(function(self) {
 		// 如果是placeholder，则value为空
 		if (self.classList.contains('placeholder')) return '';
@@ -1622,92 +1627,96 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 		self.checkValidity();
 	});
 
+	/**
+	* HTML5 validity
+	*/
+	this.validity = _supportHTML5Forms? property(function(self) {
+		return self.validity;
+	}) : property(function(self) {
+		// required pattern min max step
+		// text search url tel email password
+		var value = self.get('value');
+		
+		var validity = {
+			valueMissing: self.getAttribute('required') && !value? true : false,
+			typeMismatch: (function(type) {
+				if (type == 'url') return !(/^\s*(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i).test(value);
+				if (type == 'tel') return !(/[^\r\n]/i).test(value);
+				if (type == 'email') return !(/^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/i).test(value);
+				return false;
+			})(self.getAttribute('type')),
+			patternMismatch: (function() {
+				var pattern = self.getAttribute('pattern');
+				if (pattern) return !(new RegExp('^' + pattern + '$')).test(value);
+				else return false;
+			})(),
+			tooLong: (function() {
+				var maxlength = self.getAttribute('maxlength');
+				var n = Number(maxlength);
+				if (n != maxlength) return false;
+				return value.length > n;
+			})(),
+			customError: !!self.__customValidity,
+			// 以下三个 firefox 4 beta 也不支持，暂时不支持
+			rangeUnderflow: false,
+			rangeOverflow: false,
+			stepMismatch: false
+		};
+		validity.valid = ['valueMissing', 'typeMismatch', 'patternMismatch', 'tooLong', 'rangeUnderflow', 'rangeOverflow', 'stepMismatch', 'customError'].every(function(name) {
+			return validity[name] === false;
+		});
+		self.__validationMessage = (function() {
+			if (validity.valid) return '';
+			// Logic from webkit
+			// http://www.google.com/codesearch#N6Qhr5kJSgQ/WebCore/html/ValidityState.cpp&type=cs
+			// 文案通过Firefox和Chrome测试而来
+			// 虽然有可能同时不满足多种验证，但是message只输出第一个
+			if (validity.customError) return self.__customValidity;
+			if (validity.valueMissing) return '请填写此字段。';
+			if (validity.typeMismatch) return '请输入一个' + self.getAttribute('type') + '。';
+			if (validity.patternMismatch) return '请匹配要求的格式。';
+			if (validity.tooLong) return '请将该文本减少为 ' + self.getAttribute('maxlength') + ' 个字符或更少（您当前使用了' + self.get('value').length + '个字符）。';
+			if (validity.rangeUnderflow) return '值必须大于或等于' + self.getAttribute('min') + '。';
+			if (validity.rangeOverflow) return '值必须小于或等于' + self.getAttribute('max') + '。';
+			if (validity.stepMismatch) return '值无效。';
+		})();
+		self._set('validationMessage', self.__validationMessage);
+
+		self._set('validity', validity);
+		return validity;
+	});
+
+	/**
+	* HTML5 validationMessage
+	*/
+	this.validationMessage = _supportHTML5Forms? property(function(self) {
+		return self.validationMessage;
+	}) : property(function(self) {
+		self.get('validity');
+		return self.__validationMessage;
+	});
+
 	if (!_supportHTML5Forms) {
 		/* TODO */
 		// autofocus
 		// willvalidate
 		// formnovalidate
 
-		this.validity = property(function(self) {
-			// required pattern min max step
-			// text search url tel email password
-			var value = self.get('value');
-			
-			var validity = {
-				valueMissing: self.getAttribute('required') && !value? true : false,
-				typeMismatch: (function(type) {
-					if (type == 'url') return !(/^\s*(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i).test(value);
-					if (type == 'tel') return !(/[^\r\n]/i).test(value);
-					if (type == 'email') return !(/^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/i).test(value);
-					return false;
-				})(self.getAttribute('type')),
-				patternMismatch: (function() {
-					var pattern = self.getAttribute('pattern');
-					if (pattern) return !(new RegExp('^' + pattern + '$')).test(value);
-					else return false;
-				})(),
-				tooLong: (function() {
-					var maxlength = self.getAttribute('maxlength');
-					var n = Number(maxlength);
-					if (n != maxlength) return false;
-					return value.length > n;
-				})(),
-				customError: !!self.__customValidity,
-				// 以下三个 firefox 4 beta 也不支持，暂时不支持
-				rangeUnderflow: false,
-				rangeOverflow: false,
-				stepMismatch: false
-			};
-			validity.valid = ['valueMissing', 'typeMismatch', 'patternMismatch', 'tooLong', 'rangeUnderflow', 'rangeOverflow', 'stepMismatch', 'customError'].every(function(name) {
-				return validity[name] === false;
-			});
-			self.__validationMessage = (function() {
-				if (validity.valid) return '';
-				// Logic from webkit
-				// http://www.google.com/codesearch#N6Qhr5kJSgQ/WebCore/html/ValidityState.cpp&type=cs
-				// 文案通过Firefox和Chrome测试而来
-				// 虽然有可能同时不满足多种验证，但是message只输出第一个
-				if (validity.customError) return self.__customValidity;
-				if (validity.valueMissing) return '请填写此字段。';
-				if (validity.typeMismatch) return '请输入一个' + self.getAttribute('type') + '。';
-				if (validity.patternMismatch) return '请匹配要求的格式。';
-				if (validity.tooLong) return '请将该文本减少为 ' + self.getAttribute('maxlength') + ' 个字符或更少（您当前使用了' + self.get('value').length + '个字符）。';
-				if (validity.rangeUnderflow) return '值必须大于或等于' + self.getAttribute('min') + '。';
-				if (validity.rangeOverflow) return '值必须小于或等于' + self.getAttribute('max') + '。';
-				if (validity.stepMismatch) return '值无效。';
-			})();
-			self._set('validationMessage', self.__validationMessage);
-
-			self._set('validity', validity);
-			return validity;
-		});
-
-		this.validationMessage = property(function(self) {
-			self.get('validity');
-			return self.__validationMessage;
-		});
-
+		/**
+		* HTML5 setCustomValidity
+		*/
 		this.setCustomValidity = function(self, message) {
 			self.__customValidity = message;
 			self.get('validity');
 		};
 
 		/**
-		 * html5 forms checkValidity
+		 * HTML5 checkValidity
 		 */
 		this.checkValidity = function(self) {
 			self.get('validity');
 			return self.validity.valid;
 		};
-
-	} else {
-		this.validity = property(function(self) {
-			return self.validity;
-		});
-
-		this.validationMessage = property(function(self) {
-			return self.validationMessage;
-		});
 	}
 
 	/**
@@ -1734,7 +1743,9 @@ this.FormItemElement = new Class(Element, /**@lends dom.FormItemElement*/ functi
 
 });
 
-// input, textarea
+/**
+* input / textarea 元素的包装类的基类
+*/
 this.TextBaseElement = new Class(exports.FormItemElement, function() {
 
 	this.initialize = function(self) {
@@ -1745,6 +1756,9 @@ this.TextBaseElement = new Class(exports.FormItemElement, function() {
 		}
 	};
 
+	/**
+	* 占位符
+	*/
 	this.placeholder = property(function(self) {
 		return self.getAttribute('placeholder');
 	}, function(self, value) {
@@ -1755,6 +1769,9 @@ this.TextBaseElement = new Class(exports.FormItemElement, function() {
 		}
 	});
 
+	/**
+	* 是否处于占位符状态
+	*/
 	this._placeholding = property(function(self) {
 		return self.classList.contains('placeholder');
 	}, function(self, value) {
@@ -1819,32 +1836,53 @@ this.TextBaseElement = new Class(exports.FormItemElement, function() {
 
 });
 
+/**
+* input元素的包装类
+* @class
+*/
 this.InputElement = new Class(exports.TextBaseElement, function() {
 
-	this.formAction = nativeproperty('formAction');
-	this.formEnctype = nativeproperty('formEnctype');
-	this.formMethod = nativeproperty('formMethod');
-	this.formNoValidate = nativeproperty('formNoValidate');
-	this.formTarget = nativeproperty('formTarget');
+	/**
+	* HTML5 formAction
+	*/
+	this.formAction = _supportMultipleSubmit? nativeproperty() : attributeproperty('');
+
+	/**
+	* HTML5 formEnctype
+	*/
+	this.formEnctype = _supportMultipleSubmit? nativeproperty() : attributeproperty('application/x-www-form-urlencoded');
+
+	/**
+	* HTML5 formMethod
+	*/
+	this.formMethod = _supportMultipleSubmit? nativeproperty() : attributeproperty('get');
+
+	/**
+	* HTML5 formNoValidate
+	*/
+	this.formNoValidate = _supportMultipleSubmit? nativeproperty() : attributeproperty(false);
+
+	/**
+	* HTML5 formTarget
+	*/
+	this.formTarget = _supportMultipleSubmit? nativeproperty() : attributeproperty('');
 
 	this.initialize = function(self) {
 		this.parent(self);
 
 		if (!_supportMultipleSubmit) {
-			self.set('formAction', self.getAttribute('formaction'));
-			self.set('formEnctype', self.getAttribute('formenctype'));
-			self.set('formMethod', self.getAttribute('formmethod'));
-			self.set('formNoValidate', self.getAttribute('formnovalidation'));
-			self.set('formTarget', self.getAttribute('formtarget'));
 			self.addNativeEvent('click', function(event) {
-				self.form.__submitButton = self;
+				if (self.type == 'submit') {
+					self.form.__submitButton = self;
+				}
 			});
 		}
 	};
 
 	/**
-	 * 用ajax发送一个表单
-	 */
+	* 用ajax发送一个表单
+	* @param data 发送的数据
+	*/
 	this.send = function(self, data) {
 		if (self.type != 'submit') return;
 		var request = self.form.createRequest({
@@ -1863,39 +1901,35 @@ this.InputElement = new Class(exports.TextBaseElement, function() {
 
 });
 
+/**
+* textarea元素的包装类
+*/
 this.TextAreaElement = new Class(exports.TextBaseElement, function() {
 });
 
 /**
- * @class
- * @name dom.Window
- * @extends dom.Element
- */
-var Window = this.Window = new Class(Element, /**@lends dom.Window*/ function() {
+* window元素的包装类
+*/
+this.Window = new Class(exports.Element, function() {
 });
 
 /**
- * @class
- * @name dom.Document
- * @extends dom.Element
- */
-var Document = this.Document = new Class(Element, /**@lends dom.Document*/ function() {
+* document元素的包装类
+*/
+this.Document = new Class(exports.Element, function() {
 });
 
 /**
  * 一个包装类，实现Element方法的统一调用
- * @class
- * @name dom.Elements
- * @extends Array
  */
-var Elements = this.Elements = new Class(Array, /**@lends dom.Elements*/ function() {
+this.Elements = new Class(Array, function() {
 
 	/**
 	 * @param elements native dom elements
 	 * @param wrapper 这批节点的共有类型，默认为Element
 	 */
 	this.initialize  = function(self, elements, wrapper) {
-		if (!wrapper) wrapper = Element;
+		if (!wrapper) wrapper = exports.Element;
 
 		for (var i = 0; i < elements.length; i++) {
 			self.push(wrap(elements[i]));
@@ -1948,7 +1982,7 @@ function getWrapper(tagName) {
 	var tag = tagName.toUpperCase();
 	var cls = _tagMap[tag];
 	if (cls) return cls;
-	else return Element;
+	else return exports.Element;
 }
 
 // 比较两个数组，直到同位的成员不同，返回之前的部分
