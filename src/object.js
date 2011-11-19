@@ -1035,17 +1035,18 @@ this.Loader = new Class(function() {
 	 * @param callback 异步方法，执行完毕后调用
 	 */
 	this.executeModule = function(self, module, name, runtime, callback) {
-		var modules = runtime.modules;
-		var members = runtime.members;
 
-		var exports = new Module(name || module.name);
-		// sys.modules
-		if (exports.__name__ === 'sys') exports.modules = modules;
+		var args = [];
 
-		// 最后传进context的参数
-		var args = [exports];
+		function done() {
 
-		var done = function() {
+			var exports = new Module(name || module.name);
+			// sys.modules
+			if (exports.__name__ === 'sys') exports.modules = runtime.modules;
+
+			// 最后传进context的参数
+			args.unshift(exports);
+
 			// 空module不需要
 			if (module.fn) {
 				var returnValue = module.fn.apply(exports, args);
@@ -1065,7 +1066,7 @@ this.Loader = new Class(function() {
 		};
 
 		// 主递归函数
-		function loadNext(i) {
+		function next(i) {
 
 			var use = module.uses[i];
 			var parts, context;
@@ -1086,7 +1087,7 @@ this.Loader = new Class(function() {
 				if (args.indexOf(root) == -1) args.push(root);
 
 				if (i < module.uses.length - 1) {
-					loadNext(i + 1);
+					next(i + 1);
 				} else if (i == module.uses.length - 1) {
 					done();
 				}
@@ -1098,16 +1099,14 @@ this.Loader = new Class(function() {
 		// file
 		if (!module.fn && module.file) {
 			self.loadScript(module.file, function() {
-				loadNext(0);
+				next(0);
 			}, true);
-			return;
 		}
 		// 在空module或没有uses的情况下直接返回即可。
 		else if (!module.fn || module.uses.length === 0) {
 			done();
-			return;
 		} else {
-			loadNext(0);
+			next(0);
 		}
 	};
 
