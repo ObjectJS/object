@@ -859,6 +859,15 @@ LoaderRuntime.prototype.setMemberTo = function(name, member, value) {
 	});
 };
 
+LoaderRuntime.prototype.fillMemberTo = function(name, exports) {
+	var members = this.members[name];
+	if (members) {
+		members.forEach(function(member) {
+			exports[member.name] = member.value;
+		});
+	}
+};
+
 /**
 * 检测模块的循环依赖
 */
@@ -1018,7 +1027,7 @@ this.Loader = new Class(function() {
 	});
 
 	/**
-	 * context 执行方法
+	 * 执行一个module
 	 *
 	 * @param module 被执行的module
 	 * @param name 执行时的name
@@ -1027,6 +1036,7 @@ this.Loader = new Class(function() {
 	 */
 	this.executeModule = function(self, module, name, runtime, callback) {
 		var modules = runtime.modules;
+		var members = runtime.members;
 
 		var exports = new Module(name || module.name);
 		// sys.modules
@@ -1048,28 +1058,11 @@ this.Loader = new Class(function() {
 				}
 			}
 
-			// 不输出 __name__ 了，没有大用且影响性能，应该在创建时就指定name
-			//Object.keys(exports).forEach(function(key) {
-			//	if (typeof exports[key] == 'function') {
-			//  	exports[key].__name__ = key;
-			//  }
-			//});
+			// 已获取到了此module的引用，将其子模块都注册上去。
+			runtime.fillMemberTo(module.name, exports);
 
 			if (callback) callback(exports);
 		};
-
-		// file
-		if (!module.fn && module.file) {
-			self.loadScript(module.file, function() {
-				loadNext(0);
-			}, true);
-			return;
-		}
-		// 在空module或没有uses的情况下直接返回即可。
-		else if (!module.fn || module.uses.length === 0) {
-			done();
-			return;
-		}
 
 		// 主递归函数
 		function loadNext(i) {
@@ -1102,7 +1095,20 @@ this.Loader = new Class(function() {
 
 		}
 
-		loadNext(0);
+		// file
+		if (!module.fn && module.file) {
+			self.loadScript(module.file, function() {
+				loadNext(0);
+			}, true);
+			return;
+		}
+		// 在空module或没有uses的情况下直接返回即可。
+		else if (!module.fn || module.uses.length === 0) {
+			done();
+			return;
+		} else {
+			loadNext(0);
+		}
 	};
 
 	/**
