@@ -825,7 +825,7 @@ Module.prototype.toString = function() {
 	return '<module \'' + this.__name__ + '\'>';
 };
 
-function LoaderRuntime(prefix) {
+function LoaderRuntime(root) {
 	/**
 	 * 此次use运行过程中用到的所有module
 	 */
@@ -835,18 +835,47 @@ function LoaderRuntime(prefix) {
 	 * 模块的依赖路径的栈，检测循环依赖
 	 */
 	this.stack = [];
+
+	this.members = {};
 	
 	/**
 	 * 运行入口模块的名字
 	 */
-	this.prefix = prefix;
+	this.root = root;
 }
 
 LoaderRuntime.prototype.getName = function(name) {
-	if (name.indexOf(this.prefix) == 0) {
-		name = name.slice(this.prefix.length + 1);
+	if (name.indexOf(this.root) == 0) {
+		name = name.slice(this.root.length + 1);
 	}
 	return name;
+};
+
+LoaderRuntime.prototype.setMemberTo = function(name, member, value) {
+	if (!this.members[name]) this.members[name] = [];
+	this.members[name].push({
+		name: member,
+		value: value
+	});
+};
+
+/**
+* 检测模块的循环依赖
+*/
+LoaderRuntime.prototype.check = function(use) {
+	this.stack.push(use); // 开始获取use这个module
+	if (this.stack.indexOf(use) != this.stack.length - 1) { // 正在获取的这个module在stack中之前已经获取过了
+		var error = new Error('circular dependencies. [' + this.stack.join(',') + ']');
+		error.stack = this.stack;
+		throw error;
+	}
+};
+
+/**
+ * 检测完毕
+ */
+LoaderRuntime.prototype.checkDone = function() {
+	this.stack.pop();
 };
 
 this.LoaderRuntime = LoaderRuntime;
@@ -993,12 +1022,11 @@ this.Loader = new Class(function() {
 	 *
 	 * @param module 被执行的module
 	 * @param name 执行时的name
-	 * @param runtime 运行时对象，modules保存了此次use运行过程中用到的所有module，stack保存了模块的依赖路径的栈，检测循环依赖
+	 * @param {LoaderRuntime} runtime
 	 * @param callback 异步方法，执行完毕后调用
 	 */
 	this.executeModule = function(self, module, name, runtime, callback) {
 		var modules = runtime.modules;
-		var stack = runtime.stack;
 
 		var exports = new Module(name || module.name);
 		// sys.modules
@@ -1047,21 +1075,19 @@ this.Loader = new Class(function() {
 		function loadNext(i) {
 
 			var use = module.uses[i];
+			var parts, context;
 			if (use.indexOf('./') == 0) {
-				use = module.name + '.' + use.slice(2);
+				parts = use.slice(2).split('.');
+				context = module.name;
+			} else {
+				parts = use.split('.');
+				context = null;
 			}
-			var parts = use.split('.'),
-				context = module.name.split('.');
 
 			// 循环依赖判断
-			stack.push(use); // 开始获取use这个module
-			if (stack.indexOf(use) != stack.length - 1) { // 正在获取的这个module在stack中之前已经获取过了
-				var error = new Error('circular dependencies. [' + stack.join(',') + ']');
-				error.stack = stack;
-				throw error;
-			}
+			runtime.check(use);
 			self.loadModule(parts, context, runtime, function(root) {
-				stack.pop(); // 此module获取完毕
+				runtime.checkDone(); // 此module获取完毕
 
 				// 非重复引用
 				if (args.indexOf(root) == -1) args.push(root);
@@ -1083,17 +1109,13 @@ this.Loader = new Class(function() {
 	 * 通过一个模块名，获得到相对应的模块对象并通过callback返回
 	 * 主要是需要建立对象链
 	 *
-	 * @param parts module name parts
+	 * @param name module name
 	 * @param {LoaderRuntime} runtime 运行时对象
 	 * @param callback 模块获取到以后，通过callback的第一个参数传递回去
 	 */
-	this.loadModule = function(self, parts, context, runtime, callback) {
+	this.loadModule = function(self, name, pname, runtime, callback) {
 		var modules = runtime.modules;
-
-		for (var i = 0, l = context.length; i < l; i++) {
-			if (!parts[i] || parts[i] !== context[i]) break;
-		}
-		var common = i;
+		var parts = Array.isArray(name)? name : name.split('.');
 		
 		/**
 		 * @param i
@@ -1108,50 +1130,46 @@ this.Loader = new Class(function() {
 				modules[name] = exports;
 
 				if (pname) {
-					if (modules[pname]) modules[pname][part] = modules[name];
+					runtime.setMemberTo(pname, part, modules[name]);
 				}
 
 				if (i < parts.length - 1) {
 					loadNext(i + 1, fullname);
 				} else if (i == parts.length - 1) {
-					callback(modules[parts[0]]);
+					callback(modules[name]);
 				}
 			};
 
-			if (i < common) {
-				next();
-			} else {
-				// 使用缓存中的
-				if (modules[name]) {
-					next(modules[name]);
-				}
-				// lib 中有
-				else if (self.lib[fullname]) {
-					var module = self.lib[fullname];
+			// 使用缓存中的
+			if (modules[name]) {
+				next(modules[name]);
+			}
+			// lib 中有
+			else if (self.lib[fullname]) {
+				var module = self.lib[fullname];
 
-					// lib中有，但是是file，需要动态加载
-					if (module.file) {
-						// 文件加载完毕后，其中执行的 add 会自动把 self.lib 中的对象替换掉，file 属性丢失，加入了 execute/name/uses 等属性
-						// 使用缓存
-						self.loadScript(module.file, function() {
-							if (module.file) {
-								throw new Error(module.file + ' do not add ' + module.name);
-							}
-							self.executeModule(module, name, runtime, next);
-						}, true);
-					}
-					// 也有可能是空的模块，是没有 fn 的，executeModule会处理
-					else {
+				// lib中有，但是是file，需要动态加载
+				if (module.file) {
+					// 文件加载完毕后，其中执行的 add 会自动把 self.lib 中的对象替换掉，file 属性丢失，加入了 execute/name/uses 等属性
+					// 使用缓存
+					self.loadScript(module.file, function() {
+						// 加载进来的脚本没有替换掉相应的模块，文件有问题。
+						if (module.file) {
+							throw new Error(module.file + ' do not add ' + module.name);
+						}
 						self.executeModule(module, name, runtime, next);
-					}
+					}, true);
 				}
-				// lib中没有
+				// 也有可能是空的模块，是没有 fn 的，executeModule会处理
 				else {
-					throw new object.NoModuleError(fullname);
+					self.executeModule(module, name, runtime, next);
 				}
 			}
-
-		})(0);
+			// lib中没有
+			else {
+				throw new object.NoModuleError(fullname);
+			}
+		})(0, pname);
 	};
 
 	/**

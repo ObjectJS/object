@@ -10,12 +10,12 @@
     
 	object.add('test.a', './b', function(exports, b) {
 		this.name = 'test.a';
-		console.log(this.__name__);
+		console.log(this.__name__, b);
 	});
 
 	object.add('test', './a', function(exports, a) {
 		this.name = 'test';
-		console.log(this.__name__);
+		console.log(this.__name__, a);
 	});
 
 	/*
@@ -24,12 +24,11 @@
 	 * a
 	 * __main__
 	 */
-	// object.execute('test');
+	object.execute('test');
 
-	object.use('test, sys', function(exports, test, sys) {
-		console.dir(sys.modules)
-		console.dir(test)
-	});
+	// object.use('test, sys', function(exports, test, sys) {
+	//	console.dir(sys.modules)
+	// });
 
 </script>
 <script>
