@@ -855,24 +855,34 @@ LoaderRuntime.prototype.getName = function(name) {
 	return name;
 };
 
-LoaderRuntime.prototype.setMemberTo = function(module, member, value) {
+/**
+ * 为名为host的module设置member成员为value
+ */
+LoaderRuntime.prototype.setMemberTo = function(host, member, value) {
 
-	// 需要为上级加入自己的引用，名字为member
-	if (module) {
-		if (!this.members[module]) this.members[module] = [];
-		if (this.modules[module]) {
-			this.modules[module][member] = value;
-		} else {
-			this.members[module].push({
+	// 向host添加member成员
+	if (host) {
+		// 已存在host
+		if (this.modules[host]) {
+			this.modules[host][member] = value;
+		}
+		// host不存在，记录在members对象中
+		else {
+			if (!this.members[host]) this.members[host] = [];
+			this.members[host].push({
 				name: member,
 				value: value
 			});
 		}
 	}
 
-	var name = (module? module + '.' : '') + member;
+	/*
+	 * 将记录的成员添加到自己
+	 */
+	// 全名
+	var name = (host? host + '.' : '') + member;
 
-	// 已获取到了此module的引用，将其子模块都注册上去。
+	// 已获取到了此host的引用，将其子模块都注册上去。
 	var members = this.members[name];
 	if (members) {
 		members.forEach(function(member) {
@@ -912,7 +922,6 @@ this.Loader = new Class(function() {
 
 	this.initialize = function(self) {
 		self.useCache = true;
-		// 所有use都会默认use的模块，需要注意循环引用问题
 		self.lib = {};
 		self.anonymousModuleCount = 0;
 
@@ -1129,7 +1138,7 @@ this.Loader = new Class(function() {
 	 *
 	 * @param name module name
 	 * @param context 通过 ./ 依赖模块时，context为相对前缀
-	 * @param isRelative 通过execute执行一个模块时，有跟前缀时为true
+	 * @param isRelative 通过execute执行一个模块时，有根前缀时为true
 	 * @param {LoaderRuntime} runtime 运行时对象
 	 * @param callback 模块获取到以后，通过callback的第一个参数传递回去
 	 */
@@ -1277,7 +1286,7 @@ this.Loader = new Class(function() {
 		self.anonymousModuleCount++;
 		var module = self.add(name, uses, context);
 
-		// 不要用一个已经有内容、不可控的对象作为executeModule的exports。
+		// 不要用一个已经有内容、不可控的对象作为executeModule的exports。如window
 		self.executeModule(module, '__main__', new LoaderRuntime(name), function(exports) {
 			for (var property in exports) {
 				if (property != '__name__' && window[property] === undefined) window[property] = exports[property];
