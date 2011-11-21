@@ -1,7 +1,13 @@
 <html>
 <head>
+<meta charset="utf-8" />
 <script type="text/javascript" src="../src/object.js"></script>
+<script type="text/javascript" src="http://xnimg.cn/n/core/base-all.js"></script>
 <script>
+
+object.use('sys, XN, XN.browser, XN.env', function(exports, sys, XN) {
+	console.log(arguments.length)
+});
 
 	object.add('test.a.b', function(exports) {
 		this.name = 'test.a.b';

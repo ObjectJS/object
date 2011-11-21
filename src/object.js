@@ -1080,8 +1080,15 @@ this.Loader = new Class(function() {
 
 			// 循环依赖判断
 			runtime.check(use);
-			self.loadModule(parts, context, runtime, function(root) {
+			self.loadModule(parts, context, runtime, function(exports) {
 				runtime.checkDone(); // 此module获取完毕
+
+				var root;
+				if (context) {
+					root = exports;
+				} else {
+					root = runtime.modules[parts[0]];
+				}
 
 				// 非重复引用
 				if (args.indexOf(root) == -1) args.push(root);
@@ -1135,7 +1142,11 @@ this.Loader = new Class(function() {
 				modules[name] = exports;
 
 				if (pname) {
-					runtime.setMemberTo(pname, part, modules[name]);
+					if (modules[pname]) {
+						modules[pname][part] = modules[name];
+					} else {
+						runtime.setMemberTo(pname, part, modules[name]);
+					}
 				}
 
 				if (i < parts.length - 1) {
