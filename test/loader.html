@@ -2,26 +2,29 @@
 <head>
 <meta charset="utf-8" />
 <script type="text/javascript" src="../src/object.js"></script>
-<script type="text/javascript" src="http://xnimg.cn/n/core/base-all.js"></script>
+<!--<script type="text/javascript" src="http://xnimg.cn/n/core/base-all.js"></script>-->
 <script>
 
-object.use('sys, XN, XN.browser, XN.env', function(exports, sys, XN) {
-	console.log(arguments.length)
-});
+	object.add('test2.c', function() {});
 
-	object.add('test.a.b', function(exports) {
-		this.name = 'test.a.b';
-		console.log(this.__name__);
+	object.add('test2', './c', function(exports, c) {
+		console.log(c)
+	});
+
+	object.add('test.a.b.c', function(exports) {
+		this.name = 'test.a.b.c';
+		// console.log(this.__name__);
 	});
     
-	object.add('test.a', './b', function(exports, b) {
+	object.add('test.a', './b.c, sys', function(exports, b, sys) {
 		this.name = 'test.a';
-		console.log(this.__name__, b);
+		console.log(b.c)
+		// console.log(this.__name__, b);
 	});
 
-	object.add('test', './a', function(exports, a) {
+	object.add('test', './a, test2', function(exports, a, test2) {
 		this.name = 'test';
-		console.log(this.__name__, a);
+		// console.log(this.__name__, a);
 	});
 
 	/*

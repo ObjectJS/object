@@ -844,27 +844,40 @@ function LoaderRuntime(root) {
 	this.root = root;
 }
 
+/**
+ * 去掉root前缀的模块名
+ */
 LoaderRuntime.prototype.getName = function(name) {
-	if (name.indexOf(this.root) == 0) {
-		name = name.slice(this.root.length + 1);
+	var root = this.root;
+	if (name == root || name.indexOf(root + '.') == 0) {
+		name = name.slice(root.length + 1);
 	}
 	return name;
 };
 
-LoaderRuntime.prototype.setMemberTo = function(name, member, value) {
-	if (!this.members[name]) this.members[name] = [];
-	this.members[name].push({
-		name: member,
-		value: value
-	});
-};
+LoaderRuntime.prototype.setMemberTo = function(module, member, value) {
 
-LoaderRuntime.prototype.fillMemberTo = function(name, exports) {
+	// 需要为上级加入自己的引用，名字为member
+	if (module) {
+		if (!this.members[module]) this.members[module] = [];
+		if (this.modules[module]) {
+			this.modules[module][member] = value;
+		} else {
+			this.members[module].push({
+				name: member,
+				value: value
+			});
+		}
+	}
+
+	var name = (module? module + '.' : '') + member;
+
+	// 已获取到了此module的引用，将其子模块都注册上去。
 	var members = this.members[name];
 	if (members) {
 		members.forEach(function(member) {
-			exports[member.name] = member.value;
-		});
+			this.modules[name][member.name] = member.value;
+		}, this);
 	}
 };
 
@@ -963,12 +976,11 @@ this.Loader = new Class(function() {
 	this.loadScript = classmethod(function(cls, src, callback, useCache) {
 		if (!src || typeof src != 'string') {
 			throw new Error('src should be string');
-			return;
 		}
 		src = src.trim();
 		if (!!useCache) {
 			var scripts = cls.get('scripts');
-			for (var i = 0, script, src, l = scripts.length; i < l; i++) {
+			for (var i = 0, script, l = scripts.length; i < l; i++) {
 				script = scripts[i];
 				//src有可能是相对路径，而script.src是绝对路径，导致不一致
 				if (script.src && 
@@ -1040,7 +1052,10 @@ this.Loader = new Class(function() {
 
 		function done() {
 
-			var exports = new Module(name || module.name);
+			//  没有指定name，则使用全名
+			if (!name) name = module.name;
+
+			var exports = new Module(name);
 			// sys.modules
 			if (exports.__name__ === 'sys') exports.modules = runtime.modules;
 
@@ -1059,9 +1074,6 @@ this.Loader = new Class(function() {
 				}
 			}
 
-			// 已获取到了此module的引用，将其子模块都注册上去。
-			runtime.fillMemberTo(module.name, exports);
-
 			if (callback) callback(exports);
 		};
 
@@ -1069,27 +1081,21 @@ this.Loader = new Class(function() {
 		function next(i) {
 
 			var use = module.uses[i];
-			var parts, context;
+			var parts, context = null, isRelative = false;
 			if (use.indexOf('./') == 0) {
 				parts = use.slice(2).split('.');
-				context = module.name;
+				context = runtime.getName(module.name);
+				isRelative = (context != module.name);
 			} else {
 				parts = use.split('.');
-				context = null;
 			}
 
 			// 循环依赖判断
 			runtime.check(use);
-			self.loadModule(parts, context, runtime, function(exports) {
+			self.loadModule(parts, context, isRelative, runtime, function() {
 				runtime.checkDone(); // 此module获取完毕
 
-				var root;
-				if (context) {
-					root = exports;
-				} else {
-					root = runtime.modules[parts[0]];
-				}
-
+				var root = runtime.modules[(context? context + '.' : '') + parts[0]];
 				// 非重复引用
 				if (args.indexOf(root) == -1) args.push(root);
 
@@ -1122,10 +1128,12 @@ this.Loader = new Class(function() {
 	 * 主要是需要建立对象链
 	 *
 	 * @param name module name
+	 * @param context 通过 ./ 依赖模块时，context为相对前缀
+	 * @param isRelative 通过execute执行一个模块时，有跟前缀时为true
 	 * @param {LoaderRuntime} runtime 运行时对象
 	 * @param callback 模块获取到以后，通过callback的第一个参数传递回去
 	 */
-	this.loadModule = function(self, name, pname, runtime, callback) {
+	this.loadModule = function(self, name, context, isRelative, runtime, callback) {
 		var modules = runtime.modules;
 		var parts = Array.isArray(name)? name : name.split('.');
 		
@@ -1135,22 +1143,17 @@ this.Loader = new Class(function() {
 		 */
 		;(function loadNext(i, pname) {
 			var part = parts[i];
-			var fullname = (pname? pname + '.' : '') + part;
-			var name = runtime.getName(fullname);
+			var name = (pname? pname + '.' : '') + part;
+			var fullname = isRelative? runtime.root + '.' + name : name
 
 			var next = function(exports) {
 				modules[name] = exports;
 
-				if (pname) {
-					if (modules[pname]) {
-						modules[pname][part] = modules[name];
-					} else {
-						runtime.setMemberTo(pname, part, modules[name]);
-					}
-				}
+				// 生成对象链
+				runtime.setMemberTo(pname, part, modules[name]);
 
 				if (i < parts.length - 1) {
-					loadNext(i + 1, fullname);
+					loadNext(i + 1, name);
 				} else if (i == parts.length - 1) {
 					callback(modules[name]);
 				}
@@ -1185,7 +1188,7 @@ this.Loader = new Class(function() {
 			else {
 				throw new object.NoModuleError(fullname);
 			}
-		})(0, pname);
+		})(0, context);
 	};
 
 	/**
@@ -1222,7 +1225,7 @@ this.Loader = new Class(function() {
 	 */
 	this.add = function(self, name, uses, context) {
 		if (arguments.length < 3) {
-			return;
+			return null;
 		}
 		// 不允许重复添加。
 		if (self.lib[name] && self.lib[name].fn) return null;
@@ -1236,13 +1239,13 @@ this.Loader = new Class(function() {
 		}
 
 		if (!context || typeof context != 'function') {
-			return;
+			return null;
 		}
 		if (context && self.lib[name] && self.lib[name].file) {
 			delete self.lib[name].file;
 			self.lib[name].fn = context;
 			self.lib[name].uses = uses;
-			return;
+			return null;
 		}
 		// 建立前缀占位模块
 		self.makePrefixModule(name);
