@@ -933,6 +933,28 @@ this.Loader = new Class(function() {
 	};
 
 	/**
+	 * 建立前缀模块
+	 * 比如 a.b.c.d ，会建立 a/a.b/a.b.c 三个空模块，最后一个模块为目标模块，不为空，内容为context
+	 */
+	this.__makePrefixModule = function(self, name) {
+		if (!name || typeof name != 'string') {
+			return;
+		}
+		name = name.replace(/^\.*|\.*$/g, '');
+		if (name.indexOf('sys.') == 0) {
+			throw new Error('should not add sub module for sys');
+		}
+		var parts = name.split('.');
+		for (var i = 0, prefix, l = parts.length - 1; i < l; i++) {
+			prefix = parts.slice(0, i + 1).join('.');
+			// 说明这个module是空的
+			if (self.lib[prefix] == undefined) self.lib[prefix] = {
+				name: prefix
+			};
+		}
+	};
+
+	/**
 	 * 查找页面中的标记script标签，更新 self.lib
 	 */
 	this.loadLib = function(self) {
@@ -953,28 +975,6 @@ this.Loader = new Class(function() {
 			// 建立前缀module
 			self.__makePrefixModule(module);
 			self.lib[module] = {file: src, name: module};
-		}
-	};
-
-	/**
-	 * 建立前缀模块
-	 * 比如 a.b.c.d ，会建立 a/a.b/a.b.c 三个空模块，最后一个模块为目标模块，不为空，内容为context
-	 */
-	this.__makePrefixModule = function(self, name) {
-		if (!name || typeof name != 'string') {
-			return;
-		}
-		name = name.replace(/^\.*|\.*$/g, '');
-		if (name.indexOf('sys.') == 0) {
-			throw new Error('should not add sub module for sys');
-		}
-		var parts = name.split('.');
-		for (var i = 0, prefix, l = parts.length - 1; i < l; i++) {
-			prefix = parts.slice(0, i + 1).join('.');
-			// 说明这个module是空的
-			if (self.lib[prefix] == undefined) self.lib[prefix] = {
-				name: prefix
-			};
 		}
 	};
 
