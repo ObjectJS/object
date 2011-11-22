@@ -8,8 +8,10 @@ var get = function(uid) {
 };
 
 var $uid = this.$uid = (window.ActiveXObject) ? function(item){
+	if (item === undefined || item === null) return null;
 	return (item.uid || (item.uid = [window.UID++]))[0];
 } : function(item){
+	if (item === undefined || item === null) return null;
 	return item.uid || (item.uid = window.UID++);
 };
 
@@ -69,6 +71,9 @@ function runHooks() {
  * @param callback 需要执行的callback函数
  */
 this.ready = function(callback) {
+	if (typeof callback != 'function') {
+		return;
+	}
 	if (window.__domLoaded == true) {
 		callback();
 		return;
@@ -141,6 +146,9 @@ var wrap = this.wrap = function(node) {
  * @returns {dom.Elements}
  */
 this.getElements = function(selector, context) {
+	if (!selector || typeof selector != 'string') {
+		return null;
+	}
 	if (!context) context = document;
 
 	// 解析成Slick Selector对象
@@ -191,6 +199,9 @@ this.getElements = function(selector, context) {
  * @returns 一个包装后的结点
  */
 this.getElement = function(selector, context) {
+	if (!selector || typeof selector != 'string') {
+		return null;
+	}
 	if (!context) context = document;
 
 	var ele = Sizzle(selector, context)[0];
@@ -212,6 +223,9 @@ this.id = function(id) {
 * @param ele script元素
 */
 var eval_inner_JS = this.eval_inner_JS = function(ele) {
+	if (!ele) {
+		return;
+	}
 	if (typeof ele == 'string') {
 		var node = document.createElement('div');
 		// <div>&nbsp;</div> is for IE
@@ -403,6 +417,7 @@ this.ElementClassList = new Class(Array, function() {
 	*/
 	this.add = function(self, token) {
 		if (!self.contains(token)) self._ele.className += (' ' + token); // 根据规范，不允许重复添加
+		self._loadClasses();
 	};
 
 	/**
@@ -410,7 +425,8 @@ this.ElementClassList = new Class(Array, function() {
 	* @param token class
 	*/
 	this.remove = function(self, token) {
-		self._ele.className = self._ele.className.replace(new RegExp(token, 'i'), '');
+		self._ele.className = self._ele.className.replace(new RegExp(token, 'i'), '').trim();
+		self._loadClasses();
 	};
 
 	/**
@@ -418,7 +434,6 @@ this.ElementClassList = new Class(Array, function() {
 	* @param token class
 	*/
 	this.contains = function(self, token) {
-		self._loadClasses();
 		if (self._classes.indexOf(token) != -1) return true;
 		else return false;
 	};
@@ -1086,9 +1101,9 @@ this.Element = new Class(function() {
 	* @param defaultValue 若没有，则返回此默认值
 	*/
 	this.retrieve = function(self, property, defaultValue){
-		var storage = get(self.uid), prop = storage[property];
-		if (defaultValue !== null && prop === null) prop = storage[property] = defaultValue;
-		return prop !== null ? prop : null;
+		var storage = get(self.uid);
+		if (!(property in storage) && defaultValue !== undefined) storage[property] = defaultValue;
+		return storage[property];
 	};
 
 	/**
@@ -1281,6 +1296,47 @@ this.Element = new Class(function() {
 	this.hasClass = function(self, name) {
 		return self.classList.contains(name);
 	};
+
+	// opacity属性的辅助内容，参考Mootools
+	var html = document.documentElement;
+	var floatName = (html.style.cssFloat == null) ? 'styleFloat' : 'cssFloat',
+		hasOpacity = (html.style.opacity != null),
+		hasFilter = (html.style.filter != null),
+		reAlpha = /alpha\(opacity=([\d.]+)\)/i;
+
+	/**
+	 * 透明度属性设置
+	 */
+	this.opacity = property(function(self) {
+		if (hasOpacity) {
+			return self.style.opacity;
+		} else if (hasFilter) {
+			var filter = self.style.filter || self.getComputedStyle('filter');
+			if (filter) opacity = filter.match(reAlpha);
+			return (opacity == null || filter == null) ? 1 : (opacity[1] / 100);
+		} else {
+			return self.retrieve('opacity');
+		}
+	}, function(self, opacity) {
+		if (hasOpacity) {
+			self.style.opacity = opacity;
+		} else if (hasFilter) {
+			if (!self.currentStyle || !self.currentStyle.hasLayout) self.style.zoom = 1;
+			opacity = parseInt(opacity * 100);
+			if (opacity > 100) {
+				opacity = 100;
+			} else if (opacity < 0) {
+				opacity = 0;
+			}
+			
+			var opacityStr = opacity == 100 ? '' : 'alpha(opacity=' + opacity + ')';
+			var filter = self.style.filter || self.getComputedStyle('filter') || '';
+			self.style.filter = reAlpha.test(filter) ? filter.replace(reAlpha, opacityStr) : filter + opacityStr;
+		} else {
+			self.store('opacity', opacity);
+			self.style.visibility = opacity > 0 ? 'visible' : 'hidden';
+		}
+	});
 
 	/**
 	 * 设置inline style
@@ -1557,11 +1613,17 @@ this.FormItemElement = new Class(exports.Element, function() {
 	* selectionStart
 	*/
 	this.selectionStart = property(function(self) {
-		if (typeof self.selectionStart == 'number') {
-			return self.selectionStart;
+		try {
+			// 避免在火狐下，获取不可见元素的selectionStart出错
+			if (typeof self.selectionStart == 'number') {
+				return self.selectionStart;
+			}
+		} catch (e) {
+			return 0;
+		}
 
 		// IE
-		} else if (document.selection) {
+		if (document.selection) {
 			self.focus();
 
 			var range = document.selection.createRange();
@@ -1586,11 +1648,17 @@ this.FormItemElement = new Class(exports.Element, function() {
 	* selectionEnd
 	*/
 	this.selectionEnd = property(function(self) {
-		if (typeof self.selectionEnd == 'number') {
-			return self.selectionEnd;
+		try {
+			// 避免在火狐下，获取不可见元素的selectionEnd出错
+			if (typeof self.selectionEnd == 'number') {
+				return self.selectionEnd;
+			}
+		} catch (e) {
+			return self.get('value').length;
 		}
+
 		// IE
-		else if (document.selection) {
+		if (document.selection) {
 			self.focus();
 
 			var range = document.selection.createRange();
