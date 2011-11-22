@@ -6,11 +6,11 @@ object.add('lunar', function(exports) {
  */
 var MIN_YEAR = 1891,
 	MAX_YEAR = 2100,
-	SKY=['庚','辛','壬','癸','甲','乙','丙','丁','戊','己'],
-	EARTH=['申','酉','戌','亥','子','丑','寅','卯','辰','巳','午','未'],
-    ZODIAC=['猴','鸡','狗','猪','鼠','牛','虎','兔','龙','蛇','马','羊'],
-	MONTH_HASH=['', '正月','二月','三月','四月','五月','六月','七月','八月','九月','十月','冬月','腊月'],
-	DATE_HASH=['', '一','二','三','四','五','六','七','八','九','十'];
+	SKY = ['庚','辛','壬','癸','甲','乙','丙','丁','戊','己'],
+	EARTH = ['申','酉','戌','亥','子','丑','寅','卯','辰','巳','午','未'],
+    ZODIAC = ['猴','鸡','狗','猪','鼠','牛','虎','兔','龙','蛇','马','羊'],
+	MONTH_HASH = ['', '正月','二月','三月','四月','五月','六月','七月','八月','九月','十月','冬月','腊月'],
+	DATE_HASH = ['', '一','二','三','四','五','六','七','八','九','十'];
 
 var LUNAR_INFO = [[0,2,9,21936],  [6,1,30,9656], [0,2,17,9584], [0,2,6,21168], [5,1,26,43344],[0,2,13,59728],
 	[0,2,2,27296], [3,1,22,44368],[0,2,10,43856],[8,1,30,19304],[0,2,19,19168],[0,2,8,42352], [5,1,29,21096],
@@ -52,6 +52,9 @@ var LUNAR_INFO = [[0,2,9,21936],  [6,1,30,9656], [0,2,17,9584], [0,2,6,21168], [
  * @param date  公历-日
  */
 this.convertSolarToLunar = function(year, month, date) {
+	if (month == '' || date == '') {
+		return [year, (month == '' ? '' : exports.getCapitalNum(month, true)), (date == '' ? '' : exports.getCapitalNum(date)), exports.getLunarYearName(year), 0, 0, exports.getYearZodiac(year)];
+	}
     var yearData = LUNAR_INFO[year - MIN_YEAR];
     if (year == MIN_YEAR && month <= 2 && date <= 9) {
     	return [MIN_YEAR, '正月', '初一', '辛卯', 1, 1,'兔'];
@@ -68,12 +71,15 @@ this.convertSolarToLunar = function(year, month, date) {
  * @param date  阴历-日
  */
 this.convertLunarToSolar = function(year, month, date) {
+	if (month == '' || date == '') {
+		return [year, month, date];
+	}
     var yearData = LUNAR_INFO[year - MIN_YEAR], 
-		res = new Date(year, yearData[1]-1, yearData[2]), 
+		res = new Date(year, yearData[1] - 1, yearData[2]), 
 		between = exports.getDaysBetweenLunar(year, month, date);
 
     res.setDate(res.getDate() + between);
-    return [res.getFullYear(), res.getMonth()+1, res.getDate()];
+    return [res.getFullYear(), res.getMonth() + 1, res.getDate()];
 }
 
 /**
@@ -163,7 +169,7 @@ this.getLunarMonthsLength = function(year) {
 this.getLunarMonthNames = function(year) {
 	var leapMonth = exports.getLeapMonth(year),
 		monthNames = [],
-		monthHash = MONTH_HASH.slice(1); // remove first element
+		monthHash = MONTH_HASH.slice(1); // remove first '' element
 		monthSum = (leapMonth == 0 ? 12 : 13);
 	if (leapMonth) {
 		monthHash.splice(leapMonth, 0, '闰' + monthHash[leapMonth - 1]);
@@ -177,7 +183,7 @@ this.getLunarMonthNames = function(year) {
  * 根据阴历年月获取每月天数信息
  */
 this.getLunarDates = function(year, month) {
-	var dates=[];
+	var dates = [];
 	var days = exports.getLunarMonthDays(year,month);
 	for (var i = 1; i <= days; i++) {
 		dates.push(exports.getCapitalNum(i, false));
