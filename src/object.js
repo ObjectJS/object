@@ -426,7 +426,6 @@ var membersetter = overloadSetter(function(name, member) {
 	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
 	else if (member == null) {
 		proto[name] = member;
-
 	}
 	// 先判断最常出现的instancemethod
 	// this.a = function() {}
@@ -439,27 +438,23 @@ var membersetter = overloadSetter(function(name, member) {
 		if (name == 'initialize') {
 			cls[name] = instancemethod(member, cls);
 		}
-
 	}
 	// this.a = property(function fget() {}, function fset() {})
 	else if (member.__class__ === property) {
 		member.__name__ = name;
 		properties[name] = member;
-
 	}
 	// this.a = classmethod(function() {})
 	else if (member.__class__ === classmethod) {
 		member.im_func.__name__ = name;
 		member.__name__ = name;
 		cls[name] = proto[name] = member;
-
 	}
 	// this.a = staticmethod(function() {})
 	else if (member.__class__ === staticmethod) {
 		member.im_func.__name__ = name;
 		member.__name__ = name;
 		cls[name] = proto[name] = member.im_func;
-
 	}
 	// this.a = someObject
 	else {
@@ -918,6 +913,14 @@ this.LoaderRuntime = LoaderRuntime;
  */
 this.Loader = new Class(function() {
 
+	// 模块
+	function Module(name) {
+		this.__name__ = name;
+	}
+	Module.prototype.toString = function() {
+		return '<module \'' + this.__name__ + '\'>';
+	};
+
 	this.scripts = document.getElementsByTagName('script');
 
 	this.initialize = function(self) {
@@ -948,7 +951,7 @@ this.Loader = new Class(function() {
 				continue;
 			}
 			// 建立前缀module
-			self.makePrefixModule(module);
+			self.__makePrefixModule(module);
 			self.lib[module] = {file: src, name: module};
 		}
 	};
@@ -957,7 +960,7 @@ this.Loader = new Class(function() {
 	 * 建立前缀模块
 	 * 比如 a.b.c.d ，会建立 a/a.b/a.b.c 三个空模块，最后一个模块为目标模块，不为空，内容为context
 	 */
-	this.makePrefixModule = function(self, name) {
+	this.__makePrefixModule = function(self, name) {
 		if (!name || typeof name != 'string') {
 			return;
 		}
@@ -1086,9 +1089,21 @@ this.Loader = new Class(function() {
 			if (callback) callback(exports);
 		};
 
+		// file
+		if (!module.fn && module.file) {
+			self.loadScript(module.file, function() {
+				loadNext(0);
+			}, true);
+			return;
+		}
+		// 在空package或没有uses的情况下直接返回即可。
+		else if (!module.fn || module.uses.length === 0) {
+			done();
+			return;
+		}
+
 		// 主递归函数
 		function next(i) {
-
 			var use = module.uses[i];
 			var parts, context = null, isRelative = false;
 			if (use.indexOf('./') == 0) {
@@ -1257,7 +1272,7 @@ this.Loader = new Class(function() {
 			return null;
 		}
 		// 建立前缀占位模块
-		self.makePrefixModule(name);
+		self.__makePrefixModule(name);
 
 		// lib中存储的是function
 		// 注意别给覆盖了，有可能是有 file 成员的

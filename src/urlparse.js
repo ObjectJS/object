@@ -34,7 +34,10 @@ this.urljoin = function(base, url) {
 * @see http://docs.python.org/library/urlparse.html
 */
 var urlparse = this.urlparse = function(url) {
-	return url.match(/^(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))?(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i).slice(1);
+	var reg = /^(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))?(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i;
+	if (reg.test(url)) {
+		return url.match(reg).slice(1);
+	}
 };
 
 /**

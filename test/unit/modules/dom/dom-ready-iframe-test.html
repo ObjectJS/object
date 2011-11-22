@@ -1,0 +1,23 @@
+<!doctype>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<script src="http://xnimg.cn/n/core/object-all.js"></script>
+		<script>
+			object.use('dom, ua', function(exports, dom, ua){
+				dom.ready(function() {
+					// can not use window.parent in Chrome 5+
+					parent.readyCallbackValue_iframe_test = 1;
+					// can not access window.parent in iframe in Chrome
+					// so if your browser is chrome, open xxxx.html with your browser to test dom.ready
+					if(ua.ua.chrome > 5) {
+						alert('dom.ready is ok');
+					}
+				});
+			});
+		</script>
+	</head>
+	<body>
+	</body>
+</html>
+

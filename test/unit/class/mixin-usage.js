@@ -105,6 +105,22 @@ test('nested mixin', function() {
 	equal(c.a, 1, 'nested mixin property is ok');
 });
 
+//mixin subclass, parent should be also mixined
+test('mixin subclass(parent)', function() {
+	var A = new Class(function() {
+		this.a = 1;
+	});
+	var B = new Class(A, function() {
+		this.b = 1;
+	});
+	var C = new Class(function() {
+		Class.mixin(this, B);
+	});
+	var c = new C();
+	equal(c.a, 1, 'attribute a in parent should be mixined');
+	equal(c.b, 1, 'attribute b in subclass should be mixined');
+});
+
 //circular mixin B.mixin(A), A.mixin(B)
 test('circular mixin', function() {
 	var A = new Class(function(){
@@ -307,4 +323,75 @@ test('mixin an list of classes', function() {
 	var d = new D();
 	equal(d.a, 1, 'a should be 1 after Class.mixin(this, A, B)');
 	equal(d.b, 1, 'b should be 1 after Class.mixin(this, A, B)');
+});
+
+test('initialize in mixin should be function', function() {
+	var mixin = new Class(function() {
+		this.initialize = true;
+	});
+	try {
+		var A = new Class(function() {
+			Class.mixin(this, mixin);
+		});
+		var a = new A();
+		ok(true, 'initialize can be other non-false value');
+	} catch (e) {
+		ok(false, 'initialize can be other non-false value : ' + e);
+	}
+
+	var mixin = new Class(function() {
+		this.initialize = 1;
+	});
+	try {
+		var A = new Class(function() {
+			Class.mixin(this, mixin);
+		});
+		var a = new A();
+		ok(true, 'initialize can be other non-false value');
+	} catch (e) {
+		ok(false, 'initialize can be other non-false value : ' + e);
+	}
+});
+
+test('initialize in mixin should be called in parent and sub', function() {
+	expect(4);
+	var counter = 0;
+	var mixin = new Class(function() {
+		this.initialize = function(self) {
+			ok(true, 'mixin called');
+			counter ++;
+		}
+	});
+	var A = new Class(function() {
+		Class.mixin(this, mixin);
+	});
+	var B = new Class(A, function() {});
+
+	var a = new A();
+	equal(counter, 1, 'mixin.initialize called from parent class A');
+	var b = new B();
+	equal(counter, 2, 'mixin.initialize called from sub class B');
+});
+
+test('initialize in mixin should be called in parent and all subclasses', function() {
+	expect(6);
+	var counter = 0;
+	var mixin = new Class(function() {
+		this.initialize = function(self) {
+			ok(true, 'mixin called');
+			counter ++;
+		}
+	});
+	var A = new Class(function() {
+		Class.mixin(this, mixin);
+	});
+	var B = new Class(A, function() {});
+	var C = new Class(B, function() {});
+
+	var a = new A();
+	equal(counter, 1, 'mixin.initialize called from parent class A');
+	var b = new B();
+	equal(counter, 2, 'mixin.initialize called from sub class B');
+	var c = new C();
+	equal(counter, 3, 'mixin.initialize called from sub class C');
 });
