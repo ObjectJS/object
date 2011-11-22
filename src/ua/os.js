@@ -212,8 +212,12 @@ function detectOS(ua) {
 	//检测屏幕方向，首先确保支持屏幕方向
 	var isMobile = typeof window.orientation != 'undefined' ? true : false;
 	if(isMobile) {
-		//通过屏幕的高度和宽度的值大小，来判断是横向还是纵向
-		o.orientation = window.innerWidth > window.innerHeight ? 'profile' : 'landscape';
+		if(window.innerWidth != undefined) {
+			//通过屏幕的高度和宽度的值大小，来判断是横向还是纵向
+			o.orientation = window.innerWidth > window.innerHeight ? 'profile' : 'landscape';
+		} else {
+			o.orientation = window.screen.width > window.screen.height ? 'profile' : 'landscape';
+		}
 	} else {
 		o.orientation = 'unknown';
 	}
