@@ -7,12 +7,15 @@ object.add('net', 'dom, events', /**@lends net*/ function(exports, dom, events) 
 var ajaxProxies = this.ajaxProxies = {};
 
 /**
-* 执行一个可跨域的ajax请求
-* 跨域host必须有ajaxproxy.htm
-* callback唯一参数返回 XMLHttpRequest 对象实例
-*/
+ * 执行一个可跨域的ajax请求
+ * 跨域host必须有ajaxproxy.htm
+ * callback唯一参数返回 XMLHttpRequest 对象实例
+ */
 this.ajaxRequest = function(url, callback) {
-	if(!callback || typeof callback != 'function') {
+	if (!url || typeof url != 'string' || url.trim().length == 0) {
+		return;
+	}
+	if (!callback || typeof callback != 'function') {
 		callback = function(){};
 	}
 	var tmpA = document.createElement('a');
@@ -31,13 +34,25 @@ this.ajaxRequest = function(url, callback) {
 				iframe.src = protocol + '//' + hostname + '/ajaxproxy.htm';
 				if (iframe.attachEvent) {
 					iframe.attachEvent('onload', function () {
-						callback(iframe.contentWindow.getTransport());
+						try {
+							var transport = iframe.contentWindow.getTransport();
+						} catch (e) {
+							throw new Error('message : ' + e.message + ' from url : ' + url);
+						}
+						// ajaxProxies先缓存，避免callback异常导致缓存没有执行
 						ajaxProxies[hostname] = iframe.contentWindow;
+						callback(transport);
 					});
 				} else {
 					iframe.onload = function () {
-						callback(iframe.contentWindow.getTransport());
+						try {
+							var transport = iframe.contentWindow.getTransport();
+						} catch (e) {
+							throw new Error('message : ' + e.message + ' from url : ' + url);
+						}
+						// ajaxProxies先缓存，避免callback异常导致缓存没有执行
 						ajaxProxies[hostname] = iframe.contentWindow;
+						callback(transport);
 					};
 				}
 			});
@@ -54,9 +69,9 @@ this.ajaxRequest = function(url, callback) {
 };
 
 /**
-* 发送一个请求到url
-* @param url url
-*/
+ * 发送一个请求到url
+ * @param url url
+ */
 this.ping = function(url) {
 	var n = "_net_ping_"+ (new Date()).getTime();
 	var c = window[n] = new Image(); // 把new Image()赋给一个全局变量长期持有
@@ -80,6 +95,7 @@ this.Request = new Class(function() {
 	Class.mixin(this, events.Events);
 
 	this.initialize = function(self, options) {
+		options = options || {};
 		self.url = options.url || '';
 		self.method = options.method || 'get';
 		self.headers = {};
@@ -93,9 +109,9 @@ this.Request = new Class(function() {
 	};
 
 	/**
-	* 将data作为数据进行发送
-	* @param {string} data 发送的数据
-	*/
+ 	 * 将data作为数据进行发送
+	 * @param {string} data 发送的数据
+	 */
 	this.send = function(self, data) {
 		exports.ajaxRequest(self.url, function(xhr) {
 			self._xhr = xhr;
@@ -107,13 +123,13 @@ this.Request = new Class(function() {
 				if (xhr.readyState === 4) {
 
 					// IE6 dont's support getResponseHeader method
-					//if (xhr.getResponseHeader('Content-Type') == 'text/json') {
+					// if (xhr.getResponseHeader('Content-Type') == 'text/json') {
 						//xhr.responseJSON = JSON.parse(xhr.responseText)
-					//}
+					// }
 
 					self.responseText = xhr.responseText;
 					self.responseXML = xhr.responseXML;
-					//self.responseJSON = xhr.responseJSON;
+					// self.responseJSON = xhr.responseJSON;
 
 					// Compatible
 					eventData.responseText = xhr.responseText;
@@ -154,15 +170,15 @@ this.Request = new Class(function() {
 	};
 
 	/**
-	* getResponseHeader
-	*/
+	 * getResponseHeader
+	 */
 	this.getResponseHeader = function(self, key) {
 		return self._xhr.getResponseHeader(key);
 	};
 
 	/**
-	* setHeader
-	*/
+	 * setHeader
+	 */
 	this.setHeader = function(self, name, value) {
 		self.headers[name] = value;
 	};
