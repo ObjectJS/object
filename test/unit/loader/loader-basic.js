@@ -121,33 +121,6 @@ test('getUses-ignore', function() {
 	//equal(uses.length, 2, 'we may want to ignore more than one member at a time');
 });
 
-module("loader-makePrefixPackage");
-test('makePrefixPackage-basic', function() {
-	var loader = new Loader();
-	var edges = $UNIT_TEST_CONFIG.testEdges;
-	for(var prop in edges) {
-		try {
-			loader.makePrefixPackage(edges[prop]);
-			ok(true, 'loader.makePrefixPackage(' + prop + ') should be ok');
-		} catch (e) {
-			ok(false, 'loader.makePrefixPackage(' + prop + ') should be ok : ' + e);
-		}
-	}	
-});
-
-test('makePrefixPackage-usage', function() {
-	var loader = new Loader();
-	raises(function() {
-		loader.makePrefixPackage('sys.b.c.d');
-	}, 'should not create prefix after \'sys\'');
-	var loader = new Loader(); loader.makePrefixPackage('.a.b');
-	ok(loader.lib[''] == null, 'should not create prefix\'\'');
-	var loader = new Loader(); loader.makePrefixPackage('a.b..');
-	ok(loader.lib['a.b.'] == null, 'should not create prefix: a.b.\'\'');
-	var loader = new Loader(); loader.makePrefixPackage('..a.b..');
-	ok(loader.lib['..a.b.'] == null, 'should not create prefix: ..a.b.\'\'');
-});
-
 module("loader-loadLib", {teardown: function() {
 	// remove inserted script tag after every test case finished
 	var scripts = Sizzle('script');
