@@ -18,15 +18,18 @@
 	object.add('x.d', function(exports) {
 		return "test"
 	});
-	object.add('x.e', function(exports) {
-		return 111
-	});
-	object.add('x.f', function(exports) {
-		return new Date();
-	});
-	object.use('sys, x.a, x.b, x.c, x.d, x.e, x.f', function(exports, sys, x) {
-		console.log(sys.modules);
-	});
+
+	/*
+	 * 应该输出
+	 * a.b
+	 * a
+	 * __main__
+	 */
+	object.execute('test');
+
+	// object.use('test, sys', function(exports, test, sys) {
+	//	console.dir(sys.modules)
+	// });
 </script>
 <script>
 </script>
