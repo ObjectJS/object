@@ -418,8 +418,8 @@ this.ElementClassList = new Class(Array, function() {
 	this.add = function(self, token) {
 		if (!self.contains(token)) {
 			self._ele.className = (self._ele.className + ' ' + token).trim(); // 根据规范，不允许重复添加
+			self._loadClasses();
 		}
-		self._loadClasses();
 	};
 
 	/**
@@ -1657,6 +1657,7 @@ this.FormItemElement = new Class(exports.Element, function() {
 			var elementRange = self.createTextRange();
 			var duplicated = elementRange.duplicate();
 			elementRange.moveToBookmark(range.getBookmark());
+			//将选中区域的起始点作为整个元素区域的终点
 			duplicated.setEndPoint('EndToStart', elementRange);
 			return duplicated.text.length; 
 		} else {
