@@ -416,7 +416,9 @@ this.ElementClassList = new Class(Array, function() {
 	* @param token class
 	*/
 	this.add = function(self, token) {
-		if (!self.contains(token)) self._ele.className += (' ' + token); // 根据规范，不允许重复添加
+		if (!self.contains(token)) {
+			self._ele.className = (self._ele.className + ' ' + token).trim(); // 根据规范，不允许重复添加
+		}
 		self._loadClasses();
 	};
 
@@ -425,7 +427,10 @@ this.ElementClassList = new Class(Array, function() {
 	* @param token class
 	*/
 	this.remove = function(self, token) {
-		self._ele.className = self._ele.className.replace(new RegExp(token, 'i'), '').trim();
+		if (!token || typeof token != 'string') return;
+		//为了避免出现classAdded中remove class的情况，增加处理
+		if (!self.contains(token)) return;
+		self._ele.className = self._ele.className.replace(new RegExp(token.trim(), 'i'), '').trim();
 		self._loadClasses();
 	};
 
@@ -1311,7 +1316,8 @@ this.Element = new Class(function() {
 		if (hasOpacity) {
 			return self.style.opacity;
 		} else if (hasFilter) {
-			var filter = self.style.filter || self.getComputedStyle('filter');
+			// var filter = self.style.filter || self.getComputedStyle('filter');
+			var filter = self.style.filter || self.currentStyle.filter;
 			if (filter) opacity = filter.match(reAlpha);
 			return (opacity == null || filter == null) ? 1 : (opacity[1] / 100);
 		} else {
@@ -1330,7 +1336,9 @@ this.Element = new Class(function() {
 			}
 			
 			var opacityStr = opacity == 100 ? '' : 'alpha(opacity=' + opacity + ')';
-			var filter = self.style.filter || self.getComputedStyle('filter') || '';
+			// getComputedStyle在IE中并不存在，Mootools中使用了
+			// var filter = self.style.filter || self.getComputedStyle('filter') || '';
+			var filter = self.style.filter || self.currentStyle.filter || '';
 			self.style.filter = reAlpha.test(filter) ? filter.replace(reAlpha, opacityStr) : filter + opacityStr;
 		} else {
 			self.store('opacity', opacity);
@@ -1434,7 +1442,19 @@ this.Element = new Class(function() {
 */
 this.ImageElement = new Class(exports.Element, function() {
 
+	// 获取naturalWidth和naturalHeight的方法
+	// http://jacklmoore.com/notes/naturalwidth-and-naturalheight-in-ie/
 	function _getNaturalSize(img) {
+		// 参考jQuery
+		var anotherImg = new Image();
+		anotherImg.src = img.src;
+		return {
+			width : anotherImg.width,
+			height : anotherImg.height
+		};
+
+		/**
+		 * 在IE下得不到原来的尺寸
 		var style = img.runtimeStyle;
 		var old = {
 			w: style.width,
@@ -1449,6 +1469,7 @@ this.ImageElement = new Class(exports.Element, function() {
 			width: w,
 			height: h
 		};
+		*/
 	};
 
 	this.naturalWidth = property(function(self) {
@@ -1610,8 +1631,8 @@ this.FormElement = new Class(exports.Element, function() {
 this.FormItemElement = new Class(exports.Element, function() {
 
 	/**
-	* selectionStart
-	*/
+	 * selectionStart
+	 */
 	this.selectionStart = property(function(self) {
 		try {
 			// 避免在火狐下，获取不可见元素的selectionStart出错
@@ -1624,29 +1645,28 @@ this.FormItemElement = new Class(exports.Element, function() {
 
 		// IE
 		if (document.selection) {
-			self.focus();
-
-			var range = document.selection.createRange();
-			var start = 0;
-			if (range.parentElement() == self) {
-				var range_all = document.body.createTextRange();
-				range_all.moveToElementText(self);
-				
-				for (start = 0; range_all.compareEndPoints('StartToStart', range) < 0; start++) {
-					range_all.moveStart('character', 1);
-				}
-				
-				for (var i = 0; i <= start; i++) {
-					if (self.get('value').charAt(i) == '\n') start++;
-				}
+			// 如果当前元素没有焦点，则selectionEnd为0（保持与XN.form中的返回值一致）
+			if (document.activeElement != self) {
+				return 0;
 			}
-			return start;
+			// 参考JQuery插件：rangyinputs
+			var range = document.selection.createRange();
+			if (range == null) {
+				return 0;
+			}
+			var elementRange = self.createTextRange();
+			var duplicated = elementRange.duplicate();
+			elementRange.moveToBookmark(range.getBookmark());
+			duplicated.setEndPoint('EndToStart', elementRange);
+			return duplicated.text.length; 
+		} else {
+			return 0;
 		}
 	});
         
 	/**
-	* selectionEnd
-	*/
+	 * selectionEnd
+	 */
 	this.selectionEnd = property(function(self) {
 		try {
 			// 避免在火狐下，获取不可见元素的selectionEnd出错
@@ -1654,28 +1674,27 @@ this.FormItemElement = new Class(exports.Element, function() {
 				return self.selectionEnd;
 			}
 		} catch (e) {
-			return self.get('value').length;
+			return 0;
 		}
 
 		// IE
 		if (document.selection) {
-			self.focus();
-
-			var range = document.selection.createRange();
-			var end = 0;
-			if (range.parentElement() == self) {
-				var range_all = document.body.createTextRange();
-				range_all.moveToElementText(self);
-				
-				for (end = 0; range_all.compareEndPoints('StartToEnd', range) < 0; end++) {
-					range_all.moveStart('character', 1);
-				}
-				
-				for (var i = 0; i <= end; i++) {
-					if (self.get('value').charAt(i) == '\n') end++;
-				}
+			// 如果当前元素没有焦点，则selectionEnd为内容末尾
+			if (document.activeElement != self) {
+				return 0;
 			}
-			return end;
+			// 参考JQuery插件：rangyinputs
+			var range = document.selection.createRange();
+			if (range == null) {
+				return 0;
+			}
+			var elementRange = self.createTextRange();
+			var duplicated = elementRange.duplicate();
+			elementRange.moveToBookmark(range.getBookmark());
+			duplicated.setEndPoint('EndToStart', elementRange);
+			return duplicated.text.length + range.text.length; 
+		} else {
+			return 0;
 		}
 	});
 
