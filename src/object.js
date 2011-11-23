@@ -960,70 +960,24 @@ this.Loader = new Class(function() {
 	 * @param module 被执行的module
 	 * @param name 执行时的name
 	 * @param {LoaderRuntime} runtime
-	 * @param callback 异步方法，执行完毕后调用
+	 * @param callback 异步方法，执行完毕后调用，传入模块实例及名字
 	 */
 	this.__executeModule = function(self, module, name, runtime, callback) {
 
 		var args = [];
+		var modules = runtime.modules;
 		var currentUse = -1; 
 
-		// 获取下一个 use
-		function nextUse() {
+		/**
+		 * 顺序执行module中的uses
+		 *
+		 * @param pExports 上一个nextUse返回的模块实例
+		 */
+		function nextUse(pExports) {
 
-			// 获取当前use的一个模块
-			function nextPart(pname) {
-
-				function next(exports) {
-					modules[name] = exports;
-					// 生成对象链
-					runtime.setMemberTo(pname, part, exports);
-					nextPart(name);
-				}
-
-				currentPart++;
-
-				if (currentPart == parts.length) {
-					var exports = modules[(prefix? prefix + '.' : '') + parts[0]];
-					// 非重复引用
-					if (args.indexOf(exports) == -1) args.push(exports);
-					runtime.checkDone(); // 此module获取完毕
-					nextUse();
-
-				} else {
-					var part = parts[currentPart];
-					var name = (pname? pname + '.' : '') + part;
-					var fullname = isRelative? runtime.root + '.' + name : name
-
-					// 使用缓存中的
-					if (modules[name]) {
-						next(modules[name]);
-					}
-					// lib 中有
-					else if (self.lib[fullname]) {
-						var mod = self.lib[fullname];
-
-						// lib中有，但是是file，需要动态加载
-						if (mod.file) {
-							// 文件加载完毕后，其中执行的 add 会自动把 self.lib 中的对象替换掉，file 属性丢失，加入了 execute/name/uses 等属性
-							// 使用缓存
-							self.loadScript(mod.file, function() {
-								// 加载进来的脚本没有替换掉相应的模块，文件有问题。
-								if (mod.file) {
-									throw new Error(mod.file + ' do not add ' + mod.name);
-								}
-								self.__executeModule(mod, name, runtime, next);
-							}, true);
-						}
-						// 也有可能是空的模块，是没有 fn 的，executeModule会处理
-						else {
-							self.__executeModule(mod, name, runtime, next);
-						}
-					}
-					// lib中没有
-					else {
-						throw new object.NoModuleError(fullname);
-					}
-				};
+			if (pExports) {
+				// 非重复引用
+				if (args.indexOf(pExports) == -1) args.push(pExports);
 			}
 
 			currentUse++;
@@ -1031,56 +985,135 @@ this.Loader = new Class(function() {
 			// 模块获取完毕，执行fn，将exports通过callback传回去。
 			// 在空module或没有uses或已经use到最后一个
 			if (!module.fn || module.uses.length === 0 || currentUse == module.uses.length) {
-				if (!name) name = module.name; //  没有指定name，则使用全名
-				var exports = new Module(name);
-
-				// sys.modules
-				if (exports.__name__ === 'sys') exports.modules = runtime.modules;
-
-				// 最后传进context的参数
-				args.unshift(exports);
-
-				// 空module不需要
-				if (module.fn) {
-					var returnValue = module.fn.apply(exports, args);
-					if (returnValue) {
-						if (typeof returnValue === 'object' || typeof returnValue === 'function') {
-							returnValue.toString = Module.prototype.toString;
-							returnValue.__name__ = exports.__name__;
-						}
-						exports = returnValue;
-					}
-				}
-				if (callback) callback(exports);
-
+				doneUse();
 			} else {
-				var currentPart = -1;
-				var name = module.uses[currentUse];
-				// 循环依赖判断
-				runtime.check(name);
-				var modules = runtime.modules;
-
-				var parts, prefix = null, isRelative = false;
-				if (name.indexOf('./') == 0) {
-					parts = name.slice(2).split('.');
-					prefix = runtime.getName(module.name);
-					isRelative = (prefix != module.name);
-				} else {
-					parts = name.split('.');
-				}
-				
-				nextPart(prefix);
+				self.__executeParts(module.uses[currentUse], module.name, runtime, nextUse);
 			}
 
 		}
 
+		/**
+		 * 已执行完毕最后一个uses
+		 */
+		function doneUse() {
+			var exports, returnExports;
+
+			if (!name) name = module.name; //  没有指定name，则使用全名
+			exports = new Module(name);
+
+			// sys.modules
+			if (exports.__name__ === 'sys') exports.modules = modules;
+
+			// 最后传进context的参数
+			args.unshift(exports);
+
+			// 空module不需要
+			if (module.fn) {
+				returnExports = module.fn.apply(exports, args);
+				if (returnExports) {
+					if (typeof returnExports === 'object' || typeof returnExports === 'function') {
+						returnExports.toString = Module.prototype.toString;
+						returnExports.__name__ = exports.__name__;
+					}
+					exports = returnExports;
+				}
+			}
+			if (callback) callback(exports, name);
+		}
+
 		// file
 		if (!module.fn && module.file) {
+			// TODO 加入预处理过程，跑出所有需要加载的文件并行加载，在此执行useScript而不是loadScript
 			self.loadScript(module.file, function() {
+				// 加载进来的脚本没有替换掉相应的模块，文件有问题。
+				if (module.file) {
+					throw new Error(module.file + ' do not add ' + module.name);
+				}
 				nextUse();
 			}, true);
+		} else {
+			nextUse();
 		}
-		nextUse();
+	};
+
+	/**
+	 * 处理当前模块的每个部分
+	 * @param useName 当前部分的名字
+	 * @param moduleName 依赖此use的module的名字，用于生成作用域信息
+	 * @param {LoaderRuntime} runtime
+	 * @param callback 异步方法，模块获取完毕后通过callback的唯一参数传回
+	 */
+	this.__executeParts = function(self, useName, moduleName, runtime, callback) {
+
+		var modules = runtime.modules;
+		var parts, prefix = null, isRelative = false;
+		var pname, part, partName, currentPart = -1;
+
+		/**
+		 * 依次获取当前模块的每个部分
+		 * 如a.b.c，依次获取a、a.b、a.b.c
+		 *
+		 * @param pExprorts 上一部分的模块实例，如果是初次调用，为空
+		 * @param name 当前部分的名字
+		 */
+		function nextPart(pExports, name) {
+
+			var fullname, useModule;
+
+			if (pExports) {
+				modules[name] = pExports;
+				// 生成对象链
+				runtime.setMemberTo(pname, part, pExports);
+			}
+
+			pname = name;
+
+			currentPart++;
+
+			if (currentPart == parts.length) {
+				donePart();
+
+			} else {
+				part = parts[currentPart];
+				partName = (pname? pname + '.' : '') + part;
+				fullname = isRelative? runtime.root + '.' + partName : partName;
+
+				// 使用缓存中的
+				if (modules[partName]) {
+					nextPart(modules[partName], partName);
+				}
+				// lib 中有
+				else if (self.lib[fullname]) {
+					self.__executeModule(self.lib[fullname], partName, runtime, nextPart);
+				}
+				// lib中没有
+				else {
+					throw new object.NoModuleError(fullname);
+				}
+			};
+		}
+
+		/**
+		 * 当前模块所有部分都被处理完毕
+		 */
+		function donePart() {
+			var exports = modules[(prefix? prefix + '.' : '') + parts[0]];
+			// 模块获取完毕，去除循环依赖
+			runtime.checkDone();
+			if (callback) callback(exports);
+		}
+
+		if (useName.indexOf('./') == 0) {
+			parts = useName.slice(2).split('.');
+			prefix = runtime.getName(moduleName);
+			isRelative = (prefix != moduleName);
+		} else {
+			parts = useName.split('.');
+		}
+
+		// 记录循环依赖检测
+		runtime.check(useName);
+		nextPart(null, prefix);
 	};
 
 	/**
