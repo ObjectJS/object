@@ -94,11 +94,12 @@ test('circular dependency', function() {
 	delete object._loader.lib['c'];
 
 	object.add('uuua.ooos', function(exports) {});
-	object.add('uuua', 'uuua.ooos', function(exports) {});
+	object.add('uuua', './ooos', function(exports) {});
 	try {
 		object.use('uuua', function(exports, uuua) {});
+		ok(true, 'uuua use ./ooos will not cause an circular dependency error');
 	} catch (e) {
-		ok(false, 'uuua use uuua.ooos will cause an circular dependency error');
+		ok(false, 'uuua use ./ooos will cause an circular dependency error');
 	}
 	delete object._loader.lib['uuua.ooos'];
 	delete object._loader.lib['uuua'];

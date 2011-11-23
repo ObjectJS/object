@@ -1219,9 +1219,8 @@ this.Loader = new Class(function() {
 	 * 在parseUses阶段不需要根据名称判断去重（比如自己use自己），因为并不能避免所有冲突，还有循环引用的问题（比如 core use dom, dom use core）
 	 *
 	 * @param uses 输入
-	 * @param ignore 跳过ignore模块，用来避免自己调用自己
 	 */
-	this.parseUses = function(self, uses, ignore) {
+	this.parseUses = function(self, uses) {
 		if (!uses || typeof uses != 'string') {
 			return uses;
 		}
@@ -1229,11 +1228,6 @@ this.Loader = new Class(function() {
 			uses = uses.replace(/^,*|,*$/g, '');
 			uses = uses.split(/\s*,\s*/ig);
 		}
-
-		// 过滤自己调用自己
-		uses = uses.filter(function(use) {
-			return use !== ignore;
-		});
 
 		return uses;
 	};
@@ -1258,7 +1252,7 @@ this.Loader = new Class(function() {
 			context = uses;
 			uses = [];
 		} else {
-			uses = self.parseUses(uses, name);
+			uses = self.parseUses(uses);
 		}
 
 		if (!context || typeof context != 'function') {
