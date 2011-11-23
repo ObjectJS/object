@@ -76,76 +76,49 @@ test('loadScript with/without cache', function() {
 	}
 })
 
-module("loader-getUses");
-test('getUses-basic', function() {
+module("loader-parseUses");
+test('parseUses-basic', function() {
 	var loader = new Loader();
 	var edges = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in edges) {
 		try {
-			loader.getUses(edges[prop]);
-			ok(true, 'loader.getUses(' + prop + ') should be ok');
+			loader.parseUses(edges[prop]);
+			ok(true, 'loader.parseUses(' + prop + ') should be ok');
 		} catch (e) {
-			ok(false, 'loader.getUses(' + prop + ') should be ok : ' + e);
+			ok(false, 'loader.parseUses(' + prop + ') should be ok : ' + e);
 		}
 	}
 
 	for(var prop in edges) {
 		try {
-			loader.getUses('1', edges[prop]);
-			ok(true, 'loader.getUses(\'1\', ' + prop + ') should be ok');
+			loader.parseUses('1', edges[prop]);
+			ok(true, 'loader.parseUses(\'1\', ' + prop + ') should be ok');
 		} catch (e) {
-			ok(false, 'loader.getUses(\'1\', ' + prop + ') should be ok : ' + e);
+			ok(false, 'loader.parseUses(\'1\', ' + prop + ') should be ok : ' + e);
 		}
 	}
 });
 
-test('getUses-use', function() {
+test('parseUses-use', function() {
 	var loader = object._loader;
-	var uses = loader.getUses('1,2,3,4,5', '1');
-	equal(uses.length, 4, 'getUses works well');
+	var uses = loader.parseUses('1,2,3,4,5', '1');
+	equal(uses.length, 4, 'parseUses works well');
 	equal(uses.indexOf('1'), -1, '1 is ignored as promised');
 	equal(uses.indexOf('2'), 0, '2 is in uses because it is not ignored');
 });
 
-test('getUses-ignore', function() {
+test('parseUses-ignore', function() {
 	var loader = object._loader;
-	var uses = loader.getUses('1', '1');
-	equal(uses.length, 0, 'getUses works well');
-	var uses = loader.getUses('1', 1);
-	equal(uses.length, 1, 'getUses(\'1\', 1) should not remove \'1\', ignore must be string, or use === to judge');
-	var uses = loader.getUses('true', true);
-	equal(uses.length, 1, 'getUses(\'true\', true) should not remove \'true\'');
-	var uses = loader.getUses(',1,2,3,4,');
+	var uses = loader.parseUses('1', '1');
+	equal(uses.length, 0, 'parseUses works well');
+	var uses = loader.parseUses('1', 1);
+	equal(uses.length, 1, 'parseUses(\'1\', 1) should not remove \'1\', ignore must be string, or use === to judge');
+	var uses = loader.parseUses('true', true);
+	equal(uses.length, 1, 'parseUses(\'true\', true) should not remove \'true\'');
+	var uses = loader.parseUses(',1,2,3,4,');
 	equal(uses.length, 4, '\',1,2,3,4,\' should be considered');
-	//var uses = loader.getUses('1,2,3,4', ['1','2']);
+	//var uses = loader.parseUses('1,2,3,4', ['1','2']);
 	//equal(uses.length, 2, 'we may want to ignore more than one member at a time');
-});
-
-module("loader-makePrefixPackage");
-test('makePrefixPackage-basic', function() {
-	var loader = new Loader();
-	var edges = $UNIT_TEST_CONFIG.testEdges;
-	for(var prop in edges) {
-		try {
-			loader.makePrefixPackage(edges[prop]);
-			ok(true, 'loader.makePrefixPackage(' + prop + ') should be ok');
-		} catch (e) {
-			ok(false, 'loader.makePrefixPackage(' + prop + ') should be ok : ' + e);
-		}
-	}	
-});
-
-test('makePrefixPackage-usage', function() {
-	var loader = new Loader();
-	raises(function() {
-		loader.makePrefixPackage('sys.b.c.d');
-	}, 'should not create prefix after \'sys\'');
-	var loader = new Loader(); loader.makePrefixPackage('.a.b');
-	ok(loader.lib[''] == null, 'should not create prefix\'\'');
-	var loader = new Loader(); loader.makePrefixPackage('a.b..');
-	ok(loader.lib['a.b.'] == null, 'should not create prefix: a.b.\'\'');
-	var loader = new Loader(); loader.makePrefixPackage('..a.b..');
-	ok(loader.lib['..a.b.'] == null, 'should not create prefix: ..a.b.\'\'');
 });
 
 module("loader-loadLib", {teardown: function() {
