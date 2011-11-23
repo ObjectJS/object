@@ -323,6 +323,82 @@ test('dom.ElementClassList', function() {
 	});
 });
 
+test('new Features for dom.Element', function() {
+	object.use('dom', function(exports, dom) {
+		var node = document.createElement('div');
+		node.id = 'containerOfSpans';
+		document.body.appendChild(node);
+		node.innerHTML = '<span id=\'inner1\'></span><span id=\'inner2\'></span><span id=\'inner3\'><!--f--></span>';
+
+		var wrapped = dom.id('inner3');
+		equal(wrapped.getPrevious().id, 'inner2', 'inner1, inner2, inner3, inner3 previous is inner2');
+		equal(wrapped.getPrevious().getPrevious().id, 'inner1', 'inner1, inner2, inner3, inner3 previous is inner2, inner2 previous is inner1');
+
+		equal(wrapped.getPrevious('#inner1').id, 'inner1', 'inner3.getPrevious(#inner1)');
+		equal(wrapped.getPrevious('span').id, 'inner2', 'inner3.getPrevious(span), return inner2');
+		wrapped = dom.id('inner1');
+		equal(wrapped.getPrevious(), null, 'inner1 do not has previous');
+
+
+		var wrapped = dom.id('inner3');
+		equal(wrapped.getAllPrevious().length, 2, 'two previous');
+		equal(wrapped.getAllPrevious('span').length, 2, 'two span previous');
+		equal(wrapped.getAllPrevious('span.#inner1, span.#inner2').length, 2, 'two span previous with ids');
+		equal(wrapped.getAllPrevious('span.#inner1').length, 1, 'one span previous with id : inner1');
+		
+
+		var wrapped = dom.id('inner1');
+		equal(wrapped.getNext().id, 'inner2', 'inner1, inner2, inner3, inner1 next is inner2');
+		equal(wrapped.getNext().getNext().id, 'inner3', 'inner1, inner2, inner3, inner1 next is inner2, inner2 next is inner3');
+
+		equal(wrapped.getNext('#inner2').id, 'inner2', 'inner1.getNext(#inner2)');
+		equal(wrapped.getNext('span').id, 'inner2', 'inner1.getNext(span), return inner2');
+		wrapped = dom.id('inner3');
+		equal(wrapped.getNext(), null, 'inner3 do not has previous');
+
+		var wrapped = dom.id('inner1');
+		equal(wrapped.getAllNext().length, 2, 'two next');
+		equal(wrapped.getAllNext('span').length, 2, 'two span next');
+		equal(wrapped.getAllNext('span.#inner3, span.#inner2').length, 2, 'two span next with ids');
+		equal(wrapped.getAllNext('span.#inner3').length, 1, 'one span next with id : inner3');
+
+		var wrapped = dom.id('containerOfSpans');
+		equal(wrapped.getFirst().id, 'inner1', 'first node is inner1');
+		equal(wrapped.getFirst('span#inner2').id, 'inner2', 'first node matches span#inner2 is inner2');
+		equal(wrapped.getLast().id, 'inner3', 'last node is inner3');
+		equal(wrapped.getLast('span#inner1').id, 'inner1', 'last node matches span#inner1 is inner1');
+
+		var wrapped = dom.id('inner1');
+		var parents = wrapped.getParents();
+		equal(parents[0].tagName.toLowerCase(), 'div', 'first parent : div');
+		equal(parents[1].tagName.toLowerCase(), 'body', 'second parent : body');
+		equal(parents[2].tagName.toLowerCase(), 'html', 'third parent : html');
+		equal(parents[3], document, 'fourth parent : document');
+		equal(wrapped.getParents().length, 4, '4 parents');
+
+		equal(wrapped.getParents('div')[0].tagName.toLowerCase(), 'div', 'getParents(div) will get div');
+		equal(wrapped.getParents('div#containerOfSpans')[0].tagName.toLowerCase(), 'div', 'getParents(div#containerOfSpans) will get div');
+		equal(wrapped.getParents('body')[0], document.body, 'getParents(body) will get document.body');
+		equal(wrapped.getParents('html')[0], document.documentElement, 'getParents(html) will get document.documentElement');
+
+		equal(wrapped.getParents('span').length, 0, 'no parent is span');
+
+		var wrapped = dom.id('inner2');
+		equal(wrapped.getSiblings().length, 2, 'two brothers');
+		equal(wrapped.getSiblings('span').length, 2, 'two brothers');
+		equal(wrapped.getSiblings('span#inner1').length, 1, 'one brother named inner1');
+		equal(wrapped.getSiblings('span#inner4').length, 0, 'no brother named inner4');
+
+		var wrapped = dom.id('containerOfSpans');
+		equal(wrapped.getChildren().length, 3, 'three children');
+		equal(wrapped.getChildren('span').length, 3, 'three span children');
+		equal(wrapped.getChildren('span#inner1').length, 1, 'one span child with id : inner1');
+		equal(wrapped.getChildren('span#inner1, span#inner2').length, 2, 'two span children with ids : inner1,inner2');
+		var wrapped = dom.id('inner2');
+		equal(wrapped.getChildren().length, 0, 'inner2 has no child');
+	});
+});
+
 //Element
 test('only dom.Element', function() {
 	object.use('dom', function(exports, dom) {

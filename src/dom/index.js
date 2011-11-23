@@ -218,10 +218,10 @@ this.id = function(id) {
 };
 
 /**
-* eval inner js
-* 执行某个元素中的script标签
-* @param ele script元素
-*/
+ * eval inner js
+ * 执行某个元素中的script标签
+ * @param ele script元素
+ */
 var eval_inner_JS = this.eval_inner_JS = function(ele) {
 	if (!ele) {
 		return;
@@ -364,9 +364,9 @@ var iOS = !!navigator.userAgent.match('iPhone OS') || !!navigator.userAgent.matc
 var _supportHTML5DragDrop = !iOS && isEventSupported('dragstart') && isEventSupported('drop');
 
 /**
-* 通过一个字符串创建一个Fragment
-* @param str html字符串
-*/
+ * 通过一个字符串创建一个Fragment
+ * @param str html字符串
+ */
 this.getDom = function(str) {
 	var tmp = document.createElement('div');
 	var result = document.createDocumentFragment();
@@ -387,8 +387,8 @@ this.getDom = function(str) {
 };
 
 /**
-* html5 classList api
-*/
+ * html5 classList api
+ */
 this.ElementClassList = new Class(Array, function() {
 
 	this.initialize = function(self, ele) {
@@ -403,18 +403,18 @@ this.ElementClassList = new Class(Array, function() {
 	};
 
 	/**
-	* 切换className
-	* @param token class
-	*/
+	 * 切换className
+	 * @param token class
+	 */
 	this.toggle = function(self, token) {
 		if (self.contains(token)) self.remove(token);
 		else self.add(token);
 	};
 
 	/**
-	* 增加一个class
-	* @param token class
-	*/
+	 * 增加一个class
+	 * @param token class
+	 */
 	this.add = function(self, token) {
 		if (!self.contains(token)) {
 			self._ele.className = (self._ele.className + ' ' + token).trim(); // 根据规范，不允许重复添加
@@ -423,9 +423,9 @@ this.ElementClassList = new Class(Array, function() {
 	};
 
 	/**
-	* 删除class
-	* @param token class
-	*/
+	 * 删除class
+	 * @param token class
+	 */
 	this.remove = function(self, token) {
 		if (!token || typeof token != 'string') return;
 		//为了避免出现classAdded中remove class的情况，增加处理
@@ -435,18 +435,18 @@ this.ElementClassList = new Class(Array, function() {
 	};
 
 	/**
-	* 检测是否包含该class
-	* @param token class
-	*/
+	 * 检测是否包含该class
+	 * @param token class
+	 */
 	this.contains = function(self, token) {
 		if (self._classes.indexOf(token) != -1) return true;
 		else return false;
 	};
 
 	/**
-	* 返回此下标的class
-	* @param {int} i 下标
-	*/
+	 * 返回此下标的class
+	 * @param {int} i 下标
+	 */
 	this.item = function(self, i) {
 		return self._classes[i] || null;
 	};
@@ -1062,8 +1062,8 @@ this.DragDrop = new Class(function() {
 });
 
 /**
-* 普通元素的包装
-*/
+ * 普通元素的包装
+ */
 this.Element = new Class(function() {
 
 	Class.mixin(this, events.Events);
@@ -1087,8 +1087,8 @@ this.Element = new Class(function() {
 	};
 
 	/**
-	* 控制显示隐藏
-	*/
+	 * 控制显示隐藏
+	 */
 	this.hidden = _supportHidden? nativeproperty() : property(function(self) {
 		return self.style.display == 'none';
 	}, function(self, value) {
@@ -1101,10 +1101,10 @@ this.Element = new Class(function() {
 	});
 
 	/**
-	* 从dom读取数据
-	* @param property 数据key
-	* @param defaultValue 若没有，则返回此默认值
-	*/
+	 * 从dom读取数据
+	 * @param property 数据key
+	 * @param defaultValue 若没有，则返回此默认值
+	 */
 	this.retrieve = function(self, property, defaultValue){
 		var storage = get(self.uid);
 		if (!(property in storage) && defaultValue !== undefined) storage[property] = defaultValue;
@@ -1112,10 +1112,10 @@ this.Element = new Class(function() {
 	};
 
 	/**
-	* 存储数据至dom
-	* @param property 数据key
-	* @param value 数据值
-	*/
+	 * 存储数据至dom
+	 * @param property 数据key
+	 * @param value 数据值
+	 */
 	this.store = function(self, property, value){
 		var storage = get(self.uid);
 		storage[property] = value;
@@ -1220,54 +1220,190 @@ this.Element = new Class(function() {
 		return self;
 	};
 
-	this.getPrevious = function(self) {
-		// TODO
+	/**
+	 * 获取第一个符合selector的前兄弟节点
+	 *
+	 * @param selector css选择符
+	 */
+	this.getPrevious = function(self, selector) {
+		var matchesSelector = selector ? exports.Element.get('matchesSelector') : null;
+		var element = self;
+		while(element = element.previousSibling) {
+			// 注释节点
+			if (element.nodeType == 8) {
+				continue;
+			}
+			if (!matchesSelector || matchesSelector(element, selector)) {
+				return wrap(element);
+			}
+		}
+		return null;
 	};
 
-	this.getAllPrevious = function(self) {
-		// TODO
+	/**
+	 * 获取符合selector的所有前兄弟节点
+	 *
+	 * @param selector css选择符
+	 */
+	this.getAllPrevious = function(self, selector) {
+		var matchesSelector = selector ? exports.Element.get('matchesSelector') : null;
+		var result = [];
+		var element = self;
+		while(element = element.previousSibling) {
+			// 注释节点
+			if (element.nodeType == 8) {
+				continue;
+			}
+			if (!matchesSelector || matchesSelector(element, selector)) {
+				result.push(wrap(element));
+			}
+		}
+		return result;
 	};
 
-	this.getNext = function(self) {
-		// TODO
+	/**
+	 * 获取第一个符合selector的后兄弟节点
+	 *
+	 * @param selector css选择符
+	 */
+	this.getNext = function(self, selector) {
+		var matchesSelector = selector ? exports.Element.get('matchesSelector') : null;
+		var element = self;
+		while(element = element.nextSibling) {
+			// 注释节点
+			if (element.nodeType == 8) {
+				continue;
+			}
+			if (!matchesSelector || matchesSelector(element, selector)) {
+				return wrap(element);
+			}
+		}
+		return null;
 	};
 
-	this.getAllNext = function(self) {
-		// TODO
+	/**
+	 * 获取所有符合selector的后兄弟节点列表
+	 *
+	 * @param selector css选择符
+	 */
+	this.getAllNext = function(self, selector) {
+		var matchesSelector = selector ? exports.Element.get('matchesSelector') : null;
+		var result = [];
+		var element = self;
+		while(element = element.nextSibling) {
+			// 注释节点
+			if (element.nodeType == 8) {
+				continue;
+			}
+			if (!matchesSelector || matchesSelector(element, selector)) {
+				result.push(wrap(element));
+			}
+		}
+		return result;
 	};
 
-	this.getFirst = function(self) {
-		// TODO
+	/**
+	 * 获取第一个符合selector的子节点
+	 *
+	 * @param selector css选择符
+	 */
+	this.getFirst = function(self, selector) {
+		var matchesSelector = selector ? exports.Element.get('matchesSelector') : null;
+		var childrens = self.childNodes, l = childrens.length;
+		for (var i = 0, element; i < l; i++) {
+			element = childrens[i];
+			if (element.nodeType == 8) {
+				continue;
+			}
+			if (!matchesSelector || matchesSelector(element, selector)) {
+				return wrap(element);
+			}
+		}
+		return null;
 	};
 
-	this.getLast = function(self) {
-		// TODO
+	/**
+	 * 获取最后一个符合selector的子节点
+	 *
+	 * @param selector css选择符
+	 */
+	this.getLast = function(self, selector) {
+		var matchesSelector = selector ? exports.Element.get('matchesSelector') : null;
+		var childrens = self.childNodes, l = childrens.length;
+		for (var i = l - 1, element; i >= 0 ; i--) {
+			element = childrens[i];
+			if (element.nodeType == 8) {
+				continue;
+			}
+			if (!matchesSelector || matchesSelector(element, selector)) {
+				return wrap(element);
+			}
+		}
+		return null;
 	};
 
 	/**
 	 * 查找符合selector的父元素
+	 *
 	 * @param selector css选择符
 	 */
 	this.getParent = function(self, selector) {
 		if (!selector) return wrap(self.parentNode);
 
+		var matchesSelector = exports.Element.get('matchesSelector');
 		var element = self;
 		do {
-			if (exports.Element.get('matchesSelector')(element, selector)) return wrap(element);
+			if (matchesSelector(element, selector)) return wrap(element);
 		} while ((element = element.parentNode));
 		return null;
 	};
-
-	this.getParents = function(self) {
-		// TODO
+	
+	/**
+	 * 查找符合selector的所有父元素
+	 *
+	 * @param selector css选择符
+	 */
+	this.getParents = function(self, selector) {
+		var matchesSelector = selector ? exports.Element.get('matchesSelector') : null;
+		var result = [];
+		var element = self;
+		while(element = element.parentNode) {
+			// 注释节点
+			if (element.nodeType == 8) continue;
+			if (!matchesSelector || matchesSelector(element, selector)) {
+				result.push(wrap(element));
+			}
+		}
+		return result;
 	};
 
-	this.getSiblings = function(self) {
-		// TODO
+	/**
+	 * 获取所有符合selector的兄弟节点列表
+	 *
+	 * @param selector css选择符
+	 */
+	this.getSiblings = function(self, selector) {
+		return self.getAllPrevious(selector).concat(self.getAllNext(selector));
 	};
 
-	this.getChildren = function(self) {
-		// TODO
+	/**
+	 * 获取所有符合selector的孩子节点列表
+	 *
+	 * @param selector css选择符
+	 */
+	this.getChildren = function(self, selector) {
+		var matchesSelector = selector ? exports.Element.get('matchesSelector') : null;
+		var childrens = self.childNodes, l = childrens.length, result = [];
+		for (var i = 0, element; i < l ; i++) {
+			element = childrens[i];
+			if (element.nodeType == 8) {
+				continue;
+			}
+			if (!matchesSelector || matchesSelector(element, selector)) {
+				result.push(wrap(element));
+			}
+		}
+		return result;
 	};
 
 	/**
@@ -1438,8 +1574,8 @@ this.Element = new Class(function() {
 });
 
 /**
-* img元素的包装
-*/
+ * img元素的包装
+ */
 this.ImageElement = new Class(exports.Element, function() {
 
 	// 获取naturalWidth和naturalHeight的方法
@@ -1554,8 +1690,8 @@ this.FormElement = new Class(exports.Element, function() {
 	};
 
 	/**
-	* 根据现有表单，创建一个Request对象
-	*/
+	 * 根据现有表单，创建一个Request对象
+	 */
 	this.createRequest = function(self, params) {
 		if (!params) params = {};
 		if (!params.method) params.method = self.method;
@@ -1646,10 +1782,11 @@ this.FormItemElement = new Class(exports.Element, function() {
 		// IE
 		if (document.selection) {
 			// 如果当前元素没有焦点，则selectionEnd为0（保持与XN.form中的返回值一致）
+			// 在没有焦点的情况下，无法获取selectionEnd的准确值，目前jquery及其插件也没有解决这个问题
 			if (document.activeElement != self) {
 				return 0;
 			}
-			// 参考JQuery插件：rangyinputs
+			// 参考JQuery插件：fieldSelection
 			var range = document.selection.createRange();
 			if (range == null) {
 				return 0;
@@ -1684,7 +1821,7 @@ this.FormItemElement = new Class(exports.Element, function() {
 			if (document.activeElement != self) {
 				return 0;
 			}
-			// 参考JQuery插件：rangyinputs
+			// 参考JQuery插件：fieldSelection
 			var range = document.selection.createRange();
 			if (range == null) {
 				return 0;
@@ -1700,8 +1837,8 @@ this.FormItemElement = new Class(exports.Element, function() {
 	});
 
 	/**
-	* select元素所有已选择元素
-	*/
+	 * select元素所有已选择元素
+	 */
 	this.getSelected = function(self) {
 		self.selectedIndex; // Safari 3.2.1
 		var selected = [];
@@ -1712,8 +1849,8 @@ this.FormItemElement = new Class(exports.Element, function() {
 	};
 
 	/**
-	* value，在不支持placeholder的浏览器忽略placeholder的值
-	*/
+	 * value，在不支持placeholder的浏览器忽略placeholder的值
+	 */
 	this.value = property(function(self) {
 		// 如果是placeholder，则value为空
 		if (self.classList.contains('placeholder')) return '';
@@ -1735,8 +1872,8 @@ this.FormItemElement = new Class(exports.Element, function() {
 	});
 
 	/**
-	* HTML5 validity
-	*/
+	 * HTML5 validity
+	 */
 	this.validity = _supportHTML5Forms? property(function(self) {
 		return self.validity;
 	}) : property(function(self) {
@@ -1794,8 +1931,8 @@ this.FormItemElement = new Class(exports.Element, function() {
 	});
 
 	/**
-	* HTML5 validationMessage
-	*/
+	 * HTML5 validationMessage
+	 */
 	this.validationMessage = _supportHTML5Forms? property(function(self) {
 		return self.validationMessage;
 	}) : property(function(self) {
@@ -1810,8 +1947,8 @@ this.FormItemElement = new Class(exports.Element, function() {
 		// formnovalidate
 
 		/**
-		* HTML5 setCustomValidity
-		*/
+		 * HTML5 setCustomValidity
+		 */
 		this.setCustomValidity = function(self, message) {
 			self.__customValidity = message;
 			self.get('validity');
@@ -1851,8 +1988,8 @@ this.FormItemElement = new Class(exports.Element, function() {
 });
 
 /**
-* input / textarea 元素的包装类的基类
-*/
+ * input / textarea 元素的包装类的基类
+ */
 this.TextBaseElement = new Class(exports.FormItemElement, function() {
 
 	this.initialize = function(self) {
@@ -1864,8 +2001,8 @@ this.TextBaseElement = new Class(exports.FormItemElement, function() {
 	};
 
 	/**
-	* 占位符
-	*/
+	 * 占位符
+	 */
 	this.placeholder = property(function(self) {
 		return self.getAttribute('placeholder');
 	}, function(self, value) {
@@ -1877,8 +2014,8 @@ this.TextBaseElement = new Class(exports.FormItemElement, function() {
 	});
 
 	/**
-	* 是否处于占位符状态
-	*/
+	 * 是否处于占位符状态
+	 */
 	this._placeholding = property(function(self) {
 		return self.classList.contains('placeholder');
 	}, function(self, value) {
@@ -1944,34 +2081,34 @@ this.TextBaseElement = new Class(exports.FormItemElement, function() {
 });
 
 /**
-* input元素的包装类
-* @class
-*/
+ * input元素的包装类
+ * @class
+ */
 this.InputElement = new Class(exports.TextBaseElement, function() {
 
 	/**
-	* HTML5 formAction
-	*/
+	 * HTML5 formAction
+	 */
 	this.formAction = _supportMultipleSubmit? nativeproperty() : attributeproperty('');
 
 	/**
-	* HTML5 formEnctype
-	*/
+	 * HTML5 formEnctype
+	 */
 	this.formEnctype = _supportMultipleSubmit? nativeproperty() : attributeproperty('application/x-www-form-urlencoded');
 
 	/**
-	* HTML5 formMethod
-	*/
+	 * HTML5 formMethod
+	 */
 	this.formMethod = _supportMultipleSubmit? nativeproperty() : attributeproperty('get');
 
 	/**
-	* HTML5 formNoValidate
-	*/
+	 * HTML5 formNoValidate
+	 */
 	this.formNoValidate = _supportMultipleSubmit? nativeproperty() : attributeproperty(false);
 
 	/**
-	* HTML5 formTarget
-	*/
+	 * HTML5 formTarget
+	 */
 	this.formTarget = _supportMultipleSubmit? nativeproperty() : attributeproperty('');
 
 	this.initialize = function(self) {
@@ -1987,9 +2124,9 @@ this.InputElement = new Class(exports.TextBaseElement, function() {
 	};
 
 	/**
-	* 用ajax发送一个表单
-	* @param data 发送的数据
-	*/
+	 * 用ajax发送一个表单
+	 * @param data 发送的数据
+	 */
 	this.send = function(self, data) {
 		if (self.type != 'submit') return;
 		var request = self.form.createRequest({
@@ -2009,20 +2146,20 @@ this.InputElement = new Class(exports.TextBaseElement, function() {
 });
 
 /**
-* textarea元素的包装类
-*/
+ * textarea元素的包装类
+ */
 this.TextAreaElement = new Class(exports.TextBaseElement, function() {
 });
 
 /**
-* window元素的包装类
-*/
+ * window元素的包装类
+ */
 this.Window = new Class(exports.Element, function() {
 });
 
 /**
-* document元素的包装类
-*/
+ * document元素的包装类
+ */
 this.Document = new Class(exports.Element, function() {
 });
 
