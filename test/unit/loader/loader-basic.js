@@ -102,15 +102,15 @@ test('parseUses-basic', function() {
 test('parseUses-use', function() {
 	var loader = object._loader;
 	var uses = loader.parseUses('1,2,3,4,5', '1');
-	equal(uses.length, 4, 'parseUses works well');
-	equal(uses.indexOf('1'), -1, '1 is ignored as promised');
-	equal(uses.indexOf('2'), 0, '2 is in uses because it is not ignored');
+	equal(uses.length, 5, 'parseUses works well');
+	equal(uses.indexOf('1'), 0, '1 is ignored as promised');
+	equal(uses.indexOf('2'), 1, '2 is in uses because it is not ignored');
 });
 
 test('parseUses-ignore', function() {
 	var loader = object._loader;
 	var uses = loader.parseUses('1', '1');
-	equal(uses.length, 0, 'parseUses works well');
+	equal(uses.length, 1, 'parseUses works well');
 	var uses = loader.parseUses('1', 1);
 	equal(uses.length, 1, 'parseUses(\'1\', 1) should not remove \'1\', ignore must be string, or use === to judge');
 	var uses = loader.parseUses('true', true);

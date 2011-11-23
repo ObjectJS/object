@@ -67,6 +67,41 @@ test('return value of module', function() {
 	});
 });
 
+test('relative module - use', function() {
+
+	object.add('foo2.c', function() {});
+	object.add('foo2', './c', function(exports, c) {
+		equal(c.__name__, 'foo2.c', 'module name with same prefix.');
+	});
+	object.add('foo.a.b.c', function(exports) { });
+	object.add('foo.a', './b.c, sys', function(exports, b, sys) {
+		equal(b.__name__, 'foo.a.b', 'relative submodule name.');
+		equal(b.c.__name__, 'foo.a.b.c', 'global context name.');
+	});
+	object.add('foo.b', function(exports) {
+	});
+	object.add('foo.c', function(exports) {
+	});
+	object.add('foo', './a, ./b, ./c, foo2, sys', function(exports, a, b, c, foo2, sys) {
+		ok(a.__name__ == 'foo.a' && b.__name__ == 'foo.b' && c.__name__ == 'foo.c', 'arguments pass.');
+	});
+	object.use('foo', function() {
+	});
+	object._loader.remove('foo', true);
+	object._loader.remove('foo2', true);
+
+	object.add('foo.a.b.c', function(exports) {
+	});
+	object.add('foo.a', './b.c, sys', function(exports, b, sys) {
+		equal(b.__name__, 'a.b', 'relative submodule name.');
+		equal(b.c.__name__, 'a.b.c', 'ralative context module name.');
+	});
+	object.add('foo', './a', function(exports, a) {
+	});
+
+	object.execute('foo');
+});
+
 test('circular dependency', function() {
 	expect(4);
 	raises(function() {

@@ -1279,6 +1279,20 @@ this.Loader = new Class(function() {
 	};
 
 	/**
+	 * 移除模块的定义
+	 * @param name 需要移除模块的名字
+	 * @param r 是否移除其所有子模块
+	 */
+	this.remove = function(self, name, r) {
+		delete self.lib[name];
+		if (r) {
+			Object.keys(self.lib).forEach(function(key) {
+				if (key.indexOf(name + '.') == 0) delete self.lib[key];
+			});
+		}
+	};
+
+	/**
 	 * use
 	 *
 	 * @param uses 用逗号分隔开的模块名称列表
