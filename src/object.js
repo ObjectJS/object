@@ -1046,13 +1046,14 @@ this.Loader = new Class(function() {
 	this.__executeParts = function(self, useName, moduleName, runtime, callback) {
 
 		var modules = runtime.modules;
-		var parts, prefix = null, isRelative = false;
+		var parts; // useName所有部分的数组
+		var context = null; // 当前use是被某个模块通过相对路径调用的
+		var isRelative = false; // 当前use是否属于execute的模块的子模块，如果是，生成的名称应不包含其前缀
 		var pname, part, partName, currentPart = -1;
 
 		/**
 		 * 依次获取当前模块的每个部分
 		 * 如a.b.c，依次获取a、a.b、a.b.c
-		 *
 		 * @param pExprorts 上一部分的模块实例，如果是初次调用，为空
 		 * @param name 当前部分的名字
 		 */
@@ -1097,7 +1098,7 @@ this.Loader = new Class(function() {
 		 * 当前模块所有部分都被处理完毕
 		 */
 		function donePart() {
-			var exports = modules[(prefix? prefix + '.' : '') + parts[0]];
+			var exports = modules[(context? context + '.' : '') + parts[0]];
 			// 模块获取完毕，去除循环依赖
 			runtime.checkDone();
 			if (callback) callback(exports);
@@ -1105,15 +1106,15 @@ this.Loader = new Class(function() {
 
 		if (useName.indexOf('./') == 0) {
 			parts = useName.slice(2).split('.');
-			prefix = runtime.getName(moduleName);
-			isRelative = (prefix != moduleName);
+			context = runtime.getName(moduleName);
+			isRelative = (context != moduleName);
 		} else {
 			parts = useName.split('.');
 		}
 
 		// 记录循环依赖检测
 		runtime.check(useName);
-		nextPart(null, prefix);
+		nextPart(null, context);
 	};
 
 	/**
