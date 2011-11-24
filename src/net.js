@@ -166,8 +166,6 @@ this.Request = new Class(function() {
 	};
 
 	/**
-<<<<<<< local
-=======
 	 * 中断请求
 	 */
 	this.abort = function(self) {
@@ -175,7 +173,6 @@ this.Request = new Class(function() {
 	};
 
 	/**
->>>>>>> other
 	 * getResponseHeader
 	 */
 	this.getResponseHeader = function(self, key) {
