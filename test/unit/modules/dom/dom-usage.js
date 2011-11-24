@@ -648,6 +648,7 @@ test('dom.FormItemElement - selectionStart/selectionEnd', function() {
 			ok(false, 'formItem.get(selectionStart) after formItem.select(), should not raise error : ' + e);
 		}
 		formItem.focusToPosition(2);
+		window.scrollTo(0, 0);
 		try {
 			equal(formItem.get('selectionStart'), 2, 'selectionStart is 2 after formItem.focusToPosition(2)');
 		} catch (e) {
@@ -665,6 +666,7 @@ test('dom.FormItemElement', function() {
 		formItem.value = '1234';
 		try {
 			formItem.focus();
+			window.scrollTo(0, 0);
 		} catch (e) {};
 
 		var selectItem = dom.wrap(document.createElement('select'));
@@ -740,6 +742,7 @@ test('dom.Elements', function() {
 		equal(input2.get('value'), '1234', 'input2.value == 1234, after inputs.set(value, 1234)');
 		inputs.show();
 		inputs.focusToPosition(2);
+		window.scrollTo(0, 0);
 		try {
 			equal(input1.get('selectionStart'), 2, 'input1.get(selectionStart) should be 2');
 		} catch (e) {

@@ -125,7 +125,7 @@ test('has onxxx(throw error), 3 handlers, onxxx is first', function(){
 	obj.onxxx = function() {
 		equal(counter, 0, 'onxxx should be the first, counter = 0');
 		counter ++;
-		throw new Error('error');
+		throw new Error('error throwed in onhandler');
 	}
 	obj.addEvent('xxx', function() {
 		equal(counter, 1, 'first addEvent should be the second, counter = 1');
@@ -155,7 +155,7 @@ test('has onxxx(throw error), 3 handlers, onxxx is center', function(){
 	obj.onxxx = function() {
 		equal(counter, 1, 'onxxx should be the second, counter = 1');
 		counter ++;
-		throw new Error('error');
+		throw new Error('error throwed in onhandler');
 	}
 	obj.addEvent('xxx', function() {
 		equal(counter, 2, 'second addEvent should be the third, counter = 2');
@@ -185,7 +185,7 @@ test('has onxxx(throw error), 3 handlers, onxxx is last', function(){
 	obj.onxxx = function() {
 		equal(counter, 2, 'onxxx should be the third, counter = 2');
 		counter ++;
-		throw new Error('error');
+		throw new Error('error throwed in onhandler');
 	}
 	var oldOnerror = window.onerror;
 	window.onerror = function() {
@@ -207,7 +207,7 @@ test('has onxxx, 3 handlers(first addEvent throw error), onxxx is first', functi
 	obj.addEvent('xxx', function() {
 		equal(counter, 1, 'first addEvent should be the second, counter = 1');
 		counter ++;
-		throw new Error('error');
+		throw new Error('error throwed in addEvent handler');
 	}, false);
 	obj.addEvent('xxx', function() {
 		equal(counter, 2, 'second addEvent should be the third, counter = 2');
@@ -229,7 +229,7 @@ test('has onxxx, 3 handlers(first addEvent throw error), onxxx is center', funct
 	obj.addEvent('xxx', function() {
 		equal(counter, 0, 'first addEvent should be the first, counter = 0');
 		counter ++;
-		throw new Error('error');
+		throw new Error('error throwed in addEvent handler');
 	}, false);
 	obj.onxxx = function() {
 		equal(counter, 1, 'onxxx should be the second, counter = 1');
@@ -255,7 +255,7 @@ test('has onxxx, 3 handlers(first addEvent throw error), onxxx is last', functio
 	obj.addEvent('xxx', function() {
 		equal(counter, 0, 'first addEvent should be the first, counter = 0');
 		counter ++;
-		throw new Error('error');
+		throw new Error('error throwed in addEvent handler');
 	}, false);
 	obj.addEvent('xxx', function() {
 		equal(counter, 1, 'second addEvent should be the second, counter = 1');
@@ -281,7 +281,7 @@ test('two onxxx, 5 handlers, 1, onxxx, 2, onxxx, 3', function() {
 	obj.addEvent('xxx', function() {
 		equal(counter, 0, 'first addEvent should be the first, counter = 0');
 		counter ++;
-		throw new Error('error');
+		throw new Error('error throwed in addEvent handler');
 	}, false);
 	obj.onxxx = function() {
 		equal(false, 1, 'this onxxx should not be executed');
@@ -315,7 +315,7 @@ test('two onxxx(standard event), 5 handlers, 1, onxxx, 2, onxxx, 3', function() 
 	obj.addEvent('click', function() {
 		equal(counter, 0, 'first addEvent should be the first, counter = 0');
 		counter ++;
-		throw new Error('error');
+		throw new Error('error throwed in addEvent handler');
 	}, false);
 	obj.onclick = function() {
 		ok(false, 'this onxxx should not be executed');
