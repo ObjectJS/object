@@ -637,7 +637,7 @@ Class.initMixins = function(cls, instance) {
 	if (cls.__mixins__) {
 		for (var i = 0, l = cls.__mixins__.length, mixin; i < l; i++) {
 			mixin = cls.__mixins__[i];
-			if (mixin.prototype.initialize) mixin.prototype.initialize.call(instance);
+			if (mixin.prototype && mixin.prototype.initialize) mixin.prototype.initialize.call(instance);
 		}
 	}
 };
@@ -730,6 +730,9 @@ Class.getAllSubClasses = function(cls) {
  * 获取类成员通过cls.get(name)
  */
 Class.keys = function(cls) {
+	if (!cls || !cls.prototype) {
+		return [];
+	}
 	keys = Object.keys(cls.prototype.__properties__);
 	for (var prop in cls.prototype) {
     	keys.push(prop);

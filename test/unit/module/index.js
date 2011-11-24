@@ -1,4 +1,4 @@
 $(document).ready(function() {
-	var path = $LAB.needPath ? 'module/' : '';
+	var path = $UNIT_TEST_CONFIG.needPath ? 'module/' : '';
 	$LAB.script(path + 'module-test.js');
 });

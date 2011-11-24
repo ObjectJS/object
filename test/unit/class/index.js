@@ -1,5 +1,5 @@
 $(document).ready(function() {
-	var path = $LAB.needPath ? 'class/' : '';
+	var path = $UNIT_TEST_CONFIG.needPath ? 'class/' : '';
 	$LAB
 		.script(path + 'class-basic.js').wait()
 		.script(path + 'class-usage.js').wait()

@@ -1,5 +1,5 @@
 $(document).ready(function() {
-	var path = $LAB.needPath ? 'modules/urlparse/' : '';
+	var path = $UNIT_TEST_CONFIG.needPath ? 'modules/urlparse/' : '';
 	$LAB
 	   .script(path + "../../../../src/urlparse.js").wait()
 	   .script(path + "urlparse-basic.js").wait()

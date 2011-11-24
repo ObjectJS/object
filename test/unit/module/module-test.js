@@ -111,25 +111,33 @@ test('string starts/ends with .', function() {
 		object.use('cause_error', function(exports, a) {});
 	} catch (e) {
 		ok(false, 'object.add(\'cause_error\', \'.used\') cause an error');
-		delete object._loader.lib['cause_error'];
 	}
+	delete object._loader.lib['cause_error'];
 	try {
 		object.add('cause_error', 'used.', function(exports) {});
 		object.use('cause_error', function(exports, a) {});
 	} catch (e) {
 		ok(false, 'object.add(\'cause_error\', \'used.\') cause an error');
-		delete object._loader.lib['cause_error'];
 	}
-	object.add('.cause_error', 'used', function(exports) {});
-	object.use('.cause_error', function(exports, a) {});
-	ok(object._loader.lib[''] == undefined, 'object._loader.lib[\'\'] should be undefined');
+	delete object._loader.lib['cause_error'];
+	try {
+		object.add('.cause_error', 'used', function(exports) {});
+		object.use('.cause_error', function(exports, a) {});
+		ok(object._loader.lib[''] == undefined, 'object._loader.lib[\'\'] should be undefined');
+	} catch (e) {
+		ok(false, 'add .cause_error causes error'); 
+	}
 	delete object._loader.lib['.cause_error'];
 	delete object._loader.lib[''];
 
-	object.add('.cause_error.', 'used', function(exports) {});
-	object.use('.cause_error.', function(exports, a) {});
-	ok(object._loader.lib[''] == undefined, 'object._loader.lib[\'\'] should be undefined');
-	ok(object._loader.lib['.cause_error.'] == undefined,'object._loader.lib[\'.cause_error.\'] should be undefined');
+	try {
+		object.add('.cause_error.', 'used', function(exports) {});
+		object.use('.cause_error.', function(exports, a) {});
+		ok(object._loader.lib[''] == undefined, 'object._loader.lib[\'\'] should be undefined');
+		ok(object._loader.lib['.cause_error.'] == undefined,'object._loader.lib[\'.cause_error.\'] should be undefined');
+	} catch (e) {
+		ok(false, 'add .cause_error. causes error');
+	}
 	delete object._loader.lib[''];
 	delete object._loader.lib['.cause_error'];
 	delete object._loader.lib['.cause_error.'];

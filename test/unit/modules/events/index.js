@@ -1,5 +1,5 @@
 $(document).ready(function() {
-	var path = $LAB.needPath ? 'modules/events/' : '';
+	var path = $UNIT_TEST_CONFIG.needPath ? 'modules/events/' : '';
 	$LAB
 	   .script(path + "../../../../src/events.js").wait()
 	   //.script(path + "events-basic.js").wait()

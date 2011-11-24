@@ -1,5 +1,5 @@
 $(document).ready(function() {
-	$LAB.needPath = true;
+	$UNIT_TEST_CONFIG.needPath = true;
 	var config = [
 		{module:'loader',url:'loader'},
 		{module:'dom', url:'modules/dom'},
@@ -7,6 +7,6 @@ $(document).ready(function() {
 		{}
 	];
 	for(var i=0,l=config.length - 1; i<l; i++) {
-		$LAB.script(config[i].url + '/index.js');
+		$LAB.script(config[i].url + '/index-special.js');
 	}
 });

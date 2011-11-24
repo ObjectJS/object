@@ -1,5 +1,5 @@
 module('dom.ready')
-var path = $LAB.needPath ? 'modules/dom/' : '';
+var path = $UNIT_TEST_CONFIG.needPath ? 'modules/dom/' : '';
 
 // can not access window.parent in iframe in Chrome
 // so if your browser is chrome, open xxxx.html with your browser to test dom.ready
