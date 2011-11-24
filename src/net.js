@@ -1,7 +1,3 @@
-/**
- * @namespace
- * @name net
- */
 object.add('net', 'dom, events', /**@lends net*/ function(exports, dom, events) {
 
 var ajaxProxies = this.ajaxProxies = {};
@@ -170,6 +166,16 @@ this.Request = new Class(function() {
 	};
 
 	/**
+<<<<<<< local
+=======
+	 * 中断请求
+	 */
+	this.abort = function(self) {
+		self._xhr.abort();
+	};
+
+	/**
+>>>>>>> other
 	 * getResponseHeader
 	 */
 	this.getResponseHeader = function(self, key) {
