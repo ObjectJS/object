@@ -157,6 +157,13 @@ this.Events = new Class(function() {
 		});
 	}
 
+	// 不同浏览器对onhandler的执行顺序不一样
+	// 	  IE：最先执行onhandler，其次再执行其他监听函数
+	// 	  Firefox：如果添加多个onhandler，则第一次添加的位置为执行的位置
+	// 	  Chrome ：如果添加多个onhandler，最后一次添加的位置为执行的位置
+	// 
+	// Chrome的做法是符合标准的，因此在模拟事件执行时按照Chrome的顺序来进行
+	//
 	// 保证onxxx监听函数的正常执行，并维持onxxx类型的事件监听函数的执行顺序
 	function addOnHandlerAsEventListener(self, type) {
 		// 只有DOM节点的标准事件，才会由浏览器来执行标准方法
@@ -390,16 +397,19 @@ this.Events = new Class(function() {
 		event.initEvent(type, false, true);
 		object.extend(event, eventData);
 
+		// 火狐下通过dispatchEvent触发事件，在事件监听函数中抛出的异常都不会在控制台给出
+		// see https://bugzilla.mozilla.org/show_bug.cgi?id=503244
 		boss.dispatchEvent(event);
 		return event;
 	} : function(self, type, eventData) {
 		if (!eventData) eventData = {};
 
 		// 如果是DOM节点的标准事件，则由浏览器处理onxxx类型的事件处理函数即可
-		// http://js8.in/731.html
+		// see http://js8.in/731.html
 		if (type in NATIVE_EVENTS && self.nodeType == 1) {
 			var event = exports.wrapEvent(document.createEventObject());
 			object.extend(event, eventData);
+
 			nativeFireEvent.call(self, 'on' + type, event);
 			return event;
 		}
