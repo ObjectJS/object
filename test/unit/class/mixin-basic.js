@@ -58,3 +58,13 @@ test('mixin object.js', function() {
 		ok(false, 'Class.mixin(this, Loader), Loader should not be mixined');
 	} catch(e){};
 });
+
+test('mixin outside class', function() {
+	var A = new Class(function(){});
+	var mixin = new Class(function() {
+		this.a = 1;
+	});
+	Class.mixin(A, mixin);
+	var a = new A();
+	equal(a.a, 1, 'mixin outside class is successful(Class.mixin just put mixin into __mixins__)');
+});

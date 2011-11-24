@@ -1,17 +1,16 @@
-/**
- * @namespace
- * @name net
- */
 object.add('net', 'dom, events', /**@lends net*/ function(exports, dom, events) {
 
 var ajaxProxies = this.ajaxProxies = {};
 
 /**
-* 执行一个可跨域的ajax请求
-* 跨域host必须有ajaxproxy.htm
-* callback唯一参数返回 XMLHttpRequest 对象实例
-*/
+ * 执行一个可跨域的ajax请求
+ * 跨域host必须有ajaxproxy.htm
+ * callback唯一参数返回 XMLHttpRequest 对象实例
+ */
 this.ajaxRequest = function(url, callback) {
+	if(!callback || typeof callback != 'function') {
+		callback = function(){};
+	}
 	var tmpA = document.createElement('a');
 	tmpA.href = url;
 	var hostname = tmpA.hostname;
@@ -51,9 +50,9 @@ this.ajaxRequest = function(url, callback) {
 };
 
 /**
-* 发送一个请求到url
-* @param url url
-*/
+ * 发送一个请求到url
+ * @param url url
+ */
 this.ping = function(url) {
 	var n = "_net_ping_"+ (new Date()).getTime();
 	var c = window[n] = new Image(); // 把new Image()赋给一个全局变量长期持有
@@ -151,15 +150,22 @@ this.Request = new Class(function() {
 	};
 
 	/**
-	* getResponseHeader
-	*/
+	 * 中断请求
+	 */
+	this.abort = function(self) {
+		self._xhr.abort();
+	};
+
+	/**
+	 * getResponseHeader
+	 */
 	this.getResponseHeader = function(self, key) {
 		return self._xhr.getResponseHeader(key);
 	};
 
 	/**
-	* setHeader
-	*/
+	 * setHeader
+	 */
 	this.setHeader = function(self, name, value) {
 		self.headers[name] = value;
 	};

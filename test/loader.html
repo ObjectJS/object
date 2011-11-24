@@ -1,22 +1,29 @@
 <html>
 <head>
+<meta charset="utf-8" />
 <script type="text/javascript" src="../src/object.js"></script>
+<!--<script type="text/javascript" src="http://xnimg.cn/n/core/base-all.js"></script>-->
 <script>
-	object.add('x.a', function(exports) {
-		exports.aa = 1;
+
+	object.add('test2.c', function() {});
+
+	object.add('test2', './c', function(exports, c) {
 	});
-	object.add('x.b', 'x.a', function(exports, x) {
-		exports.bb = 1;
-		return {
-			bb: 2
-		}
+
+	object.add('test.a.b.c', function(exports) {
+		this.name = 'test.a.b.c';
+		console.log(this.__name__);
 	});
-	object.add('x.c', function(exports) {
-		return function() {
-		}
+    
+	object.add('test.a', './b.c, sys', function(exports, b, sys) {
+		this.name = 'test.a';
+		console.log(this.__name__, b);
 	});
-	object.add('x.d', function(exports) {
-		return "test"
+
+	object.add('test', './a, test2, test2, test2, test2, sys', function(exports, a, test2, sys) {
+		this.name = 'test';
+		console.log(this.__name__, a);
+		console.dir(sys.modules);
 	});
 
 	/*

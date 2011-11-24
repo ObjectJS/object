@@ -1,5 +1,6 @@
 $(document).ready(function() {
+	var path = $LAB.needPath ? 'modules/ua/os/' : '';
 	$LAB
-	   .script("../../../../../src/ua/os.js").wait()
-	   .script("os-test.js");
+	   .script(path + "../../../../../src/ua/os.js").wait()
+	   .script(path + "os-test.js");
 });
