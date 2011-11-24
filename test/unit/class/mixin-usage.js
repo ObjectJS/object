@@ -146,8 +146,8 @@ test('mixin exists module', function() {
 		});
 
 		var a = new A();
-		ok(a._eventListeners != null, '_eventLiseners is not null after mixin events.Events');
-		equal(Object.keys(a._eventListeners).length, 0, 'nothing in a._eventListeners');
+		ok(a.__eventListeners != null, '__eventLiseners is not null after mixin events.Events');
+		equal(Object.keys(a.__eventListeners).length, 0, 'nothing in a.__eventListeners');
 		ok(a.addEvent != null, 'addEvent is not null after mixin events.Events');
 		ok(a.removeEvent != null, 'removeEvent is not null after mixin events.Events');
 		ok(a.fireEvent != null, 'fireEvent is not null after mixin events.Events');

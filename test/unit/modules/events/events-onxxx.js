@@ -1,9 +1,14 @@
 module('events-onxxx');
 
-object.use('events, dom', function(exports, events, dom) {
+object.use('events, dom, ua', function(exports, events, dom, ua) {
 	window.events = events;
 	window.dom = dom;
+	window.ua = ua;
 });
+
+var isChrome = ua.ua.chrome;
+var isFF = ua.ua.firefox;
+var isIE = ua.ua.ie;
 
 test('events.onxxx - does not have onxxx, execute as ordered', function(){
 	Class.inject(events.Events, obj = {});
@@ -119,7 +124,7 @@ test('has onxxx, 3 handlers, onxxx is last', function(){
 });
 
 test('has onxxx(throw error), 3 handlers, onxxx is first', function(){
-	expect(5);
+	expect(isChrome ? 5 : 4);
 	Class.inject(events.Events, obj = {});
 	var counter = 0;
 	obj.onxxx = function() {
@@ -145,7 +150,7 @@ test('has onxxx(throw error), 3 handlers, onxxx is first', function(){
 });
 
 test('has onxxx(throw error), 3 handlers, onxxx is center', function(){
-	expect(5);
+	expect(isChrome ? 5 : 4);
 	Class.inject(events.Events, obj = {});
 	var counter = 0;
 	obj.addEvent('xxx', function() {
@@ -171,7 +176,7 @@ test('has onxxx(throw error), 3 handlers, onxxx is center', function(){
 });
 
 test('has onxxx(throw error), 3 handlers, onxxx is last', function(){
-	expect(5);
+	expect(isChrome ? 5 : 4);
 	Class.inject(events.Events, obj = {});
 	var counter = 0;
 	obj.addEvent('xxx', function() {
@@ -197,7 +202,7 @@ test('has onxxx(throw error), 3 handlers, onxxx is last', function(){
 });
 
 test('has onxxx, 3 handlers(first addEvent throw error), onxxx is first', function(){
-	expect(5);
+	expect(isChrome ? 5 : 4);
 	Class.inject(events.Events, obj = {});
 	var counter = 0;
 	obj.onxxx = function() {
@@ -223,7 +228,7 @@ test('has onxxx, 3 handlers(first addEvent throw error), onxxx is first', functi
 });
 
 test('has onxxx, 3 handlers(first addEvent throw error), onxxx is center', function(){
-	expect(5);
+	expect(isChrome ? 5 : 4);
 	Class.inject(events.Events, obj = {});
 	var counter = 0;
 	obj.addEvent('xxx', function() {
@@ -249,7 +254,7 @@ test('has onxxx, 3 handlers(first addEvent throw error), onxxx is center', funct
 });
 
 test('has onxxx, 3 handlers(first addEvent throw error), onxxx is last', function(){
-	expect(5);
+	expect(isChrome ? 5 : 4);
 	Class.inject(events.Events, obj = {});
 	var counter = 0;
 	obj.addEvent('xxx', function() {
@@ -275,7 +280,7 @@ test('has onxxx, 3 handlers(first addEvent throw error), onxxx is last', functio
 });
 
 test('two onxxx, 5 handlers, 1, onxxx, 2, onxxx, 3', function() {
-	expect(6);
+	expect(isChrome ? 6 : 5);
 	Class.inject(events.Events, obj = {});
 	var counter = 0;
 	obj.addEvent('xxx', function() {
@@ -309,7 +314,7 @@ test('two onxxx, 5 handlers, 1, onxxx, 2, onxxx, 3', function() {
 });
 
 test('two onxxx(standard event), 5 handlers, 1, onxxx, 2, onxxx, 3', function() {
-	expect(6);
+	expect(isChrome ? 6 : 5);
 	Class.inject(events.Events, obj = {});
 	var counter = 0;
 	obj.addEvent('click', function() {
@@ -348,7 +353,8 @@ test('two onxxx(standard event in DOM Node), 5 handlers, 1, onxxx, 2, onxxx, 3',
 	Class.inject(events.Events, obj);
 	var counter = 0;
 	obj.addEvent('click', function() {
-		equal(counter, 0, 'first addEvent should be the first, counter = 0');
+		var expect = isIE ? 1 : (isChrome ? 0 : 0);
+		equal(counter, expect, 'first addEvent, order : ' + expect);
 		counter ++;
 	}, false);
 	obj.onclick = function() {
@@ -356,18 +362,20 @@ test('two onxxx(standard event in DOM Node), 5 handlers, 1, onxxx, 2, onxxx, 3',
 		counter ++;	//should not add
 	}
 	obj.addEvent('click', function() {
-		equal(counter, 1, 'second addEvent should be the second, counter = 1');
+		var expect = isIE ? 2 : (isChrome ? 1 : 2);
+		equal(counter, expect, 'second addEvent, order : ' + expect);
 		counter ++;
 	}, false);
 	obj.onclick = function() {
-		equal(counter, 2, 'onxxx should be the third, counter = 2');
+		var expect = isIE ? 0 : (isChrome ? 2 : 1);
+		equal(counter, expect, 'onxxx , order :  ' + expect);
 		counter ++;
 	}
 	obj.addEvent('click', function() {
-		equal(counter, 3, 'third addEvent should be the fourth, counter = 3');
+		var expect = isIE ? 3 : (isChrome ? 3 : 3);
+		equal(counter, expect, 'third addEvent, order : ' + expect);
 		counter ++;
 	}, false);
-	//why obj.click can invoke addEvent(click) handlers???
 	obj.fireEvent('click');
 	equal(counter, 4, 'two onclick and three addEvent(click) are executed by fireEvent(click)');
 });
@@ -377,7 +385,8 @@ test('two onxxx(standard event in DOM Node - for IE wrap), 5 handlers, 1, onxxx,
 	obj = dom.id('qunit-header');
 	var counter = 0;
 	obj.addEvent('dblclick', function() {
-		equal(counter, 0, 'first addEvent should be the first, counter = 0');
+		var expect = isIE ? 1 : (isChrome ? 0 : 0);
+		equal(counter, expect, 'first addEvent, order : ' + expect);
 		counter ++;
 	}, false);
 	obj.ondblclick = function() {
@@ -385,19 +394,21 @@ test('two onxxx(standard event in DOM Node - for IE wrap), 5 handlers, 1, onxxx,
 		counter ++;	//should not add
 	}
 	obj.addEvent('dblclick', function(e) {
+		var expect = isIE ? 2 : (isChrome ? 1 : 2);
 		equal(e.a, 1, 'e.a is ok with IE nativeFireEvent');
-		equal(counter, 1, 'second addEvent should be the second, counter = 1');
+		equal(counter, expect, 'second addEvent, order : ' + expect);
 		counter ++;
 	}, false);
 	obj.ondblclick = function() {
-		equal(counter, 2, 'onxxx should be the third, counter = 2');
+		var expect = isIE ? 0 : (isChrome ? 2 : 1);
+		equal(counter, expect, 'onxxx , order :  ' + expect);
 		counter ++;
 	}
 	obj.addEvent('dblclick', function() {
-		equal(counter, 3, 'third addEvent should be the fourth, counter = 3');
+		var expect = isIE ? 3 : (isChrome ? 3 : 3);
+		equal(counter, expect, 'third addEvent, order : ' + expect);
 		counter ++;
 	}, false);
-	//why obj.click can invoke addEvent(click) handlers???
 	obj.fireEvent('dblclick', {a:1});
 	equal(counter, 4, 'two onclick and three addEvent(click) are executed by fireEvent(click)');
 });

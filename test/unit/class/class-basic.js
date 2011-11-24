@@ -4,7 +4,7 @@ test('modify global variable in constructor', function() {
 	var A = new Class(function() {
 		counter = counter + 1;
 	});
-	ok(counter == 0, 'just define a new class A, global variable(counter) should not be modified');
+	ok(counter == 1, 'just define a new class A, global variable(counter) should not be modified');
 });
 
 test('modify global variable in initialize method', function() {
@@ -80,7 +80,7 @@ test('set special property : __mixins__', function() {
 	var a = new A();
 
 	A.set('__mixins__', 'mixin');
-	equal(A.get('__mixins__'), 'mixin', '__mixins__ can be set as string???');
+	notEqual(A.get('__mixins__'), undefined, '__mixins__ can not be set as string');
 
 	try {
 		var b = new A();
@@ -101,7 +101,7 @@ test('set special property : __metaclass__', function() {
 	});
 
 	A.set('__metaclass__', 'string');
-	equal(A.get('__metaclass__'), 'string', '__metaclass__ is changed by set');
+	equal(A.get('__metaclass__'), undefined, '__metaclass__ is not changed if set to string');
 
 	try {
 		var B = new Class(A, function() {});
@@ -120,7 +120,7 @@ test('set special property : __new__', function() {
 	});
 	A.set('__new__', 'string');
 
-	equal(A.get('__new__'), 'string', '__new__ is changed by set');
+	notEqual(A.get('__new__'), undefined, '__new__ is not changed if set to string');
 
 	try {
 		var B = new Class(function() {
@@ -139,6 +139,7 @@ test('set special property : __this__', function() {
 		});
 	});
 
+	A._name = 1;
 	var B = new Class(A, function() {
 		this.a = classmethod(function(cls) {
 			return this.parent();
@@ -146,11 +147,12 @@ test('set special property : __this__', function() {
 	});
 
 	B.set('__this__', 'string');
-	equal(B.get('__this__'), 'string', '__this__ is changed by set');
+	notEqual(B.get('__this__'), 'string', '__this__ is not changed if set to string');
 
 	B._name = 1;
 
 	try {
+		equal(A.a(), 1, 'ok');
 		equal(B.a(), 1, 'ok');
 	} catch (e) {
 		ok(false, 'B.a() raises error after set __this__ to string : ' + e);
@@ -169,7 +171,7 @@ test('set special property : __base__', function() {
 		}
 	});
 	B.set('__base__', 'string');
-	equal(B.get('__base__'), 'string', '__base__ is changed by set');
+	notEqual(B.get('__base__'), 'string', '__base__ is not changed if set to string');
 
 	var b = new B();
 	try {
@@ -190,7 +192,7 @@ test('set special property : @mixins', function() {
 	});
 
 	A.set('@mixins', 'mixin');
-	equal(A.get('@mixins'), 'mixin', 'set @mixins, but only can get by __mixins__, not convenient');
+	notEqual(A.get('@mixins'), 'mixin', 'set @mixins, but only can get by __mixins__, not convenient');
 	
 	try {
 		var b = new A();
@@ -333,11 +335,11 @@ test('set after class instance is created', function() {
 	});
 	var a = new A();
 	equal(a.get('e'), 1, 'e is an property, get(e) ok');
-	A.set('e', 1);
+	A.set('e', 2);
 	try {
 		equal(a.get('e'), 1, 'e is an property, get(e) ok');
 	} catch (e) {
-		ok(false, 'A.set changed the behavior of a.get(e), even after instance is created');
+		ok(false, 'A.set changed the behavior of a.get(e), even after instance is created : ' + e);
 	}
 });
 
