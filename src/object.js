@@ -821,11 +821,16 @@ Module.prototype.toString = function() {
 };
 
 function LoaderRuntime(root) {
+
 	/**
 	 * 此次use运行过程中用到的所有module
 	 */
 	this.modules = {};
 
+	/**
+	 * 当子模块依赖父模块时，并无法立刻获取到父模块的引用，而是一个空的模块
+	 * 此变量用于存储这种情况时的空模块
+	 */
 	this.emptyModules = {};
 
 	/**
@@ -833,6 +838,11 @@ function LoaderRuntime(root) {
 	 */
 	this.stack = [];
 
+	/**
+	 * 当使用相对依赖时，子模块被处理完毕时，其父模块可能还未处理完毕
+	 * 导致无法立刻将此子模块的引用赋予其父模块
+	 * 此变量用于存储父模块与其子模块的映射关系，在父模块初始化完毕后再将自模块赋予自己。
+	 */
 	this.members = {};
 	
 	/**
@@ -841,13 +851,41 @@ function LoaderRuntime(root) {
 	this.root = root;
 }
 
-LoaderRuntime.prototype.addEmptyModule = function(name, module, ref) {
-	if (!this.emptyModules[name]) this.emptyModules[name] = {
-		module: module,
+/**
+ * 加入一个module，
+ */
+LoaderRuntime.prototype.addModule = function(name) {
+	var emptyModule = this.emptyModules[name];
+	var exports = emptyModule? emptyModule.exports : new Module(name);
+	this.modules[name] = exports;
+	return exports;
+};
+
+/**
+ * 加入一个占位的空module，保证子模块可获取到父模块的引用
+ */
+LoaderRuntime.prototype.addEmptyModule = function(name, ref) {
+	var emptyModules = this.emptyModules;
+	var exports = new Module(name);
+	// refs保存所有依赖了此父模块的子模块的信息。
+	if (!emptyModules[name]) emptyModules[name] = {
+		exports: exports,
 		refs : []
 	};
+	emptyModules[name].refs.push(ref);
+	return exports;
+};
+
+/**
+ * 当子模块调用父模块时，检测是否可以正确的获取到其引用。
+ */
+LoaderRuntime.prototype.checkRef = function(name) {
 	var emptyModule = this.emptyModules[name];
-	emptyModule.refs.push(ref);
+	if (emptyModule) {
+		emptyModule.refs.forEach(function(ref) {
+			if (console) console.warn(ref + '无法正确获得' + name + '模块的引用。因为该模块是通过return返回模块实例的。');
+		});
+	}
 };
 
 /**
@@ -897,21 +935,11 @@ LoaderRuntime.prototype.setMemberTo = function(host, member, value) {
 	}
 };
 
-this.LoaderRuntime = LoaderRuntime;
-
 /**
  * object的包管理器
  * 这个class依赖于object._lib ，且会修改它
  */
 this.Loader = new Class(function() {
-
-	// 模块
-	function Module(name) {
-		this.__name__ = name;
-	}
-	Module.prototype.toString = function() {
-		return '<module \'' + this.__name__ + '\'>';
-	};
 
 	this.scripts = document.getElementsByTagName('script');
 
@@ -957,8 +985,6 @@ this.Loader = new Class(function() {
 	this.__executeModule = function(self, module, name, runtime, callback) {
 
 		var args = [];
-		var modules = runtime.modules;
-		var emptyModules = runtime.emptyModules;
 		var currentUse = -1; 
 
 		/**
@@ -971,6 +997,8 @@ this.Loader = new Class(function() {
 			var useName;
 
 			if (pExports) {
+				// 模块获取完毕，去除循环依赖检测
+				runtime.stack.pop();
 				// 非重复引用
 				if (args.indexOf(pExports) == -1) args.push(pExports);
 			}
@@ -980,18 +1008,19 @@ this.Loader = new Class(function() {
 			// 模块获取完毕，执行fn，将exports通过callback传回去。
 			// 在空module或没有uses或已经use到最后一个
 			if (!module.fn || module.uses.length === 0 || currentUse == module.uses.length) {
-				// 有可能由于循环依赖已经生成了这个module的实例，只是还没有附上成员，保存在emptyModules中。
 				doneUse();
+
 			} else {
 				useName = module.uses[currentUse];
 
-				// 正在获取的这个module在stack中之前已经获取过了，形成了循环依赖。
-				if (runtime.stack.indexOf(useName) != -1) {
-					runtime.addEmptyModule(useName, new Module(useName), name);
-					nextUse(emptyModules[useName].module);
+				// 记录开始获取当前模块
+				runtime.stack.push(useName);
+
+				// 刚刚push过，应该在最后一个，如果不在，说明循环依赖了
+				if (runtime.stack.indexOf(useName) != runtime.stack.length - 1) {
+					nextUse(runtime.addEmptyModule(useName, name));
+
 				} else {
-					// 记录开始获取当前模块
-					runtime.stack.push(useName);
 					self.__executeParts(useName, module.name, runtime, nextUse);
 				}
 			}
@@ -1002,14 +1031,14 @@ this.Loader = new Class(function() {
 		 * 已执行完毕最后一个uses
 		 */
 		function doneUse() {
-			var exports, returnExports;
 
-			exports = emptyModules[name]? emptyModules[name].module : new Module(name);
+			var exports = runtime.addModule(name);
+			var returnExports;
 
 			if (!name) name = module.name; //  没有指定name，则使用全名
 
 			// sys.modules
-			if (exports.__name__ === 'sys') exports.modules = modules;
+			if (exports.__name__ === 'sys') exports.modules = runtime.modules;
 
 			// 最后传进context的参数
 			args.unshift(exports);
@@ -1018,16 +1047,14 @@ this.Loader = new Class(function() {
 			if (module.fn) {
 				returnExports = module.fn.apply(exports, args);
 				if (returnExports) {
+					// 检测是否有子模块引用了本模块
+					runtime.checkRef(name);
+
 					if (typeof returnExports === 'object' || typeof returnExports === 'function') {
 						returnExports.toString = Module.prototype.toString;
 						returnExports.__name__ = exports.__name__;
 					}
 					exports = returnExports;
-					if (emptyModules[name]) {
-						emptyModules[name].refs.forEach(function(ref) {
-							console.warn(ref + '无法正确获得' + name + '模块的引用。因为该模块是通过return返回模块实例的。');
-						});
-					}
 				}
 			}
 			if (callback) callback(exports, name);
@@ -1086,7 +1113,7 @@ this.Loader = new Class(function() {
 			currentPart++;
 
 			if (currentPart == parts.length) {
-				donePart(modules[moduleName]);
+				callback(modules[moduleName]);
 
 			} else {
 				part = parts[currentPart];
@@ -1108,18 +1135,11 @@ this.Loader = new Class(function() {
 			};
 		}
 
-		/**
-		 * 当前模块所有部分都被处理完毕
-		 */
-		function donePart(exports) {
-			// 模块获取完毕，去除循环依赖
-			runtime.stack.pop();
-			if (callback) callback(exports);
-		}
-
 		if (useName.indexOf('./') == 0) {
 			parts = useName.slice(2).split('.');
+			// 去除root
 			context = runtime.getName(ownerName);
+			// 说明确实去除了root，是一个相对引用，在获取fullname时需要加上root
 			isRelative = (context != ownerName);
 			moduleName = context + '.' + parts[0];
 		} else {
