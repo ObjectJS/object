@@ -311,6 +311,11 @@ this.add = function() {
 	object._loader.add.apply(object._loader, arguments);
 };
 
+this.define = function() {
+	if (!object._loader) object._loader = new Loader();
+	object._loader.define.apply(object._loader, arguments);
+};
+
 // 找不到模块Error
 this.NoModuleError = function(name) {
 	this.message = 'no module named ' + name;
@@ -812,11 +817,17 @@ StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "inde
 
 (function() {
 
+function Module(id, depts, constructor) {
+	this.id = id;
+	this.dependencies = depts;
+	this.constructor = constructor;
+}
+
 // 模块
-function Module(name) {
+function Exports(name) {
 	this.__name__ = name;
 }
-Module.prototype.toString = function() {
+Exports.prototype.toString = function() {
 	return '<module \'' + this.__name__ + '\'>';
 };
 
@@ -852,11 +863,11 @@ function LoaderRuntime(root) {
 }
 
 /**
- * 加入一个module，
+ * 加入一个exports
  */
-LoaderRuntime.prototype.addModule = function(name) {
+LoaderRuntime.prototype.addExports = function(name) {
 	var emptyModule = this.emptyModules[name];
-	var exports = emptyModule? emptyModule.exports : new Module(name);
+	var exports = emptyModule? emptyModule.exports : new Exports(name);
 	this.modules[name] = exports;
 	return exports;
 };
@@ -864,9 +875,9 @@ LoaderRuntime.prototype.addModule = function(name) {
 /**
  * 加入一个占位的空module，保证子模块可获取到父模块的引用
  */
-LoaderRuntime.prototype.addEmptyModule = function(name, ref) {
+LoaderRuntime.prototype.addEmptyExports = function(name, ref) {
 	var emptyModules = this.emptyModules;
-	var exports = new Module(name);
+	var exports = new Exports(name);
 	// refs保存所有依赖了此父模块的子模块的信息。
 	if (!emptyModules[name]) emptyModules[name] = {
 		exports: exports,
@@ -891,12 +902,12 @@ LoaderRuntime.prototype.checkRef = function(name) {
 /**
  * 去掉root前缀的模块名
  */
-LoaderRuntime.prototype.getName = function(name) {
+LoaderRuntime.prototype.getId = function(id) {
 	var root = this.root;
-	if (name == root || name.indexOf(root + '.') == 0) {
-		name = name.slice(root.length + 1);
+	if (id == root || id.indexOf(root + '.') == 0) {
+		id = id.slice(root.length + 1);
 	}
-	return name;
+	return id;
 };
 
 /**
@@ -914,7 +925,7 @@ LoaderRuntime.prototype.setMemberTo = function(host, member, value) {
 		else {
 			if (!this.members[host]) this.members[host] = [];
 			this.members[host].push({
-				name: member,
+				id: member,
 				value: value
 			});
 		}
@@ -924,13 +935,13 @@ LoaderRuntime.prototype.setMemberTo = function(host, member, value) {
 	 * 将记录的成员添加到自己
 	 */
 	// 全名
-	var name = (host? host + '.' : '') + member;
+	var id = (host? host + '.' : '') + member;
 
 	// 已获取到了此host的引用，将其子模块都注册上去。
-	var members = this.members[name];
+	var members = this.members[id];
 	if (members) {
 		members.forEach(function(member) {
-			this.modules[name][member.name] = member.value;
+			this.modules[id][member.id] = member.value;
 		}, this);
 	}
 };
@@ -956,21 +967,19 @@ this.Loader = new Class(function() {
 	 * 建立前缀模块
 	 * 比如 a.b.c.d ，会建立 a/a.b/a.b.c 三个空模块，最后一个模块为目标模块，不为空，内容为context
 	 */
-	this.__makePrefixModule = function(self, name) {
-		if (!name || typeof name != 'string') {
+	this.__makePrefixModule = function(self, id) {
+		if (!id || typeof id != 'string') {
 			return;
 		}
-		name = name.replace(/^\.*|\.*$/g, '');
-		if (name.indexOf('sys.') == 0) {
+		id = id.replace(/^\.*|\.*$/g, '');
+		if (id.indexOf('sys.') == 0) {
 			throw new Error('should not add sub module for sys');
 		}
-		var parts = name.split('.');
+		var parts = id.split('.');
 		for (var i = 0, prefix, l = parts.length - 1; i < l; i++) {
 			prefix = parts.slice(0, i + 1).join('.');
 			// 说明这个module是空的
-			if (self.lib[prefix] == undefined) self.lib[prefix] = {
-				name: prefix
-			};
+			if (self.lib[prefix] == undefined) self.lib[prefix] = new Module(prefix);
 		}
 	};
 
@@ -988,13 +997,13 @@ this.Loader = new Class(function() {
 		var currentUse = -1; 
 
 		/**
-		 * 顺序执行module中的uses
+		 * 顺序执行module中的dependencies
 		 *
 		 * @param pExports 上一个nextUse返回的模块实例
 		 */
 		function nextUse(pExports) {
 
-			var useName;
+			var deptId;
 
 			if (pExports) {
 				// 模块获取完毕，去除循环依赖检测
@@ -1005,37 +1014,37 @@ this.Loader = new Class(function() {
 
 			currentUse++;
 
-			// 模块获取完毕，执行fn，将exports通过callback传回去。
-			// 在空module或没有uses或已经use到最后一个
-			if (!module.fn || module.uses.length === 0 || currentUse == module.uses.length) {
+			// 模块获取完毕，执行constructor，将exports通过callback传回去。
+			// 在空module或没有dependencies或已经use到最后一个
+			if (!module.constructor || module.dependencies.length === 0 || currentUse == module.dependencies.length) {
 				doneUse();
 
 			} else {
-				useName = module.uses[currentUse];
+				deptId = module.dependencies[currentUse];
 
 				// 记录开始获取当前模块
-				runtime.stack.push(useName);
+				runtime.stack.push(deptId);
 
 				// 刚刚push过，应该在最后一个，如果不在，说明循环依赖了
-				if (runtime.stack.indexOf(useName) != runtime.stack.length - 1) {
-					nextUse(runtime.addEmptyModule(useName, name));
+				if (runtime.stack.indexOf(deptId) != runtime.stack.length - 1) {
+					nextUse(runtime.addEmptyExports(deptId, name));
 
 				} else {
-					self.__executeParts(useName, module.name, runtime, nextUse);
+					self.__executeParts(deptId, module.id, runtime, nextUse);
 				}
 			}
 
 		}
 
 		/**
-		 * 已执行完毕最后一个uses
+		 * 已执行完毕最后一个dependencies
 		 */
 		function doneUse() {
 
-			var exports = runtime.addModule(name);
+			var exports = runtime.addExports(name);
 			var returnExports;
 
-			if (!name) name = module.name; //  没有指定name，则使用全名
+			if (!name) name = module.id; //  没有指定name，则使用全名
 
 			// sys.modules
 			if (exports.__name__ === 'sys') exports.modules = runtime.modules;
@@ -1044,14 +1053,14 @@ this.Loader = new Class(function() {
 			args.unshift(exports);
 
 			// 空module不需要
-			if (module.fn) {
-				returnExports = module.fn.apply(exports, args);
+			if (module.constructor) {
+				returnExports = module.constructor.apply(exports, args);
 				if (returnExports) {
 					// 检测是否有子模块引用了本模块
 					runtime.checkRef(name);
 
 					if (typeof returnExports === 'object' || typeof returnExports === 'function') {
-						returnExports.toString = Module.prototype.toString;
+						returnExports.toString = Exports.prototype.toString;
 						returnExports.__name__ = exports.__name__;
 					}
 					exports = returnExports;
@@ -1061,12 +1070,12 @@ this.Loader = new Class(function() {
 		}
 
 		// file
-		if (!module.fn && module.file) {
+		if (!module.constructor && module.file) {
 			// TODO 加入预处理过程，跑出所有需要加载的文件并行加载，在此执行useScript而不是loadScript
 			self.loadScript(module.file, function() {
 				// 加载进来的脚本没有替换掉相应的模块，文件有问题。
 				if (module.file) {
-					throw new Error(module.file + ' do not add ' + module.name);
+					throw new Error(module.file + ' do not add ' + module.id);
 				}
 				nextUse();
 			}, true);
@@ -1077,74 +1086,74 @@ this.Loader = new Class(function() {
 
 	/**
 	 * 处理当前模块的每个部分
-	 * @param useName 当前部分的名字
-	 * @param ownerName 依赖此use的module的名字，用于生成作用域信息
+	 * @param deptId 当前部分的名字
+	 * @param ownerId 依赖此dept的module的名字，用于生成作用域信息
 	 * @param {LoaderRuntime} runtime
 	 * @param callback 异步方法，模块获取完毕后通过callback的唯一参数传回
 	 */
-	this.__executeParts = function(self, useName, ownerName, runtime, callback) {
+	this.__executeParts = function(self, deptId, ownerId, runtime, callback) {
 
 		var modules = runtime.modules;
-		var parts; // useName所有部分的数组
-		var context = null; // 当前use是被某个模块通过相对路径调用的
-		var moduleName = ''; // 当前模块在运行时保存在modules中的名字，为context+parts的第一部分
-		var isRelative = false; // 当前use是否属于execute的模块的子模块，如果是，生成的名称应不包含其前缀
-		var pname, part, partName, currentPart = -1;
+		var parts; // deptId所有部分的数组
+		var context = null; // 当前dept是被某个模块通过相对路径调用的
+		var moduleId = ''; // 当前模块在运行时保存在modules中的名字，为context+parts的第一部分
+		var isRelative = false; // 当前dept是否属于execute的模块的子模块，如果是，生成的名称应不包含其前缀
+		var pId, part, partId, currentPart = -1;
 
 		/**
 		 * 依次获取当前模块的每个部分
 		 * 如a.b.c，依次获取a、a.b、a.b.c
 		 *
 		 * @param pExprorts 上一部分的模块实例，如果是初次调用，为空
-		 * @param name 截止到当前部分的包含context前缀的名字
+		 * @param id 截止到当前部分的包含context前缀的名字
 		 */
-		function nextPart(pExports, name) {
+		function nextPart(pExports, id) {
 
-			var fullname, useModule;
+			var fullId, deptModule;
 
 			if (pExports) {
-				modules[name] = pExports;
+				modules[id] = pExports;
 				// 生成对象链
-				runtime.setMemberTo(pname, part, pExports);
+				runtime.setMemberTo(pId, part, pExports);
 			}
 
-			pname = name;
+			pId = id;
 
 			currentPart++;
 
 			if (currentPart == parts.length) {
-				callback(modules[moduleName]);
+				callback(modules[moduleId]);
 
 			} else {
 				part = parts[currentPart];
-				partName = (pname? pname + '.' : '') + part;
-				fullname = isRelative? runtime.root + '.' + partName : partName;
+				partId = (pId? pId + '.' : '') + part;
+				fullId = isRelative? runtime.root + '.' + partId : partId;
 
 				// 使用缓存中的
-				if (modules[partName]) {
-					nextPart(modules[partName], partName);
+				if (modules[partId]) {
+					nextPart(modules[partId], partId);
 				}
 				// lib 中有
-				else if (self.lib[fullname]) {
-					self.__executeModule(self.lib[fullname], partName, runtime, nextPart);
+				else if (self.lib[fullId]) {
+					self.__executeModule(self.lib[fullId], partId, runtime, nextPart);
 				}
 				// lib中没有
 				else {
-					throw new object.NoModuleError(fullname);
+					throw new object.NoModuleError(fullId);
 				}
 			};
 		}
 
-		if (useName.indexOf('./') == 0) {
-			parts = useName.slice(2).split('.');
+		if (deptId.indexOf('./') == 0) {
+			parts = deptId.slice(2).split('.');
 			// 去除root
-			context = runtime.getName(ownerName);
-			// 说明确实去除了root，是一个相对引用，在获取fullname时需要加上root
-			isRelative = (context != ownerName);
-			moduleName = context + '.' + parts[0];
+			context = runtime.getId(ownerId);
+			// 说明确实去除了root，是一个相对引用，在获取fullId时需要加上root
+			isRelative = (context != ownerId);
+			moduleId = context + '.' + parts[0];
 		} else {
-			parts = useName.split('.');
-			moduleName = parts[0];
+			parts = deptId.split('.');
+			moduleId = parts[0];
 		}
 
 		nextPart(null, context);
@@ -1156,14 +1165,15 @@ this.Loader = new Class(function() {
 	this.loadLib = function(self) {
 
 		var scripts = self.scripts;
+		var module;
 
-		for (var i = 0, script, module, src, l = scripts.length; i < l; i++) {
+		for (var i = 0, script, id, src, l = scripts.length; i < l; i++) {
 			script = scripts[i];
-			module = script.getAttribute('data-module');
-			if (!module) continue;
+			id = script.getAttribute('data-module');
+			if (!id) continue;
 			//self.lib中的内容可能是makePrefixModule构造的，只有name
 			//在模块a.b先声明，模块a后声明的情况下，无法获取模块a的内容
-			if (self.lib[module] && (self.lib[module].fn || self.lib[module].file)) {
+			if (self.lib[id] && (self.lib[id].constructor || self.lib[id].file)) {
 				continue;
 			}
 			src = script.getAttribute('data-src');
@@ -1171,30 +1181,10 @@ this.Loader = new Class(function() {
 				continue;
 			}
 			// 建立前缀module
-			self.__makePrefixModule(module);
-			self.lib[module] = {file: src, name: module};
-		}
-	};
-
-	/**
-	 * 建立前缀模块
-	 * 比如 a.b.c.d ，会建立 a/a.b/a.b.c 三个空模块，最后一个模块为目标模块，不为空，内容为context
-	 */
-	this.__makePrefixModule = function(self, name) {
-		if (!name || typeof name != 'string') {
-			return;
-		}
-		name = name.replace(/^\.*|\.*$/g, '');
-		if (name.indexOf('sys.') == 0) {
-			throw new Error('should not add sub module for sys');
-		}
-		var parts = name.split('.');
-		for (var i = 0, prefix, l = parts.length - 1; i < l; i++) {
-			prefix = parts.slice(0, i + 1).join('.');
-			// 说明这个module是空的
-			if (self.lib[prefix] == undefined) self.lib[prefix] = {
-				name: prefix
-			};
+			self.__makePrefixModule(id);
+			module = new Module(id);
+			module.file = src;
+			self.lib[id] = module;
 		}
 	};
 
@@ -1271,82 +1261,78 @@ this.Loader = new Class(function() {
 	});
 
 	/**
-	 * 处理传入的uses参数
+	 * 处理传入的depts参数
 	 * 在parseUses阶段不需要根据名称判断去重（比如自己use自己），因为并不能避免所有冲突，还有循环引用的问题（比如 core use dom, dom use core）
 	 *
-	 * @param uses 输入
+	 * @param depts 输入
 	 * @param ignore 跳过ignore模块，用来避免自己调用自己
 	 */
-	this.parseUses = function(self, uses, ignore) {
-		if (!uses || typeof uses != 'string') {
-			return uses;
+	this.parseUses = function(self, depts, ignore) {
+		if (!depts || typeof depts != 'string') {
+			return depts;
 		}
-		if (typeof uses == 'string') {
-			uses = uses.replace(/^,*|,*$/g, '');
-			uses = uses.split(/\s*,\s*/ig);
+		if (typeof depts == 'string') {
+			depts = depts.replace(/^,*|,*$/g, '');
+			depts = depts.split(/\s*,\s*/ig);
 		}
 
-		// 过滤自己调用自己
-		uses = uses.filter(function(use) {
-			return use !== ignore;
-		});
-
-		return uses;
+		return depts;
 	};
 
 	/**
-	 * 传入context，context的参数会包含use进来的module
-	 * 创造一个context，内部通过 this.xxx 设置的成员都会在这个 context 下。
-	 *
-	 * @param name 名称
-	 * @param uses 用逗号分隔开的模块名称列表
-	 * @param context 这个function会在调用module时调用，并将module通过参数传入context，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
+	 * 传入constructor，constructor的参数会包含use进来的module
+	 * 创造一个constructor，内部通过 this.xxx 设置的成员都会在这个 constructor 下。
+	 * @param id
+	 * @param depts 用逗号分隔开的模块名称列表
+	 * @param constructor 这个function会在调用module时调用，并将module通过参数传入constructor，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
 	 */
-	this.add = function(self, name, uses, context) {
+	this.add = function(self, id, depts, constructor) {
 		if (arguments.length < 3) {
 			return null;
 		}
 		// 不允许重复添加。
-		if (self.lib[name] && self.lib[name].fn) return null;
+		if (self.lib[id] && self.lib[id].constructor) return null;
 
-		// uses 参数是可选的
-		if (typeof uses == 'function') {
-			context = uses;
-			uses = [];
+		// depts 参数是可选的
+		if (typeof depts == 'function') {
+			constructor = depts;
+			depts = [];
 		} else {
-			uses = self.parseUses(uses, name);
+			depts = self.parseUses(depts, id);
 		}
 
-		if (!context || typeof context != 'function') {
+		if (!constructor || typeof constructor != 'function') {
 			return null;
 		}
-		if (context && self.lib[name] && self.lib[name].file) {
-			delete self.lib[name].file;
-			self.lib[name].fn = context;
-			self.lib[name].uses = uses;
+		if (constructor && self.lib[id] && self.lib[id].file) {
+			delete self.lib[id].file;
+			self.lib[id].constructor = constructor;
+			self.lib[id].dependencies = depts;
 			return null;
 		}
 		// 建立前缀占位模块
-		self.__makePrefixModule(name);
+		self.__makePrefixModule(id);
 
 		// lib中存储的是function
 		// 注意别给覆盖了，有可能是有 file 成员的
-		var module = self.lib[name];
-		if (!module) module = self.lib[name] = {};
-		module.name = name;
-		module.uses = uses;
-		module.fn = context;
+		var module = self.lib[id];
+		if (!module) module = self.lib[id] = new Module(id);
+		module.dependencies = depts;
+		module.constructor = constructor;
 
 		return module;
+	};
+
+	this.define = function(self, name, depts, context) {
 	};
 
 	/**
 	 * use
 	 *
-	 * @param uses 用逗号分隔开的模块名称列表
-	 * @param context uses加载后调用，将module通过参数传入context，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
+	 * @param depts 用逗号分隔开的模块名称列表
+	 * @param context depts加载后调用，将module通过参数传入context，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
 	 */
-	this.use = function(self, uses, context) {
+	this.use = function(self, depts, context) {
 		if (!context || typeof context != 'function') {
 			return;
 		}
@@ -1354,7 +1340,7 @@ this.Loader = new Class(function() {
 
 		var name = '__anonymous_' + self.anonymousModuleCount + '__';
 		self.anonymousModuleCount++;
-		var module = self.add(name, uses, context);
+		var module = self.add(name, depts, context);
 
 		// 不要用一个已经有内容、不可控的对象作为executeModule的exports。如window
 		self.__executeModule(module, '__main__', new LoaderRuntime(name), function(exports) {

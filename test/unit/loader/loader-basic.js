@@ -154,7 +154,7 @@ test('loadLib', function() {
 	loader.loadLib();
 	ok(Object.keys(loader.lib).length == 2, 'new script tag inserted, new module loaded');
 	ok(loader.lib['test_module'] != null, 'module test_module is added');
-	ok(loader.lib['test_module'].name == 'test_module', 'module test_module is added, name is ok');
+	ok(loader.lib['test_module'].id == 'test_module', 'module test_module is added, id is ok');
 	ok(loader.lib['test_module'].file == emptyJS, 'module test_module is added, file is ok');
 
 	var script = document.createElement('script');

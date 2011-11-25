@@ -26,7 +26,18 @@
 		return {fuck:1}
 	});
 
-	object.use('test', function() {
+	// object.use('test', function() {
+	// });
+
+	// object.define('test', './a, sys', function(require, exports, module) {
+	// 	var a = require('./a');
+	// 	var sys = require('sys');
+
+	// 	console.log(a)
+	// });
+
+	object.use('test', function(exports, test) {
+		// console.log(test);
 	});
 
 	/*
