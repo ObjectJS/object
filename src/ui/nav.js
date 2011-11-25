@@ -1,16 +1,8 @@
-/**
- * @namespace
- * @name ui.nav
- */
-object.add('ui.nav', 'ui, ui.decorators', /**@lends ui.nav*/ function(exports, ui) {
+object.add('ui.nav', 'ui, ui.decorators', function(exports, ui) {
 
 var fireevent = ui.decorators.fireevent;
 
-/**
- * @class
- * @name ui.nav.ForeNextControl
- */
-this.ForeNextControl = new Class(ui.Component, /**@lends ui.nav.ForeNextControl*/ function() {
+this.ForeNextControl = new Class(ui.Component, function() {
 
 	this.nextButton = ui.define('.nextbutton');
 	this.foreButton = ui.define('.forebutton');
