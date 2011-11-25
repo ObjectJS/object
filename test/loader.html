@@ -15,26 +15,26 @@
 		console.log(this.__name__);
 	});
     
-	object.add('test.a', 'test', function(exports, test) {
+	object.add('test.a', 'test, ./b', function(exports, test) {
 		setTimeout(function() {
 			console.log(test.a)
 		}, 0)
 	});
 
-	object.add('test', './a, sys', function(exports, a, test2, sys) {
-		this.fuck = 2;
-		return {fuck:1}
-	});
+	// object.add('test', './a, sys', function(exports, a, test2, sys) {
+	// 	this.fuck = 2;
+	// 	return {fuck:1}
+	// });
 
 	// object.use('test', function() {
 	// });
 
-	// object.define('test', './a, sys', function(require, exports, module) {
-	// 	var a = require('./a');
-	// 	var sys = require('sys');
-
-	// 	console.log(a)
-	// });
+	object.define('test', './a, sys', function(require, exports, module) {
+		var a = require('./a');
+		var sys = require('sys');
+		var b = require('./b');
+		console.log(b)
+	});
 
 	object.use('test', function(exports, test) {
 		// console.log(test);
@@ -51,6 +51,7 @@
 	// object.use('test, sys', function(exports, test, sys) {
 	// 	console.dir(sys.modules)
 	// });
+
 
 </script>
 <script>

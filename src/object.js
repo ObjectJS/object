@@ -817,11 +817,43 @@ StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "inde
 
 (function() {
 
-function Module(id, depts, constructor) {
+function ObjectModule(id, deps, factory) {
 	this.id = id;
-	this.dependencies = depts;
-	this.constructor = constructor;
+	this.dependencies = deps;
+	this.factory = factory;
 }
+ObjectModule.onNextUse = function(module, name, runtime, args, exports) {
+	if (exports) {
+		// 非重复引用
+		if (args.indexOf(exports) == -1) args.push(exports);
+	}
+};
+ObjectModule.onDoneUse = function(module, name, runtime, args, exports) {
+	// 最后传进context的参数
+	args.unshift(exports);
+};
+
+function SeaModule(id, deps, factory) {
+	this.id = id;
+	this.dependencies = deps;
+	this.factory = factory;
+}
+SeaModule.onDoneUse = function(module, name, runtime, args, exports) {
+	function require(id) {
+		if (id.indexOf('./') == 0) {
+			id = runtime.getId(name) + '.' + id.slice(2);
+		}
+		var exports = runtime.modules[id];
+		if (!exports) throw new object.NoModuleError(id);
+		return exports;
+	}
+	require.asyncLoad = function() {
+	};
+	// 最后传进context的参数
+	args.push(require);
+	args.push(exports);
+	args.push(module);
+};
 
 // 模块
 function Exports(name) {
@@ -979,48 +1011,53 @@ this.Loader = new Class(function() {
 		for (var i = 0, prefix, l = parts.length - 1; i < l; i++) {
 			prefix = parts.slice(0, i + 1).join('.');
 			// 说明这个module是空的
-			if (self.lib[prefix] == undefined) self.lib[prefix] = new Module(prefix);
+			if (self.lib[prefix] == undefined) self.lib[prefix] = {
+				id: prefix
+			};
 		}
 	};
 
 	/**
 	 * 执行一个module
 	 *
-	 * @param module 被执行的module
+	 * @param id 被执行的module id
 	 * @param name 执行时的name
 	 * @param {LoaderRuntime} runtime
 	 * @param callback 异步方法，执行完毕后调用，传入模块实例及名字
 	 */
-	this.__executeModule = function(self, module, name, runtime, callback) {
+	this.__executeModule = function(self, id, name, runtime, callback) {
 
 		var args = [];
 		var currentUse = -1; 
+		var module = self.lib[id];
 
 		/**
 		 * 顺序执行module中的dependencies
-		 *
 		 * @param pExports 上一个nextUse返回的模块实例
 		 */
 		function nextUse(pExports) {
 
 			var deptId;
+			var module = self.lib[id]; // 重新赋值module，因为可能之前获取到的只是占位空module
+			var deps = module.dependencies;
+			var factory = module.factory;
+			var onNextUse = module.constructor.onNextUse;
+			if (onNextUse) onNextUse(module, name, runtime, args, pExports);
 
 			if (pExports) {
 				// 模块获取完毕，去除循环依赖检测
 				runtime.stack.pop();
-				// 非重复引用
-				if (args.indexOf(pExports) == -1) args.push(pExports);
 			}
 
 			currentUse++;
 
-			// 模块获取完毕，执行constructor，将exports通过callback传回去。
+			// 模块获取完毕，执行factory，将exports通过callback传回去。
 			// 在空module或没有dependencies或已经use到最后一个
-			if (!module.constructor || module.dependencies.length === 0 || currentUse == module.dependencies.length) {
+			if (!factory || deps.length == 0 || currentUse == deps.length) {
 				doneUse();
 
 			} else {
-				deptId = module.dependencies[currentUse];
+				deptId = deps[currentUse];
 
 				// 记录开始获取当前模块
 				runtime.stack.push(deptId);
@@ -1037,24 +1074,26 @@ this.Loader = new Class(function() {
 		}
 
 		/**
-		 * 已执行完毕最后一个dependencies
+		 * 已执行完毕最后一个dependency
 		 */
 		function doneUse() {
 
 			var exports = runtime.addExports(name);
 			var returnExports;
+			var module = self.lib[id];
+			var factory = module.factory;
+			module.exports = exports;
+			var onDoneUse = module.constructor.onDoneUse;
+			if (onDoneUse) onDoneUse(module, name, runtime, args, exports);
 
-			if (!name) name = module.id; //  没有指定name，则使用全名
+			if (!name) name = id; //  没有指定name，则使用全名
 
 			// sys.modules
 			if (exports.__name__ === 'sys') exports.modules = runtime.modules;
 
-			// 最后传进context的参数
-			args.unshift(exports);
-
 			// 空module不需要
-			if (module.constructor) {
-				returnExports = module.constructor.apply(exports, args);
+			if (factory) {
+				returnExports = factory.apply(exports, args);
 				if (returnExports) {
 					// 检测是否有子模块引用了本模块
 					runtime.checkRef(name);
@@ -1070,11 +1109,12 @@ this.Loader = new Class(function() {
 		}
 
 		// file
-		if (!module.constructor && module.file) {
+		if (!module.factory && module.file) {
 			// TODO 加入预处理过程，跑出所有需要加载的文件并行加载，在此执行useScript而不是loadScript
 			self.loadScript(module.file, function() {
 				// 加载进来的脚本没有替换掉相应的模块，文件有问题。
-				if (module.file) {
+				// 重新读取module，module可能只是个占位
+				if (self.lib[id].file) {
 					throw new Error(module.file + ' do not add ' + module.id);
 				}
 				nextUse();
@@ -1103,7 +1143,6 @@ this.Loader = new Class(function() {
 		/**
 		 * 依次获取当前模块的每个部分
 		 * 如a.b.c，依次获取a、a.b、a.b.c
-		 *
 		 * @param pExprorts 上一部分的模块实例，如果是初次调用，为空
 		 * @param id 截止到当前部分的包含context前缀的名字
 		 */
@@ -1135,7 +1174,7 @@ this.Loader = new Class(function() {
 				}
 				// lib 中有
 				else if (self.lib[fullId]) {
-					self.__executeModule(self.lib[fullId], partId, runtime, nextPart);
+					self.__executeModule(fullId, partId, runtime, nextPart);
 				}
 				// lib中没有
 				else {
@@ -1165,7 +1204,6 @@ this.Loader = new Class(function() {
 	this.loadLib = function(self) {
 
 		var scripts = self.scripts;
-		var module;
 
 		for (var i = 0, script, id, src, l = scripts.length; i < l; i++) {
 			script = scripts[i];
@@ -1173,7 +1211,7 @@ this.Loader = new Class(function() {
 			if (!id) continue;
 			//self.lib中的内容可能是makePrefixModule构造的，只有name
 			//在模块a.b先声明，模块a后声明的情况下，无法获取模块a的内容
-			if (self.lib[id] && (self.lib[id].constructor || self.lib[id].file)) {
+			if (self.lib[id] && (self.lib[id].factory || self.lib[id].file)) {
 				continue;
 			}
 			src = script.getAttribute('data-src');
@@ -1182,9 +1220,10 @@ this.Loader = new Class(function() {
 			}
 			// 建立前缀module
 			self.__makePrefixModule(id);
-			module = new Module(id);
-			module.file = src;
-			self.lib[id] = module;
+			self.lib[id] = {
+				id: id,
+				file: src
+			};
 		}
 	};
 
@@ -1261,89 +1300,112 @@ this.Loader = new Class(function() {
 	});
 
 	/**
-	 * 处理传入的depts参数
-	 * 在parseUses阶段不需要根据名称判断去重（比如自己use自己），因为并不能避免所有冲突，还有循环引用的问题（比如 core use dom, dom use core）
-	 *
-	 * @param depts 输入
+	 * 处理传入的deps参数
+	 * 在parseDeps阶段不需要根据名称判断去重（比如自己use自己），因为并不能避免所有冲突，还有循环引用的问题（比如 core use dom, dom use core）
+	 * @param deps 输入
 	 * @param ignore 跳过ignore模块，用来避免自己调用自己
 	 */
-	this.parseUses = function(self, depts, ignore) {
-		if (!depts || typeof depts != 'string') {
-			return depts;
+	this.parseDeps = function(self, deps, ignore) {
+		if (!deps || typeof deps != 'string') {
+			return deps;
 		}
-		if (typeof depts == 'string') {
-			depts = depts.replace(/^,*|,*$/g, '');
-			depts = depts.split(/\s*,\s*/ig);
+		if (typeof deps == 'string') {
+			deps = deps.replace(/^,*|,*$/g, '');
+			deps = deps.split(/\s*,\s*/ig);
 		}
 
-		return depts;
+		return deps;
 	};
 
 	/**
-	 * 传入constructor，constructor的参数会包含use进来的module
-	 * 创造一个constructor，内部通过 this.xxx 设置的成员都会在这个 constructor 下。
+	 * 传入factory，factory的参数会包含use进来的module
+	 * 创造一个factory，内部通过 this.xxx 设置的成员都会在这个 factory 下。
 	 * @param id
-	 * @param depts 用逗号分隔开的模块名称列表
-	 * @param constructor 这个function会在调用module时调用，并将module通过参数传入constructor，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
+	 * @param deps 用逗号分隔开的模块名称列表
+	 * @param factory 这个function会在调用module时调用，并将module通过参数传入factory，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
 	 */
-	this.add = function(self, id, depts, constructor) {
-		if (arguments.length < 3) {
-			return null;
-		}
+	this.add = function(self, id, deps, factory) {
 		// 不允许重复添加。
-		if (self.lib[id] && self.lib[id].constructor) return null;
+		if (self.lib[id] && self.lib[id].factory) return null;
+		if (arguments.length < 3) return null;
 
-		// depts 参数是可选的
-		if (typeof depts == 'function') {
-			constructor = depts;
-			depts = [];
+		// deps 参数是可选的
+		if (typeof deps == 'function') {
+			factory = deps;
+			deps = [];
 		} else {
-			depts = self.parseUses(depts, id);
+			deps = self.parseDeps(deps);
 		}
 
-		if (!constructor || typeof constructor != 'function') {
-			return null;
-		}
-		if (constructor && self.lib[id] && self.lib[id].file) {
-			delete self.lib[id].file;
-			self.lib[id].constructor = constructor;
-			self.lib[id].dependencies = depts;
-			return null;
-		}
+		if (!factory || typeof factory != 'function') return null;
+
+		var module = new ObjectModule(id, deps, factory);
+
 		// 建立前缀占位模块
-		self.__makePrefixModule(id);
+		if (!self.lib[id]) self.__makePrefixModule(id);
 
-		// lib中存储的是function
-		// 注意别给覆盖了，有可能是有 file 成员的
-		var module = self.lib[id];
-		if (!module) module = self.lib[id] = new Module(id);
-		module.dependencies = depts;
-		module.constructor = constructor;
+		self.lib[id] = module;
 
 		return module;
 	};
 
-	this.define = function(self, name, depts, context) {
+	this.define = function(self, id, deps, factory) {
+		// 不允许重复添加。
+		if (self.lib[id] && self.lib[id].factory) return null;
+		if (arguments.length < 3) return null;
+
+		// deps 参数是可选的
+		if (typeof deps == 'function') {
+			factory = deps;
+			deps = [];
+		} else {
+			deps = self.parseDeps(deps);
+		}
+
+		if (!factory || typeof factory != 'function') return null;
+
+		var module = new SeaModule(id, deps, factory);
+
+		// 建立前缀占位模块
+		if (!self.lib[id]) self.__makePrefixModule(id);
+
+		self.lib[id] = module;
+
+		return module;
+	};
+
+	/**
+	 * 移除模块的定义
+	 * @param name 需要移除模块的名字
+	 * @param r 是否移除其所有子模块
+	 */
+	this.remove = function(self, name, r) {
+		delete self.lib[name];
+		if (r) {
+			Object.keys(self.lib).forEach(function(key) {
+				if (key.indexOf(name + '.') == 0) delete self.lib[key];
+			});
+		}
 	};
 
 	/**
 	 * use
 	 *
-	 * @param depts 用逗号分隔开的模块名称列表
-	 * @param context depts加载后调用，将module通过参数传入context，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
+	 * @param deps 用逗号分隔开的模块名称列表
+	 * @param context deps加载后调用，将module通过参数传入context，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
 	 */
-	this.use = function(self, depts, context) {
+	this.use = function(self, deps, context) {
 		if (!context || typeof context != 'function') {
 			return;
 		}
 		self.loadLib();
 
-		var name = '__anonymous_' + self.anonymousModuleCount + '__';
+		var id = '__anonymous_' + self.anonymousModuleCount + '__';
 		self.anonymousModuleCount++;
-		var module = self.add(name, depts, context);
+		self.add(id, deps, context);
 
 		// 不要用一个已经有内容、不可控的对象作为executeModule的exports。如window
-		self.__executeModule(module, '__main__', new LoaderRuntime(name), function(exports) {
+		self.__executeModule(id, '__main__', new LoaderRuntime(id), function(exports) {
 			for (var property in exports) {
 				if (property != '__name__' && window[property] === undefined) window[property] = exports[property];
 			}
@@ -1353,18 +1415,17 @@ this.Loader = new Class(function() {
 	/**
 	 * execute
 	 *
-	 * @param name 执行的入口模块名称
+	 * @param id 执行的入口模块名称
 	 */ 
-	this.execute = function(self, name) {
-		if (!name || typeof name != 'string') {
+	this.execute = function(self, id) {
+		if (!id || typeof id != 'string') {
 			return;
 		}
 		self.loadLib();
 
-		var module = self.lib[name];
-		if (!module) throw new object.NoModuleError(name);
+		if (!self.lib[id]) throw new object.NoModuleError(id);
 
-		self.__executeModule(module, '__main__', new LoaderRuntime(name));
+		self.__executeModule(id, '__main__', new LoaderRuntime(id));
 	};
 
 });
