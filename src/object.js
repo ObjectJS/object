@@ -287,7 +287,7 @@ this._loader = null;
  * @borrows object.Loader.use
  */
 this.use = function() {
-	if (!object._loader) object._loader = new Loader();
+	if (!object._loader) object._loader = new this.Loader();
 	object._loader.use.apply(object._loader, arguments);
 };
 
@@ -297,7 +297,7 @@ this.use = function() {
  * @borrows object.Loader.execute
  */
 this.execute = function() {
-	if (!object._loader) object._loader = new Loader();
+	if (!object._loader) object._loader = new this.Loader();
 	object._loader.execute.apply(object._loader, arguments);
 };
 
@@ -307,25 +307,14 @@ this.execute = function() {
  * @borrows object.Loader.add
  */
 this.add = function() {
-	if (!object._loader) object._loader = new Loader();
+	if (!object._loader) object._loader = new this.Loader();
 	object._loader.add.apply(object._loader, arguments);
 };
 
 this.define = function() {
-	if (!object._loader) object._loader = new Loader();
+	if (!object._loader) object._loader = new this.Loader();
 	object._loader.define.apply(object._loader, arguments);
 };
-
-// 找不到模块Error
-this.NoModuleError = function(name) {
-	this.message = 'no module named ' + name;
-};
-this.NoModuleError.prototype = new Error();
-
-this.ModuleRequiredError = function(name) {
-	this.message = 'module ' + name + ' required';
-};
-this.ModuleRequiredError.prototype = new Error();
 
 })(window);
 
@@ -839,21 +828,37 @@ function SeaModule(id, deps, factory) {
 	this.factory = factory;
 }
 SeaModule.onDoneUse = function(module, name, runtime, args, exports) {
+	var loader = this;
 	function require(id) {
 		if (id.indexOf('./') == 0) {
 			id = runtime.getId(name) + '.' + id.slice(2);
 		}
 		var exports = runtime.modules[id];
-		if (!exports) throw new object.NoModuleError(id);
+		if (!exports) throw new ModuleRequiredError(id);
 		return exports;
 	}
-	require.asyncLoad = function() {
+	require.async = function(deps, callback) {
+		loader.lib['__test__'] = new ObjectModule('__test__', loader.parseDeps(deps), function() {});
+		loader.__executeModule('__test__', '__main__', runtime, function() {
+			//callback.apply(null, Array.prototype.slice.call(arguments, 1));
+		});
 	};
 	// 最后传进context的参数
 	args.push(require);
 	args.push(exports);
 	args.push(module);
 };
+
+// 找不到模块Error
+function NoModuleError(name) {
+	this.message = 'no module named ' + name;
+};
+NoModuleError.prototype = new Error();
+
+function ModuleRequiredError(name) {
+	this.message = 'module ' + name + ' required';
+};
+ModuleRequiredError.prototype = new Error();
 
 // 模块
 function Exports(name) {
@@ -982,7 +987,7 @@ LoaderRuntime.prototype.setMemberTo = function(host, member, value) {
  * object的包管理器
  * 这个class依赖于object._lib ，且会修改它
  */
-this.Loader = new Class(function() {
+var Loader = new Class(function() {
 
 	this.scripts = document.getElementsByTagName('script');
 
@@ -1042,7 +1047,7 @@ this.Loader = new Class(function() {
 			var deps = module.dependencies;
 			var factory = module.factory;
 			var onNextUse = module.constructor.onNextUse;
-			if (onNextUse) onNextUse(module, name, runtime, args, pExports);
+			if (onNextUse) onNextUse.call(self, module, name, runtime, args, pExports);
 
 			if (pExports) {
 				// 模块获取完毕，去除循环依赖检测
@@ -1084,7 +1089,7 @@ this.Loader = new Class(function() {
 			var factory = module.factory;
 			module.exports = exports;
 			var onDoneUse = module.constructor.onDoneUse;
-			if (onDoneUse) onDoneUse(module, name, runtime, args, exports);
+			if (onDoneUse) onDoneUse.call(self, module, name, runtime, args, exports);
 
 			if (!name) name = id; //  没有指定name，则使用全名
 
@@ -1178,7 +1183,7 @@ this.Loader = new Class(function() {
 				}
 				// lib中没有
 				else {
-					throw new object.NoModuleError(fullId);
+					throw new NoModuleError(fullId);
 				}
 			};
 		}
@@ -1423,14 +1428,18 @@ this.Loader = new Class(function() {
 		}
 		self.loadLib();
 
-		if (!self.lib[id]) throw new object.NoModuleError(id);
+		if (!self.lib[id]) throw new NoModuleError(id);
 
 		self.__executeModule(id, '__main__', new LoaderRuntime(id));
 	};
 
 });
 
-})();
+this.Loader = Loader;
+this.NoModuleError = NoModuleError;
+this.ModuleRequiredError = ModuleRequiredError;
+
+}).apply(object);
 
 /**
  * 增加window模块，如果其他模块中需要使用或修改window的相关内容，必须显式的依赖window模块

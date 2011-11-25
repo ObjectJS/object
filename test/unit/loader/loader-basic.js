@@ -1,3 +1,4 @@
+var Loader = object.Loader;
 var head = document.getElementsByTagName('head')[0];
 module('loader-loadScript', {teardown: function() {
 	// remove inserted script tag after every test case finished

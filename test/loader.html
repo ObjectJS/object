@@ -32,7 +32,9 @@
 	object.define('test', './a, sys', function(require, exports, module) {
 		var a = require('./a');
 		var sys = require('sys');
-		var b = require('./b');
+		var b = require.async('./b', function(b) {
+			console.log(b)
+		});
 		console.log(b)
 	});
 
