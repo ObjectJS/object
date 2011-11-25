@@ -1,3 +1,4 @@
+var Loader = object.Loader;
 var head = document.getElementsByTagName('head')[0];
 module('loader-loadScript', {teardown: function() {
 	// remove inserted script tag after every test case finished
@@ -76,48 +77,48 @@ test('loadScript with/without cache', function() {
 	}
 })
 
-module("loader-parseUses");
-test('parseUses-basic', function() {
+module("loader-parseDeps");
+test('parseDeps-basic', function() {
 	var loader = new Loader();
 	var edges = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in edges) {
 		try {
-			loader.parseUses(edges[prop]);
-			ok(true, 'loader.parseUses(' + prop + ') should be ok');
+			loader.parseDeps(edges[prop]);
+			ok(true, 'loader.parseDeps(' + prop + ') should be ok');
 		} catch (e) {
-			ok(false, 'loader.parseUses(' + prop + ') should be ok : ' + e);
+			ok(false, 'loader.parseDeps(' + prop + ') should be ok : ' + e);
 		}
 	}
 
 	for(var prop in edges) {
 		try {
-			loader.parseUses('1', edges[prop]);
-			ok(true, 'loader.parseUses(\'1\', ' + prop + ') should be ok');
+			loader.parseDeps('1', edges[prop]);
+			ok(true, 'loader.parseDeps(\'1\', ' + prop + ') should be ok');
 		} catch (e) {
-			ok(false, 'loader.parseUses(\'1\', ' + prop + ') should be ok : ' + e);
+			ok(false, 'loader.parseDeps(\'1\', ' + prop + ') should be ok : ' + e);
 		}
 	}
 });
 
-test('parseUses-use', function() {
+test('parseDeps-use', function() {
 	var loader = object._loader;
-	var uses = loader.parseUses('1,2,3,4,5', '1');
-	equal(uses.length, 5, 'parseUses works well');
+	var uses = loader.parseDeps('1,2,3,4,5', '1');
+	equal(uses.length, 5, 'parseDeps works well');
 	equal(uses.indexOf('1'), 0, '1 is ignored as promised');
 	equal(uses.indexOf('2'), 1, '2 is in uses because it is not ignored');
 });
 
-test('parseUses-ignore', function() {
+test('parseDeps-ignore', function() {
 	var loader = object._loader;
-	var uses = loader.parseUses('1', '1');
-	equal(uses.length, 1, 'parseUses works well');
-	var uses = loader.parseUses('1', 1);
-	equal(uses.length, 1, 'parseUses(\'1\', 1) should not remove \'1\', ignore must be string, or use === to judge');
-	var uses = loader.parseUses('true', true);
-	equal(uses.length, 1, 'parseUses(\'true\', true) should not remove \'true\'');
-	var uses = loader.parseUses(',1,2,3,4,');
+	var uses = loader.parseDeps('1', '1');
+	equal(uses.length, 1, 'parseDeps works well');
+	var uses = loader.parseDeps('1', 1);
+	equal(uses.length, 1, 'parseDeps(\'1\', 1) should not remove \'1\', ignore must be string, or use === to judge');
+	var uses = loader.parseDeps('true', true);
+	equal(uses.length, 1, 'parseDeps(\'true\', true) should not remove \'true\'');
+	var uses = loader.parseDeps(',1,2,3,4,');
 	equal(uses.length, 4, '\',1,2,3,4,\' should be considered');
-	//var uses = loader.parseUses('1,2,3,4', ['1','2']);
+	//var uses = loader.parseDeps('1,2,3,4', ['1','2']);
 	//equal(uses.length, 2, 'we may want to ignore more than one member at a time');
 });
 
@@ -154,7 +155,7 @@ test('loadLib', function() {
 	loader.loadLib();
 	ok(Object.keys(loader.lib).length == 2, 'new script tag inserted, new module loaded');
 	ok(loader.lib['test_module'] != null, 'module test_module is added');
-	ok(loader.lib['test_module'].name == 'test_module', 'module test_module is added, name is ok');
+	ok(loader.lib['test_module'].id == 'test_module', 'module test_module is added, id is ok');
 	ok(loader.lib['test_module'].file == emptyJS, 'module test_module is added, file is ok');
 
 	var script = document.createElement('script');
@@ -203,11 +204,11 @@ test('add-usage', function() {
 	equal(Object.keys(loader.lib).length, 3, 'b is added to loader.lib');
 	loader.add('c', 'a,b', function() {});
 	equal(Object.keys(loader.lib).length, 4, 'c is added to loader.lib');
-	equal(loader.lib['c'].uses.length, 2, 'c uses a and b, so lib[c].uses.length = 2');
+	equal(loader.lib['c'].dependencies.length, 2, 'c dependencies a and b, so lib[c].dependencies.length = 2');
 
 	loader.add('d.dd', 'a,b,c', function() {});
 	equal(Object.keys(loader.lib).length, 6, 'd and d.dd are added to loader.lib');
-	equal(loader.lib['d.dd'].uses.length, 3, 'd.dd uses a ,b and c, so lib[d.dd].uses.length = 3');
+	equal(loader.lib['d.dd'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
 
 	loader.add('error1', 'a,b');
 	equal(loader.lib['error1'], undefined, 'add module without context, should not be added');
