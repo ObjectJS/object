@@ -1,10 +1,7 @@
-/**
- * @namespace
- * @name ui.decorators
- */
-object.add('ui.decorators', 'events', /**@lends ui.decorators*/ function(exports, events) {
+object.add('ui.decorators', 'events', function(exports, events) {
 
 	/**
+	 * @deprecated
 	 * use events.fireevent instead
 	 */
 	this.fireevent = events.fireevent;

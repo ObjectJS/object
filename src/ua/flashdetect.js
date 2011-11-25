@@ -4,7 +4,6 @@ object.add('ua.flashdetect', function(exports) {
 * getFlashVersionv Flash Player version detection http://stauren.net
 * released under the MIT License:
 * http://www.opensource.org/licenses/mit-license.php
-*
 */
 this.getFlashVersion = function(){
 	var _ver = false;
