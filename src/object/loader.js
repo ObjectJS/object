@@ -358,7 +358,7 @@ var Loader = new Class(function() {
 					runtime.checkRef(name);
 
 					if (typeof returnExports === 'object' || typeof returnExports === 'function') {
-						returnExports.toString = Exports.prototype.toString;
+						returnExports.toString = Package.prototype.toString;
 						returnExports.__name__ = exports.__name__;
 					}
 					exports = returnExports;
