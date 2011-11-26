@@ -23,11 +23,17 @@ SeaPackage.factoryRunner = {
 			return exports;
 		}
 		require.async = function(deps, callback) {
-			loader.load(loader.createPackage(name, loader.parseDeps(deps), function() {
-				callback.apply(null, Array.prototype.slice.call(arguments, 1));
+			deps = loader.parseDeps(deps);
+			console.log(runtime.stack.toString())
+			loader.load(new SeaPackage(name, deps, function(require) {
+				var args = [];
+				deps.forEach(function(dep) {
+					args.push(require(dep));
+				});
+				callback.apply(null, args);
 			}), name, runtime);
 		};
-		// 最后传进context的参数
+		// 最后传进factory的参数
 		args.push(require);
 		args.push(exports);
 		args.push(module);

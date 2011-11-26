@@ -182,7 +182,7 @@ var Loader = new Class(function() {
 
 	/**
 	 * 建立前缀模块
-	 * 比如 a.b.c.d ，会建立 a/a.b/a.b.c 三个空模块，最后一个模块为目标模块，不为空，内容为context
+	 * 比如 a.b.c.d ，会建立 a/a.b/a.b.c 三个空模块，最后一个模块为目标模块
 	 */
 	this.__makePrefixModule = function(self, id) {
 		if (!id || typeof id != 'string') {
@@ -588,17 +588,17 @@ var Loader = new Class(function() {
 	/**
 	 * use
 	 * @param deps 用逗号分隔开的模块名称列表
-	 * @param context deps加载后调用，将module通过参数传入context，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
+	 * @param factory deps加载后调用，将module通过参数传入factory，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
 	 */
-	this.use = function(self, deps, context) {
-		if (!context || typeof context != 'function') {
+	this.use = function(self, deps, factory) {
+		if (!factory || typeof factory != 'function') {
 			return;
 		}
 		self.loadLib();
 
 		var id = '__anonymous_' + self.anonymousModuleCount + '__';
 		self.anonymousModuleCount++;
-		var module = object.add(id, deps, context);
+		var module = object.add(id, deps, factory);
 
 		// 不要用一个已经有内容、不可控的对象作为executeModule的exports。如window
 		self.load(module, '__main__', self.createRuntime(id), function(exports) {
@@ -607,13 +607,6 @@ var Loader = new Class(function() {
 			}
 		});
 
-	};
-
-	/**
-	 * 建立一个普通的package
-	 */
-	this.createPackage = function(self, id, deps, factory) {
-		return new Package(id, deps, factory);
 	};
 
 });
