@@ -415,10 +415,10 @@ test('Class.getChain', function() {
 	var B = new Class(A, function(){});
 	var C = new Class(A, function(){});
 	var D = new Class(C, function(){});
-	equal(Class.getChain(A).length, 1, 'A');
-	equal(Class.getChain(B).length, 2, 'A,B');
-	equal(Class.getChain(C).length, 2, 'A,C');
-	equal(Class.getChain(D).length, 3, 'A,C,D');
+	equal(Class.getChain(A).length, 2, 'type,A');
+	equal(Class.getChain(B).length, 3, 'type,A,B');
+	equal(Class.getChain(C).length, 3, 'type,A,C');
+	equal(Class.getChain(D).length, 4, 'type,A,C,D');
 });
 
 test('Class.getInstance', function() {

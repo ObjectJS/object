@@ -529,7 +529,8 @@ test('dom.ImageElement', function() {
 		stop();
 		setTimeout(function() {
 			start();
-			image.src = 'http://hdn.xnimg.cn/photos/hdn421/20110803/0920/tiny_gZQg_12580o019117.jpg';
+			var path = $UNIT_TEST_CONFIG.needPath ? 'modules/dom/' : '';
+			image.src = path + 'image.jpg';
 			equal(image.width, 50, 'width of head image is 50px');
 			equal(image.height, 50, 'height of head image is 50px');
 			image.width = image.height = 20;
@@ -623,6 +624,10 @@ test('dom.FormElement', function() {
 	});
 });
 
+var ie = false;
+object.use('ua', function(exports, ua) {
+	ie = ua.ua.ie;
+});
 test('dom.FormItemElement - selectionStart/selectionEnd', function() {
 	object.use('dom', function(exports, dom) {
 		var formItem = dom.wrap(document.createElement('input'));
@@ -639,8 +644,10 @@ test('dom.FormItemElement - selectionStart/selectionEnd', function() {
 			ok(false, 'get selectionEnd of hidden input element should not cause an error : ' + e);
 		}
 		try {
-			equal(formItem.get('selectionStart'), 4, 'selectionStart is 4');
-			equal(formItem.get('selectionEnd'), 4, 'selectionEnd is 4');
+			var start = ie ? 0 : 4;
+			var end = ie ? 0 : 4;
+			equal(formItem.get('selectionStart'), start, 'selectionStart is ' + start);
+			equal(formItem.get('selectionEnd'), end, 'selectionEnd is ' + end);
 		} catch (e) {
 			ok(false, 'formItem.get(selectionStart) should not raise error : ' + e);
 		}
@@ -748,7 +755,8 @@ test('dom.Elements', function() {
 		inputs.focusToPosition(2);
 		window.scrollTo(0, 0);
 		try {
-			equal(input1.get('selectionStart'), 2, 'input1.get(selectionStart) should be 2');
+			var result = ie ? 0 : 2;
+			equal(input1.get('selectionStart'), result, 'input1.get(selectionStart) should be ' + result);
 		} catch (e) {
 			ok(false, 'input1.get(selectionStart) after input1.focusToPosition(2), should not raise error : ' + e);
 		}

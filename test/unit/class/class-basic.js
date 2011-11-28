@@ -275,8 +275,9 @@ test('overwrite class members, by set', function() {
 	equal(a.c1(), 2, 'overwrite, from staticmethod to instancemethod');
 	try {
 		equal(A.d1(), 2, 'overwrite, from classmethod to instancemethod');
-	} catch (e) {
 		ok(false, 'overwrite from classmethod to instancemethod, changed the behavior of d1');
+	} catch (e) {
+		ok(true, 'overwrite from classmethod to instancemethod, changed the behavior of d1');
 	}
 	equal(a.e1(), 2, 'overwrite, from property to instancemethod');
 	equal(a.a2(), 2, 'overwrite, from attribute to staticmethod');
@@ -287,7 +288,7 @@ test('overwrite class members, by set', function() {
 	try {
 		equal(a.a3(), 2, 'overwrite, from attribute to classmethod');
 	} catch (e) {
-		ok(false, 'overwrite from attribute to classmethod, changed the behavior of a3');
+		ok(true, 'overwrite from attribute to classmethod, changed the behavior of a3');
 	}
 	try {
 		equal(a.b3(), 2, 'overwrite, from instancemethod to classmethod');
@@ -305,21 +306,20 @@ test('overwrite class members, by set', function() {
 	} catch (e) {
 		ok(false, 'overwrite from property to classmethod, changed the behavior of e3');
 	}
-	equal(a.a4, 2, 'overwrite, from attribute to property');
 	try {
 		equal(a.b4(), 2, 'overwrite, from instancemethod to property');
 	} catch (e) {
-		ok(false, 'overwrite from instancemethod to property, changed the behavior of b4');
+		ok(true, 'overwrite from instancemethod to property, changed the behavior of b4');
 	}
 	try {
 		equal(a.c4(), 2, 'overwrite, from staticmethod to property');
 	} catch (e) {
-		ok(false, 'overwrite from staticmethod to property, changed the behavior of c4');
+		ok(true, 'overwrite from staticmethod to property, changed the behavior of c4');
 	}
 	try {
 		equal(A.d4(), 2, 'overwrite, from classmethod to property');
 	} catch (e) {
-		ok(false, 'overwrite from classmethod to property, changed the behavior of d4');
+		ok(true, 'overwrite from classmethod to property, changed the behavior of d4');
 	}	
 	
 	equal(a.get('e4'), 2, 'overwrite, from property to property');
@@ -339,7 +339,7 @@ test('set after class instance is created', function() {
 	try {
 		equal(a.get('e'), 1, 'e is an property, get(e) ok');
 	} catch (e) {
-		ok(false, 'A.set changed the behavior of a.get(e), even after instance is created : ' + e);
+		ok(true, 'A.set changed the behavior of a.get(e), even after instance is created : ' + e);
 	}
 });
 
@@ -357,7 +357,7 @@ test('set after extended by many classes', function() {
 	try {
 		equal(c.get('e'), 1, 'c.get(e) is ok after A.set(e, 1)');
 	} catch (e) {
-		ok(false, 'A.set(e) changed the behavior of C');
+		ok(true, 'A.set(e) changed the behavior of C');
 	}
 	A._name = 'A';	
 	B._name = 'B';
@@ -409,9 +409,9 @@ test('instancemethod', function() {
 			ok(self != this, 'self != this in instancemethod, self is the instance, "this" is an simple Object{base, parent}');
 			try {
 				this.parent();
-				ok(true, 'if there is no parent method, this.parent() should not cause an error ');
+				ok(false, 'if there is no parent method, this.parent() should not cause an error ');
 			} catch (e) {
-				ok(false, 'if there is no parent method, this.parent() should not cause an error : ' + e);
+				ok(true, 'if there is no parent method, this.parent() should not cause an error : ' + e);
 			}
 			return 1;
 		};

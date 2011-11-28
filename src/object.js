@@ -234,7 +234,6 @@ else {
 	var funcNameRegExp = /(?:^|\()function ([\w$]+)/;
 	//Function.__get_name__((function a() {})) -> (function a(){}) -> a
 	Function.__get_name__ = function(func) {
-		console.log(func.toString());
 		// IE 下没有 Function.prototype.name，通过代码获得
 		var result = funcNameRegExp.exec(func.toString());
 		if (result) return result[1];
@@ -566,7 +565,13 @@ type.__new__ = function(metaclass, name, base, dict) {
 		parent: function() {
 			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
 			var name = arguments.callee.caller.__name__;
+			if (!name) {
+				throw new Error('can not get function name when this.parent called');
+			}
 			var base = cls.__base__;
+			if (!base || !base.get) {
+				throw new Error('no parent class, can not call parent');
+			}
 			var baseMember = base.get(name);
 			if (!baseMember || !baseMember.apply) {
 				throw new Error('no such method in parent : \'' + name + '\'');
