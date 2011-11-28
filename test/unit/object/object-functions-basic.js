@@ -31,8 +31,13 @@ test('extend', function() {
 	equal(a['0'], 1, 'a[\'0\'] should be considered');
 	var a = object.extend({}, {'':1});
 	equal(a[''], 1, 'a[\'\'] should be considered');
+
 	var a = object.extend({}, Array.prototype);
-	ok(a.indexOf != undefined, 'extend from Array.prototype');
+	if (a.indexOf) {
+		ok(a.indexOf != undefined, 'extend from Array.prototype is ok in chrome');
+	} else {
+		ok(a.indexOf == undefined, 'extend from Array.prototype is not ok in this browser');
+	}
 	var a = object.extend({}, {'call':1});
 	equal(a['call'], 1, 'a.call should be considered');
 

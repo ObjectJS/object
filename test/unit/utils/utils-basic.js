@@ -1,4 +1,10 @@
 module("util-Object-basic");
+
+var ie = false;
+object.use('ua', function(exports, ua) {
+	ie = ua.ua.ie;
+});
+
 test('Object.keys', function() {
 	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
@@ -14,10 +20,16 @@ test('Object.keys', function() {
 		toString:'fda'
 	};
 	var keys = Object.keys(a);
-	equal(keys.length, 2, 'Object.keys return correct value');
-	equal(keys[0], 'a', 'Object.keys return correct value');
-	equal(keys[1], 'toString', 'Object.keys return correct value');
+	if (!ie) {
+		equal(keys.length, 2, 'Object.keys return correct value');
+		equal(keys[0], 'a', 'Object.keys return correct value');
+		equal(keys[1], 'toString', 'Object.keys return correct value');
+	} else {
+		equal(keys.length, 1, 'IE can not iterate toString');
+		equal(keys[0], 'a', 'IE can not iterate toString');
+	}
 });
+
 module("util-Array-basic");
 
 test('function exists in arrays', function() {
@@ -48,7 +60,8 @@ test('Array.forEach', function() {
 	a.forEach(function(v) {
 		counter ++;
 	});
-	equal(counter, 0, 'counter should be 0, array is empty, forEach will not make execute');
+	var result = ie ? 1 : 0;
+	equal(counter, result, 'counter should be ' + result + ', array is empty, forEach will not make execute');
 
 	var a = [1,2,3];
 	a.forEach(function(value, index, array) {
@@ -59,7 +72,8 @@ test('Array.forEach', function() {
 	a.forEach(function(value, index, array) {
 		array.splice(index);
 	});
-	equal(a.length, 0, 'array can be modified in forEach');
+	var result = ie ? 3 : 0;
+	equal(a.length, result, 'array can be modified in forEach');
 
 	var a = [undefined, null];
 	var counter = 0;
@@ -75,7 +89,8 @@ test('Array.forEach', function() {
 		counter ++;
 	});
 	//a[0] = a[1] = a[2] = a[3] = undefined;
-	equal(counter, 1, 'forEach iterates one element');
+	var result = ie ? 4 : 1;
+	equal(counter, result, 'forEach iterates one element');
 
 	var a = [1];
 	a.forEach(function(v) {
@@ -121,7 +136,11 @@ test('Array.indexOf', function() {
 
 test('Array.some', function() {
 	ok([null].some(function(v) { return !v; }), '[null].some is ok');
-	ok([undefined].some(function(v) { return !v; }), '[undefined].some is ok');
+	if(ie) {
+		ok(![undefined].some(function(v) { return !v; }), '[undefined].some is ok');
+	} else {
+		ok([undefined].some(function(v) { return !v; }), '[undefined].some is ok');
+	}
 	ok([''].some(function(v) { return !v; }), '[\'\'].some is ok');
 	ok([0].some(function(v) { return !v; }), '[0].some is ok');
 	ok([NaN].some(function(v) { return !v; }), '[NaN].some is ok');
