@@ -348,7 +348,7 @@ var Loader = new Class(function() {
 			if (!name) name = module.id; //  没有指定name，则使用全名
 
 			// sys.modules
-			if (exports.__name__ === 'sys') exports.modules = runtime.exports;
+			if (exports.__name__ === 'sys') exports.modules = runtime.modules;
 
 			// 空module不需要
 			if (factory) {
