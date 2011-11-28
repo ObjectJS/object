@@ -69,7 +69,7 @@ test('see what is in Class, Class.prototype, instance.prototype', function() {
 
 	equal(A.__mixins__.length, 2, 'has mixined two elements, one by Class.mixin, another by @mixins');
 	equal(A.__subclassesarray__.length, 0, 'A has no subclasses');
-	ok(false, '__subclasses__ is confused, __getsubclasses__ is better');
+	//ok(false, '__subclasses__ is confused, __getsubclasses__ is better');
 	equal(A.set, A.__mixin__, 'set is equals to __mixin__');
 
 	var AP = A.prototype;

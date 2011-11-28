@@ -27,7 +27,7 @@ object.add('ua', function(exports) {
 		var o = {}, core, shell;
 
 		// check IE
-		if ((m = ua.match(/MSIE\s([^;]*)/)) && m[1]) {
+		if (!~ua.indexOf('Opera') && (m = ua.match(/MSIE\s([^;]*)/)) && m[1]) {
 
 			// IE8: always IE8, with Trident 4
 			// IE9: same as documentMode, with Trident 5
@@ -50,7 +50,8 @@ object.add('ua', function(exports) {
 				o[core = 'webkit'] = numberify(m[1]);
 
 			// Gecko
-			} else if ((m = ua.match(/Gecko/))) {
+			// 避免Opera userAgent：Mozilla/5.0 (Windows NT 5.1; U; en; rv:1.8.1) Gecko/20061208 Firefox/5.0 Opera 11.11
+			} else if (!~ua.indexOf('Opera') && (m = ua.match(/Gecko/))) {
 				o[core = 'gecko'] = 0; // Gecko detected, look for revision
 				if ((m = ua.match(/rv:([\d\.]*)/)) && m[1]) {
 					o[core] = numberify(m[1]);
@@ -69,11 +70,14 @@ object.add('ua', function(exports) {
 				o[shell = 'chrome'] = numberify(m[1]);
 
 			// Safari
-			} else if ((m = ua.match(/\/([\d\.]*) Safari/)) && m[1]) {
+			} else if ((m = ua.match(/\/([\d\.]*)( Mobile\/?[\w]*)? Safari/)) && m[1]) {
 				o[shell = 'safari'] = numberify(m[1]);
+			} else if (/\/[\d\.]* \(KHTML, like Gecko\) Safari/.test(ua)) {
+				o[shell = 'safari'] = undefined;
 
 			// Firefox
-			} else if ((m = ua.match(/Firefox\/([\d\.]*)/)) && m[1]) {
+			// 避免Opera userAgent：Mozilla/5.0 (Windows NT 5.1; U; en; rv:1.8.1) Gecko/20061208 Firefox/5.0 Opera 11.11
+			} else if (!~ua.indexOf('Opera') && (m = ua.match(/Firefox\/([\d\.]*)/)) && m[1]) {
 				o[shell = 'firefox'] = numberify(m[1]);
 
 			// Opera
@@ -83,6 +87,9 @@ object.add('ua', function(exports) {
 				if ((m = ua.match(/Opera\/.* Version\/([\d\.]*)/)) && m[1]) {
 					o[shell] = numberify(m[1]);
 				}
+			} else if ((m = ua.match(/Opera ([\d\.]*)/)) && m[1]) {
+				core = 'presto';
+				o[shell = 'opera'] = numberify(m[1]);
 			}
 		}
 

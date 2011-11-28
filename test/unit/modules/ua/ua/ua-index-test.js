@@ -19,6 +19,9 @@ test('ua.numberify', function() {
 		var edges = $UNIT_TEST_CONFIG.testEdges;
 		for(var prop in edges) {
 			try {
+				if (typeof edges[prop] != 'string') {
+					continue;
+				}
 				numberify(edges[prop]);
 				ok(true, 'ua.numberify ' + prop + ' is ok');
 			} catch (e) {
@@ -58,7 +61,7 @@ test('ua.numberify', function() {
 	});
 });
 
-var userAgents = [
+var userAgents_index= [
 //IE
 {
 	str: 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0)',
@@ -229,13 +232,13 @@ var userAgents = [
 test('ua.core/shell/core_version/shell_version', function() {
 	object.use('ua, sys', function(exports, ua, sys) {
 		var detect = ua.__detectUA;
-		for(var i=0,l=userAgents.length,current; i<l; i++) {
-			current = userAgents[i];
+		for(var i=0,l=userAgents_index.length,current; i<l; i++) {
+			current = userAgents_index[i];
 			var o =detect(current.str);
-			equal(o.core, current.core, 'core is ok : ' + current.core+ ', ' + current.str);
-			equal(o.shell, current.shell, 'shell is ok : ' + current.shell+ ', ' + current.str);
-			equal(o[o.core], current.core_version, 'core_version is ok : ' + current.core_version + ', ' + current.str);
-			equal(o[o.shell], current.shell_version, 'shell_version is ok : ' + current.shell_version+ ', ' + current.str);
+			equal(current.core, o.core, 'core is ok : ' + current.core + ', ' + current.str);
+			equal(current.shell, o.shell, 'shell is ok : ' + current.shell + ', ' + current.str);
+			equal(current.core_version, o[o.core], 'core_version is ok : ' + current.core_version + ', ' + current.str);
+			equal(current.shell_version, o[o.shell], 'shell_version is ok : ' + current.shell_version+ ', ' + current.str);
 		}
 	});
 });

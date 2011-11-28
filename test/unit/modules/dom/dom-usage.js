@@ -526,14 +526,18 @@ test('dom.ImageElement', function() {
 	object.use('dom', function(exports, dom) {
 		var image = dom.wrap(document.createElement('img'));
 		ok('naturalWidth' in image.__properties__, 'img wrapped successfully');
-		image.src = 'http://hdn.xnimg.cn/photos/hdn421/20110803/0920/tiny_gZQg_12580o019117.jpg';
-		equal(image.width, 50, 'width of head image is 50px');
-		equal(image.height, 50, 'height of head image is 50px');
-		image.width = image.height = 20;
-		equal(image.width, 20, 'width is modified');
-		equal(image.height, 20, 'height is modified');
-		equal(image.get('naturalWidth'), 50, 'image.get(naturalWidth) is still 50');
-		equal(image.get('naturalHeight'), 50, 'image.get(naturalHeight) is still 50');
+		stop();
+		setTimeout(function() {
+			start();
+			image.src = 'http://hdn.xnimg.cn/photos/hdn421/20110803/0920/tiny_gZQg_12580o019117.jpg';
+			equal(image.width, 50, 'width of head image is 50px');
+			equal(image.height, 50, 'height of head image is 50px');
+			image.width = image.height = 20;
+			equal(image.width, 20, 'width is modified');
+			equal(image.height, 20, 'height is modified');
+			equal(image.get('naturalWidth'), 50, 'image.get(naturalWidth) is still 50');
+			equal(image.get('naturalHeight'), 50, 'image.get(naturalHeight) is still 50');
+		}, 100);
 	});
 });
 //FormElement

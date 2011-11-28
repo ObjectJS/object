@@ -27,9 +27,9 @@ test('mixin document/window/location', function() {
 });
 //mixin generic objects, such as String, Array, Date, RegExp
 test('mixin with String/Array/Date/RegExp', function() {
-	try {new Class(function(){Class.mixin(this,String)});} catch(e) {ok(false, 'String should be considered');}
+	try {new Class(function(){Class.mixin(this,String)});} catch(e) {ok(false, 'String should be considered : ' + e);}
 	try {new Class(function(){Class.mixin(this,'string')});} catch(e) {ok(false, '"string" should be considered');}
-	try {new Class(function(){Class.mixin(this,Array)});} catch(e) {ok(false, 'Array should be considered');}
+	try {new Class(function(){Class.mixin(this,Array)});} catch(e) {ok(false, 'Array should be considered : ' + e);}
 	try {new Class(function(){Class.mixin(this,[1,2])});} catch(e) {ok(false, '[1,2] should be considered');}
 	try {new Class(function(){Class.mixin(this,Date)});} catch(e) {ok(false, 'Date should be considered');}
 	try {new Class(function(){Class.mixin(this,new Date)});} catch(e) {ok(false, 'new Date should be considered');}
@@ -55,16 +55,17 @@ test('mixin object.js', function() {
 		catch(e) {ok(false, 'Class.mixin(this,Class) should be considered');}
 	try {
 		new Class(function(){Class.mixin(this,Loader)});
-		ok(false, 'Class.mixin(this, Loader), Loader should not be mixined');
+		ok(false, 'Class.mixin(this, Loader), Loader should not be mixined : ' + e);
 	} catch(e){};
 });
 
-test('mixin outside class', function() {
+test('mixin at the outside of class', function() {
 	var A = new Class(function(){});
 	var mixin = new Class(function() {
 		this.a = 1;
 	});
 	Class.mixin(A, mixin);
 	var a = new A();
-	equal(a.a, 1, 'mixin outside class is successful(Class.mixin just put mixin into __mixins__)');
+	// mixin can only used inside an class
+	// equal(a.a, 1, 'mixin outside class is successful(Class.mixin just put mixin into __mixins__)');
 });

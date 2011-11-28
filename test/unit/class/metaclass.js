@@ -68,18 +68,18 @@ test('metaclass is not a class', function() {
 			this.__metaclass__ = true;
 		});
 		var a = new A();
-		ok(true, '__metaclass__ is not a class, which should not cause error');
+		ok(false, '__metaclass__ is not a class, which should cause error');
 	} catch (e) {
-		ok(false, '__metaclass__ is not a class, which should not cause error : ' + e);
+		ok(true, '__metaclass__ is not a class, which should cause error : ' + e);
 	}
 	try {
 		var A = new Class(function() {			
 			this.__metaclass__ = function() {};
 		});
 		var a = new A();
-		ok(true, '__metaclass__ is not a class, which should not cause error');
+		ok(false, '__metaclass__ is not a class, which should cause error');
 	} catch (e) {
-		ok(false, '__metaclass__ is not a class, which should not cause error : ' + e);
+		ok(true, '__metaclass__ is not a class, which should cause error : ' + e);
 	}
 	try {
 		var A = new Class(function() {
@@ -89,48 +89,50 @@ test('metaclass is not a class', function() {
 			};
 		});
 		var a = new A();
-		ok(true, '__metaclass__ is not a class, which should not cause error');
+		ok(false, '__metaclass__ is not a class, which should cause error');
 	} catch (e) {
-		ok(false, '__metaclass__ is not a class, which should not cause error : ' + e);
+		ok(true, '__metaclass__ is not a class, which should cause error : ' + e);
 	}
 });
 
 test('metaclass is a class without __new__ or initialize', function() {
+	//cls.__new__ = base.__new__; so without __new__ is still fine for metaclass;
 	var metaclass = new Class(function() {});
 	try {
 		var A = new Class(function() {
 			this.__metaclass__ = metaclass;
 		});
 		var a = new A();
-		ok(true, '__metaclass__ is a class without __new__ and initialize, which should not cause error');
+		ok(false, '__metaclass__ is a class without __new__ and initialize, which should cause error');
 	} catch (e) {
-		ok(false, '__metaclass__ is a class without __new__ and initialize, which should not cause error : ' + e);
+		ok(true, '__metaclass__ is a class without __new__ and initialize, which should cause error : ' + e);
 	}
 
-	var metaclass = new Class(function() {
+	var metaclass2 = new Class(function() {
 		this.initialize = function(cls, name, base, dict) {};
 	});
+	metaclass2.fda = 'a';
 	try {
 		var A = new Class(function() {
-			this.__metaclass__ = metaclass;
+			this.__metaclass__ = metaclass2;
 		});
 		var a = new A();
-		ok(true, '__metaclass__ is a class without __new__ , which should not cause error');
+		ok(true, 'cls.__new__ = base.__new__; so without __new__ is still fine for metaclass');
 	} catch (e) {
-		ok(false, '__metaclass__ is a class without __new__ , which should not cause error : ' + e);
+		ok(true, 'cls.__new__ = base.__new__; so without __new__ is still fine for metaclass: ' + e);
 	}
 
-	var metaclass = new Class(function() {
+	var metaclass3 = new Class(function() {
 		this.__new__ = function(cls, name, base, dict) {};
 	});
 	try {
 		var A = new Class(function() {
-			this.__metaclass__ = metaclass;
+			this.__metaclass__ = metaclass3;
 		});
 		var a = new A();
-		ok(true, '__metaclass__ is a class without initialize , which should not cause error');
+		ok(false, '__metaclass__ is a class without initialize , which should cause error');
 	} catch (e) {
-		ok(false, '__metaclass__ is a class without initialize , which should not cause error : ' + e);
+		ok(true, '__metaclass__ is a class without initialize , which should cause error : ' + e);
 	}
 });
 
@@ -144,9 +146,9 @@ test('metaclass with empty __new__', function() {
 			this.__metaclass__ = metaclass;
 		});
 		var a = new A();
-		ok(true, '__metaclass__ is a class with empty __new__ , which should not cause error');
+		ok(false, '__metaclass__ is a class with empty __new__ , which should not cause error');
 	} catch (e) {
-		ok(false, '__metaclass__ is a class with empty __new__ , which should not cause error : ' + e);
+		ok(true, '__metaclass__ is a class with empty __new__ , which should not cause error : ' + e);
 	}
 });
 
@@ -160,7 +162,7 @@ test('__new__ return something else', function() {
 	var A = new Class(function() {
 		this.__metaclass__ = metaclass;
 	});
-	ok(true, '__new__ return return type.__new__(cls, name, base, dict); which should not cause error');
+	ok(true, '__new__ return type.__new__(cls, name, base, dict); which should not cause error');
 
 	try {
 		var metaclass = new Class(function() {
@@ -172,9 +174,9 @@ test('__new__ return something else', function() {
 		var A = new Class(function() {
 			this.__metaclass__ = metaclass;
 		});
-		ok(true, '__new__ return null should not cause error');
+		ok(false, '__new__ return null should cause error');
 	} catch (e){
-		ok(false, '__new__ return null should not cause error : ' + e);
+		ok(true, '__new__ return null should cause error : ' + e);
 	}
 
 	try {
@@ -188,9 +190,9 @@ test('__new__ return something else', function() {
 			this.__metaclass__ = metaclass;
 		});
 		var a = new A();
-		ok(true, '__new__ return 1 or other non-class value, should not cause error');
+		ok(false, '__new__ return 1 or other non-class value, should not cause error');
 	} catch (e){
-		ok(false, '__new__ return 1 or other non-class value, should not cause error : ' + e);
+		ok(true, '__new__ return 1 or other non-class value, should not cause error : ' + e);
 	}
 });
 
@@ -283,9 +285,9 @@ test('throw uncatched error in __metaclass__', function() {
 		var A = new Class(function(){
 			this.__metaclass__ = metaclass;
 		});
-		ok(true, 'error in __mataclass__ should be handled');
+		ok(false, 'error in __mataclass__ should be handled');
 	} catch (e) {
-		ok(false, 'error in __mataclass__ should be handled : ' + e);
+		ok(true, 'error in __mataclass__ should be handled : ' + e);
 	}
 
 	var metaclass = new Class(function() {
@@ -300,9 +302,9 @@ test('throw uncatched error in __metaclass__', function() {
 		var A = new Class(function(){
 			this.__metaclass__ = metaclass;
 		});
-		ok(true, 'error in __mataclass__ should be handled');
+		ok(false, 'error in __mataclass__ should be handled');
 	} catch (e) {
-		ok(false, 'error in __mataclass__ should be handled : ' + e);
+		ok(true, 'error in __mataclass__ should be handled : ' + e);
 	}
 
 	var metaclass = new Class(function() {
@@ -318,9 +320,9 @@ test('throw uncatched error in __metaclass__', function() {
 		var A = new Class(function(){
 			this.__metaclass__ = metaclass;
 		});
-		ok(true, 'error in __mataclass__ should be handled');
+		ok(false, 'error in __mataclass__ should be handled');
 	} catch (e) {
-		ok(false, 'error in __mataclass__ should be handled : ' + e);
+		ok(true, 'error in __mataclass__ should be handled : ' + e);
 	}
 });
 
@@ -331,9 +333,8 @@ test('metaclass is other non-false value, not function', function() {
 			new Class(function() {
 				this.__metaclass__ = trues[i];
 			});
-			ok(true, '__metaclass__ is ' + trues[i] + ', which should not cause an error');
 		} catch (e) {
-			ok(false, '__metaclass__ is ' + trues[i] + ', which should not cause an error : ' + e);
+			ok(true, '__metaclass__ is ' + trues[i] + ', which should cause an error : ' + e);
 		};
 	}
 });

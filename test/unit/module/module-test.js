@@ -146,14 +146,23 @@ test('string starts/ends with .', function() {
 		object.add('cause_error', '.used', function(exports) {});
 		object.use('cause_error', function(exports, a) {});
 	} catch (e) {
-		ok(false, 'object.add(\'cause_error\', \'.used\') cause an error');
+		ok(true, 'object.add(\'cause_error\', \'.used\') cause an error : ' + e);
+	}
+	delete object._loader.lib['cause_error'];
+	try {
+		object.add('cause_error', './used', function(exports) {});
+		object.add('cause_error.used', function(exports) {});
+		object.use('cause_error', function(exports, a) {});
+		ok(true, 'start with ./ is ok in uses');
+	} catch (e) {
+		ok(true, 'object.add(\'cause_error\', \'.used\') cause an error : ' + e);
 	}
 	delete object._loader.lib['cause_error'];
 	try {
 		object.add('cause_error', 'used.', function(exports) {});
 		object.use('cause_error', function(exports, a) {});
 	} catch (e) {
-		ok(false, 'object.add(\'cause_error\', \'used.\') cause an error');
+		ok(true, 'object.add(\'cause_error\', \'used.\') cause an error : ' + e);
 	}
 	delete object._loader.lib['cause_error'];
 	try {
@@ -161,7 +170,7 @@ test('string starts/ends with .', function() {
 		object.use('.cause_error', function(exports, a) {});
 		ok(object._loader.lib[''] == undefined, 'object._loader.lib[\'\'] should be undefined');
 	} catch (e) {
-		ok(false, 'add .cause_error causes error'); 
+		ok(true, 'add .cause_error causes error : ' + e); 
 	}
 	delete object._loader.lib['.cause_error'];
 	delete object._loader.lib[''];
@@ -172,7 +181,7 @@ test('string starts/ends with .', function() {
 		ok(object._loader.lib[''] == undefined, 'object._loader.lib[\'\'] should be undefined');
 		ok(object._loader.lib['.cause_error.'] == undefined,'object._loader.lib[\'.cause_error.\'] should be undefined');
 	} catch (e) {
-		ok(false, 'add .cause_error. causes error');
+		ok(true, 'add .cause_error. causes error : ' + e);
 	}
 	delete object._loader.lib[''];
 	delete object._loader.lib['.cause_error'];

@@ -1,7 +1,7 @@
 object.add('options', function(exports) {
 
 // 仿照 mootools 的overloadSetter，返回一个 key/value 这种形式的function参数的包装，使其支持{key1: value1, key2: value2} 这种形式
-var enumerables = true;
+var enumerables = true, APslice = Array.prototype.slice;
 for (var i in {toString: 1}) enumerables = null;
 if (enumerables) enumerables = ['hasOwnProperty', 'valueOf', 'isPrototypeOf', 'propertyIsEnumerable', 'toLocaleString', 'toString', 'constructor'];
 // func有可能是个method，需要支持传递self参数
@@ -9,7 +9,7 @@ this.overloadsetter = function(func) {
 	return function() {
 		var a = arguments[func.length - 2] || null;
 		var b = arguments[func.length - 1];
-		var passArgs = args = Array.prototype.slice.call(arguments, 0, func.length - 2);
+		var passArgs = args = APslice.call(arguments, 0, func.length - 2);
 
 		if (a === null) return this;
 		if (typeof a != 'string') {
@@ -84,14 +84,15 @@ this.Options = new Class({
 		if (!host) host = self._options;
 
 		for (var i in options) {
-			if (host[i] !== undefined) host[i] = options[i];
+			// host[i] !== undefined is false when the value is undefined
+			if (i in host) host[i] = options[i];
 		}
 	},
 
 	setOption: function(self, name, type, value) {
 		if (value !== undefined) {
 			self._options[name] = value;
-		} else {
+		} else if (self._provider && self._provider.makeOption){
 			value = self._provider.makeOption(name, type);
 			if (value === null) return;
 			else self._options[name] = value;

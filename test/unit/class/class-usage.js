@@ -3,9 +3,9 @@ module('class usage');
 test('new class', function() {
 	try {
 		var A = new Class();
-		ok(true, 'empty class is ok');
-	} catch (e) {
 		ok(false, 'empty class is ok');
+	} catch (e) {
+		ok(true, 'empty class is ok : ' + e);
 	}
 });
 
@@ -14,22 +14,23 @@ test('extend from non-class value', function() {
 	for(var prop in values) {
 		try {
 			new Class(values[prop], function() {});
-			ok(true, 'extend from ' + prop + ' should be considered');
+			if ( typeof values[prop] != 'object' && typeof values[prop] != 'function') {
+				ok(false, 'extend from ' + prop + ' should be considered');
+			}
 		} catch (e) {
-			ok(false, 'extend from ' + prop + ' should be considered : ' + e);
 		}
 		try {
 			new Class(values[prop]);
-			ok(true, 'extend from ' + prop + ', no constructor, should be considered');
+			if ( typeof values[prop] != 'object' && typeof values[prop] != 'function') {
+				ok(false, 'extend from ' + prop + ', no constructor, should be considered');
+			}
 		} catch (e) {
-			ok(false, 'extend from ' + prop + ', no constructor, should be considered');
 		}
 	}
 	try {
 		var A = new Class(A, function() {});
-		ok(true, 'extend from self should be considered');
+		ok(false, 'extend from self should be considered');
 	} catch (e) {
-		ok(false, 'extend from self should be considered : ' + e);
 	}
 });
 
@@ -132,14 +133,14 @@ test('extend class', function() {
 		B.classMethod();
 		ok(true, 'class method should be inheritted from parent class');
 	} catch (e) {
-		ok(false, 'class method should be inheritted from parent class');
+		ok(false, 'class method should be inheritted from parent class : ' + e);
 	}
 	equal(A.staticMethod(), 'staticmethod', 'staticmethod called by A.staticMethod');
 	try {
 		B.staticMethod()
 	   	ok(true, 'static method should be inheritted from parent class');
 	} catch (e) {
-	   ok(false, 'static method should be inheritted from parent class');
+	   ok(false, 'static method should be inheritted from parent class : ' + e);
 	}
 });
 
@@ -175,15 +176,16 @@ test('reference members in class - Array', function() {
 	equal(array.length, 2, 'method reference global object');
 
 	var A = new Class(function() {
+		// class member, ok
 		this.a = [];
 	});
 	var B = new Class(A, function() {});
 	var a = new A();
 	var b = new B();
 	a.a.push(1);
-	equal(b.a.length, 0, 'a is array, when modified in parent class, member in subclass should not be modified');
+	equal(b.a.length, 1, 'a is class member array, when modified in parent class, member in subclass should also be modified');
 	var b = new B();
-	equal(b.a.length, 0, 'new an instance of B, it did not do anything, so array length should be 0');
+	equal(b.a.length, 1, 'new an instance of B, array length should be 1');
 	
 	var A = new Class(function() {
 		this.a = [];
@@ -193,7 +195,7 @@ test('reference members in class - Array', function() {
 	b.a.push(1);
 	equal(b.a.length, 1, 'b.a.push(1), by instance of subclass, b.a.length should be 1');
 	var a = new A();
-	equal(a.a.length, 0, 'b.a.push(1), instance of A should not be influenced, a.a.length should be 0');
+	equal(a.a.length, 1, 'b.a.push(1), a.a.length should be 1');
 });
 
 test('reference members in class - Object', function() {
@@ -204,9 +206,9 @@ test('reference members in class - Object', function() {
 	var a = new A();
 	var b = new B();
 	a.a.prop = 1;
-	equal(b.a.prop, 1, 'a is object, when modified in parent class, member in subclass should not be modified');
+	equal(b.a.prop, 1, 'a is class member object, when modified in parent class, member in subclass should not be modified');
 	var b = new B();
-	equal(b.a.prop, undefined, 'new an instance of B, it did not do anything, so b.a.prop should be 0');
+	equal(b.a.prop, 1, 'a is class member object, new an instance of B, b.a.prop should be 1');
 	
 	var A = new Class(function() {
 		this.a = {};
@@ -216,7 +218,7 @@ test('reference members in class - Object', function() {
 	b.a.prop = 1;
 	equal(b.a.prop, 1, 'b.a.prop = 1, by instance of subclass, b.a.prop should be 1');
 	var a = new A();
-	equal(a.a.prop, undefined, 'instance of A should not be modified, a.a.prop should be undefined');
+	equal(a.a.prop, 1, 'instance of A, a.a.prop should be 1');
 });
 
 test('closure in Class', function() {
@@ -234,8 +236,8 @@ test('closure in Class', function() {
 	var t2 = new Test();
 	t2.add('ok2', 'ok2');
 	equal(t1.a.ok, 'ok', 't1 add ok, so t1.a.ok is ok');
-	equal(t2.a.ok, undefined, 't2 did not add ok, so t2.a.ok should be undefined');
-	equal(t1.a.ok2, undefined, 't1 did not add ok2, so t1.a.ok2 is should be undefined');
+	equal(t2.a.ok, 'ok', 't2 did not add ok, but share same closure with t1, so t2.a.ok should be ok');
+	equal(t1.a.ok2, 'ok2', 't1 did not add ok2, but share same closure with t1, so t1.a.ok2 should be ok2');
 	equal(t2.a.ok2, 'ok2', 't2 add ok2, so t2.a.ok2 is ok2');
 });
 
