@@ -60,4 +60,8 @@ object.add('window', function(exports) {
 	return window;
 });
 
+object.add('loader', function(exports) {
+	exports.Loader = object.Loader;
+});
+
 })(object);
