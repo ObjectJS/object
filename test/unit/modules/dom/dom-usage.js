@@ -526,11 +526,10 @@ test('dom.ImageElement', function() {
 	object.use('dom', function(exports, dom) {
 		var image = dom.wrap(document.createElement('img'));
 		ok('naturalWidth' in image.__properties__, 'img wrapped successfully');
-		stop();
-		setTimeout(function() {
+		var path = $UNIT_TEST_CONFIG.needPath ? 'modules/dom/' : '';
+		image.src = path + 'image.jpg';
+		image.onload = function() {
 			start();
-			var path = $UNIT_TEST_CONFIG.needPath ? 'modules/dom/' : '';
-			image.src = path + 'image.jpg';
 			equal(image.width, 50, 'width of head image is 50px');
 			equal(image.height, 50, 'height of head image is 50px');
 			image.width = image.height = 20;
@@ -538,7 +537,9 @@ test('dom.ImageElement', function() {
 			equal(image.height, 20, 'height is modified');
 			equal(image.get('naturalWidth'), 50, 'image.get(naturalWidth) is still 50');
 			equal(image.get('naturalHeight'), 50, 'image.get(naturalHeight) is still 50');
-		}, 100);
+		}
+		stop();
+		
 	});
 });
 //FormElement

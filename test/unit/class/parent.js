@@ -221,7 +221,11 @@ test('parent method is instancemethod/staticmethod/classmethod/property - 2', fu
 	} catch (e) {
 		ok(false, 'parent method called in staticmethod, which should be considered : ' + e);
 	}
-	b.d();
+	try {
+		b.d();
+	} catch (e) {
+		ok(true, 'parent instancemethod should be deleted, if it is set to property in sub');
+	}
 	try {
 		b.get('d');
 		ok(false, 'property setter/getter can call xxx.parent too');

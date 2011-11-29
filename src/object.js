@@ -313,6 +313,15 @@ this.add = function() {
 	object._loader.add.apply(object._loader, arguments);
 };
 
+/**
+ * 添加一个module
+ * @name object.add
+ * @borrows object.Loader.add
+ */
+this.remove = function() {
+	if (!object._loader) object._loader = new Loader();
+	object._loader.remove.apply(object._loader, arguments);
+};
 // 找不到模块Error
 this.NoModuleError = function(name) {
 	this.message = 'no module named ' + name;
@@ -427,11 +436,10 @@ var membersetter = overloadSetter(function(name, member) {
 	}
 
 	// 类构建完毕后才进行set，需要先删除之前的成员
-	if (!constructing) {
-		delete cls[name];
-		delete proto[name];
-		delete properties[name];
-	}
+	// 为了避免子类构建时删除父类属性失败，这去掉constructing的判断
+	delete cls[name];
+	delete proto[name];
+	delete properties[name];
 
 	// 这里的member指向new Class参数的书写的对象/函数
 	if (name == '@mixins') {
