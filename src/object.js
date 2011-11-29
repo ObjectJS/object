@@ -478,6 +478,8 @@ var membersetter = overloadSetter(function(name, member) {
 	else if (member.__class__ === property) {
 		member.__name__ = name;
 		properties[name] = member;
+		// 当prototype覆盖instancemethod/classmethod/staticmethod时，需要去除prototype上的属性
+		proto[name] = undefined;
 	}
 	// this.a = classmethod(function() {})
 	else if (member.__class__ === classmethod) {
@@ -699,8 +701,9 @@ Class.initMixins = function(cls, instance) {
 	if (cls.__mixins__) {
 		for (var i = 0, l = cls.__mixins__.length, mixin; i < l; i++) {
 			mixin = cls.__mixins__[i];
-			if (mixin.prototype && mixin.prototype.initialize 
-				&& mixin.prototype.initialize.call) mixin.prototype.initialize.call(instance);
+			if (mixin.prototype && typeof mixin.prototype.initialize == 'function') {
+				mixin.prototype.initialize.call(instance);
+			}
 		}
 	}
 };
@@ -752,7 +755,7 @@ Class.inject = function(cls, host, args) {
 	var p = Class.getInstance(cls);
 	object.extend(host, p);
 	Class.initMixins(cls, host);
-	if (cls.prototype.initialize) cls.prototype.initialize.apply(host, args);
+	if (typeof cls.prototype.initialize == 'function') cls.prototype.initialize.apply(host, args);
 };
 
 /**

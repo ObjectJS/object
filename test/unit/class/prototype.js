@@ -93,7 +93,9 @@ test('see what is in Class, Class.prototype, instance.prototype', function() {
 	ok('c' in AP, 'instancemethod c is in A.prototype');
 	ok('d' in AP, 'classmethod d is in A.prototype');
 	ok('e' in AP, 'staticmethod e is in A.prototype');
-	ok(!('f' in AP), 'property f is not directly in A.prototype');
+
+	ok(('f' in AP) && AP['f'] === undefined, 'A.prototype contains f, which is undefined');
+	//ok(!('f' in AP), 'property f is not directly in A.prototype');
 	ok('f' in AP.__properties__, 'property f is in A.prototype.__properties__');
 	equal(typeof AP.__properties__['f'], 'object', 'member in __properties__ is object');
 	ok('fget' in AP.__properties__['f'], 'fget is in property f');
