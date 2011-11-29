@@ -1,7 +1,6 @@
 $(document).ready(function() {
 	$UNIT_TEST_CONFIG.needPath = true;
 	var config = [
-		{module:'loader',url:'loader'},
 		{module:'dom', url:'modules/dom'},
 		{module:'net', url:'modules/net'},
 		{}

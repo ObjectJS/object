@@ -43,6 +43,10 @@ function createNode(tagName, className) {
 	return node;
 }
 
+var image = document.createElement('img');
+var path = $UNIT_TEST_CONFIG.needPath ? 'modules/dom/' : '';
+image.src = path + 'image.jpg';
+
 object.use('dom', function(exports, dom) {
 	window.elementProps = Class.keys(dom.Element);
 	window.formInputElementPropsOnly = ['selectionStart', 'selectionEnd', 'getSelected', 'value', 'validity',
@@ -524,10 +528,8 @@ test('only dom.Element', function() {
 
 test('dom.ImageElement', function() {
 	object.use('dom', function(exports, dom) {
-		var image = dom.wrap(document.createElement('img'));
+		image = dom.wrap(image);
 		ok('naturalWidth' in image.__properties__, 'img wrapped successfully');
-		var path = $UNIT_TEST_CONFIG.needPath ? 'modules/dom/' : '';
-		image.src = path + 'image.jpg';
 		equal(image.width, 50, 'width of head image is 50px');
 		equal(image.height, 50, 'height of head image is 50px');
 		image.width = image.height = 20;
