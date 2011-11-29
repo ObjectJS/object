@@ -528,17 +528,13 @@ test('dom.ImageElement', function() {
 		ok('naturalWidth' in image.__properties__, 'img wrapped successfully');
 		var path = $UNIT_TEST_CONFIG.needPath ? 'modules/dom/' : '';
 		image.src = path + 'image.jpg';
-		image.onload = function() {
-			start();
-			equal(image.width, 50, 'width of head image is 50px');
-			equal(image.height, 50, 'height of head image is 50px');
-			image.width = image.height = 20;
-			equal(image.width, 20, 'width is modified');
-			equal(image.height, 20, 'height is modified');
-			equal(image.get('naturalWidth'), 50, 'image.get(naturalWidth) is still 50');
-			equal(image.get('naturalHeight'), 50, 'image.get(naturalHeight) is still 50');
-		}
-		stop();
+		equal(image.width, 50, 'width of head image is 50px');
+		equal(image.height, 50, 'height of head image is 50px');
+		image.width = image.height = 20;
+		equal(image.width, 20, 'width is modified');
+		equal(image.height, 20, 'height is modified');
+		equal(image.get('naturalWidth'), 50, 'image.get(naturalWidth) is still 50');
+		equal(image.get('naturalHeight'), 50, 'image.get(naturalHeight) is still 50');
 		
 	});
 });
