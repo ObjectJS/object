@@ -238,6 +238,44 @@ test('parent method is instancemethod/staticmethod/classmethod/property - 2', fu
 		ok(true, 'property can be called by b.e()/b.e(value), and parent also can be used : ' + e);
 	}
 });
+
+test('property in sub class should overwrite same name member in parent', function() {
+	var A = new Class(function() {
+		this.a = 1;
+		this.b = {a:1};
+		this.c = function(self){
+			ok(false, 'instancemethod c should be overwrited by property c in sub class');
+		}
+		this.d = classmethod(function(cls) {
+			ok(false, 'classmethod d should be overwrited by property d in sub class');
+		});
+		this.e = staticmethod(function() {
+			ok(false, 'staticmethod e should be overwrited by property e in sub class');
+		});
+	});
+
+	var B = new Class(A, function() {
+		this.a = property(function(self){});
+		this.b = property(function(self){});
+		this.c = property(function(self){});
+		this.d = property(function(self){});
+		this.e = property(function(self){});
+	});
+
+	var b = new B();
+	notEqual(b.a, 1, 'should not get b.a, because b.a should be overwrited');
+	equal(b.b, undefined, 'should not get b.b, because b.b should be overwrited');
+	raises(function() {
+		b.c();
+	}, 'can not call b.c(), b.c should be overwrited');
+	raises(function() {
+		b.d();
+	}, 'can not call b.d(), b.d should be overwrited');
+	raises(function() {
+		b.e();
+	}, 'can not call b.e(), b.e should be overwrited');
+});
+
 //the order of parent method execution
 test('order of parent', function() {
 	var counter = 0;
