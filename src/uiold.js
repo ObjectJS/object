@@ -134,8 +134,22 @@ this.Component = new Class(dom.Element, function() {
 			}
 		}
 
-		// 将ele注射进cls
-		Class.inject(cls, ele);
+		// 将ele注射进cls，不能使用Class.inject，需要判断：
+		// 1、待注入的属性值是否是undefined
+		// 2、属性是否已经在对象中存在（避免对innerHTML之类DOM节点属性进行设置）
+		ele.__class__ = cls;
+		ele.__properties__ = cls.prototype.__properties__;
+		var clsInstance = Class.getInstance(cls);
+		for (var prop in clsInstance) {
+			if (prop in ele || clsInstance[prop] === undefined) {
+				continue;
+			}
+			ele[prop] = clsInstance[prop];
+		}
+		Class.initMixins(cls, ele);
+		if (typeof cls.prototype.initialize == 'function') {
+			cls.prototype.initialize.apply(ele, []);
+		}
 
 		ele._wrapper = cls;
 		return ele;
