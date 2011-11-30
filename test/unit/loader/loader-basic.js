@@ -117,6 +117,53 @@ test('loadLib', function() {
 	equal(Object.keys(loader.lib).length, oldLength+1, 'new script tag inserted, data-src is not end with .js');
 });
 
+module('loader-getAbsolutePath');
+
+// 计算当前引用objectjs的页面文件的目录路径
+function calculatePageDir() {
+	var loc = window['location'];
+	var pageUrl = loc.protocol + '//' + loc.host + (loc.pathname.charAt(0) !== '/' ? '/' : '') + loc.pathname; 
+	// IE 下文件系统是以\为分隔符，统一改为/
+	if (pageUrl.indexOf('\\') != -1) {
+		pageUrl = pageUrl.replace(/\\/g, '/');
+	}
+	var pageDir = './';
+	if (pageUrl.indexOf('/') != -1) {
+		// 去除文件，留下目录path
+		pageDir = pageUrl.substring(0, pageUrl.lastIndexOf('/') + 1);
+	}
+	return pageDir;
+}
+
+var pageDir = calculatePageDir();
+
+test('getAbsolutePath', function() {
+	equal(Loader._getAbsolutePath('file://dir/a.js'), 'file://dir/a.js', 'return cleaned path');
+	equal(Loader._getAbsolutePath('http://host/a.js'), 'http://host/a.js',  'return cleaned absolute path');
+	equal(Loader._getAbsolutePath('http://host//b/c/../../a.js'), 'http://host/a.js', 'http://host//b/c/../../a.js -> http://host/a.js');
+	equal(Loader._getAbsolutePath('//a/b/c/../../a.js'), '//a/a.js', '//a/b/c/../../a.js -> //a/a.js');
+	
+	equal(Loader._getAbsolutePath('/a/b/c/../../a.js'), pageDir + 'a/a.js', '/a/b/c/../../a.js -> ' + pageDir + 'a/a/.js');
+	equal(Loader._getAbsolutePath('/a/b/c/../../a.js?a=1'), pageDir + 'a/a.js?a=1', '/a/b/c/../../a.js?a=1 -> ' + pageDir + 'a/a/.js?a=1');
+	equal(Loader._getAbsolutePath('/a/b/c/../../a.js?a=1#'), pageDir + 'a/a.js?a=1', '/a/b/c/../../a.js?a=1# -> ' + pageDir + 'a/a/.js?a=1');
+	equal(Loader._getAbsolutePath('http://hg.xnimg.cn/object/src/dom/index.js'), 'http://hg.xnimg.cn/object/src/dom/index.js', 'http://hg.xnimg.cn/object/src/dom/index.js -> http://hg.xnimg.cn/object/src/dom/index.js');
+});
+
+module('loader-removeScript');
+
+test('removeScript', function() {
+	Loader.loadScript(emptyJS, function() {});
+	equal(Object.keys(Loader.get('_urlNodeMap')).length, 0, 'no cache, so will not add to _urlNodeMap');
+	Loader.removeScript(emptyJS);
+	Loader.loadScript(emptyJS, function() {}, true);
+	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, 'cache is true, so will add to _urlNodeMap');
+	notEqual(Loader.get('_urlNodeMap')[pageDir + emptyJS], undefined, pageDir + emptyJS + ' is cached in _urlNodeMap');
+	Loader.removeScript('_' + emptyJS);
+	notEqual(Loader.get('_urlNodeMap')[pageDir + emptyJS], undefined, 'remove failed, but should not raise error');
+	Loader.removeScript(emptyJS);
+	equal(Loader.get('_urlNodeMap')[pageDir + emptyJS], undefined, pageDir + emptyJS + ' is remove from _urlNodeMap');
+});
+
 module("loader-add");
 test('add-basic', function() {
 	var edges = $UNIT_TEST_CONFIG.testEdges;

@@ -1247,17 +1247,17 @@ this.Loader = new Class(function() {
 	 * @param src 地址
 	 */
 	this._getAbsolutePath = staticmethod(function(src) {
-		// 如果本身是绝对路径，则返回src
+		// 如果本身是绝对路径，则返回src的清理版本
 		if (src.indexOf('://') != -1 || src.indexOf('//') === 0) {
-			return src;
+			return cleanPath(src);
 		} else {
-			return clearPath(pageDir + src);
+			return cleanPath(pageDir + src);
 		}
 
 		/**
 		 * 清理路径url，去除相对寻址符号
 		 */
-		function clearPath(path) {
+		function cleanPath(path) {
 			// 去除多余的/
 			path = path.replace(/([^:\/])\/+/g, '$1\/');
 			// 如果没有相对寻址，直接返回path
@@ -1281,7 +1281,8 @@ this.Loader = new Class(function() {
 				}
 			}
 
-			return result.join('/');
+			// 去除尾部的#号
+			return result.join('/').replace(/#$/, '');
 		}
 	});
 
@@ -1351,9 +1352,8 @@ this.Loader = new Class(function() {
 		document.getElementsByTagName('head')[0].insertBefore(ele, null);
 
 		if (useCache) { 
-			// 利用ele.src获取绝对路径来存键值对
+			// 利用绝对路径来存键值对，key为绝对路径，value为script节点
 			urlNodeMap[absPath] = ele;
-			ele.src;
 		}
 	});
 

@@ -238,3 +238,24 @@ test('use many modules', function() {
 		recoverEnv();
 	});
 });
+
+test('many urls pointing to the same file', function() {
+	recoverEnv();
+	addModuleScriptToHead('module1', module1JS_request_file_once);
+	var loader = object._loader;
+	loader.loadLib();
+	stop();
+	window.moduleFileRequestTimeCounter = 0;
+	loader.use('module1', function(exports, module1) {
+		start();
+		equal(module1.test, 1, 'use module1, which add counter by one on window');
+		equal(window.moduleFileRequestTimeCounter, 1, 'request module file once');
+	});
+	stop();
+	loader.use('module1', function(exports, module1) {
+		start();
+		equal(module1.test, 1, 'use module1, which add counter by one on window');
+		equal(window.moduleFileRequestTimeCounter, 1, 'request module file only once');
+		recoverEnv();
+	});
+});
