@@ -7,5 +7,5 @@ $(document).ready(function() {
 		.script(path + 'mixin-usage.js').wait()
 		.script(path + 'metaclass.js').wait()
 		.script(path + 'parent.js').wait()
-		.script(path + 'prototype.js').wait()
+		.script(path + 'prototype-basic.js').wait()
 });

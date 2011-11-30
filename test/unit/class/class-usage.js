@@ -1,4 +1,4 @@
-module('class usage');
+module('class-usage');
 
 test('new class', function() {
 	try {

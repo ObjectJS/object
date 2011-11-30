@@ -1,4 +1,4 @@
-module('dom.usage')
+module('dom-usage')
 
 function assertPropExists(props, obj, desc, showTrue) {
 	desc = desc || '';
