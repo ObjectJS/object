@@ -7,6 +7,13 @@
 	</library>
 
 	<source dir="src">
+		<combine path="object.js">
+			<include path="object/ecma5.js" />
+			<include path="object/core.js" />
+			<include path="object/oop.js" />
+			<include path="object/loader.js" />
+			<include path="object/object-loader.js" />
+		</combine>
 		<combine path="object-all.js">
 			<include path="../lib/slick/Slick.Parser.js" />
 			<include path="../lib/jeresig-sizzle-68ff471/sizzle.js" />

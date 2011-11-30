@@ -27,7 +27,7 @@ $UNIT_TEST_CONFIG.testEdges = {
 	'{a:1}' : {a:1},
 	'object': object,
 	'Class' : Class,
-	'Loader': Loader
+	'Loader': object.Loader
 };
 
 $UNIT_TEST_CONFIG.arrayEdges = {

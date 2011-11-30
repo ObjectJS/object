@@ -1,42 +1,31 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<script type="text/javascript" src="../src/object.js"></script>
+<script type="text/javascript" src="../pub/object-all.js"></script>
 <!--<script type="text/javascript" src="http://xnimg.cn/n/core/base-all.js"></script>-->
 <script>
 
-	object.add('test2.c', function() {});
-
-	object.add('test2', './c', function(exports, c) {
+	object.add('xn.flashUploader', 'sys, dom/dd', function(exports, sys, dom) {
+		console.log(sys.modules)
+		console.log(dom)
+		return {
+			haha: 2
+		};
 	});
 
-	object.add('test.a.b.c', function(exports) {
-		this.name = 'test.a.b.c';
-		console.log(this.__name__);
-	});
-    
-	object.add('test.a', './b.c, sys', function(exports, b, sys) {
-		this.name = 'test.a';
-		console.log(this.__name__, b);
+	object.define('xn/flashUploader/async', function(require) {
+
+		require.async('xn/flashUploader', function(flashUploader) {
+			console.log(flashUploader.haha);
+		});
+
 	});
 
-	object.add('test', './a, test2, test2, test2, test2, sys', function(exports, a, test2, sys) {
-		this.name = 'test';
-		console.log(this.__name__, a);
-		console.dir(sys.modules);
+	object.use('xn/flashUploader/async, xn.flashUploader', function(exports, async, xn) {
+		console.log('async', async);
+		console.log('xn', xn);
 	});
 
-	/*
-	 * 应该输出
-	 * a.b
-	 * a
-	 * __main__
-	 */
-	object.execute('test');
-
-	// object.use('test, sys', function(exports, test, sys) {
-	//	console.dir(sys.modules)
-	// });
 </script>
 <script>
 </script>

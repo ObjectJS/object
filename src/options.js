@@ -46,7 +46,6 @@ this.overloadsetter = function(func) {
  *	param2: 2
  * });
  * 来设定默认值，没有设置过默认值的成员不会输出
- * @class
  */
 this.Arguments = new Class(function() {
 
@@ -68,7 +67,6 @@ this.Arguments = new Class(function() {
 
 /**
  * 参数
- * @class
  */
 this.Options = new Class({
 
