@@ -22,6 +22,9 @@ Module.prototype.toString = function() {
 	return '<module \'' + this.__name__ + '\'>';
 };
 
+/**
+ * 普通Package
+ */
 function Package(id, deps, factory) {
 	this.id = id;
 	this.dependencies = deps;
@@ -40,6 +43,46 @@ Package.factoryRunner = {
 	}
 };
 
+/**
+ * 文艺Package
+ */
+function SeaPackage(id, deps, factory) {
+	this.id = id;
+	this.dependencies = deps;
+	this.factory = factory;
+}
+SeaPackage.factoryRunner = {
+	doneDep: function(loader, module, name, runtime, args, exports) {
+		function require(id) {
+			if (id.indexOf('./') == 0) {
+				id = runtime.getName(name) + '.' + loader.parseId(id.slice(2));
+			} else {
+				id = loader.parseId(id);
+			}
+			var exports = runtime.modules[id];
+			if (!exports) throw new object.ModuleRequiredError(id);
+			return exports;
+		}
+		require.async = function(deps, callback) {
+			deps = loader.parseDeps(deps);
+			loader.load(new SeaPackage(name, deps, function(require) {
+				var args = [];
+				deps.forEach(function(dep) {
+					args.push(require(dep));
+				});
+				callback.apply(null, args);
+			}), name, runtime);
+		};
+		// 最后传进factory的参数
+		args.push(require);
+		args.push(exports);
+		args.push(module);
+	}
+};
+
+/**
+ * Loader运行时，每一个use、execute产生一个
+ */
 function LoaderRuntime(root) {
 
 	/**
@@ -71,95 +114,117 @@ function LoaderRuntime(root) {
 	this.root = root;
 }
 
-/**
- * 加入一个module
- */
-LoaderRuntime.prototype.addModule = function(name) {
-	var emptyModule = this.emptyModules[name];
-	var exports = emptyModule? emptyModule.exports : new Module(name);
-	this.modules[name] = exports;
-	return exports;
-};
+LoaderRuntime.prototype = {
+	/**
+	 * 加入一个module
+	 */
+	addModule: function(name) {
+		var emptyModule = this.emptyModules[name];
+		var exports = emptyModule? emptyModule.exports : new Module(name);
+		this.modules[name] = exports;
+		return exports;
+	},
 
-/**
- * 加入一个占位的空module，保证子模块可获取到父模块的引用
- */
-LoaderRuntime.prototype.addEmptyModule = function(name, ref) {
-	var emptyModule = this.emptyModules[name];
-	var exports;
-	// refs保存所有依赖了此父模块的子模块的信息。
-	if (emptyModule) {
-		exports = emptyModule.exports;
-	} else {
-		exports = new Module(name);
-		this.emptyModules[name] = emptyModule = {
-			exports: exports,
-			refs : []
-		};
-	}
-	emptyModule.refs.push(ref);
-	return exports;
-};
-
-/**
- * 当子模块调用父模块时，检测是否可以正确的获取到其引用。
- */
-LoaderRuntime.prototype.checkRef = function(name) {
-	var emptyModule = this.emptyModules[name];
-	if (emptyModule) {
-		emptyModule.refs.forEach(function(ref) {
-			if (console) console.warn(ref + '无法正确获得' + name + '模块的引用。因为该模块是通过return返回模块实例的。');
-		});
-	}
-};
-
-/**
- * 去掉root前缀的模块名
- */
-LoaderRuntime.prototype.getId = function(id) {
-	var root = this.root;
-	if (id == root || id.indexOf(root + '.') == 0) {
-		id = id.slice(root.length + 1);
-	}
-	return id;
-};
-
-/**
- * 为名为host的module设置member成员为value
- */
-LoaderRuntime.prototype.setMemberTo = function(host, member, value) {
-
-	// 向host添加member成员
-	if (host) {
-		// 已存在host
-		if (this.modules[host]) {
-			this.modules[host][member] = value;
-		}
-		// host不存在，记录在members对象中
-		else {
-			if (!this.members[host]) this.members[host] = [];
-			this.members[host].push({
-				id: member,
-				value: value
-			});
-		}
-	}
+	/**
+	 * 设置一个已存在的module
+	 */
+	setModule: function(name, exports) {
+		this.modules[name] = exports;
+	},
 
 	/*
-	 * 将记录的成员添加到自己
+	 * 获取一个module
 	 */
-	// 全名
-	var id = (host? host + '.' : '') + member;
+	getModule: function(name) {
+		return this.modules[name];
+	},
 
-	// 已获取到了此host的引用，将其子模块都注册上去。
-	var members = this.members[id];
-	if (members) {
-		members.forEach(function(member) {
-			this.modules[id][member.id] = member.value;
-		}, this);
+	/**
+	 * 加入一个占位的空module，保证子模块可获取到父模块的引用
+	 */
+	addEmptyModule: function(name, ref) {
+		var emptyModule = this.emptyModules[name];
+		var exports;
+		// refs保存所有依赖了此父模块的子模块的信息。
+		if (emptyModule) {
+		    exports = emptyModule.exports;
+		} else {
+		    exports = new Module(name);
+		    this.emptyModules[name] = emptyModule = {
+		   	 exports: exports,
+		   	 refs : []
+		    };
+		}
+		emptyModule.refs.push(ref);
+		return exports;
+	},
+
+	/**
+	 * 当子模块调用父模块时，检测是否可以正确的获取到其引用。
+	 */
+	checkRef: function(name) {
+		var emptyModule = this.emptyModules[name];
+		if (emptyModule) {
+		    emptyModule.refs.forEach(function(ref) {
+		 	   if (console) console.warn(ref + '无法正确获得' + name + '模块的引用。因为该模块是通过return返回模块实例的。');
+		    });
+		}
+	},
+
+	/**
+	 * 加上root前缀的完整id
+	 */
+	getId: function(name) {
+		return this.root + '.' + name;
+	},
+
+	/**
+	 * 去掉root前缀的模块名
+	 */
+	getName: function(id) {
+		var root = this.root;
+		if (id == root || id.indexOf(root + '.') == 0) {
+			id = id.slice(root.length + 1);
+		}
+		return id;
+	},
+
+	/**
+	 * 为名为host的module设置member成员为value
+	 */
+	setMemberTo: function(host, member, value) {
+
+		// 向host添加member成员
+		if (host) {
+		    // 已存在host
+		    if (this.modules[host]) {
+		  	  this.modules[host][member] = value;
+		    }
+		    // host不存在，记录在members对象中
+		    else {
+		  	  if (!this.members[host]) this.members[host] = [];
+		  	  this.members[host].push({
+		  		  id: member,
+		  		  value: value
+		  	  });
+		    }
+		}
+
+		/*
+		 * 将记录的成员添加到自己
+		 */
+		// 全名
+		var id = (host? host + '.' : '') + member;
+
+		// 已获取到了此host的引用，将其子模块都注册上去。
+		var members = this.members[id];
+		if (members) {
+		    members.forEach(function(member) {
+		  	  this.modules[id][member.id] = member.value;
+		    }, this);
+		}
 	}
 };
-
 
 // 计算当前引用objectjs的页面文件的目录路径
 function calculatePageDir() {
@@ -186,10 +251,10 @@ var pageDir = calculatePageDir();
  */
 var Loader = new Class(function() {
 
-	this.scripts = document.getElementsByTagName('script');
-
 	// 用于保存url与script节点的键值对
 	this._urlNodeMap = {};
+
+	this.scripts = document.getElementsByTagName('script');
 
 	this.initialize = function(self) {
 		self.useCache = true;
@@ -226,14 +291,10 @@ var Loader = new Class(function() {
 	};
 
 	/**
-	 * 将.形式的id转换成路径形式
+	 * 将路径形式的id转换成.形式
 	 */
-	this.parseId = function(self, id, context) {
-		if (id.indexOf('./') == 0 && context) {
-			return context + '.' + id.slice(2);
-		} else {
-			return id.replace(/\./g, '.');
-		}
+	this.parseId = function(self, id) {
+		return id.replace(/\//g, '.');
 	};
 
 	/**
@@ -245,7 +306,6 @@ var Loader = new Class(function() {
 	 */
 	this.loadDep = function(self, depId, ownerId, runtime, callback) {
 
-		var modules = runtime.modules;
 		var parts; // depId所有部分的数组
 		var context = null; // 当前dep是被某个模块通过相对路径调用的
 		var moduleId = ''; // 当前模块在运行时保存在modules中的名字，为context+parts的第一部分
@@ -263,7 +323,7 @@ var Loader = new Class(function() {
 			var fullId, depModule;
 
 			if (pExports) {
-				modules[id] = pExports;
+				runtime.setModule(id, pExports);
 				// 生成对象链
 				runtime.setMemberTo(pId, part, pExports);
 			}
@@ -273,16 +333,17 @@ var Loader = new Class(function() {
 			currentPart++;
 
 			if (currentPart == parts.length) {
-				callback(modules[moduleId.replace(/\//g, '.')]);
+				callback(runtime.getModule(moduleId));
 
 			} else {
 				part = parts[currentPart];
 				partId = (pId? pId + '.' : '') + part;
-				fullId = isRelative? runtime.root + '.' + partId : partId;
+				fullId = isRelative? runtime.getId(partId) : partId;
+				depModule = runtime.getModule(partId);
 
 				// 使用缓存中的
-				if (modules[partId]) {
-					nextPart(modules[partId], partId);
+				if (depModule) {
+					nextPart(depModule, partId);
 				}
 				// lib 中有
 				else if (self.lib[fullId]) {
@@ -295,27 +356,22 @@ var Loader = new Class(function() {
 			};
 		}
 
+		// Relative
 		if (depId.indexOf('.\/') == 0) {
 			depId = depId.slice(2);
-			if (depId.indexOf('\/') != -1) {
-				parts = [depId.replace(/\//g, '.')];
-				moduleId = depId;
-			} else {
-				parts = depId.split('.');
-				// 去除root
-				context = runtime.getId(ownerId);
-				// 说明确实去除了root，是一个相对引用，在获取fullId时需要加上root
-				isRelative = (context != ownerId);
-				moduleId = context + '.' + parts[0];
-			}
+			// 去除root
+			context = runtime.getName(ownerId);
+			// 说明确实去除了root，是一个相对引用，在获取fullId时需要加上root
+			isRelative = (context != ownerId);
+		}
+
+		if (depId.indexOf('\/') != -1) {
+			depId = self.parseId(depId)
+			parts = [depId];
+			moduleId = depId;
 		} else {
-			if (depId.indexOf('\/') != -1) {
-				parts = [depId.replace(/\//g, '.')];
-				moduleId = depId;
-			} else {
-				parts = depId.split('.');
-				moduleId = parts[0];
-			}
+			parts = depId.split('.');
+			moduleId = (context? context + '.' : '') + parts[0];
 		}
 
 		nextPart(null, context);
@@ -439,7 +495,7 @@ var Loader = new Class(function() {
 			script = scripts[i];
 			id = script.getAttribute('data-module');
 			if (!id) continue;
-			id = id.replace(/\//g, '.');
+			id = self.parseId(id);
 			//self.lib中的内容可能是makePrefixModule构造的，只有name
 			//在模块a.b先声明，模块a后声明的情况下，无法获取模块a的内容
 			if (self.lib[id] && (self.lib[id].factory || self.lib[id].file)) {
@@ -468,12 +524,6 @@ var Loader = new Class(function() {
 	 * @param src 地址
 	 */
 	this._getAbsolutePath = staticmethod(function(src) {
-		// 如果本身是绝对路径，则返回src的清理版本
-		if (src.indexOf('://') != -1 || src.indexOf('//') === 0) {
-			return cleanPath(src);
-		} else {
-			return cleanPath(pageDir + src);
-		}
 
 		/**
 		 * 清理路径url，去除相对寻址符号
@@ -505,6 +555,13 @@ var Loader = new Class(function() {
 			// 去除尾部的#号
 			return result.join('/').replace(/#$/, '');
 		}
+
+		// 如果本身是绝对路径，则返回src的清理版本
+		if (src.indexOf('://') != -1 || src.indexOf('//') === 0) {
+			return cleanPath(src);
+		}
+
+		return cleanPath(pageDir + src);
 	});
 
 	/**
@@ -637,7 +694,7 @@ var Loader = new Class(function() {
 	 */
 	this.addPackage = function(self, id, deps, factory, constructor) {
 		if (!id || typeof id != 'string') return null;
-		id = id.replace(/\//g, '.');
+		id = self.parseId(id);
 		// 不允许重复添加。
 		if (self.lib[id] && self.lib[id].factory) return null;
 		if (arguments.length < 4) return null;
@@ -652,21 +709,21 @@ var Loader = new Class(function() {
 
 		if (!factory || typeof factory != 'function') return null;
 
-		var package = self.lib[id];
+		var pkg = self.lib[id];
 
 		// 已存在，说明是占位的
-		if (package) {
-			package.constructor = constructor;
-			package.dependencies = deps;
-			package.factory = factory;
-			delete package.file;
+		if (pkg) {
+			pkg.constructor = constructor;
+			pkg.dependencies = deps;
+			pkg.factory = factory;
+			delete pkg.file;
 		} else {
 			// 建立前缀占位模块
 			self.__makePrefixModule(id);
-			package = self.lib[id] = new constructor(id, deps, factory);
+			pkg = self.lib[id] = new constructor(id, deps, factory);
 		}
 
-		return package;
+		return pkg;
 	};
 
 	/**
@@ -676,6 +733,10 @@ var Loader = new Class(function() {
 	 */
 	this.add = function(self, id, deps, factory) {
 		return self.addPackage(id, deps, factory, Package);
+	};
+
+	this.define = function(self, id, deps, factory) {
+		return self.addPackage(id, deps, factory, SeaPackage);
 	};
 
 	/**
