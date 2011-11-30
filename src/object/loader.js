@@ -413,7 +413,7 @@ var Loader = new Class(function() {
 		}
 
 		// file
-		if (module.factory == null && module.file) {
+		if (!module.factory && module.file) {
 			// TODO 加入预处理过程，跑出所有需要加载的文件并行加载，在此执行useScript而不是loadScript
 			self.loadScript(module.file, function() {
 				// 加载进来的脚本没有替换掉相应的模块，文件有问题。
