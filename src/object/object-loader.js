@@ -24,7 +24,6 @@ SeaPackage.factoryRunner = {
 		}
 		require.async = function(deps, callback) {
 			deps = loader.parseDeps(deps);
-			console.log(runtime.stack.toString())
 			loader.load(new SeaPackage(name, deps, function(require) {
 				var args = [];
 				deps.forEach(function(dep) {

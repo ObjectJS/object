@@ -1,27 +1,27 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<script type="text/javascript" src="../pub/object.js"></script>
+<script type="text/javascript" src="../pub/object-all.js"></script>
 <!--<script type="text/javascript" src="http://xnimg.cn/n/core/base-all.js"></script>-->
-<script data-src="flashUploader.js" data-module="xn.flashUploader"></script>
 <script>
 
-	object.define('xn.flashUploader', function(require, exports) {
+	object.add('xn.flashUploader', 'sys, dom/dd', function(exports, sys, dom) {
+		console.log(sys.modules)
 		return {
 			haha: 2
 		};
 	});
 
-	object.define('xn.flashUploader.async', function(require) {
+	object.define('xn/flashUploader/async', function(require) {
 
-		require.async('xn.flashUploader', function(flashUploader) {
+		require.async('xn/flashUploader', function(flashUploader) {
 			console.log(flashUploader.haha);
 		});
 
 	});
 
-	object.use('xn.flashUploader.async', function(exports, xn) {
-		console.log(xn.flashUploader.haha);
+	object.use('xn/flashUploader/async, xn.flashUploader', function(exports, async, xn) {
+		console.log(async, xn);
 	});
 
 </script>

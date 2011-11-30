@@ -208,7 +208,7 @@ test('add-usage', function() {
 
 	loader.add('d.dd', 'a,b,c', function() {});
 	equal(Object.keys(loader.lib).length, 6, 'd and d.dd are added to loader.lib');
-	equal(loader.lib['d.dd'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
+	equal(loader.lib['d/dd'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d/dd].dependencies.length = 3');
 
 	loader.add('error1', 'a,b');
 	equal(loader.lib['error1'], undefined, 'add module without context, should not be added');
