@@ -34,57 +34,63 @@ test('sys.molules - submodule by execute', function() {
 
 	object.add('test2', './c', function(exports, c) {});
 
-	object.add('test.a.b.c', function(exports) {
-		this.name = 'test.a.b.c';
+	object.add('test1.a.b.c', function(exports) {
+		this.name = 'test1.a.b.c';
 		equal(this.__name__, 'a.b.c');
 	});
     
-	object.add('test.a', './b.c, sys', function(exports, b, sys) {
-		this.name = 'test.a';
+	object.add('test1.a', './b.c, sys', function(exports, b, sys) {
+		this.name = 'test1.a';
 		equal(this.__name__, 'a');
 	});
 
-	object.add('test', './a, test2, test2, test2, test2, sys', function(exports, a, test2, sys) {
-		this.name = 'test';
+	object.add('test1', './a, test2, test2, test2, test2, sys', function(exports, a, test2, sys) {
+		this.name = 'test1';
 		equal(this.__name__, '__main__');
-		ok(sys.modules['a'] != null, 'test.a is used by ./a, so a is in sys.modules');
-		ok(sys.modules['a.b'] != null, 'a.b is in sys.modules');
-		ok(sys.modules['a.b.c'] != null, 'a.b.c is in sys.modules');
-		ok(sys.modules['test2'] != null, 'test2 is in sys.modules');
-		ok(sys.modules['test2.c'] != null, 'test2.c is in sys.modules');
+		if(!sys) {
+			ok(false, 'sys is undefined when use ./a, test2, test2, test2, test2, sys');
+		} else {
+			ok(sys.modules['a'] != null, 'test1.a is used by ./a, so a is in sys.modules');
+			ok(sys.modules['a.b'] != null, 'a.b is in sys.modules');
+			ok(sys.modules['a.b.c'] != null, 'a.b.c is in sys.modules');
+			ok(sys.modules['test2'] != null, 'test2 is in sys.modules');
+			ok(sys.modules['test2.c'] != null, 'test2.c is in sys.modules');
+		}
 	});
 
-	object.execute('test');
-	object.remove('test', true);
+	object.execute('test1');
+	object.remove('test1', true);
+	object.remove('test2', true);
 });
 
-test('sys.molules - submodule by execute', function() {
-	object.add('test2.c', function() {});
+test('sys.molules - submodule by use', function() {
+	object.add('test3.c', function() {});
 
-	object.add('test2', './c', function(exports, c) {});
+	object.add('test3', './c', function(exports, c) {});
 
-	object.add('test.a.b.c', function(exports) {
-		this.name = 'test.a.b.c';
-		equal(this.__name__, 'test.a.b.c');
+	object.add('test4.a.b.c', function(exports) {
+		this.name = 'test4.a.b.c';
+		equal(this.__name__, 'test4.a.b.c');
 	});
     
-	object.add('test.a', './b.c, sys', function(exports, b, sys) {
-		this.name = 'test.a';
-		equal(this.__name__, 'test.a');
+	object.add('test4.a', './b.c, sys', function(exports, b, sys) {
+		this.name = 'test4.a';
+		equal(this.__name__, 'test4.a');
 	});
 
-	object.add('test', './a, test2, test2, test2, test2, sys', function(exports, a, test2, sys) {
-		equal(this.__name__, 'test');
+	object.add('test4', './a, test3, test3, test3, test3, sys', function(exports, a, test3, sys) {
+		equal(this.__name__, 'test4');
 	});
 
-	object.use('test, sys', function(exports, test, sys) {
-		ok(sys.modules['test.a'] != null, 'test.a is used by ./a, so a is in sys.modules');
-		ok(sys.modules['test.a.b'] != null, 'a.b is in sys.modules');
-		ok(sys.modules['test.a.b.c'] != null, 'a.b.c is in sys.modules');
-		ok(sys.modules['test2'] != null, 'test2 is in sys.modules');
-		ok(sys.modules['test2.c'] != null, 'test2.c is in sys.modules');
+	object.use('test4, sys', function(exports, test, sys) {
+		ok(sys.modules['test4.a'] != null, 'test4.a is used by ./a, so a is in sys.modules');
+		ok(sys.modules['test4.a.b'] != null, 'a.b is in sys.modules');
+		ok(sys.modules['test4.a.b.c'] != null, 'a.b.c is in sys.modules');
+		ok(sys.modules['test3'] != null, 'test3 is in sys.modules');
+		ok(sys.modules['test3.c'] != null, 'test3.c is in sys.modules');
 	});
-	object.remove('test', true);
+	object.remove('test3', true);
+	object.remove('test4', true);
 });
 
 test('simple use of module', function() {

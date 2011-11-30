@@ -59,6 +59,7 @@ var setter = function(prop, value) {
  * 会被放到cls.get
  */
 var membergetter = function(name) {
+	if (name == '@mixins') name = '__mixins__';
 	var cls = this;
 	var proto = this.prototype;
 	var properties = proto.__properties__;
@@ -69,6 +70,16 @@ var membergetter = function(name) {
 	if (!member) return member;
 	if (member.__class__ == instancemethod) return instancemethod(member.im_func, this);
 	return member;
+};
+
+/**
+ * 判断是否存在成员
+ * 会被放到cls.has
+ */
+var hasmember = function(name) {
+	if (name == '@mixins') name = '__mixins__';
+	var proto = this.prototype;
+	return (name in this || name in proto || name in proto.__properties__);
 };
 
 /**
@@ -84,18 +95,30 @@ var membersetter = overloadSetter(function(name, member) {
 	var subs = cls.__subclassesarray__;
 	var constructing = cls.__constructing__;
 
-	// 类构建完毕后才进行set，需要先删除之前的成员
-	if (!constructing) {
-		delete cls[name];
-		delete proto[name];
-		delete properties[name];
+	if (['__new__', '__this__', '__base__', '@mixins', '__mixins__'].indexOf(name) != -1) {
+		if (!member || (typeof member != 'object' && typeof member != 'function')) {
+			return;
+		}
 	}
+	
+	// 类构建完毕后才进行set，需要先删除之前的成员
+	delete cls[name];
+	delete proto[name];
+	delete properties[name];
 
 	// 这里的member指向new Class参数的书写的对象/函数
-	if (name == '@mixins') name = '__mixins__';
-
-	if (['__new__', '__metaclass__', '__mixins__'].indexOf(name) != -1) {
-		cls[name] = member;
+	if (name == '@mixins') {
+		// 避免@mixins与Class.mixin设置的值相互覆盖
+		name = '__mixins__';
+		if (cls[name]) {
+			cls[name] = cls[name].concat(member);
+		} else {
+			cls[name] = member;
+		}
+	} else if (['__new__', '__metaclass__', '__mixins__'].indexOf(name) != -1) {
+		if (member && (typeof member == 'object' || typeof member == 'function')) {
+			cls[name] = member;
+		}
 
 	} else if (['__this__', '__base__'].indexOf(name) != -1) {
 		cls[name] = proto[name] = member;
@@ -120,6 +143,8 @@ var membersetter = overloadSetter(function(name, member) {
 	else if (member.__class__ === property) {
 		member.__name__ = name;
 		properties[name] = member;
+		// 当prototype覆盖instancemethod/classmethod/staticmethod时，需要去除prototype上的属性
+		proto[name] = undefined;
 	}
 	// this.a = classmethod(function() {})
 	else if (member.__class__ === classmethod) {
@@ -141,7 +166,8 @@ var membersetter = overloadSetter(function(name, member) {
 	// 所有子类cls上加入
 	if (!constructing && name in cls && subs) {
 		subs.forEach(function(sub) {
-			if (!name in sub) sub.set(name, member);
+			// !(name in sub) 与 !name in sub 得到的结果不一样
+			if (!(name in sub)) sub.set(name, member);
 		});
 	}
 });
@@ -214,8 +240,18 @@ type.__new__ = function(metaclass, name, base, dict) {
 		parent: function() {
 			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
 			var name = arguments.callee.caller.__name__;
+			if (!name) {
+				throw new Error('can not get function name when this.parent called');
+			}
 			var base = cls.__base__;
-			return base.get(name).apply(base, arguments);
+			if (!base || !base.get) {
+				throw new Error('no parent class, can not call parent');
+			}
+			var baseMember = base.get(name);
+			if (!baseMember || !baseMember.apply) {
+				throw new Error('no such method in parent : \'' + name + '\'');
+			}
+			return baseMember.apply(base, arguments);
 		}
 	});
 	cls.__new__ = base.__new__;
@@ -229,7 +265,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 	if (mixins) {
 		mixins.forEach(function(mixin) {
 			Class.keys(mixin).forEach(function(name) {
-				if (cls.get(name)) return; // 不要覆盖自定义的
+				if (cls.has(name)) return; // 不要覆盖自定义的
 
 				var member = mixin.get(name);
 
@@ -260,6 +296,9 @@ var Class = this.Class = function() {
 	if (length < 1) throw new Error('bad arguments');
 	// 父类
 	var base = length > 1? arguments[0] : type;
+	if (typeof base != 'function' && typeof base != 'object') {
+		throw new Error('base is not function or object');
+	}
 	if (base) {
 		// IE不能extend native function，用相应的class包装一下
 		if (!_nativeExtendable) {
@@ -273,6 +312,9 @@ var Class = this.Class = function() {
 
 	// 构造器
 	var dict = arguments[length - 1];
+	if (typeof dict != 'function' && typeof dict != 'object') {
+		throw new Error('constructor is not function or object');
+	}
 	if (dict instanceof Function) {
 		var f = dict;
 		dict = {};
@@ -282,7 +324,13 @@ var Class = this.Class = function() {
 	// metaclass
 	var metaclass = dict.__metaclass__ || base.__metaclass__ || type;
 
+	if (!metaclass.__new__ || !metaclass.initialize) {
+		throw new Error('__metaclass__ should have __new__ method and initialize method');
+	}
 	var cls = metaclass.__new__(metaclass, null, base, dict);
+	if (!cls || typeof cls != 'function') {
+		throw new Error('__new__ method should return cls');
+	}
 	metaclass.initialize(cls, null, base, dict);
 
 	return cls;
@@ -300,6 +348,7 @@ Class.create = function() {
 	cls.__subclasses__ = subclassesgetter;
 	cls.__mixin__ = cls.set = membersetter;
 	cls.get = membergetter;
+	cls.has = hasmember;
 	return cls;
 };
 
@@ -307,6 +356,9 @@ Class.create = function() {
  * mixin时调用mixin的initialize方法，保证其中的初始化成员能够被执行
  */
 Class.initMixins = function(cls, instance) {
+	if (!cls) {
+		return;
+	}
 	// 初始化父类的mixin
 	if (cls.__base__) {
 		Class.initMixins(cls.__base__, instance);
@@ -314,7 +366,9 @@ Class.initMixins = function(cls, instance) {
 	if (cls.__mixins__) {
 		for (var i = 0, l = cls.__mixins__.length, mixin; i < l; i++) {
 			mixin = cls.__mixins__[i];
-			if (mixin.prototype.initialize) mixin.prototype.initialize.call(instance);
+			if (mixin.prototype && typeof mixin.prototype.initialize == 'function') {
+				mixin.prototype.initialize.call(instance);
+			}
 		}
 	}
 };
@@ -326,19 +380,27 @@ Class.initMixins = function(cls, instance) {
  * })
  */
 Class.mixin = function(dict, cls) {
+	if (!dict || typeof dict != 'object') {
+		return;
+	}
+	if (cls === Array) {
+		cls = ArrayClass;
+	} else if (cls === String) {
+		cls = StringClass;
+	}
 	dict.__mixins__ = dict.__mixins__ || [];
 	dict.__mixins__.push(cls);
 };
 
 Class.hasProperty = function(obj, name) {
-	return (name in obj.__properties__);
+	return (obj && obj.__properties__) ? (name in obj.__properties__) : false;
 };
 
 /**
  * 所有properties
  */
 Class.getPropertyNames = function(obj) {
-	return Object.keys(obj.__properties__);
+	return (obj && obj.__properties__) ? Object.keys(obj.__properties__) : [];
 };
 
 /**
@@ -357,13 +419,16 @@ Class.inject = function(cls, host, args) {
 	var p = Class.getInstance(cls);
 	object.extend(host, p);
 	Class.initMixins(cls, host);
-	if (cls.prototype.initialize) cls.prototype.initialize.apply(host, args);
+	if (typeof cls.prototype.initialize == 'function') cls.prototype.initialize.apply(host, args);
 };
 
 /**
  * 获取一个class的继承链
  */
 Class.getChain = function(cls) {
+	if (!cls) {
+		return [];
+	}
 	var result = [cls];
 	while (cls.__base__) {
 		result.push(cls.__base__);
@@ -386,10 +451,10 @@ Class.getInstance = function(cls) {
  * 会在Class.mixin中用到
  */
 Class.getAllSubClasses = function(cls) {
+	if (!cls || !cls.__subclassesarray__) {
+		return [];
+	}
 	var array = cls.__subclassesarray__;
-    if (!array) {
-        return [];
-    }
 	var queue = [].concat(array), ele = queue.shift(), subs;
 	while (ele != null) {
 		subs = ele.__subclassesarray__;
@@ -407,6 +472,9 @@ Class.getAllSubClasses = function(cls) {
  * 获取类成员通过cls.get(name)
  */
 Class.keys = function(cls) {
+	if (!cls || !cls.prototype) {
+		return [];
+	}
 	keys = Object.keys(cls.prototype.__properties__);
 	for (var prop in cls.prototype) {
     	keys.push(prop);
@@ -483,6 +551,6 @@ var createNativeClass = function(source, methodNames) {
 
 ArrayClass = createNativeClass(Array, ["concat", "indexOf", "join", "lastIndexOf", "pop", "push", "reverse", "shift", "slice", "sort", "splice", "toString", "unshift", "valueOf", "forEach", "some", "every", "map", "filter", "reduce", "reduceRight"]);
 ArrayClass.prototype.length = 0;
-StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "indexOf", "lastIndexOf", "match", "replace", "search", "slice", "split", "substr", "substring", "toLowerCase", "toUpperCase", "valueOf"]);
-
+StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "indexOf", "lastIndexOf", "match", "replace", "search", "slice", "split", "substr", "substring", "toLowerCase", "toUpperCase", "valueOf", "trim"]);
+StringClass.prototype.length = 0;
 })(object);

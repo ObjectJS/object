@@ -5,7 +5,11 @@ function recoverEnv() {
 	var head = document.getElementsByTagName('head')[0];
 	for(var i=0;i<scripts.length; i++) {
 		if(scripts[i].callbacks || scripts[i].getAttribute('data-module') || /module[\dA-Z]/.test(scripts[i].src)) {
-			head.removeChild(scripts[i]);
+			if (scripts[i].src) {
+				Loader.removeScript(scripts[i].src);
+			} else {
+				scripts[i].parentNode.removeChild(scripts[i]);
+			}
 		}
 	}
 	for(var prop in object._loader.lib) {
@@ -116,6 +120,7 @@ test('one module file, many modules', function() {
 		start();
 		equal(module3.c, 1, 'module3.c is ok : 1');
 		equal(window.oneFileManyModules_load_times, 1, 'only load script for once');
+		recoverEnv();
 	});
 });
 
@@ -233,4 +238,19 @@ test('use many modules', function() {
 		equal(moduleC.c, 1, 'moduleC got');
 		recoverEnv();
 	});
+});
+
+test('many urls pointing to the same file', function() {
+	recoverEnv();
+	Loader.loadScript(emptyJS, function() {}, true);
+	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, 'one file added');
+	Loader.loadScript('../unit/' + emptyJS, function() {}, true);
+	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, '../unit/xxx.js is the same dir with xxx.js, will not load again');
+	Loader.loadScript('..//unit/' + emptyJS, function() {}, true);
+	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, '..//unit/xxx.js is the same dir with xxx.js, will not load again');
+	Loader.loadScript('../../test/unit/' + emptyJS, function() {}, true);
+	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, '../../test/unit/xxx.js is the same dir with xxx.js, will not load again');
+	Loader.loadScript('../../test/unit/' + emptyJS + '#', function() {}, true);
+	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, '../../test/unit/xxx.js# is the same dir with xxx.js, will not load again');
+	recoverEnv();
 });
