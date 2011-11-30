@@ -1004,6 +1004,7 @@ function calculatePageDir() {
 	return pageDir;
 }
 
+
 var pageDir = calculatePageDir();
 
 /**
