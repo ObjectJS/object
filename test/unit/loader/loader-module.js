@@ -242,6 +242,10 @@ test('use many modules', function() {
 
 test('many urls pointing to the same file', function() {
 	recoverEnv();
+	// only test when test in test-runner
+	if (!$UNIT_TEST_CONFIG.needPath) {
+		return;
+	}
 	Loader.loadScript(emptyJS, function() {}, true);
 	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, 'one file added');
 	Loader.loadScript('../unit/' + emptyJS, function() {}, true);
