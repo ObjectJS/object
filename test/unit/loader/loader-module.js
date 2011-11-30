@@ -120,6 +120,7 @@ test('one module file, many modules', function() {
 		start();
 		equal(module3.c, 1, 'module3.c is ok : 1');
 		equal(window.oneFileManyModules_load_times, 1, 'only load script for once');
+		recoverEnv();
 	});
 });
 
@@ -241,21 +242,15 @@ test('use many modules', function() {
 
 test('many urls pointing to the same file', function() {
 	recoverEnv();
-	addModuleScriptToHead('module1', module1JS_request_file_once);
-	var loader = object._loader;
-	loader.loadLib();
-	stop();
-	window.moduleFileRequestTimeCounter = 0;
-	loader.use('module1', function(exports, module1) {
-		start();
-		equal(module1.test, 1, 'use module1, which add counter by one on window');
-		equal(window.moduleFileRequestTimeCounter, 1, 'request module file once');
-	});
-	stop();
-	loader.use('module1', function(exports, module1) {
-		start();
-		equal(module1.test, 1, 'use module1, which add counter by one on window');
-		equal(window.moduleFileRequestTimeCounter, 1, 'request module file only once');
-		recoverEnv();
-	});
+	Loader.loadScript(emptyJS, function() {}, true);
+	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, 'one file added');
+	Loader.loadScript('../unit/' + emptyJS, function() {}, true);
+	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, '../unit/xxx.js is the same dir with xxx.js, will not load again');
+	Loader.loadScript('..//unit/' + emptyJS, function() {}, true);
+	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, '..//unit/xxx.js is the same dir with xxx.js, will not load again');
+	Loader.loadScript('../../test/unit/' + emptyJS, function() {}, true);
+	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, '../../test/unit/xxx.js is the same dir with xxx.js, will not load again');
+	Loader.loadScript('../../test/unit/' + emptyJS + '#', function() {}, true);
+	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, '../../test/unit/xxx.js# is the same dir with xxx.js, will not load again');
+	recoverEnv();
 });
