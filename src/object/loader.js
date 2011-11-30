@@ -496,8 +496,8 @@ var Loader = new Class(function() {
 			id = script.getAttribute('data-module');
 			if (!id) continue;
 			id = self.parseId(id);
-			//self.lib中的内容可能是makePrefixModule构造的，只有name
-			//在模块a.b先声明，模块a后声明的情况下，无法获取模块a的内容
+			// self.lib中的内容可能是makePrefixModule构造的，只有name
+			// 在模块a.b先声明，模块a后声明的情况下，无法获取模块a的内容
 			if (self.lib[id] && (self.lib[id].factory || self.lib[id].file)) {
 				continue;
 			}
@@ -694,10 +694,8 @@ var Loader = new Class(function() {
 	 */
 	this.addPackage = function(self, id, deps, factory, constructor) {
 		if (!id || typeof id != 'string') return null;
-		id = self.parseId(id);
-		// 不允许重复添加。
-		if (self.lib[id] && self.lib[id].factory) return null;
 		if (arguments.length < 4) return null;
+		id = self.parseId(id);
 
 		// deps 参数是可选的
 		if (typeof deps == 'function') {
@@ -709,9 +707,12 @@ var Loader = new Class(function() {
 
 		if (!factory || typeof factory != 'function') return null;
 
+		// 不允许重复添加。
+		if (self.lib[id] && self.lib[id].factory) return null;
+
 		var pkg = self.lib[id];
 
-		// 已存在，说明是占位的
+		// 已存在，说明是占位的，可能是一个file，或者一个空的
 		if (pkg) {
 			pkg.constructor = constructor;
 			pkg.dependencies = deps;
