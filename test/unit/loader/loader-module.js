@@ -5,7 +5,11 @@ function recoverEnv() {
 	var head = document.getElementsByTagName('head')[0];
 	for(var i=0;i<scripts.length; i++) {
 		if(scripts[i].callbacks || scripts[i].getAttribute('data-module') || /module[\dA-Z]/.test(scripts[i].src)) {
-			head.removeChild(scripts[i]);
+			if (scripts[i].src) {
+				Loader.removeScript(scripts[i].src);
+			} else {
+				scripts[i].parentNode.removeChild(scripts[i]);
+			}
 		}
 	}
 	for(var prop in object._loader.lib) {

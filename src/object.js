@@ -988,21 +988,34 @@ LoaderRuntime.prototype.checkDone = function() {
 
 this.LoaderRuntime = LoaderRuntime;
 
+// 计算当前引用objectjs的页面文件的目录路径
+function calculatePageDir() {
+	var loc = window['location'];
+	var pageUrl = loc.protocol + '//' + loc.host + (loc.pathname.charAt(0) !== '/' ? '/' : '') + loc.pathname; 
+	// IE 下文件系统是以\为分隔符，统一改为/
+	if (pageUrl.indexOf('\\') != -1) {
+		pageUrl = pageUrl.replace(/\\/g, '/');
+	}
+	var pageDir = './';
+	if (pageUrl.indexOf('/') != -1) {
+		// 去除文件，留下目录path
+		pageDir = pageUrl.substring(0, pageUrl.lastIndexOf('/') + 1);
+	}
+	return pageDir;
+}
+
+var pageDir = calculatePageDir();
+
 /**
  * object的包管理器
  * 这个class依赖于object._lib ，且会修改它
  */
 this.Loader = new Class(function() {
 
-	// 模块
-	function Module(name) {
-		this.__name__ = name;
-	}
-	Module.prototype.toString = function() {
-		return '<module \'' + this.__name__ + '\'>';
-	};
-
 	this.scripts = document.getElementsByTagName('script');
+
+	// 用于保存url与script节点的键值对
+	this._urlNodeMap = {};
 
 	this.initialize = function(self) {
 		self.useCache = true;
@@ -1224,8 +1237,53 @@ this.Loader = new Class(function() {
 		}
 	};
 
-	// 用于保存url与script节点的键值对
-	var urlNodeMap = null;
+	/**
+	 * 通过一个src，获取对应文件的绝对路径
+	 * 例如：http://hg.xnimg.cn/a.js -> http://hg.xnimg.cn/a.js
+	 *       file:///dir/a.js -> file:///dir/a.js
+	 *       in http://host/b/c/d/e/f.html, load ../g.js -> http://host/a/b/d/g.js
+	 *       in file:///dir/b/c/d/e/f.html, load ../g.js -> file:///dir/a/b/d/g.js
+	 *
+	 * @param src 地址
+	 */
+	this._getAbsolutePath = staticmethod(function(src) {
+		// 如果本身是绝对路径，则返回src
+		if (src.indexOf('://') != -1 || src.indexOf('//') === 0) {
+			return src;
+		} else {
+			return clearPath(pageDir + src);
+		}
+
+		/**
+		 * 清理路径url，去除相对寻址符号
+		 */
+		function clearPath(path) {
+			// 去除多余的/
+			path = path.replace(/([^:\/])\/+/g, '$1\/');
+			// 如果没有相对寻址，直接返回path
+			if (path.indexOf('.') === -1) {
+				return path;
+			}
+
+			var parts = path.split('/');
+			// 把所有的普通var变量都写在一行，便于压缩
+			var result = [];
+
+			for (var i = 0, part, len = parts.length; i < len; i++) {
+				part = parts[i];
+				if (part === '..') {
+					if (result.length === 0) {
+						throw new Error('invalid path: ' + path);
+					}
+					result.pop();
+				} else if (part !== '.') {
+					result.push(part);
+				}
+			}
+
+			return result.join('/');
+		}
+	});
 
 	/**
 	 * 加载一个script, 执行callback
@@ -1239,31 +1297,17 @@ this.Loader = new Class(function() {
 			throw new Error('src should be string');
 		}
 		src = src.trim();
+		var absPath = cls._getAbsolutePath(src);
 		if (useCache) {
-			if (!urlNodeMap) {
-				urlNodeMap = {};
-				// 利用现有script标签来
-				var scripts = cls.get('scripts');
-				for (var i = 0, script, l = scripts.length; i < l; i++) {
-					script = scripts[i];
-					urlNodeMap[script.src] = script;
+			var urlNodeMap = cls.get('_urlNodeMap'), scriptNode = urlNodeMap[absPath];
+			if (scriptNode) {
+				if (scriptNode.loading) {
+					// 增加一个回调即可
+					scriptNode.callbacks.push(callback);
+				} else {
+					callback(scriptNode);
 				}
-			}
-			for (var scriptUrl in urlNodeMap) {
-				if (scriptUrl.indexOf(src) == scriptUrl.length - src.length) {
-					var scriptNode = urlNodeMap[scriptUrl];
-					if (!scriptNode || !scriptNode.parentNode) {
-						delete urlNodeMap[scriptUrl];
-						break;
-					}
-					if (scriptNode.loading) {
-						// 增加一个回调即可
-						scriptNode.callbacks.push(callback);
-					} else {
-						callback(scriptNode);
-					}
-					return;
-				}
+				return;
 			}
 		}
 
@@ -1308,11 +1352,34 @@ this.Loader = new Class(function() {
 
 		if (useCache) { 
 			// 利用ele.src获取绝对路径来存键值对
-			urlNodeMap[ele.src] = ele;
+			urlNodeMap[absPath] = ele;
+			ele.src;
 		}
-
 	});
 
+	/**
+	 * 根据src属性，删除一个script标签，并且清除对应的键值对缓存记录
+	 * 目前只供单元测试还原测试环境使用
+	 *
+	 * @param src 路径
+	 */
+	this.removeScript = classmethod(function(cls, src) {
+		if (!src || typeof src != 'string') {
+			throw new Error('src should be string');
+		}
+		src = src.trim();
+		// 转换为绝对路径
+		var absPath = cls._getAbsolutePath(src);
+		// 获取节点
+		var urlNodeMap = cls.get('_urlNodeMap'), scriptNode = urlNodeMap[absPath];
+		// 如果节点存在，则删除script，并从缓存中清空
+		if (scriptNode) {
+			delete urlNodeMap[absPath];
+			scriptNode.parentNode.removeChild(scriptNode);
+			scriptNode = null;
+		}
+	});
+	
 	/**
 	 * 处理传入的uses参数
 	 * 在parseUses阶段不需要根据名称判断去重（比如自己use自己），因为并不能避免所有冲突，还有循环引用的问题（比如 core use dom, dom use core）
