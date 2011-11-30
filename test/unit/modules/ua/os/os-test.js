@@ -289,7 +289,7 @@ test('test processor', function() {
 	object.use('ua.os', function(exports, ua) {
 		var detectOS = ua.os._detectOS, o;
 		o = detectOS();
-		equal(o.processor, 32, '32-bit processor');
+		ok(o.processor == 32 || o.processor == 64, 'processor is 32-bit or 64-bit');
 
 		o = detectOS('Mozilla/5.0 (Windows NT 6.1; WOW64; rv:6.0a2) Gecko/20110613 Firefox/6.0a2');
 		equal(o.processor, 64, '64-bit processor');

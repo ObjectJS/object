@@ -1,5 +1,5 @@
 $(document).ready(function() {
-	$LAB.needPath = true;
+	$UNIT_TEST_CONFIG.needPath = true;
 	var config = [
 		{module:'class', url:'class'},
 		{module:'loader',url:'loader'},

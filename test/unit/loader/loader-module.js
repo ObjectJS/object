@@ -1,4 +1,4 @@
-module('loader-loadScript');
+module('loader-loadScript-module');
 
 function recoverEnv() {
 	var scripts = Sizzle('script');
@@ -15,7 +15,7 @@ function recoverEnv() {
 	}
 }
 
-var path = ($LAB.needPath ? 'loader/' : '');
+var path = ($UNIT_TEST_CONFIG.needPath ? 'loader/' : '');
 function emptyCallback(){};
 var emptyJS = path + 'empty.js';
 var module1JS_seperate = path + 'module1.js';

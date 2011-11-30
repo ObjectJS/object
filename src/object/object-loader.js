@@ -18,7 +18,7 @@ SeaPackage.factoryRunner = {
 			if (id.indexOf('./') == 0) {
 				id = runtime.getId(name) + '.' + id.slice(2);
 			}
-			var exports = runtime.modules[id];
+			var exports = runtime.modules[id.replace(/\//g, '.')];
 			if (!exports) throw new object.ModuleRequiredError(id);
 			return exports;
 		}

@@ -1,6 +1,6 @@
 $(document).ready(function() {
-	var path = $LAB.needPath ? 'loader/' : '';
+	var path = $UNIT_TEST_CONFIG.needPath ? 'loader/' : '';
 	$LAB
-		.script(path + "loader-basic.js")
-		.script(path + "loader-module.js")
+		.script(path + "loader-basic.js").wait()
+		.script(path + "loader-module.js").wait()
 });

@@ -118,7 +118,7 @@ LoaderRuntime.prototype.checkRef = function(name) {
  */
 LoaderRuntime.prototype.getId = function(id) {
 	var root = this.root;
-	if (id == root || id.indexOf(root + '/') == 0) {
+	if (id == root || id.indexOf(root + '.') == 0) {
 		id = id.slice(root.length + 1);
 	}
 	return id;
@@ -149,7 +149,7 @@ LoaderRuntime.prototype.setMemberTo = function(host, member, value) {
 	 * 将记录的成员添加到自己
 	 */
 	// 全名
-	var id = (host? host + '/' : '') + member;
+	var id = (host? host + '.' : '') + member;
 
 	// 已获取到了此host的引用，将其子模块都注册上去。
 	var members = this.members[id];
@@ -192,9 +192,9 @@ var Loader = new Class(function() {
 		if (id.indexOf('sys.') == 0) {
 			throw new Error('should not add sub module for sys');
 		}
-		var parts = id.split('/');
+		var parts = id.split('.');
 		for (var i = 0, prefix, l = parts.length - 1; i < l; i++) {
-			prefix = parts.slice(0, i + 1).join('/');
+			prefix = parts.slice(0, i + 1).join('.');
 			// 说明这个module是空的
 			if (self.lib[prefix] == undefined) self.lib[prefix] = {
 				id: prefix
@@ -207,26 +207,26 @@ var Loader = new Class(function() {
 	 */
 	this.parseId = function(self, id, context) {
 		if (id.indexOf('./') == 0 && context) {
-			return context + '/' + id.slice(2);
+			return context + '.' + id.slice(2);
 		} else {
-			return id.replace(/\./g, '/');
+			return id.replace(/\./g, '.');
 		}
 	};
 
 	/**
 	 * 处理当前模块的每个部分
-	 * @param deptId 当前部分的名字
-	 * @param ownerId 依赖此dept的module的名字，用于生成作用域信息
+	 * @param depId 当前部分的名字
+	 * @param ownerId 依赖此dep的module的名字，用于生成作用域信息
 	 * @param {LoaderRuntime} runtime
 	 * @param callback 异步方法，模块获取完毕后通过callback的唯一参数传回
 	 */
-	this.loadDep = function(self, deptId, ownerId, runtime, callback) {
+	this.loadDep = function(self, depId, ownerId, runtime, callback) {
 
 		var modules = runtime.modules;
-		var parts; // deptId所有部分的数组
-		var context = null; // 当前dept是被某个模块通过相对路径调用的
+		var parts; // depId所有部分的数组
+		var context = null; // 当前dep是被某个模块通过相对路径调用的
 		var moduleId = ''; // 当前模块在运行时保存在modules中的名字，为context+parts的第一部分
-		var isRelative = false; // 当前dept是否属于execute的模块的子模块，如果是，生成的名称应不包含其前缀
+		var isRelative = false; // 当前dep是否属于execute的模块的子模块，如果是，生成的名称应不包含其前缀
 		var pId, part, partId, currentPart = -1;
 
 		/**
@@ -237,7 +237,7 @@ var Loader = new Class(function() {
 		 */
 		function nextPart(pExports, id) {
 
-			var fullId, deptModule;
+			var fullId, depModule;
 
 			if (pExports) {
 				modules[id] = pExports;
@@ -250,12 +250,12 @@ var Loader = new Class(function() {
 			currentPart++;
 
 			if (currentPart == parts.length) {
-				callback(modules[moduleId]);
+				callback(modules[moduleId.replace(/\//g, '.')]);
 
 			} else {
 				part = parts[currentPart];
-				partId = (pId? pId + '/' : '') + part;
-				fullId = isRelative? runtime.root + '/' + partId : partId;
+				partId = (pId? pId + '.' : '') + part;
+				fullId = isRelative? runtime.root + '.' + partId : partId;
 
 				// 使用缓存中的
 				if (modules[partId]) {
@@ -272,13 +272,13 @@ var Loader = new Class(function() {
 			};
 		}
 
-		if (deptId.indexOf('.\/') == 0) {
-			deptId = deptId.slice(2);
-			if (deptId.indexOf('\/') != -1) {
-				parts = [deptId];
-				moduleId = deptId;
+		if (depId.indexOf('.\/') == 0) {
+			depId = depId.slice(2);
+			if (depId.indexOf('\/') != -1) {
+				parts = [depId.replace(/\//g, '.')];
+				moduleId = depId;
 			} else {
-				parts = deptId.split('.');
+				parts = depId.split('.');
 				// 去除root
 				context = runtime.getId(ownerId);
 				// 说明确实去除了root，是一个相对引用，在获取fullId时需要加上root
@@ -286,11 +286,11 @@ var Loader = new Class(function() {
 				moduleId = context + '.' + parts[0];
 			}
 		} else {
-			if (deptId.indexOf('\/') != -1) {
-				parts = [deptId];
-				moduleId = deptId;
+			if (depId.indexOf('\/') != -1) {
+				parts = [depId.replace(/\//g, '.')];
+				moduleId = depId;
 			} else {
-				parts = deptId.split('.');
+				parts = depId.split('.');
 				moduleId = parts[0];
 			}
 		}
@@ -316,7 +316,7 @@ var Loader = new Class(function() {
 		 * @param pExports 上一个nextDep返回的模块实例
 		 */
 		function nextDep(pExports) {
-			var deptId;
+			var depId;
 			var deps = module.dependencies;
 			var factory = module.factory;
 			var factoryRunner = module.constructor.factoryRunner;
@@ -337,17 +337,17 @@ var Loader = new Class(function() {
 				doneDep();
 
 			} else {
-				deptId = deps[currentUse];
+				depId = deps[currentUse];
 
 				// 记录开始获取当前模块
-				runtime.stack.push(deptId);
+				runtime.stack.push(depId);
 
 				// 刚刚push过，应该在最后一个，如果不在，说明循环依赖了
-				if (runtime.stack.indexOf(deptId) != runtime.stack.length - 1) {
-					nextDep(runtime.addEmptyModule(deptId, name));
+				if (runtime.stack.indexOf(depId) != runtime.stack.length - 1) {
+					nextDep(runtime.addEmptyModule(depId, name));
 
 				} else {
-					self.loadDep(deptId, module.id, runtime, nextDep);
+					self.loadDep(depId, module.id, runtime, nextDep);
 				}
 			}
 
@@ -416,7 +416,7 @@ var Loader = new Class(function() {
 			script = scripts[i];
 			id = script.getAttribute('data-module');
 			if (!id) continue;
-			id = id.replace(/\./g, '\/');
+			id = id.replace(/\//g, '.');
 			//self.lib中的内容可能是makePrefixModule构造的，只有name
 			//在模块a.b先声明，模块a后声明的情况下，无法获取模块a的内容
 			if (self.lib[id] && (self.lib[id].factory || self.lib[id].file)) {
@@ -539,7 +539,7 @@ var Loader = new Class(function() {
 	 */
 	this.addPackage = function(self, id, deps, factory, constructor) {
 		if (!id || typeof id != 'string') return null;
-		id = id.replace(/\./g, '\/');
+		id = id.replace(/\//g, '.');
 		// 不允许重复添加。
 		if (self.lib[id] && self.lib[id].factory) return null;
 		if (arguments.length < 4) return null;
@@ -589,7 +589,7 @@ var Loader = new Class(function() {
 		delete loader.lib[name];
 		if (r) {
 			Object.keys(loader.lib).forEach(function(key) {
-				if (key.indexOf(name + '/') == 0) delete loader.lib[key];
+				if (key.indexOf(name + '.') == 0) delete loader.lib[key];
 			});
 		}
 	};

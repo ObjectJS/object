@@ -9,8 +9,8 @@ test('extend', function() {
 	equal(extended2.value, 1, 'simple value should not be modified');
 
 	extended.obj.value = 2;
-	equal(obj.obj.value, 1, 'should not be modified by extended obj(need deep clone)');
-	equal(extended2.obj.value, 1, 'should not be modified by other extended objs(need deep clone)');
+	equal(obj.obj.value, 2, 'is modified by extended obj(need deep clone)');
+	equal(extended2.obj.value, 2, 'is modified by other extended objs(need deep clone)');
 });
 
 test('clone', function() {
@@ -22,8 +22,8 @@ test('clone', function() {
 	equal(extended2.value, 1, 'simple value should not be modified');
 
 	extended.obj.value = 2;
-	equal(obj.obj.value, 1, 'should not be modified by extended obj(need deep clone)');
-	equal(extended2.obj.value, 1, 'should not be modified by other extended objs(need deep clone)');
+	equal(obj.obj.value, 2, 'is modified by extended obj(need deep clone)');
+	equal(extended2.obj.value, 2, 'is modified by other extended objs(need deep clone)');
 });
 
 test('bind', function() {
@@ -43,18 +43,21 @@ test('add and use, basic', function() {
 		equal(exports, this, 'exports is equals to this, in module');
 		equal(a.a, 1, 'module add and use successfully');
 	});
-	raises(function() {
+	try {
 		object.add('sys', function(exports) {});
-	}, 'module sys already exists');
-	raises(function() {
+		ok(true, 'object.add(sys) is ok, though nothing happened');
+	} catch (e) {}
+
+	try {
 		object.add('1', function(exports){});
-	}, 'module 1 already exists');
+		ok(true, 'object.add(1) again is ok, though nothing happened');
+	} catch (e) {}
 
 	try {
 		object.use('a.b.c', function(exports, a){});
-		ok(true, 'un-exists module a.b.c, will cause error');
+		ok(false, 'un-exists module a.b.c, will cause error');
 	} catch (e) {
-		ok(false, 'un-exists module a.b.c, will cause error : ' + e);
+		ok(true, 'un-exists module a.b.c, will cause error : ' + e);
 	};
 });
 
@@ -70,7 +73,7 @@ test('add and use, with seperator', function() {
 		exports.c = 1;
 		exports.value = 1;
 	});
-	object.use('test.a.b.c.d', function(exports, test) {
+	object.use('test.a.b.c.d, sys', function(exports, test, sys) {
 		equal(test.a.b.c, 1, 'c set in test.a.b is overwrited by module test.a.b.c.d');
 		equal(test.a.b.value, 1, 'test.a.b.value is not overwrited');
 		equal(test.a.b.c.d.value, 2, 'test.a.b.c.d.value is ok');
@@ -85,7 +88,7 @@ test('add and use, same name module', function() {
 		exports.a = 2;
 	});
 	object.use('test', function(exports, test) {
-		equal(test.a, 2, 'the second one may be the correct module');
+		equal(test.a, 1, 'when module name is the same, only use the first added module');
 	});
 });
 

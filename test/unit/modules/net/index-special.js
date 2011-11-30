@@ -1,5 +1,4 @@
 $(document).ready(function() {
-	return;
 	try {
 		// error in Chrome
 		document.domain = 'renren.com';

@@ -1,29 +1,19 @@
 <!doctype>
 <html>
 	<head>
-		<meta charset="utf-8" />
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 		<script type="text/javascript" src="http://s.xnimg.cn/n/core/object-all.js"></script>
 		<script type="text/javascript" src="../../lib/jquery-latest.js"></script>
+		<script type="text/javascript" src="../../lib/LAB.src.js"></script>
 		<script type="text/javascript" src="../../lib/qunit.js"></script>
+		<script type="text/javascript" src="../../lib/config.js"></script>
 	  	<link rel="stylesheet" href="../../lib/qunit.css" type="text/css" media="screen" />
-		
-		<script type="text/javascript">
-			function dynamicLoad(src) {
-				var script = document.createElement('script');
-				script.type = 'text/javascript';
-				script.src = src;
-				document.body.appendChild(script);
-			}
-			$(document).ready(function() {
-				//load module js dynamically
-				dynamicLoad('../../../../src/ua/os.js');
-				//load test js dynamically
-				dynamicLoad('os-test.js');
-			});
-		</script>
+
+		<script type="text/javascript" src="index-special.js"></script>
+
 	</head>
 	<body>
-		<h1 id="qunit-header">objectjs unit test -- ua.os</h1>
+		<h1 id="qunit-header">objectjs unit test</h1>
 		<h2 id="qunit-banner"></h2>
 		<div id="qunit-testrunner-toolbar"></div>
 		<h2 id="qunit-userAgent"></h2>
@@ -31,4 +21,3 @@
 		<div id="qunit-fixture">test markup, will be hidden</div>
 	</body>
 </html>
-

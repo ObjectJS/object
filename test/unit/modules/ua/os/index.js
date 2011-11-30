@@ -1,5 +1,5 @@
 $(document).ready(function() {
-	var path = $LAB.needPath ? 'modules/ua/os/' : '';
+	var path = $UNIT_TEST_CONFIG.needPath ? 'modules/ua/os/' : '';
 	$LAB
 	   .script(path + "../../../../../src/ua/os.js").wait()
 	   .script(path + "os-test.js");

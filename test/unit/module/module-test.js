@@ -13,6 +13,80 @@ test('modules in object._loader.lib', function() {
 	ok(object._loader.lib.__anonymous_0__.name == '__anonymous_0__', 'anonymous module name pass');
 });
 
+test('sys.modules - exists', function() {
+	object.add('ttt.a', 'sys', function(exports, sys){
+		ok(sys.modules != null, 'sys.modules exists');
+		ok(sys.modules['sys'] != null, 'sys.modules[sys] exists');
+		ok(sys.modules['ttt'] != null, 'sys.modules[ttt] exists');
+	});
+	object.add('ttt.b', function(exports) {});
+	object.use('ttt.a, ttt.b, sys', function(exports, ttt, sys){
+		ok(sys.modules != null, 'sys.modules exists');
+		ok(sys.modules['ttt'] != null, 'sys.modules[ttt] exists');
+		ok(sys.modules['ttt.a'] != null, 'sys.modules[ttt.a] exists');
+		ok(sys.modules['ttt.b'] != null, 'sys.modules[ttt.b] exists');
+	});
+	object.remove('ttt', true);
+});
+
+test('sys.molules - submodule by execute', function() {
+	object.add('test2.c', function() {});
+
+	object.add('test2', './c', function(exports, c) {});
+
+	object.add('test.a.b.c', function(exports) {
+		this.name = 'test.a.b.c';
+		equal(this.__name__, 'a.b.c');
+	});
+    
+	object.add('test.a', './b.c, sys', function(exports, b, sys) {
+		this.name = 'test.a';
+		equal(this.__name__, 'a');
+	});
+
+	object.add('test', './a, test2, test2, test2, test2, sys', function(exports, a, test2, sys) {
+		this.name = 'test';
+		equal(this.__name__, '__main__');
+		ok(sys.modules['a'] != null, 'test.a is used by ./a, so a is in sys.modules');
+		ok(sys.modules['a.b'] != null, 'a.b is in sys.modules');
+		ok(sys.modules['a.b.c'] != null, 'a.b.c is in sys.modules');
+		ok(sys.modules['test2'] != null, 'test2 is in sys.modules');
+		ok(sys.modules['test2.c'] != null, 'test2.c is in sys.modules');
+	});
+
+	object.execute('test');
+	object.remove('test', true);
+});
+
+test('sys.molules - submodule by execute', function() {
+	object.add('test2.c', function() {});
+
+	object.add('test2', './c', function(exports, c) {});
+
+	object.add('test.a.b.c', function(exports) {
+		this.name = 'test.a.b.c';
+		equal(this.__name__, 'test.a.b.c');
+	});
+    
+	object.add('test.a', './b.c, sys', function(exports, b, sys) {
+		this.name = 'test.a';
+		equal(this.__name__, 'test.a');
+	});
+
+	object.add('test', './a, test2, test2, test2, test2, sys', function(exports, a, test2, sys) {
+		equal(this.__name__, 'test');
+	});
+
+	object.use('test, sys', function(exports, test, sys) {
+		ok(sys.modules['test.a'] != null, 'test.a is used by ./a, so a is in sys.modules');
+		ok(sys.modules['test.a.b'] != null, 'a.b is in sys.modules');
+		ok(sys.modules['test.a.b.c'] != null, 'a.b.c is in sys.modules');
+		ok(sys.modules['test2'] != null, 'test2 is in sys.modules');
+		ok(sys.modules['test2.c'] != null, 'test2.c is in sys.modules');
+	});
+	object.remove('test', true);
+});
+
 test('simple use of module', function() {
 	expect(4);
 	object.add('module1', function(exports) {
@@ -146,26 +220,43 @@ test('string starts/ends with .', function() {
 		object.add('cause_error', '.used', function(exports) {});
 		object.use('cause_error', function(exports, a) {});
 	} catch (e) {
-		ok(false, 'object.add(\'cause_error\', \'.used\') cause an error');
-		delete object._loader.lib['cause_error'];
+		ok(true, 'object.add(\'cause_error\', \'.used\') cause an error : ' + e);
 	}
+	delete object._loader.lib['cause_error'];
+	try {
+		object.add('cause_error', './used', function(exports) {});
+		object.add('cause_error.used', function(exports) {});
+		object.use('cause_error', function(exports, a) {});
+		ok(true, 'start with ./ is ok in uses');
+	} catch (e) {
+		ok(true, 'object.add(\'cause_error\', \'.used\') cause an error : ' + e);
+	}
+	delete object._loader.lib['cause_error'];
 	try {
 		object.add('cause_error', 'used.', function(exports) {});
 		object.use('cause_error', function(exports, a) {});
 	} catch (e) {
-		ok(false, 'object.add(\'cause_error\', \'used.\') cause an error');
-		delete object._loader.lib['cause_error'];
+		ok(true, 'object.add(\'cause_error\', \'used.\') cause an error : ' + e);
 	}
-	object.add('.cause_error', 'used', function(exports) {});
-	object.use('.cause_error', function(exports, a) {});
-	ok(object._loader.lib[''] == undefined, 'object._loader.lib[\'\'] should be undefined');
+	delete object._loader.lib['cause_error'];
+	try {
+		object.add('.cause_error', 'used', function(exports) {});
+		object.use('.cause_error', function(exports, a) {});
+		ok(object._loader.lib[''] == undefined, 'object._loader.lib[\'\'] should be undefined');
+	} catch (e) {
+		ok(true, 'add .cause_error causes error : ' + e); 
+	}
 	delete object._loader.lib['.cause_error'];
 	delete object._loader.lib[''];
 
-	object.add('.cause_error.', 'used', function(exports) {});
-	object.use('.cause_error.', function(exports, a) {});
-	ok(object._loader.lib[''] == undefined, 'object._loader.lib[\'\'] should be undefined');
-	ok(object._loader.lib['.cause_error.'] == undefined,'object._loader.lib[\'.cause_error.\'] should be undefined');
+	try {
+		object.add('.cause_error.', 'used', function(exports) {});
+		object.use('.cause_error.', function(exports, a) {});
+		ok(object._loader.lib[''] == undefined, 'object._loader.lib[\'\'] should be undefined');
+		ok(object._loader.lib['.cause_error.'] == undefined,'object._loader.lib[\'.cause_error.\'] should be undefined');
+	} catch (e) {
+		ok(true, 'add .cause_error. causes error : ' + e);
+	}
 	delete object._loader.lib[''];
 	delete object._loader.lib['.cause_error'];
 	delete object._loader.lib['.cause_error.'];

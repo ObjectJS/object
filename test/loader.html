@@ -7,6 +7,7 @@
 
 	object.add('xn.flashUploader', 'sys, dom/dd', function(exports, sys, dom) {
 		console.log(sys.modules)
+		console.log(dom)
 		return {
 			haha: 2
 		};
@@ -21,7 +22,8 @@
 	});
 
 	object.use('xn/flashUploader/async, xn.flashUploader', function(exports, async, xn) {
-		console.log(async, xn);
+		console.log('async', async);
+		console.log('xn', xn);
 	});
 
 </script>
