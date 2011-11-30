@@ -1,4 +1,4 @@
-module('loader-loadScript');
+module('loader-loadScript-module');
 
 function recoverEnv() {
 	var scripts = Sizzle('script');

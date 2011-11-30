@@ -1224,6 +1224,9 @@ this.Loader = new Class(function() {
 		}
 	};
 
+	// 用于保存url与script节点的键值对
+	var urlNodeMap = null;
+
 	/**
 	 * 加载一个script, 执行callback
 	 * 有冲突检测，如果连续调用两次loadScript同一src的话，则第二个调用会等第一个完毕后直接执行callback，不会加载两次。
@@ -1236,19 +1239,28 @@ this.Loader = new Class(function() {
 			throw new Error('src should be string');
 		}
 		src = src.trim();
-		if (!!useCache) {
-			var scripts = cls.get('scripts');
-			for (var i = 0, script, l = scripts.length; i < l; i++) {
-				script = scripts[i];
-				//src有可能是相对路径，而script.src是绝对路径，导致不一致
-				if (script.src && 
-						(script.src.indexOf(src) == script.src.length - src.length)) {
-					// 连续调用，此脚本正在加载呢
-					if (script.loading) {
+		if (useCache) {
+			if (!urlNodeMap) {
+				urlNodeMap = {};
+				// 利用现有script标签来
+				var scripts = cls.get('scripts');
+				for (var i = 0, script, l = scripts.length; i < l; i++) {
+					script = scripts[i];
+					urlNodeMap[script.src] = script;
+				}
+			}
+			for (var scriptUrl in urlNodeMap) {
+				if (scriptUrl.indexOf(src) == scriptUrl.length - src.length) {
+					var scriptNode = urlNodeMap[scriptUrl];
+					if (!scriptNode || !scriptNode.parentNode) {
+						delete urlNodeMap[scriptUrl];
+						break;
+					}
+					if (scriptNode.loading) {
 						// 增加一个回调即可
-						script.callbacks.push(callback);
+						scriptNode.callbacks.push(callback);
 					} else {
-						callback(script);
+						callback(scriptNode);
 					}
 					return;
 				}
@@ -1293,6 +1305,11 @@ this.Loader = new Class(function() {
 		}
 
 		document.getElementsByTagName('head')[0].insertBefore(ele, null);
+
+		if (useCache) { 
+			// 利用ele.src获取绝对路径来存键值对
+			urlNodeMap[ele.src] = ele;
+		}
 
 	});
 
@@ -1433,4 +1450,6 @@ this.Loader = new Class(function() {
 object.add('window', function(exports) {
 	return window;
 });
+
+
 

@@ -291,4 +291,3 @@ test('loadScript with/without cache', function() {
 		equal(len1, len2, 'cache works, load same script, get from cache');
 	}
 })
-
