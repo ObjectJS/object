@@ -1,6 +1,6 @@
 $(document).ready(function() {
 	var path = $UNIT_TEST_CONFIG.needPath ? 'class/' : '';
-	$LAB
+	$UNIT_TEST_SCRIPT_LOADER
 		.script(path + 'class-basic.js').wait()
 		.script(path + 'class-usage.js').wait()
 		.script(path + 'mixin-basic.js').wait()
