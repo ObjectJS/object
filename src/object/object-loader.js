@@ -7,7 +7,7 @@ var loader = new object.Loader();
 
 object._loader = loader;
 
-object.add = loader.add.bind(loader);
+//object.add = loader.add.bind(loader);
 object.define = loader.define.bind(loader);
 object.remove = loader.remove.bind(loader);
 object.use = loader.use.bind(loader);
@@ -20,11 +20,11 @@ object.execute = loader.execute.bind(loader);
  *        window.globalMember = 1;
  *    });
  */
-object.add('window', function(exports) {
+object.define('window', function(require, exports) {
 	return window;
 });
 
-object.add('loader', function(exports) {
+object.define('loader', function(require, exports) {
 	exports.Loader = object.Loader;
 });
 

@@ -1,4 +1,5 @@
-object.add('xn/flashUploader', 'sys, dom/dd', function(exports, sys, dom) {
+object.define('xn/flashUploader', 'sys', function(require, exports) {
+	var sys = require('sys');
 	return {
 		init: function() {
 				  console.log('init');
