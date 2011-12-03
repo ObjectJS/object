@@ -1,20 +1,24 @@
-/**
- * Loader
- */
 ;(function(object) {
 
-// 找不到模块Error
+/**
+ * 找不到模块Error
+ */
 function NoModuleError(name) {
 	this.message = 'no module named ' + name;
 };
 NoModuleError.prototype = new Error();
 
+/**
+ * 未对模块进行依赖
+ */
 function ModuleRequiredError(name) {
 	this.message = 'module ' + name + ' required';
 };
 ModuleRequiredError.prototype = new Error();
 
-// 模块
+/**
+ * 模块
+ */
 function Module(name) {
 	this.__name__ = name;
 }
@@ -25,65 +29,25 @@ Module.prototype.toString = function() {
 /**
  * 普通Package
  */
-function Package(id, deps, factory) {
-	this.id = id.replace(/\./g, '/');
-	this.dependencies = deps;
-	this.factory = factory;
+function SeaPackage(id, deps, factory) {
+	Package.apply(this, arguments);
 }
 
-/**
- * @param id 依赖此dep的module的名字，用于生成作用域信息
- * @param ownerId
- */
-Package.Dep = function(id, ownerId) {
-	this.id = id;
-	this.ownerId = ownerId;
+SeaPackage.prototype = new Package();
+
+SeaPackage.prototype.constructor = SeaPackage;
+
+SeaPackage.prototype.execute = function(name, exports, runtime) {
+	var returnExports = this.factory.call(exports, this.createRequire(name, runtime), exports, this);
+	return returnExports;
 };
 
-Package.Dep.prototype = {
-	/**
-	 * 处理当前模块
-	 * @param callback 异步方法，模块获取完毕后通过callback的唯一参数传回
-	 */
-	load: function(callback) {
-		var runtime = this.runtime;
-		var loader = this.loader;
-		var id = this.id;
-		var ownerId = this.ownerId;
-
-		var isRelative = false;
-		// Relative
-		if (id.indexOf('.\/') == 0) {
-			id = id.slice(2);
-			// 去除root
-			var context = runtime.getName(ownerId);
-			// 说明确实去除了root，是一个相对引用，在获取fullId时需要加上root
-			isRelative = (context != ownerId);
-		}
-
-		id = loader.parseId(id);
-
-		var fullId = isRelative? runtime.getId(id) : id;
-		var depModule = runtime.getModule(id);
-
-		// 使用缓存中的
-		if (depModule) {
-			callback(depModule);
-
-		} else {
-			loader.load(loader.getPackage(fullId), id, runtime, callback);
-		}
-	}
-};
-
-Package.createRequire = function(loader, module, name, runtime) {
+SeaPackage.prototype.createRequire = function(name, runtime) {
+	var loader = this.loader;
+	var module = this;
 	function require(id) {
-		if (id.indexOf('./') == 0) {
-			id = runtime.getName(name) + '.' + loader.parseId(id.slice(2));
-		} else {
-			id = loader.parseId(id);
-		}
-		var exports = runtime.getModule(id);
+		var root = module.getDep(id).root;
+		var exports = runtime.getModule(root);
 		if (!exports) {
 			// 有依赖却没有获取到，说明是由于循环依赖
 			if (module.dependencies.indexOf(id) != -1) {
@@ -99,91 +63,196 @@ Package.createRequire = function(loader, module, name, runtime) {
 
 	require.async = function(deps, callback) {
 		deps = loader.parseDeps(deps);
-		loader.load(new Package(name, deps, function(require) {
+		var pkg = new SeaPackage(name, deps, function(require) {
 			var args = [];
 			deps.forEach(function(dep) {
 				args.push(require(dep));
 			});
 			callback.apply(null, args);
-		}), name, runtime);
+		});
+		pkg.loader = loader;
+		loader.load(pkg, name, runtime);
 	};
 
 	return require;
 };
 
-function ObjectPackage() {
+/**
+ * 文艺 Package
+ */
+function ObjectPackage(id, deps, factory) {
+	Package.apply(this, arguments);
 };
 
-ObjectPackage.Dep = function(id, ownerId) {
+ObjectPackage.prototype = new Package();
+
+ObjectPackage.prototype.constructor = ObjectPackage;
+
+ObjectPackage.prototype.execute = function(name, exports, runtime) {
+	var args = [exports];
+	this.dependencies.forEach(function(dep) {
+		var root = this.getDep(dep).root;
+		dep = runtime.getModule(root);
+		if (args.indexOf(dep) == -1) {
+			args.push(dep);
+		}
+	}, this);
+	var returnExports = this.factory.apply(exports, args);
+	return returnExports;
+};
+
+function Dependency(id, module) {
 	this.id = id;
-	this.ownerId = ownerId;
+	this.module = module;
+}
+
+/**
+ * @param id
+ * @param module
+ */
+function SeaDependency(id, module) {
+	Dependency.call(this, id.replace(/\//g, '.'), module);
+	this.root = this.id;
 };
 
-ObjectPackage.Dep.prototype = {
-	load: function(callback) {
-		var runtime = this.runtime;
-		var loader = this.loader;
-		var id = this.id;
+SeaDependency.prototype = new Dependency();
 
-		var parts; // depId所有部分的数组
-		var context = null; // 当前dep是被某个模块通过相对路径调用的
-		var moduleId = ''; // 当前模块在运行时保存在modules中的名字，为context+parts的第一部分
-		var isRelative = false; // 当前dep是否属于execute的模块的子模块，如果是，生成的名称应不包含其前缀
-		var pId, part, partId, currentPart = -1;
+/**
+ * 处理当前模块
+ * @param callback 异步方法，模块获取完毕后通过callback的唯一参数传回
+ */
+SeaDependency.prototype.load = function(callback, runtime) {
+	var ownerId = this.module.id;
+	var loader = this.module.loader;
+	var id = this.id;
 
-		/**
-		 * 依次获取当前模块的每个部分
-		 * 如a.b.c，依次获取a、a.b、a.b.c
-		 * @param pExprorts 上一部分的模块实例，如果是初次调用，为空
-		 * @param id 截止到当前部分的包含context前缀的名字
-		 */
-		function nextPart(pExports, id) {
+	var isRelative = false;
+	// Relative
+	if (id.indexOf('.\/') == 0) {
+		id = id.slice(2);
+		// 去除root
+		var context = runtime.getName(ownerId);
+		// 说明确实去除了root，是一个相对引用，在获取fullId时需要加上root
+		isRelative = (context != ownerId);
+	}
 
-			var fullId, depModule;
+	id = loader.parseId(id);
 
-			if (pExports) {
-				runtime.setModule(id, pExports);
-				// 生成对象链
-				runtime.setMemberTo(pId, part, pExports);
-			}
+	var fullId = isRelative? runtime.getId(id) : id;
+	var depModule = runtime.getModule(id);
 
-			pId = id;
+	// 使用缓存中的
+	if (depModule) {
+		callback(depModule);
 
-			currentPart++;
+	} else {
+		loader.load(loader.getPackage(fullId), id, runtime, callback);
+	}
+};
 
-			if (currentPart == parts.length) {
-				callback(runtime.getModule(moduleId));
+ObjectDependency = function(id, module) {
+	if (id.indexOf('./') == 0) {
+		id = id.slice(2);
+		this.root = module.id + '.' + id;
+		this.isRelative = true;
+	} else {
+		this.root = id.split('.')[0];
+	}
+	Dependency.call(this, id, module);
+};
+
+ObjectDependency.prototype = new Dependency();
+
+ObjectDependency.prototype.load = function(callback, runtime) {
+	var ownerId = this.module.id;
+	var loader = this.module.loader;
+
+	var parts; // depId所有部分的数组
+	var context = null; // 当前dep是被某个模块通过相对路径调用的
+	var moduleId = ''; // 当前模块在运行时保存在modules中的名字，为context+parts的第一部分
+	var isRelative = false; // 当前dep是否属于execute的模块的子模块，如果是，生成的名称应不包含其前缀
+	var pId, part, partId, currentPart = -1;
+
+	/**
+	 * 依次获取当前模块的每个部分
+	 * 如a.b.c，依次获取a、a.b、a.b.c
+	 * @param pExprorts 上一部分的模块实例，如果是初次调用，为空
+	 * @param id 截止到当前部分的包含context前缀的名字
+	 */
+	function nextPart(pExports, id) {
+
+		var fullId, depModule;
+
+		if (pExports) {
+			runtime.setModule(id, pExports);
+			// 生成对象链
+			runtime.setMemberTo(pId, part, pExports);
+		}
+
+		pId = id;
+
+		currentPart++;
+
+		if (currentPart == parts.length) {
+			callback(runtime.getModule(moduleId));
+
+		} else {
+			part = parts[currentPart];
+			partId = (pId? pId + '.' : '') + part;
+			fullId = isRelative? runtime.getId(partId) : partId;
+			depModule = runtime.getModule(partId);
+
+			// 使用缓存中的
+			if (depModule) {
+				nextPart(depModule, partId);
 
 			} else {
-				part = parts[currentPart];
-				partId = (pId? pId + '.' : '') + part;
-				fullId = isRelative? runtime.getId(partId) : partId;
-				depModule = runtime.getModule(partId);
-
-				// 使用缓存中的
-				if (depModule) {
-					nextPart(depModule);
-
-				} else {
-					loader.load(loader.getPackage(fullId), partId, runtime, nextPart);
-				}
-			};
-		}
-
-		// Relative
-		if (id.indexOf('.\/') == 0) {
-			id = id.slice(2);
-			// 去除root
-			context = runtime.getName(ownerId);
-			// 说明确实去除了root，是一个相对引用，在获取fullId时需要加上root
-			isRelative = (context != ownerId);
-		}
-
-		parts = id.split('.');
-		moduleId = (context? context + '.' : '') + parts[0];
-
-		nextPart(null, context);
+				loader.load(loader.getPackage(fullId), partId, runtime, nextPart);
+			}
+		};
 	}
+
+	// Relative
+	if (this.isRelative) {
+		// 去除root
+		context = runtime.getName(ownerId);
+		// 说明确实去除了root，是一个相对引用，在获取fullId时需要加上root
+		isRelative = (context != ownerId);
+	}
+
+	parts = this.id.split('.');
+	moduleId = (context? context + '.' : '') + parts[0];
+
+	nextPart(null, context);
+};
+
+/**
+ * XX Package
+ */
+function Package(id, deps, factory) {
+	if (!id) return;
+
+	this.id = id.replace(/\./g, '/');
+	this.dependencies = deps;
+	this.factory = factory;
+	this.loader = null;
+	this.deps = {};
+	this.dependencies.forEach(function(dep) {
+		this.deps[dep] = this.createDep(dep);
+	}, this);
+}
+Package.prototype.execute = function() {};
+Package.prototype.getDep = function(id) {
+	return this.deps[id];
+};
+Package.prototype.createDep = function(depId) {
+	var dep;
+	if (depId.indexOf('.') != -1) {
+		dep = new ObjectDependency(depId, this);
+	} else {
+		dep = new SeaDependency(depId, this);
+	}
+	return dep;
 };
 
 /**
@@ -221,6 +290,15 @@ LoaderRuntime.prototype = {
 	addModule: function(name, exports) {
 		exports = exports || new Module(name);
 		this.modules[name] = exports;
+
+		// 已获取到了此host的引用，将其子模块都注册上去。
+		var members = this.members[name];
+		if (members) {
+			members.forEach(function(member) {
+			  this.modules[name][member.id] = member.value;
+			}, this);
+		}
+
 		return exports;
 	},
 
@@ -265,30 +343,16 @@ LoaderRuntime.prototype = {
 		if (host) {
 		    // 已存在host
 		    if (this.modules[host]) {
-		  	  this.modules[host][member] = value;
+		  		this.modules[host][member] = value;
 		    }
 		    // host不存在，记录在members对象中
 		    else {
-		  	  if (!this.members[host]) this.members[host] = [];
-		  	  this.members[host].push({
-		  		  id: member,
-		  		  value: value
-		  	  });
+		  		if (!this.members[host]) this.members[host] = [];
+		  	  	this.members[host].push({
+		  	  	    id: member,
+		  	  	    value: value
+		  	  	});
 		    }
-		}
-
-		/*
-		 * 将记录的成员添加到自己
-		 */
-		// 全名
-		var id = (host? host + '.' : '') + member;
-
-		// 已获取到了此host的引用，将其子模块都注册上去。
-		var members = this.members[id];
-		if (members) {
-		    members.forEach(function(member) {
-		  	  this.modules[id][member.id] = member.value;
-		    }, this);
 		}
 	}
 };
@@ -326,14 +390,29 @@ var Loader = new Class(function() {
 	this.initialize = function(self) {
 		self.useCache = true;
 		self.lib = {
-			'sys': {
-				id: 'sys',
-				dependencies: [],
-				factory: function(exports) {}
-			}
+			'sys': new Package('sys', [], function() {})
 		};
 		self.fileLib = {};
+		self.prefixLib = {};
 		self.anonymousModuleCount = 0;
+	};
+
+	/**
+	 * 建立前缀模块
+	 * 比如 a.b.c.d ，会建立 a a.b a.b.c 三个空模块，最后一个模块为目标模块
+	 */
+	this.definePrefixFor = function(self, id) {
+		if (!id || typeof id != 'string') return;
+		if (arguments.length < 2) return;
+		id = self.parseId(id);
+
+		var parts = id.split('.');
+		for (var i = 0, prefix, pkg, l = parts.length - 1; i < l; i++) {
+			prefix = parts.slice(0, i + 1).join('.');
+			if (self.prefixLib[prefix]) continue;
+			pkg = new Package(prefix, [], function(){});
+			self.prefixLib[prefix] = pkg;
+		}
 	};
 
 	/**
@@ -341,18 +420,6 @@ var Loader = new Class(function() {
 	 */
 	this.parseId = function(self, id) {
 		return id.replace(/\//g, '.');
-	};
-
-	this.getDep = function(self, depId, ownerId, runtime) {
-		var dep;
-		if (depId.indexOf('.') != -1) {
-			dep = new ObjectPackage.Dep(depId, ownerId);
-		} else {
-			dep = new Package.Dep(depId, ownerId);
-		}
-		dep.loader = self;
-		dep.runtime = runtime;
-		return dep;
 	};
 
 	/**
@@ -401,7 +468,7 @@ var Loader = new Class(function() {
 					nextDep();
 
 				} else {
-					self.getDep(depId, module.id, runtime).load(nextDep);
+					module.getDep(depId).load(nextDep, runtime);
 				}
 			}
 		}
@@ -413,7 +480,7 @@ var Loader = new Class(function() {
 			if (!name) name = module.id; //  没有指定name，则使用全名
 
 			var exports = new Module(name);
-			var returnExports = module.factory.call(exports, Package.createRequire(self, module, name, runtime), exports, module);
+			var returnExports = module.execute(name, exports, runtime);
 			if (returnExports) {
 				returnExports.__name__ = exports.__name__;
 				exports = returnExports;
@@ -450,6 +517,7 @@ var Loader = new Class(function() {
 		// Already define
 		} else {
 			module = pkg;
+			module.loader = self;
 			nextDep();
 		}
 	};
@@ -688,14 +756,60 @@ var Loader = new Class(function() {
 		// 不允许重复添加。
 		if (self.lib[id]) return;
 
+		// prefix已注册
+		if (self.prefixLib[id]) delete self.prefixLib[id];
+
 		// 文件已加载
 		if (self.fileLib[id]) delete self.fileLib[id];
 
-		self.lib[id] = new Package(id, deps, factory);
+		// 添加前缀module到prefixLib
+		self.definePrefixFor(id);
+
+		var pkg = new SeaPackage(id, deps, factory);
+		pkg.loader = self;
+		self.lib[id] = pkg;
+	};
+
+	/**
+	 * @param id
+	 * @param deps
+	 * @param factory
+	 */
+	this.add = function(self, id, deps, factory) {
+		if (!id || typeof id != 'string') return;
+		if (arguments.length < 3) return;
+
+		// deps 参数是可选的
+		if (arguments.length == 3) {
+			factory = deps;
+			deps = [];
+		} else {
+			deps = self.parseDeps(deps);
+		}
+
+		if (!factory || typeof factory != 'function') return;
+
+		id = self.parseId(id);
+
+		// 不允许重复添加。
+		if (self.lib[id]) return;
+
+		// prefix已注册
+		if (self.prefixLib[id]) delete self.prefixLib[id];
+
+		// 文件已加载
+		if (self.fileLib[id]) delete self.fileLib[id];
+
+		// 添加前缀module到prefixLib
+		self.definePrefixFor(id);
+
+		var pkg = new ObjectPackage(id, deps, factory);
+		pkg.loader = self;
+		self.lib[id] = pkg;
 	};
 
 	this.getPackage = function(self, id) {
-		return self.lib[id] || self.fileLib[id];
+		return self.lib[id] || self.fileLib[id] || self.prefixLib[id];
 	};
 
 	/**
@@ -742,7 +856,10 @@ var Loader = new Class(function() {
 		object.define(id, deps, function(require, exports, module) {
 			var args = [];
 			module.dependencies.forEach(function(dep) {
-				args.push(require(dep));
+				var dep = require(dep);
+				if (args.indexOf(dep) == -1) {
+					args.push(dep);
+				}
 			});
 			factory.apply(null, args);
 		});

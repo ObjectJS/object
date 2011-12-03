@@ -1,4 +1,8 @@
-object.define('haha.lala', function() {
+object.add('haha.lala', 'sys, dom', function(exports, sys, dom) {
+	console.log(dom.dd)
+	exports.name = 'lala';
+});
+object.define('haha.baba', function() {
 });
 object.define('xn/flashUploader/async', function(require) {
 
@@ -8,8 +12,8 @@ object.define('xn/flashUploader/async', function(require) {
 
 });
 
-object.use('xn/flashUploader/async, haha.lala', function(async, haha) {
-   console.log(arguments)
+object.use('xn/flashUploader/async, haha.lala, haha.baba, sys', function(async, haha) {
+	console.log(haha.lala.name)
 });
 
 object.define('a', 'b', function(require, exports, module) {
