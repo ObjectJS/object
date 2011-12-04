@@ -1,6 +1,16 @@
 ;(function(object) {
 
 /**
+ * 模块
+ */
+function Module(name) {
+	this.__name__ = name;
+}
+Module.prototype.toString = function() {
+	return '<module \'' + this.__name__ + '\'>';
+};
+
+/**
  * 找不到模块Error
  */
 function NoModuleError(name) {
@@ -17,16 +27,6 @@ function ModuleRequiredError(name) {
 ModuleRequiredError.prototype = new Error();
 
 /**
- * 模块
- */
-function Module(name) {
-	this.__name__ = name;
-}
-Module.prototype.toString = function() {
-	return '<module \'' + this.__name__ + '\'>';
-};
-
-/**
  * 普通Package
  */
 function SeaPackage(id, deps, factory) {
@@ -37,17 +37,21 @@ SeaPackage.prototype = new Package();
 
 SeaPackage.prototype.constructor = SeaPackage;
 
-SeaPackage.prototype.execute = function(name, exports, runtime) {
+SeaPackage.prototype.execute = function(name, runtime) {
+	var exports = new Module(name);
 	var returnExports = this.factory.call(exports, this.createRequire(name, runtime), exports, this);
-	return returnExports;
+	if (returnExports) {
+		returnExports.__name__ = exports.__name__;
+		exports = returnExports;
+	}
+	return exports;
 };
 
 SeaPackage.prototype.createRequire = function(name, runtime) {
-	var loader = this.loader;
+	var loader = runtime.loader;
 	var module = this;
 	function require(id) {
-		var root = module.getDep(id).root;
-		var exports = runtime.getModule(root);
+		var exports = module.getDep(id).getModule(runtime);
 		if (!exports) {
 			// 有依赖却没有获取到，说明是由于循环依赖
 			if (module.dependencies.indexOf(id) != -1) {
@@ -62,7 +66,7 @@ SeaPackage.prototype.createRequire = function(name, runtime) {
 	}
 
 	require.async = function(deps, callback) {
-		deps = loader.parseDeps(deps);
+		deps = module.parseDeps(deps);
 		var pkg = new SeaPackage(name, deps, function(require) {
 			var args = [];
 			deps.forEach(function(dep) {
@@ -70,7 +74,6 @@ SeaPackage.prototype.createRequire = function(name, runtime) {
 			});
 			callback.apply(null, args);
 		});
-		pkg.loader = loader;
 		loader.load(pkg, name, runtime);
 	};
 
@@ -88,17 +91,21 @@ ObjectPackage.prototype = new Package();
 
 ObjectPackage.prototype.constructor = ObjectPackage;
 
-ObjectPackage.prototype.execute = function(name, exports, runtime) {
+ObjectPackage.prototype.execute = function(name, runtime) {
+	var exports = new Module(name);
 	var args = [exports];
 	this.dependencies.forEach(function(dep) {
-		var root = this.getDep(dep).root;
-		dep = runtime.getModule(root);
+		var dep = this.getDep(dep).getModule(runtime);
 		if (args.indexOf(dep) == -1) {
 			args.push(dep);
 		}
 	}, this);
 	var returnExports = this.factory.apply(exports, args);
-	return returnExports;
+	if (returnExports) {
+		returnExports.__name__ = exports.__name__;
+		exports = returnExports;
+	}
+	return exports;
 };
 
 function Dependency(id, module) {
@@ -112,7 +119,6 @@ function Dependency(id, module) {
  */
 function SeaDependency(id, module) {
 	Dependency.call(this, id.replace(/\//g, '.'), module);
-	this.root = this.id;
 };
 
 SeaDependency.prototype = new Dependency();
@@ -121,9 +127,8 @@ SeaDependency.prototype = new Dependency();
  * 处理当前模块
  * @param callback 异步方法，模块获取完毕后通过callback的唯一参数传回
  */
-SeaDependency.prototype.load = function(callback, runtime) {
+SeaDependency.prototype.load = function(runtime, callback) {
 	var ownerId = this.module.id;
-	var loader = this.module.loader;
 	var id = this.id;
 
 	var isRelative = false;
@@ -136,8 +141,6 @@ SeaDependency.prototype.load = function(callback, runtime) {
 		isRelative = (context != ownerId);
 	}
 
-	id = loader.parseId(id);
-
 	var fullId = isRelative? runtime.getId(id) : id;
 	var depModule = runtime.getModule(id);
 
@@ -146,9 +149,13 @@ SeaDependency.prototype.load = function(callback, runtime) {
 		callback(depModule);
 
 	} else {
-		loader.load(loader.getPackage(fullId), id, runtime, callback);
+		runtime.loadModule(fullId, id, callback);
 	}
 };
+
+SeaDependency.prototype.getModule = function(runtime) {
+	return runtime.getModule(this.id);
+}
 
 ObjectDependency = function(id, module) {
 	if (id.indexOf('./') == 0) {
@@ -163,9 +170,8 @@ ObjectDependency = function(id, module) {
 
 ObjectDependency.prototype = new Dependency();
 
-ObjectDependency.prototype.load = function(callback, runtime) {
+ObjectDependency.prototype.load = function(runtime, callback) {
 	var ownerId = this.module.id;
-	var loader = this.module.loader;
 
 	var parts; // depId所有部分的数组
 	var context = null; // 当前dep是被某个模块通过相对路径调用的
@@ -207,7 +213,7 @@ ObjectDependency.prototype.load = function(callback, runtime) {
 				nextPart(depModule, partId);
 
 			} else {
-				loader.load(loader.getPackage(fullId), partId, runtime, nextPart);
+				runtime.loadModule(fullId, partId, nextPart);
 			}
 		};
 	}
@@ -226,6 +232,10 @@ ObjectDependency.prototype.load = function(callback, runtime) {
 	nextPart(null, context);
 };
 
+ObjectDependency.prototype.getModule = function(runtime) {
+	return runtime.getModule(this.root);
+}
+
 /**
  * XX Package
  */
@@ -233,18 +243,26 @@ function Package(id, deps, factory) {
 	if (!id) return;
 
 	this.id = id.replace(/\./g, '/');
-	this.dependencies = deps;
+	this.dependencies = this.parseDeps(deps);
 	this.factory = factory;
-	this.loader = null;
 	this.deps = {};
 	this.dependencies.forEach(function(dep) {
 		this.deps[dep] = this.createDep(dep);
 	}, this);
 }
-Package.prototype.execute = function() {};
-Package.prototype.getDep = function(id) {
-	return this.deps[id];
+
+Package.prototype.execute = function(name, runtime) {
+	return new Module(name);
 };
+
+Package.prototype.getDep = function(id) {
+	if (id in this.deps) {
+		return this.deps[id];
+	} else {
+		return this.createDep(id);
+	}
+};
+
 Package.prototype.createDep = function(depId) {
 	var dep;
 	if (depId.indexOf('.') != -1) {
@@ -253,6 +271,28 @@ Package.prototype.createDep = function(depId) {
 		dep = new SeaDependency(depId, this);
 	}
 	return dep;
+};
+
+/**
+ * 处理传入的deps参数
+ * 在parseDeps阶段不需要根据名称判断去重（比如自己use自己），因为并不能避免所有冲突，还有循环引用的问题（比如 core use dom, dom use core）
+ * @param {String} deps 输入
+ */
+Package.prototype.parseDeps = function(deps) {
+	if (Array.isArray(deps)) return deps;
+
+	if (!deps) {
+		return [];
+	}
+
+	deps = deps.trim();
+	if (/^\.[^\/]|\.$/.test(deps)) {
+		throw new Error('deps should not startWith/endWith \'.\', except startWith \'./\'');
+	}
+	deps = deps.replace(/^,*|,*$/g, '');
+	deps = deps.split(/\s*,\s*/ig);
+
+	return deps;
 };
 
 /**
@@ -314,6 +354,11 @@ LoaderRuntime.prototype = {
 	 */
 	getModule: function(name) {
 		return this.modules[name];
+	},
+
+	loadModule: function(id, name, callback) {
+		var loader = this.loader;
+		loader.load(loader.getModule(id), name, this, callback);
 	},
 
 	/**
@@ -468,7 +513,7 @@ var Loader = new Class(function() {
 					nextDep();
 
 				} else {
-					module.getDep(depId).load(nextDep, runtime);
+					module.getDep(depId).load(runtime, nextDep);
 				}
 			}
 		}
@@ -477,14 +522,9 @@ var Loader = new Class(function() {
 		 * 已执行完毕最后一个dependency
 		 */
 		function doneDep() {
-			if (!name) name = module.id; //  没有指定name，则使用全名
+			if (!name) name = module.id; // 没有指定name，则使用全名
 
-			var exports = new Module(name);
-			var returnExports = module.execute(name, exports, runtime);
-			if (returnExports) {
-				returnExports.__name__ = exports.__name__;
-				exports = returnExports;
-			}
+			var exports = module.execute(name, runtime);
 
 			runtime.addModule(name, exports);
 
@@ -517,7 +557,6 @@ var Loader = new Class(function() {
 		// Already define
 		} else {
 			module = pkg;
-			module.loader = self;
 			nextDep();
 		}
 	};
@@ -690,30 +729,12 @@ var Loader = new Class(function() {
 	});
 
 	/**
-	 * 处理传入的deps参数
-	 * 在parseDeps阶段不需要根据名称判断去重（比如自己use自己），因为并不能避免所有冲突，还有循环引用的问题（比如 core use dom, dom use core）
-	 * @param {String} deps 输入
-	 */
-	this.parseDeps = function(self, deps) {
-		if (!deps || typeof deps != 'string') {
-			return [];
-		}
-
-		deps = deps.trim();
-		if (/^\.[^\/]|\.$/.test(deps)) {
-			throw new Error('deps should not startWith/endWith \'.\', except startWith \'./\'');
-		}
-		deps = deps.replace(/^,*|,*$/g, '');
-		deps = deps.split(/\s*,\s*/ig);
-
-		return deps;
-	};
-
-	/**
 	 * 建立一个runtime
 	 */
 	this.createRuntime = function(self, id) {
-		return new LoaderRuntime(id);
+		var runtime = new LoaderRuntime(id);
+		runtime.loader = self;
+		return runtime;
 	};
 
 	/**
@@ -732,21 +753,14 @@ var Loader = new Class(function() {
 		};
 	};
 
-	/**
-	 * @param id
-	 * @param deps
-	 * @param factory
-	 */
-	this.define = function(self, id, deps, factory) {
+	this.defineModule = function(self, constructor, id, deps, factory) {
 		if (!id || typeof id != 'string') return;
-		if (arguments.length < 3) return;
+		if (arguments.length < 4) return;
 
 		// deps 参数是可选的
-		if (arguments.length == 3) {
+		if (typeof deps == 'function') {
 			factory = deps;
 			deps = [];
-		} else {
-			deps = self.parseDeps(deps);
 		}
 
 		if (!factory || typeof factory != 'function') return;
@@ -765,9 +779,17 @@ var Loader = new Class(function() {
 		// 添加前缀module到prefixLib
 		self.definePrefixFor(id);
 
-		var pkg = new SeaPackage(id, deps, factory);
-		pkg.loader = self;
+		var pkg = new constructor(id, deps, factory);
 		self.lib[id] = pkg;
+	};
+
+	/**
+	 * @param id
+	 * @param deps
+	 * @param factory
+	 */
+	this.define = function(self, id, deps, factory) {
+		self.defineModule(SeaPackage, id, deps, factory);
 	};
 
 	/**
@@ -776,39 +798,13 @@ var Loader = new Class(function() {
 	 * @param factory
 	 */
 	this.add = function(self, id, deps, factory) {
-		if (!id || typeof id != 'string') return;
-		if (arguments.length < 3) return;
-
-		// deps 参数是可选的
-		if (arguments.length == 3) {
-			factory = deps;
-			deps = [];
-		} else {
-			deps = self.parseDeps(deps);
-		}
-
-		if (!factory || typeof factory != 'function') return;
-
-		id = self.parseId(id);
-
-		// 不允许重复添加。
-		if (self.lib[id]) return;
-
-		// prefix已注册
-		if (self.prefixLib[id]) delete self.prefixLib[id];
-
-		// 文件已加载
-		if (self.fileLib[id]) delete self.fileLib[id];
-
-		// 添加前缀module到prefixLib
-		self.definePrefixFor(id);
-
-		var pkg = new ObjectPackage(id, deps, factory);
-		pkg.loader = self;
-		self.lib[id] = pkg;
+		self.defineModule(ObjectPackage, id, deps, factory);
 	};
 
-	this.getPackage = function(self, id) {
+	/**
+	 * @param id
+	 */
+	this.getModule = function(self, id) {
 		return self.lib[id] || self.fileLib[id] || self.prefixLib[id];
 	};
 
@@ -836,7 +832,8 @@ var Loader = new Class(function() {
 		}
 		self.buildFileLib();
 
-		self.load(self.lib[id], '__main__', self.createRuntime(id));
+		var runtime = self.createRuntime(id);
+		runtime.loadModule(id, '__main__');
 	};
 
 	/**
@@ -861,10 +858,16 @@ var Loader = new Class(function() {
 					args.push(dep);
 				}
 			});
+
+			if (['exports', 'e'].indexOf(/^function.*\((.*)\)/.exec(factory.toString())[1].split(/\s*,\s*/)[0]) != -1) {
+				console.warn('object.use即将不再支持第一个exports参数，请尽快删除。');
+				args.unshift(exports);
+			}
 			factory.apply(null, args);
 		});
 
-		self.load(self.lib[id], '__main__', self.createRuntime(id), function() {});
+		var runtime = self.createRuntime(id);
+		runtime.loadModule(id, '__main__', function() {});
 	};
 
 });

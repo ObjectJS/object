@@ -4,7 +4,9 @@ object.add('haha.lala', 'sys, dom', function(exports, sys, dom) {
 });
 object.define('haha.baba', function() {
 });
-object.define('xn/flashUploader/async', function(require) {
+object.define('xn/flashUploader/async', 'haha.lala, haha.baba', function(require) {
+
+	var haha = require('haha');
 
 	require.async('xn/flashUploader', function(flashUploader) {
 		flashUploader.init();
