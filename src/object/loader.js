@@ -142,19 +142,11 @@ SeaDependency.prototype.load = function(runtime, callback) {
 	}
 
 	var fullId = isRelative? runtime.getId(id) : id;
-	var depModule = runtime.getModule(id);
-
-	// 使用缓存中的
-	if (depModule) {
-		callback(depModule);
-
-	} else {
-		runtime.loadModule(fullId, id, callback);
-	}
+	runtime.loadModule(fullId, id, callback);
 };
 
 SeaDependency.prototype.getModule = function(runtime) {
-	return runtime.getModule(this.id);
+	return runtime.modules[this.id];
 }
 
 ObjectDependency = function(id, module) {
@@ -200,21 +192,13 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 		currentPart++;
 
 		if (currentPart == parts.length) {
-			callback(runtime.getModule(moduleId));
+			callback(runtime.modules[moduleId]);
 
 		} else {
 			part = parts[currentPart];
 			partId = (pId? pId + '.' : '') + part;
 			fullId = isRelative? runtime.getId(partId) : partId;
-			depModule = runtime.getModule(partId);
-
-			// 使用缓存中的
-			if (depModule) {
-				nextPart(depModule, partId);
-
-			} else {
-				runtime.loadModule(fullId, partId, nextPart);
-			}
+			runtime.loadModule(fullId, partId, nextPart);
 		};
 	}
 
@@ -233,7 +217,7 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 };
 
 ObjectDependency.prototype.getModule = function(runtime) {
-	return runtime.getModule(this.root);
+	return runtime.modules[this.root];
 }
 
 /**
@@ -349,16 +333,21 @@ LoaderRuntime.prototype = {
 		this.modules[name] = exports;
 	},
 
-	/*
-	 * 获取一个module
-	 */
-	getModule: function(name) {
-		return this.modules[name];
-	},
-
+	/**
+	* 加载一个module
+	*/
 	loadModule: function(id, name, callback) {
 		var loader = this.loader;
-		loader.load(loader.getModule(id), name, this, callback);
+
+		var depModule = this.modules[name];
+
+		// 使用缓存中的
+		if (depModule) {
+			callback(depModule, name);
+
+		} else {
+			loader.load(loader.getModule(id), name, this, callback);
+		}
 	},
 
 	/**
