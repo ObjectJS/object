@@ -95,7 +95,7 @@ ObjectPackage.prototype.execute = function(name, runtime) {
 	var exports = new Module(name);
 	var args = [exports];
 	this.dependencies.forEach(function(dep) {
-		var dep = this.getDep(dep).getModule(runtime);
+		dep = this.getDep(dep).getModule(runtime);
 		if (args.indexOf(dep) == -1) {
 			args.push(dep);
 		}
@@ -147,12 +147,12 @@ SeaDependency.prototype.load = function(runtime, callback) {
 
 SeaDependency.prototype.getModule = function(runtime) {
 	return runtime.modules[this.id];
-}
+};
 
 ObjectDependency = function(id, module) {
 	if (id.indexOf('./') == 0) {
 		id = id.slice(2);
-		this.root = module.id + '.' + id;
+		this.root = module.id + '.' + id.split('.')[0];
 		this.isRelative = true;
 	} else {
 		this.root = id.split('.')[0];
@@ -217,8 +217,9 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 };
 
 ObjectDependency.prototype.getModule = function(runtime) {
-	return runtime.modules[this.root];
-}
+	var root = runtime.getName(this.root);
+	return runtime.modules[root];
+};
 
 /**
  * XX Package
@@ -226,7 +227,7 @@ ObjectDependency.prototype.getModule = function(runtime) {
 function Package(id, deps, factory) {
 	if (!id) return;
 
-	this.id = id.replace(/\./g, '/');
+	this.id = id.replace(/\//g, '.');
 	this.dependencies = this.parseDeps(deps);
 	this.factory = factory;
 	this.deps = {};
@@ -845,7 +846,7 @@ var Loader = new Class(function() {
 		object.define(id, deps, function(require, exports, module) {
 			var args = [];
 			module.dependencies.forEach(function(dep) {
-				var dep = require(dep);
+				dep = require(dep);
 				if (args.indexOf(dep) == -1) {
 					args.push(dep);
 				}

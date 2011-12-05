@@ -33,4 +33,3 @@ object.define('b', 'a', function(require) {
 object.use('a', function(a) {
 	console.log(a.a)
 })
-

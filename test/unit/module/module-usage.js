@@ -1,6 +1,6 @@
 module("module-usage");
 test('modules in object._loader.lib', function() {
-	expect(6);
+	expect(4);
 	raises(function() {
 		object.use('not_defined_module', function(exports){});
 	}, 'use not defined module, should raise error');
@@ -9,8 +9,6 @@ test('modules in object._loader.lib', function() {
 	object.use('test_object_add', function(exports, test) {});
 	ok(object._loader.lib.test_object_add != null, 'test_object_add module exists');
 	ok(object._loader.lib.__anonymous_0__ != null, 'anonymous module exists');
-	equal(object._loader.lib.test_object_add.exports.__name__, 'test_object_add', 'module name test pass');
-	equal(object._loader.lib.__anonymous_0__.exports.__name__, '__main__', 'anonymous module name is __main__');
 });
 
 test('sys.modules - exists', function() {
