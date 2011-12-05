@@ -38,7 +38,7 @@ SeaPackage.prototype = new Package();
 SeaPackage.prototype.constructor = SeaPackage;
 
 SeaPackage.prototype.execute = function(name, runtime) {
-	var exports = new Module(name);
+	var exports = runtime.modules[name] || new Module(name);
 	var returnExports = this.factory.call(exports, this.createRequire(name, runtime), exports, this);
 	if (returnExports) {
 		returnExports.__name__ = exports.__name__;
@@ -74,7 +74,7 @@ SeaPackage.prototype.createRequire = function(name, runtime) {
 			});
 			callback.apply(null, args);
 		});
-		loader.load(pkg, name, runtime);
+		pkg.load(name, runtime);
 	};
 
 	return require;
@@ -92,7 +92,7 @@ ObjectPackage.prototype = new Package();
 ObjectPackage.prototype.constructor = ObjectPackage;
 
 ObjectPackage.prototype.execute = function(name, runtime) {
-	var exports = new Module(name);
+	var exports = runtime.modules[name] || new Module(name);
 	var args = [exports];
 	this.dependencies.forEach(function(dep) {
 		dep = this.getDep(dep).getModule(runtime);
@@ -102,10 +102,25 @@ ObjectPackage.prototype.execute = function(name, runtime) {
 	}, this);
 	var returnExports = this.factory.apply(exports, args);
 	if (returnExports) {
+		// 检测是否有子模块引用了本模块
+		if (exports.__empty_refs__) {
+			exports.__empty_refs__.forEach(function(ref) {
+			   if (console) console.warn(ref + '无法正确获得' + name + '模块的引用。因为该模块是通过return返回模块实例的。');
+			});
+		}
+
 		returnExports.__name__ = exports.__name__;
 		exports = returnExports;
 	}
 	return exports;
+};
+
+ObjectPackage.prototype.handleCyclicDependency = function(depId, runtime, next) {
+	var exports = runtime.modules[depId] || new Module(depId);
+	runtime.modules[depId] = exports;
+	if (!exports.__empty_refs__) exports.__empty_refs__ = [];
+	exports.__empty_refs__.push(name);
+	next(exports);
 };
 
 function Dependency(id, module) {
@@ -238,6 +253,72 @@ function Package(id, deps, factory) {
 
 Package.prototype.execute = function(name, runtime) {
 	return new Module(name);
+};
+
+Package.prototype.load = function(name, runtime, callback) {
+	var currentUse = -1; 
+	var module = this;
+
+	/**
+	 * 顺序执行module中的dependencies
+	 * @param pExports 上一个nextDep返回的模块实例
+	 */
+	function nextDep(pExports) {
+		var depId;
+		var deps = module.dependencies;
+		var factory = module.factory;
+
+		if (pExports) {
+			// 模块获取完毕，去除循环依赖检测
+			runtime.stack.pop();
+		}
+
+		currentUse++;
+
+		// 模块获取完毕，执行factory，将exports通过callback传回去。
+		// 已经处理到最后一个
+		if (currentUse == deps.length) {
+			doneDep();
+
+		} else {
+			depId = deps[currentUse];
+
+			// 记录开始获取当前模块
+			runtime.stack.push(depId);
+
+			// 刚刚push过，应该在最后一个，如果不在，说明循环依赖了
+			if (runtime.stack.indexOf(depId) != runtime.stack.length - 1) {
+				// TODO
+				runtime.loader.lib[depId].handleCyclicDependency(depId, runtime, nextDep);
+
+			} else {
+				module.getDep(depId).load(runtime, nextDep);
+			}
+		}
+	}
+
+	/**
+	 * 已执行完毕最后一个dependency
+	 */
+	function doneDep() {
+		if (!name) name = module.id; // 没有指定name，则使用全名
+
+		var exports = module.execute(name, runtime);
+
+		runtime.addModule(name, exports);
+
+		// sys.modules
+		if (exports.__name__ === 'sys') exports.modules = runtime.modules;
+
+		if (callback) callback(exports, name);
+	}
+
+	nextDep();
+};
+
+Package.prototype.handleCyclicDependency = function(depId, runtime, next) {
+	// 但并不立刻报错，而是当作此模块没有获取到，继续获取下一个
+	next();
 };
 
 Package.prototype.getDep = function(id) {
@@ -467,64 +548,6 @@ var Loader = new Class(function() {
 	 */
 	this.load = function(self, pkg, name, runtime, callback) {
 
-		var currentUse = -1; 
-		var module;
-
-		/**
-		 * 顺序执行module中的dependencies
-		 * @param pExports 上一个nextDep返回的模块实例
-		 */
-		function nextDep(pExports) {
-			var depId;
-			var deps = module.dependencies;
-			var factory = module.factory;
-
-			if (pExports) {
-				// 模块获取完毕，去除循环依赖检测
-				runtime.stack.pop();
-			}
-
-			currentUse++;
-
-			// 模块获取完毕，执行factory，将exports通过callback传回去。
-			// 已经处理到最后一个
-			if (currentUse == deps.length) {
-				doneDep();
-
-			} else {
-				depId = deps[currentUse];
-
-				// 记录开始获取当前模块
-				runtime.stack.push(depId);
-
-				// 刚刚push过，应该在最后一个，如果不在，说明循环依赖了
-				// 但并不立刻报错，而是当作此模块没有获取到，继续获取下一个
-				if (runtime.stack.indexOf(depId) != runtime.stack.length - 1) {
-					nextDep();
-
-				} else {
-					module.getDep(depId).load(runtime, nextDep);
-				}
-			}
-		}
-
-		/**
-		 * 已执行完毕最后一个dependency
-		 */
-		function doneDep() {
-			if (!name) name = module.id; // 没有指定name，则使用全名
-
-			var exports = module.execute(name, runtime);
-
-			runtime.addModule(name, exports);
-
-			// sys.modules
-			if (exports.__name__ === 'sys') exports.modules = runtime.modules;
-
-			if (callback) callback(exports, name);
-		}
-
-
 		// No module
 		if (!pkg) {
 			throw new NoModuleError(name);
@@ -534,20 +557,21 @@ var Loader = new Class(function() {
 		else if (pkg.file) {
 			// TODO 加入预处理过程，跑出所有需要加载的文件并行加载，在此执行useScript而不是loadScript
 			self.loadScript(pkg.file, function() {
+				var id = pkg.id;
+				var file = pkg.file;
 				// 重新读取pkg，之前的pkg只是个fileLib中的占位
-				module = self.lib[pkg.id];
+				pkg = self.lib[id];
 
 				// 加载进来的脚本没有替换掉相应的模块，文件有问题。
-				if (!module) {
-					throw new Error(pkg.file + ' do not add ' + pkg.id);
+				if (!pkg) {
+					throw new Error(file + ' do not add ' + id);
 				}
-				nextDep();
+				pkg.load(name, runtime, callback);
 			}, true);
 
 		// Already define
 		} else {
-			module = pkg;
-			nextDep();
+			pkg.load(name, runtime, callback);
 		}
 	};
 

@@ -1,5 +1,4 @@
 object.add('haha.lala', 'sys, dom', function(exports, sys, dom) {
-	console.log(dom.dd)
 	exports.name = 'lala';
 });
 object.define('haha.baba', function() {
@@ -18,10 +17,10 @@ object.use('xn/flashUploader/async, haha.lala, haha.baba, sys', function(async, 
 	console.log(haha.lala.name)
 });
 
-object.define('a', 'b', function(require, exports, module) {
-	var b = require('b');
+object.add('a', 'b', function(exports, b) {
 	console.log(b.b);
 	this.a = 'a'
+	return {}
 });
 object.define('b', 'a', function(require) {
 	setTimeout(function() {
