@@ -736,6 +736,9 @@ var Loader = new Class(function() {
 
 		if (self.fileLib[id]) return;
 
+		// 添加前缀module到prefixLib
+		self.definePrefixFor(id);
+
 		self.fileLib[id] = {
 			id: id,
 			file: src
