@@ -95,4 +95,3 @@
 
 	global.$UNIT_TEST_CONFIG = config;
 })(window)
-
