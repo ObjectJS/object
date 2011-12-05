@@ -1,4 +1,4 @@
-module('prototype');
+module('prototype-basic');
 
 test('prototype inherit in javascript', function() {
 	var A = function(){};

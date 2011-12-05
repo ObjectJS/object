@@ -1,4 +1,4 @@
-module("module");
+module("module-usage");
 test('modules in object._loader.lib', function() {
 	expect(6);
 	raises(function() {
@@ -9,8 +9,8 @@ test('modules in object._loader.lib', function() {
 	object.use('test_object_add', function(exports, test) {});
 	ok(object._loader.lib.test_object_add != null, 'test_object_add module exists');
 	ok(object._loader.lib.__anonymous_0__ != null, 'anonymous module exists');
-	equal(object._loader.lib.test_object_add.name, 'test_object_add', 'module name test pass');
-	ok(object._loader.lib.__anonymous_0__.name == '__anonymous_0__', 'anonymous module name pass');
+	equal(object._loader.lib.test_object_add.exports.__name__, 'test_object_add', 'module name test pass');
+	equal(object._loader.lib.__anonymous_0__.exports.__name__, '__main__', 'anonymous module name is __main__');
 });
 
 test('sys.modules - exists', function() {
@@ -183,29 +183,58 @@ test('relative module - use', function() {
 });
 
 test('circular dependency', function() {
-	expect(4);
-	raises(function() {
-		object.add('a', 'b', function(exports, b) {});
-		object.add('b', 'a', function(exports, a) {});
-		object.use('a', function(exports, a) {});
-	}, 'a->b->a should throw circular dependency error');
+	expect(14);
+	object.add('a', 'b', function(exports, b) {
+		exports.a = 1;
+	});
+	object.add('b', 'a', function(exports, a) {
+		equal(a.__name__, 'a', 'module a is ok in circular dependency');
+		equal(a.a, undefined, 'a.a is undefined in b, not prepared yet');
+		stop();
+		setTimeout(function() {
+			start();
+			equal(a.a, 1, 'a.a is ok in b, after 100 ms');
+		}, 100);
+	});
+	object.use('a', function(exports, a) {
+		equal(a.__name__, 'a', 'module a is ok in circular dependency');
+		equal(a.a, 1, 'a.a is ok in circular dependency');
+	});
 	delete object._loader.lib['a'];
 	delete object._loader.lib['b'];
 
-	raises(function() {
-		object.add('c1', 'c2', function(exports, b) {});
-		object.add('c2', 'c3', function(exports, a) {});
-		object.add('c3', 'c2', function(exports, a) {});
-		object.use('c1', function(exports, a) {});
-	}, 'c1->c2->c3->c2 should throw circular dependency error');
+	object.add('c1', 'c2', function(exports, c2) {
+		exports.c1 = 1;
+	});
+	object.add('c2', 'c3', function(exports, c3) {
+		equal(c3.c3, 1, 'c3.c3 is prepared when use in c2');
+		exports.c2 = 1;
+	});
+	object.add('c3', 'c2', function(exports, c2) {
+		equal(c2.c2, undefined, 'c2.c2 is not prepared when use in c3');
+		stop();
+		setTimeout(function() {
+			start();
+			equal(c2.c2, 1, 'c2.c2 is prepared, after 100ms');
+		}, 100);
+		exports.c3 = 1;
+	});
+	object.use('c1, c2, c3', function(exports, c1, c2, c3) {
+		equal(c1.c1, 1, 'c1.c1 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
+		equal(c2.c2, 1, 'c2.c2 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
+		equal(c3.c3, 1, 'c3.c3 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
+	});
 	delete object._loader.lib['c1'];
 	delete object._loader.lib['c2'];
 	delete object._loader.lib['c3'];
 
-	raises(function() {
-		object.add('c', 'c', function(exports, c) {});
-		object.use('c', function(exports, c) {});
-	}, 'c->c should throw circular dependency error');
+	object.add('c', 'c', function(exports, c) {
+		exports.c = 1;
+	});
+	object.use('c', function(exports, c) {
+		equal(c.__name__, 'c', 'c.__name__ is ok in circular dependency : c -> c');
+		equal(c.c, 1, 'c.c is ok when circular dependency : c -> c');
+	});
 	delete object._loader.lib['c'];
 
 	object.add('uuua.ooos', function(exports) {});

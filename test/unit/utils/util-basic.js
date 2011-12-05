@@ -1,4 +1,4 @@
-module("util-Object-basic");
+module("util-basic-Object");
 
 var ie = false;
 object.use('ua', function(exports, ua) {
@@ -30,7 +30,7 @@ test('Object.keys', function() {
 	}
 });
 
-module("util-Array-basic");
+module("util-basic-Array");
 
 test('function exists in arrays', function() {
 	var arrays = $UNIT_TEST_CONFIG.arrayEdges;
@@ -188,7 +188,7 @@ test('Array.reduceRight', function() {
 	// what happend?
 });
 
-module("util-String-basic");
+module("util-basic-String");
 test('String.trim', function() {
 	equal(''.trim(), '', '\'\'.trim is ok');
 	equal('  '.trim(), '', '\'  \'.trim is ok');
@@ -206,7 +206,7 @@ test('String.trim', function() {
 	equal(str.trim(), '', '100000 empty string trim is still ok');
 });
 
-module("util-Function-basic");
+module("util-basic-Function");
 test('Function.bind', function() {
 	var binder = (function () {
 			ok(this != window, 'after bind, this should not be window');
@@ -261,7 +261,7 @@ test('Function.__get_name__', function() {
 	equal(D(), 2, 'second D overwrite the fist D');
 });
 
-module("util-Class-basic");
+module("util-basic-Class");
 test('Class.create', function() {
 	var C = Class.create();
 	try { C.set('d', 1); 

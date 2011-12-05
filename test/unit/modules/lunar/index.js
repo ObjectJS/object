@@ -3,7 +3,7 @@ $(document).ready(function() {
 	object.Loader.loadScript(path + "../../../../src/lunar.js", function() {
 		// make sure lunar.js loaded firstly
 		// why only lunar.js??
-		$LAB.script(path + "lunar-usage.js").wait()
+		$UNIT_TEST_SCRIPT_LOADER.script(path + "lunar-usage.js").wait()
 	});
 	
 });

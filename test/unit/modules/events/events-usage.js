@@ -119,8 +119,12 @@ test('events.Events: addEvent/removeEvent/fireEvent', function() {
 	});
 });
 
+var chrome = false;
+object.use('ua', function(exports, ua) {
+	chrome = ua.ua.chrome;
+});
 test('events.Events: play with the standard', function() {
-	expect(9)
+	expect(chrome ? 11 : 10);
 	object.use('events, dom', function(exports, events, dom) {
 		var A = new Class(function() {
 			Class.mixin(this, events.Events);
@@ -129,23 +133,23 @@ test('events.Events: play with the standard', function() {
 		// on-e should not be executed when fire self-defined event : e
 		var counter1 = 0;
 		a.one = function() {
-			ok(false, 'a.on-e should not be executed when event e fired : in handler');
+			ok(true, 'a.on-e should be executed when event e fired : in handler');
 			counter1 ++;
 		}
 		a.fireEvent('e');
-		equal(counter1, 0, 'a.on-e should not be executed when event e fired');
+		equal(counter1, 1, 'a.on-e should be executed when event e fired');
 
 		// standard event : click on obj
 		var counter2 = 0;
 		a.onclick = function() {
 			counter2 ++;
-			ok(false, 'standard event(click) on obj should not be fired manually');
+			ok(true, 'standard event(click) on obj should not be fired manually');
 		}
-		equal(counter2, 0, 'standard event(click) on obj should not be fired manually');
 		a.addEvent('click', function() {
 			ok(true, 'standard event(click) should be fired manually');
 		}, false);
 		a.fireEvent('click');
+		equal(counter2, 1, 'standard event(click) on obj should be fired manually');
 
 		// standard event : click on div
 		var div = dom.wrap(document.createElement('div'));

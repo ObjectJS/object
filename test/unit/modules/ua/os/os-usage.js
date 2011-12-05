@@ -1,4 +1,4 @@
-module("ua.os");
+module("os-usage");
 test('basic info in module ua.os', function() {
 	expect(9);
 	object.use('ua.os', function(exports, ua) {

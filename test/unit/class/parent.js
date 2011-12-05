@@ -1,4 +1,4 @@
-module('call parent');
+module('parent');
 
 test('common useage of parent method', function() {
 	expect(2);

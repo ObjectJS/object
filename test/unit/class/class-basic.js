@@ -1,4 +1,4 @@
-module("class basic");
+module("class-basic");
 test('modify global variable in constructor', function() {
 	var counter = 0;
 	var A = new Class(function() {

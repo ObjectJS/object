@@ -1,6 +1,6 @@
 $(document).ready(function() {
 	var path = $UNIT_TEST_CONFIG.needPath ? 'utils/' : '';
-	$LAB
-		.script(path + 'utils-basic.js')
-		.script(path + 'mustache.js')
+	$UNIT_TEST_SCRIPT_LOADER
+		.script(path + 'util-basic.js')
+		.script(path + 'mustache-usage.js')
 });
