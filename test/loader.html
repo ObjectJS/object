@@ -3,32 +3,8 @@
 <meta charset="utf-8" />
 <script type="text/javascript" src="../pub/object-all.js"></script>
 <!--<script type="text/javascript" src="http://xnimg.cn/n/core/base-all.js"></script>-->
-<script>
-
-	object.add('xn.flashUploader', 'sys, dom/dd', function(exports, sys, dom) {
-		console.log(sys.modules)
-		console.log(dom)
-		return {
-			haha: 2
-		};
-	});
-
-	object.define('xn/flashUploader/async', function(require) {
-
-		require.async('xn/flashUploader', function(flashUploader) {
-			console.log(flashUploader.haha);
-		});
-
-	});
-
-	object.use('xn/flashUploader/async, xn.flashUploader', function(exports, async, xn) {
-		console.log('async', async);
-		console.log('xn', xn);
-	});
-
-</script>
-<script>
-</script>
+<script data-src="flashUploader.js" data-module="xn.flashUploader"></script>
+<script src="loader.js"></script>
 </head>
 <body>
 

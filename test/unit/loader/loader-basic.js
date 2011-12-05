@@ -1,84 +1,35 @@
 var Loader = object.Loader;
-function emptyCallback(){};
-var emptyJS = ($UNIT_TEST_CONFIG.needPath ? 'loader/' : '') + 'empty.js';
+function emptyCallback() {};
+var emptyJS = ($UNIT_TEST_CONFIG.needPath ? 'loader/': '') + 'empty.js';
 var head = document.getElementsByTagName('head')[0];
 // the only loader instance
 var loader = new Loader();
 
-module("loader-basic-parseDeps");
-test('parseDeps-basic', function() {
-	var edges = $UNIT_TEST_CONFIG.testEdges;
-	for(var prop in edges) {
-		try {
-			loader.parseDeps(edges[prop]);
-			ok(true, 'loader.parseDeps(' + prop + ') should be ok');
-		} catch (e) {
-			ok(false, 'loader.parseDeps(' + prop + ') should be ok : ' + e);
+module("loader-basic-buildFileLib", {
+	teardown: function() {
+		// remove inserted script tag after every test case finished
+		var scripts = Sizzle('script');
+		for (var i = 0; i < scripts.length; i++) {
+			if (scripts[i].getAttribute('data-module') || scripts[i].getAttribute('data-src') || scripts[i].callbacks) {
+				if (document.head) document.head.removeChild(scripts[i]);
+			}
 		}
-	}
-
-	for(var prop in edges) {
-		try {
-			loader.parseDeps('1', edges[prop]);
-			ok(true, 'loader.parseDeps(\'1\', ' + prop + ') should be ok');
-		} catch (e) {
-			ok(false, 'loader.parseDeps(\'1\', ' + prop + ') should be ok : ' + e);
-		}
-	}
-	for (var prop in loader.lib) {
-		if (prop != 'sys') {
-			delete loader.lib[prop];
+		for (var prop in loader.lib) {
+			if (prop != 'sys') {
+				delete loader.lib[prop];
+			}
 		}
 	}
 });
 
-test('parseDeps-use', function() {
-	var loader = object._loader;
-	var dependencies = loader.parseDeps('1,2,3,4,5', '1');
-	equal(dependencies.length, 5, 'parseDeps works well');
-	equal(dependencies.indexOf('1'), 0, '1 is ignored as promised');
-	equal(dependencies.indexOf('2'), 1, '2 is in dependencies because it is not ignored');
-});
-
-test('parseDeps-ignore', function() {
-	var loader = object._loader;
-	var dependencies = loader.parseDeps('1', '1');
-	equal(dependencies.length, 1, 'parseDeps works well');
-	var dependencies = loader.parseDeps('1', 1);
-	equal(dependencies.length, 1, 'parseDeps(\'1\', 1) should not remove \'1\', ignore must be string, or use === to judge');
-	var dependencies = loader.parseDeps('true', true);
-	equal(dependencies.length, 1, 'parseDeps(\'true\', true) should not remove \'true\'');
-	var dependencies = loader.parseDeps(',1,2,3,4,');
-	equal(dependencies.length, 4, '\',1,2,3,4,\' should be considered');
-	//var dependencies = loader.parseDeps('1,2,3,4', ['1','2']);
-	//equal(dependencies.length, 2, 'we may want to ignore more than one member at a time');
-});
-
-module("loader-basic-loadLib", {teardown: function() {
-	// remove inserted script tag after every test case finished
-	var scripts = Sizzle('script');
-	for(var i=0;i<scripts.length; i++) {
-		if(scripts[i].getAttribute('data-module') 
-			|| scripts[i].getAttribute('data-src')
-			|| scripts[i].callbacks) {
-			if(document.head) document.head.removeChild(scripts[i]);
-		}
-	}
-	for (var prop in loader.lib) {
-		if (prop != 'sys') {
-			delete loader.lib[prop];
-		}
-	}
-}});
-
-test('loadLib', function() {
+test('buildFileLib', function() {
 	//ok(false, 'what is the difference between self.scripts and cls.scripts in Loader? when to use??');
 	ok(Object.keys(loader.lib).length == 1, 'only sys in loader.lib');
-	loader.loadLib();
+	loader.buildFileLib();
 	ok(Object.keys(loader.lib).length == 1, 'still only sys in loader.lib');
 	ok(loader.scripts != null, 'self.scripts should not be null');
 	var len1 = loader.scripts.length;
-	
+
 	Loader.loadScript(emptyJS, emptyCallback);
 	var len2 = loader.scripts.length;
 	equal(len1 + 1, len2, 'when new script inserted, loader.scripts should be added automatically');
@@ -89,33 +40,33 @@ test('loadLib', function() {
 	head.appendChild(script);
 	var len3 = loader.scripts.length;
 	equal(len1 + 2, len3, 'when new script inserted, loader.scripts should be added automatically');
-	loader.loadLib();
-	ok(Object.keys(loader.lib).length == 2, 'new script tag inserted, new module loaded');
-	ok(loader.lib['test_module'] != null, 'module test_module is added');
-	ok(loader.lib['test_module'].id == 'test_module', 'module test_module is added, name is ok');
-	ok(loader.lib['test_module'].file == emptyJS, 'module test_module is added, file is ok');
+	loader.buildFileLib();
+	ok(Object.keys(loader.fileLib).length == 1, 'new script tag inserted, new module loaded');
+	ok(loader.fileLib['test_module'] != null, 'module test_module is added');
+	ok(loader.fileLib['test_module'].id == 'test_module', 'module test_module is added, name is ok');
+	ok(loader.fileLib['test_module'].file == emptyJS, 'module test_module is added, file is ok');
 
 	var script = document.createElement('script');
 	script.setAttribute('data-src', 'test_module_null_data-module');
 	head.appendChild(script);
 	var oldLength = Object.keys(loader.lib).length;
-	loader.loadLib();
+	loader.buildFileLib();
 	equal(Object.keys(loader.lib).length, oldLength, 'new script tag inserted, but no data-module attribute, so no new module added');
 
 	var script = document.createElement('script');
 	script.setAttribute('data-module', 'test_module_null_data-src');
 	head.appendChild(script);
 	var oldLength = Object.keys(loader.lib).length;
-	loader.loadLib();
+	loader.buildFileLib();
 	equal(Object.keys(loader.lib).length, oldLength, 'new script tag inserted, but no data-src attribute, so no new module added');
 
 	var script = document.createElement('script');
 	script.setAttribute('data-module', 'test_module_wrong_data-src');
 	script.setAttribute('data-src', 'not-correct-js-file-url');
 	head.appendChild(script);
-	var oldLength = Object.keys(loader.lib).length;
-	loader.loadLib();
-	equal(Object.keys(loader.lib).length, oldLength+1, 'new script tag inserted, data-src is not end with .js');
+	var oldLength = Object.keys(loader.fileLib).length;
+	loader.buildFileLib();
+	equal(Object.keys(loader.fileLib).length, oldLength + 1, 'new script tag inserted, data-src is not end with .js');
 });
 
 module('loader-basic-getAbsolutePath');
@@ -123,13 +74,13 @@ module('loader-basic-getAbsolutePath');
 // 计算当前引用objectjs的页面文件的目录路径
 function calculatePageDir() {
 	var loc = window['location'];
-	var pageUrl = loc.protocol + '//' + loc.host + (loc.pathname.charAt(0) !== '/' ? '/' : '') + loc.pathname; 
+	var pageUrl = loc.protocol + '//' + loc.host + (loc.pathname.charAt(0) !== '/' ? '/': '') + loc.pathname;
 	// IE 下文件系统是以\为分隔符，统一改为/
-	if (pageUrl.indexOf('\\') != -1) {
+	if (pageUrl.indexOf('\\') != - 1) {
 		pageUrl = pageUrl.replace(/\\/g, '/');
 	}
 	var pageDir = './';
-	if (pageUrl.indexOf('/') != -1) {
+	if (pageUrl.indexOf('/') != - 1) {
 		// 去除文件，留下目录path
 		pageDir = pageUrl.substring(0, pageUrl.lastIndexOf('/') + 1);
 	}
@@ -140,10 +91,10 @@ var pageDir = calculatePageDir();
 
 test('getAbsolutePath', function() {
 	equal(Loader._getAbsolutePath('file://dir/a.js'), 'file://dir/a.js', 'return cleaned path');
-	equal(Loader._getAbsolutePath('http://host/a.js'), 'http://host/a.js',  'return cleaned absolute path');
+	equal(Loader._getAbsolutePath('http://host/a.js'), 'http://host/a.js', 'return cleaned absolute path');
 	equal(Loader._getAbsolutePath('http://host//b/c/../../a.js'), 'http://host/a.js', 'http://host//b/c/../../a.js -> http://host/a.js');
 	equal(Loader._getAbsolutePath('//a/b/c/../../a.js'), '//a/a.js', '//a/b/c/../../a.js -> //a/a.js');
-	
+
 	equal(Loader._getAbsolutePath('/a/b/c/../../a.js'), pageDir + 'a/a.js', '/a/b/c/../../a.js -> ' + pageDir + 'a/a/.js');
 	equal(Loader._getAbsolutePath('/a/b/c/../../a.js?a=1'), pageDir + 'a/a.js?a=1', '/a/b/c/../../a.js?a=1 -> ' + pageDir + 'a/a/.js?a=1');
 	equal(Loader._getAbsolutePath('/a/b/c/../../a.js?a=1#'), pageDir + 'a/a.js?a=1', '/a/b/c/../../a.js?a=1# -> ' + pageDir + 'a/a/.js?a=1');
@@ -156,7 +107,8 @@ test('removeScript', function() {
 	Loader.loadScript(emptyJS, function() {});
 	equal(Object.keys(Loader.get('_urlNodeMap')).length, 0, 'no cache, so will not add to _urlNodeMap');
 	Loader.removeScript(emptyJS);
-	Loader.loadScript(emptyJS, function() {}, true);
+	Loader.loadScript(emptyJS, function() {},
+	true);
 	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, 'cache is true, so will add to _urlNodeMap');
 	notEqual(Loader.get('_urlNodeMap')[pageDir + emptyJS], undefined, pageDir + emptyJS + ' is cached in _urlNodeMap');
 	Loader.removeScript('_' + emptyJS);
@@ -168,11 +120,11 @@ test('removeScript', function() {
 module("loader-basic-add");
 test('add-basic', function() {
 	var edges = $UNIT_TEST_CONFIG.testEdges;
-	for(var prop in edges) {
+	for (var prop in edges) {
 		try {
 			loader.add(edges[prop], ['a']);
 			ok(true, 'loader.add(' + prop + ', [\'a\']) should be ok');
-		} catch (e) {
+		} catch(e) {
 			ok(false, 'loader.add(' + prop + ', [\'a\']) should be ok : ' + e);
 		}
 	}
@@ -189,7 +141,7 @@ test('add-usage', function() {
 	equal(loader.lib['c'].dependencies.length, 2, 'c dependencies a and b, so lib[c].dependencies.length = 2');
 
 	loader.add('d.dd', 'a,b,c', function() {});
-	equal(Object.keys(loader.lib).length, 6, 'd and d.dd are added to loader.lib');
+	equal(Object.keys(loader.lib).length, 5, 'd.dd are added to loader.lib');
 	equal(loader.lib['d.dd'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
 
 	loader.add('error1', 'a,b');
@@ -202,21 +154,21 @@ module("loader-basic-use");
 test('use-basic', function() {
 	try {
 		loader.use();
-	} catch (e) {
-	   	ok(false, 'more arguments are needed : loader.use() : ' + e);
+	} catch(e) {
+		ok(false, 'more arguments are needed : loader.use() : ' + e);
 	}
 	try {
 		loader.use('a');
-	} catch (e) {
-	   	ok(false, 'more arguments are needed : loader.use(a) : ' + e);
+	} catch(e) {
+		ok(false, 'more arguments are needed : loader.use(a) : ' + e);
 	}
 	loader.add('a', function(exports) {
 		exports.a = 1;
 	});
-	try { 
-		loader.use('a', 'a'); 
-	} catch (e) {
-	   	ok(false, 'loader.use(str, str), context should be function : ' + e);
+	try {
+		loader.use('a', 'a');
+	} catch(e) {
+		ok(false, 'loader.use(str, str), context should be function : ' + e);
 	}
 });
 test('use-usage', function() {
@@ -227,23 +179,21 @@ test('use-usage', function() {
 	loader.add('b', function(exports) {
 		exports.b = 1;
 	});
-	loader.use('a,b', function(exports, a, b) {
+	loader.use('a,b', function(a, b) {
 		equal(a.a, 1, 'module a used successfully');
 		equal(b.b, 1, 'module b used successfully');
-		exports.extendToWindow = 1;
 	});
-	equal(window.extendToWindow, 1, 'extend to window successfully');
 });
 
 module("loader-basic-execute");
 test('execute-basic', function() {
 	var edges = $UNIT_TEST_CONFIG.testEdges;
-	for(var prop in edges) {
+	for (var prop in edges) {
 		try {
 			loader.execute(edges[prop]);
 			ok(true, 'loader.execute(' + prop + ') is ok');
-		} catch (e) {
-			if(e.message.indexOf('no module named') != 0) {
+		} catch(e) {
+			if (e.message.indexOf('no module named') != 0) {
 				ok(false, 'loader.execute(' + prop + ') is ok : ' + e);
 			}
 		}
@@ -266,15 +216,17 @@ test('execute-usage', function() {
 	delete loader.lib['b'];
 });
 
-module('loader-basic-loadScript', {teardown: function() {
-	// remove inserted script tag after every test case finished
-	var scripts = Sizzle('script');
-	for(var i=0;i<scripts.length; i++) {
-		if(scripts[i].callbacks) {
-			head.removeChild(scripts[i]);
+module('loader-basic-loadScript', {
+	teardown: function() {
+		// remove inserted script tag after every test case finished
+		var scripts = Sizzle('script');
+		for (var i = 0; i < scripts.length; i++) {
+			if (scripts[i].callbacks) {
+				head.removeChild(scripts[i]);
+			}
 		}
 	}
-}});
+});
 
 test('loadScript basic test', function() {
 	ok(Loader.loadScript, 'loadScript is visible in Loader');
@@ -294,7 +246,6 @@ test('loadScript with url', function() {
 	//raises(function() {
 	//	Loader.loadScript('not-exists-url', emptyCallback);
 	//}, 'can not loadScript with not exists url');
-
 	var oldOnError = window.onerror;
 	window.onerror = function() {
 		ok(true, 'not-exists-url.js is not exist');
@@ -327,11 +278,11 @@ test('loadScript with/without cache', function() {
 	try {
 		Loader.loadScript(emptyJS, emptyCallback, true);
 		cacheIsOk = true;
-	} catch (e) {
+	} catch(e) {
 		ok(false, 'cache should work with Loader.loadScript(emptyJS, emptyCallback, true) : ' + e);
 	}
 
-	if(cacheIsOk) {
+	if (cacheIsOk) {
 		Loader.loadScript(emptyJS, emptyCallback, true);
 		var len1 = Sizzle('script').length;
 		Loader.loadScript(emptyJS, emptyCallback, true);
@@ -339,3 +290,4 @@ test('loadScript with/without cache', function() {
 		equal(len1, len2, 'cache works, load same script, get from cache');
 	}
 })
+
