@@ -3,7 +3,7 @@ module('loader-usage-loadScript');
 function recoverEnv() {
 	var scripts = Sizzle('script');
 	var head = document.getElementsByTagName('head')[0];
-	for (var i=0;i<scripts.length; i++) {
+	for (var i = 0; i < scripts.length; i++) {
 		if (scripts[i].callbacks || scripts[i].getAttribute('data-module') || /module[\dA-Z]/.test(scripts[i].src)) {
 			if (scripts[i].src) {
 				Loader.removeScript(scripts[i].src);
@@ -13,24 +13,24 @@ function recoverEnv() {
 		}
 	}
 	for (var prop in object._loader.lib) {
-		if(/module/.test(prop)) {
+		if (/module/.test(prop)) {
 			delete object._loader.lib[prop];
 		}
 	}
 	for (var prop in object._loader.fileLib) {
-		if(/module/.test(prop)) {
+		if (/module/.test(prop)) {
 			delete object._loader.fileLib[prop];
 		}
 	}
 	for (var prop in object._loader.prefixLib) {
-		if(/module/.test(prop)) {
+		if (/module/.test(prop)) {
 			delete object._loader.prefixLib[prop];
 		}
 	}
 }
 
-var path = ($UNIT_TEST_CONFIG.needPath ? 'loader/' : '');
-function emptyCallback(){};
+var path = ($UNIT_TEST_CONFIG.needPath ? 'loader/': '');
+function emptyCallback() {};
 var emptyJS = path + 'empty.js';
 var module1JS_seperate = path + 'module1.js';
 var module2JS_seperate = path + 'module2.js';
@@ -72,7 +72,7 @@ test('add script as module', function() {
 		start();
 		equal(module1.a, 1, 'module load from file, module1.a = 1 is ok');
 	});
-	loader.use('module2', function(module2) { 
+	loader.use('module2', function(module2) {
 		start();
 		equal(module2.a, 2, 'module load from file, module2.a = 1 is ok');
 	});
@@ -86,7 +86,7 @@ test('add script as module, but is another module', function() {
 	stop();
 	// for global error throwed in callback of executeModule
 	var oldError = window.onerror;
-	window.onerror = function(a,b,c) {
+	window.onerror = function(a, b, c) {
 		start();
 		ok(true, 'error occurred when data-module is module1, data-src file is about module2');
 		window.onerror = oldError;
@@ -256,15 +256,21 @@ test('many urls pointing to the same file', function() {
 	if (!$UNIT_TEST_CONFIG.needPath) {
 		return;
 	}
-	Loader.loadScript(emptyJS, function() {}, true);
+	Loader.loadScript(emptyJS, function() {},
+	true);
 	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, 'one file added');
-	Loader.loadScript('../unit/' + emptyJS, function() {}, true);
+	Loader.loadScript('../unit/' + emptyJS, function() {},
+	true);
 	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, '../unit/xxx.js is the same dir with xxx.js, will not load again');
-	Loader.loadScript('..//unit/' + emptyJS, function() {}, true);
+	Loader.loadScript('..//unit/' + emptyJS, function() {},
+	true);
 	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, '..//unit/xxx.js is the same dir with xxx.js, will not load again');
-	Loader.loadScript('../../test/unit/' + emptyJS, function() {}, true);
+	Loader.loadScript('../../test/unit/' + emptyJS, function() {},
+	true);
 	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, '../../test/unit/xxx.js is the same dir with xxx.js, will not load again');
-	Loader.loadScript('../../test/unit/' + emptyJS + '#', function() {}, true);
+	Loader.loadScript('../../test/unit/' + emptyJS + '#', function() {},
+	true);
 	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, '../../test/unit/xxx.js# is the same dir with xxx.js, will not load again');
 	recoverEnv();
 });
+
