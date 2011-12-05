@@ -5,56 +5,7 @@ var head = document.getElementsByTagName('head')[0];
 // the only loader instance
 var loader = new Loader();
 
-module("loader-basic-parseDeps");
-test('parseDeps-basic', function() {
-	var edges = $UNIT_TEST_CONFIG.testEdges;
-	for(var prop in edges) {
-		try {
-			loader.parseDeps(edges[prop]);
-			ok(true, 'loader.parseDeps(' + prop + ') should be ok');
-		} catch (e) {
-			ok(false, 'loader.parseDeps(' + prop + ') should be ok : ' + e);
-		}
-	}
-
-	for(var prop in edges) {
-		try {
-			loader.parseDeps('1', edges[prop]);
-			ok(true, 'loader.parseDeps(\'1\', ' + prop + ') should be ok');
-		} catch (e) {
-			ok(false, 'loader.parseDeps(\'1\', ' + prop + ') should be ok : ' + e);
-		}
-	}
-	for (var prop in loader.lib) {
-		if (prop != 'sys') {
-			delete loader.lib[prop];
-		}
-	}
-});
-
-test('parseDeps-use', function() {
-	var loader = object._loader;
-	var dependencies = loader.parseDeps('1,2,3,4,5', '1');
-	equal(dependencies.length, 5, 'parseDeps works well');
-	equal(dependencies.indexOf('1'), 0, '1 is ignored as promised');
-	equal(dependencies.indexOf('2'), 1, '2 is in dependencies because it is not ignored');
-});
-
-test('parseDeps-ignore', function() {
-	var loader = object._loader;
-	var dependencies = loader.parseDeps('1', '1');
-	equal(dependencies.length, 1, 'parseDeps works well');
-	var dependencies = loader.parseDeps('1', 1);
-	equal(dependencies.length, 1, 'parseDeps(\'1\', 1) should not remove \'1\', ignore must be string, or use === to judge');
-	var dependencies = loader.parseDeps('true', true);
-	equal(dependencies.length, 1, 'parseDeps(\'true\', true) should not remove \'true\'');
-	var dependencies = loader.parseDeps(',1,2,3,4,');
-	equal(dependencies.length, 4, '\',1,2,3,4,\' should be considered');
-	//var dependencies = loader.parseDeps('1,2,3,4', ['1','2']);
-	//equal(dependencies.length, 2, 'we may want to ignore more than one member at a time');
-});
-
-module("loader-basic-loadLib", {teardown: function() {
+module("loader-basic-buildFileLib", {teardown: function() {
 	// remove inserted script tag after every test case finished
 	var scripts = Sizzle('script');
 	for(var i=0;i<scripts.length; i++) {
@@ -71,10 +22,10 @@ module("loader-basic-loadLib", {teardown: function() {
 	}
 }});
 
-test('loadLib', function() {
+test('buildFileLib', function() {
 	//ok(false, 'what is the difference between self.scripts and cls.scripts in Loader? when to use??');
 	ok(Object.keys(loader.lib).length == 1, 'only sys in loader.lib');
-	loader.loadLib();
+	loader.buildFileLib();
 	ok(Object.keys(loader.lib).length == 1, 'still only sys in loader.lib');
 	ok(loader.scripts != null, 'self.scripts should not be null');
 	var len1 = loader.scripts.length;
@@ -89,33 +40,33 @@ test('loadLib', function() {
 	head.appendChild(script);
 	var len3 = loader.scripts.length;
 	equal(len1 + 2, len3, 'when new script inserted, loader.scripts should be added automatically');
-	loader.loadLib();
-	ok(Object.keys(loader.lib).length == 2, 'new script tag inserted, new module loaded');
-	ok(loader.lib['test_module'] != null, 'module test_module is added');
-	ok(loader.lib['test_module'].id == 'test_module', 'module test_module is added, name is ok');
-	ok(loader.lib['test_module'].file == emptyJS, 'module test_module is added, file is ok');
+	loader.buildFileLib();
+	ok(Object.keys(loader.fileLib).length == 1, 'new script tag inserted, new module loaded');
+	ok(loader.fileLib['test_module'] != null, 'module test_module is added');
+	ok(loader.fileLib['test_module'].id == 'test_module', 'module test_module is added, name is ok');
+	ok(loader.fileLib['test_module'].file == emptyJS, 'module test_module is added, file is ok');
 
 	var script = document.createElement('script');
 	script.setAttribute('data-src', 'test_module_null_data-module');
 	head.appendChild(script);
 	var oldLength = Object.keys(loader.lib).length;
-	loader.loadLib();
+	loader.buildFileLib();
 	equal(Object.keys(loader.lib).length, oldLength, 'new script tag inserted, but no data-module attribute, so no new module added');
 
 	var script = document.createElement('script');
 	script.setAttribute('data-module', 'test_module_null_data-src');
 	head.appendChild(script);
 	var oldLength = Object.keys(loader.lib).length;
-	loader.loadLib();
+	loader.buildFileLib();
 	equal(Object.keys(loader.lib).length, oldLength, 'new script tag inserted, but no data-src attribute, so no new module added');
 
 	var script = document.createElement('script');
 	script.setAttribute('data-module', 'test_module_wrong_data-src');
 	script.setAttribute('data-src', 'not-correct-js-file-url');
 	head.appendChild(script);
-	var oldLength = Object.keys(loader.lib).length;
-	loader.loadLib();
-	equal(Object.keys(loader.lib).length, oldLength+1, 'new script tag inserted, data-src is not end with .js');
+	var oldLength = Object.keys(loader.fileLib).length;
+	loader.buildFileLib();
+	equal(Object.keys(loader.fileLib).length, oldLength+1, 'new script tag inserted, data-src is not end with .js');
 });
 
 module('loader-basic-getAbsolutePath');
@@ -189,7 +140,7 @@ test('add-usage', function() {
 	equal(loader.lib['c'].dependencies.length, 2, 'c dependencies a and b, so lib[c].dependencies.length = 2');
 
 	loader.add('d.dd', 'a,b,c', function() {});
-	equal(Object.keys(loader.lib).length, 6, 'd and d.dd are added to loader.lib');
+	equal(Object.keys(loader.lib).length, 5, 'd.dd are added to loader.lib');
 	equal(loader.lib['d.dd'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
 
 	loader.add('error1', 'a,b');
@@ -227,12 +178,10 @@ test('use-usage', function() {
 	loader.add('b', function(exports) {
 		exports.b = 1;
 	});
-	loader.use('a,b', function(exports, a, b) {
+	loader.use('a,b', function(a, b) {
 		equal(a.a, 1, 'module a used successfully');
 		equal(b.b, 1, 'module b used successfully');
-		exports.extendToWindow = 1;
 	});
-	equal(window.extendToWindow, 1, 'extend to window successfully');
 });
 
 module("loader-basic-execute");

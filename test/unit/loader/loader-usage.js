@@ -3,8 +3,8 @@ module('loader-usage-loadScript');
 function recoverEnv() {
 	var scripts = Sizzle('script');
 	var head = document.getElementsByTagName('head')[0];
-	for(var i=0;i<scripts.length; i++) {
-		if(scripts[i].callbacks || scripts[i].getAttribute('data-module') || /module[\dA-Z]/.test(scripts[i].src)) {
+	for (var i=0;i<scripts.length; i++) {
+		if (scripts[i].callbacks || scripts[i].getAttribute('data-module') || /module[\dA-Z]/.test(scripts[i].src)) {
 			if (scripts[i].src) {
 				Loader.removeScript(scripts[i].src);
 			} else {
@@ -12,9 +12,19 @@ function recoverEnv() {
 			}
 		}
 	}
-	for(var prop in object._loader.lib) {
+	for (var prop in object._loader.lib) {
 		if(/module/.test(prop)) {
 			delete object._loader.lib[prop];
+		}
+	}
+	for (var prop in object._loader.fileLib) {
+		if(/module/.test(prop)) {
+			delete object._loader.fileLib[prop];
+		}
+	}
+	for (var prop in object._loader.prefixLib) {
+		if(/module/.test(prop)) {
+			delete object._loader.prefixLib[prop];
 		}
 	}
 }
@@ -51,18 +61,18 @@ test('add script as module', function() {
 	addModuleScriptToHead('module1', module1JS_seperate);
 	addModuleScriptToHead('module2', module2JS_seperate);
 	var loader = object._loader;
-	loader.loadLib();
-	ok(loader.lib['module1'] != null, 'module1 is in loader.lib');
-	ok(loader.lib['module2'] != null, 'module2 is in loader.lib');
-	equal(loader.lib['module1'].file, module1JS_seperate, 'module1 js file is ' + module1JS_seperate);
-	equal(loader.lib['module2'].file, module2JS_seperate, 'module2 js file is ' + module2JS_seperate);
+	loader.buildFileLib();
+	ok(loader.fileLib['module1'] != null, 'module1 is in loader.lib');
+	ok(loader.fileLib['module2'] != null, 'module2 is in loader.lib');
+	equal(loader.fileLib['module1'].file, module1JS_seperate, 'module1 js file is ' + module1JS_seperate);
+	equal(loader.fileLib['module2'].file, module2JS_seperate, 'module2 js file is ' + module2JS_seperate);
 
 	stop();
-	loader.use('module1', function(exports, module1) {
+	loader.use('module1', function(module1) {
 		start();
 		equal(module1.a, 1, 'module load from file, module1.a = 1 is ok');
 	});
-	loader.use('module2', function(exports, module2) { 
+	loader.use('module2', function(module2) { 
 		start();
 		equal(module2.a, 2, 'module load from file, module2.a = 1 is ok');
 	});
@@ -72,7 +82,7 @@ test('add script as module, but is another module', function() {
 	recoverEnv();
 	addModuleScriptToHead('module1', module2JS_seperate);
 	var loader = object._loader;
-	loader.loadLib();
+	loader.buildFileLib();
 	stop();
 	// for global error throwed in callback of executeModule
 	var oldError = window.onerror;
@@ -82,7 +92,7 @@ test('add script as module, but is another module', function() {
 		window.onerror = oldError;
 		return true;
 	};
-	loader.use('module1', function(exports, module1) {});
+	loader.use('module1', function(module1) {});
 });
 
 test('file module1 depends on file module2', function() {
@@ -90,9 +100,9 @@ test('file module1 depends on file module2', function() {
 	addModuleScriptToHead('module1', module1JS_depends);
 	addModuleScriptToHead('module2', module2JS_depends);
 	var loader = object._loader;
-	loader.loadLib();
+	loader.buildFileLib();
 	stop();
-	loader.use('module1', function(exports, module1) {
+	loader.use('module1', function(module1) {
 		start();
 		equal(module1.a, 1, 'module1.a is ok : 1');
 		equal(module1.b, 2, 'module1.b, from module2.b is ok : 2');
@@ -105,18 +115,18 @@ test('one module file, many modules', function() {
 	addModuleScriptToHead('module2', module_manyModules);
 	addModuleScriptToHead('module3', module_manyModules);
 	var loader = object._loader;
-	loader.loadLib();
+	loader.buildFileLib();
 	window.oneFileManyModules_load_times = 0;
 	stop();
-	loader.use('module1', function(exports, module1) {
+	loader.use('module1', function(module1) {
 		start();
 		equal(module1.a, 1, 'module1.a is ok : 1');
 	});
-	loader.use('module2', function(exports, module2) {
+	loader.use('module2', function(module2) {
 		start();
 		equal(module2.b, 1, 'module2.b is ok : 1');
 	});
-	loader.use('module3', function(exports, module3) {
+	loader.use('module3', function(module3) {
 		start();
 		equal(module3.c, 1, 'module3.c is ok : 1');
 		equal(window.oneFileManyModules_load_times, 1, 'only load script for once');
@@ -130,13 +140,13 @@ test('file module1 is parent, file module1.module2 is sub', function() {
 	addModuleScriptToHead('module1.module2', module2JS_parent);
 	var loader = object._loader;
 	stop();
-	loader.loadLib();
-	loader.use('module1.module2', function(exports, module1) {
+	loader.buildFileLib();
+	loader.use('module1.module2', function(module1) {
 		start();
 		equal(module1.a, 1, 'use module1.module2, module1.a is ok : 1');
 		equal(module1.module2.a, 2, 'use module1.module2, module1.module2.a is ok : 2');
 	});
-	loader.use('module1', function(exports, module1) {
+	loader.use('module1', function(module1) {
 		equal(module1.a, 1, 'only use module1, module1.a is ok : 1');
 	});
 });
@@ -147,13 +157,13 @@ test('file module1 is parent, file module1.module2.module3 is sub', function() {
 	addModuleScriptToHead('module1.module2.module3', module2JS_parent_2);
 	var loader = object._loader;
 	stop();
-	loader.loadLib();
-	loader.use('module1.module2.module3', function(exports, module1) {
+	loader.buildFileLib();
+	loader.use('module1.module2.module3', function(module1) {
 		start();
 		equal(module1.a, 1, 'use module1.module2, module1.a is ok : 1');
 		equal(module1.module2.module3.a, 2, 'use module1.module2.module3, module1.module2.module3.a is ok : 2');
 	});
-	loader.use('module1', function(exports, module1) {
+	loader.use('module1', function(module1) {
 		equal(module1.a, 1, 'only use module1, module1.a is ok : 1');
 	});
 });
@@ -164,8 +174,8 @@ test('file module1 name is module1, file module2 name is the same', function() {
 	addModuleScriptToHead('module1', module2JS_same_name);
 	stop();
 	var loader = object._loader;
-	loader.loadLib();
-	loader.use('module1', function(exports, module1) {
+	loader.buildFileLib();
+	loader.use('module1', function(module1) {
 		start();
 		equal(module1.a, 1, 'use module1, will choose the first script tag whose data-module is module1');
 	});
@@ -175,16 +185,16 @@ test('request module file only once', function() {
 	recoverEnv();
 	addModuleScriptToHead('module1', module1JS_request_file_once);
 	var loader = object._loader;
-	loader.loadLib();
+	loader.buildFileLib();
 	stop();
 	window.moduleFileRequestTimeCounter = 0;
-	loader.use('module1', function(exports, module1) {
+	loader.use('module1', function(module1) {
 		start();
 		equal(module1.test, 1, 'use module1, which add counter by one on window');
 		equal(window.moduleFileRequestTimeCounter, 1, 'request module file once');
 	});
 	stop();
-	loader.use('module1', function(exports, module1) {
+	loader.use('module1', function(module1) {
 		start();
 		equal(module1.test, 1, 'use module1, which add counter by one on window');
 		equal(window.moduleFileRequestTimeCounter, 1, 'request module file only once');
@@ -201,7 +211,7 @@ test('file module1 is used by an existing module', function() {
 		exports.a = 1;
 		equal(module1.test, 1, 'use module1 in object.add');
 	})
-	loader.use('use_module1', function(exports, use_module1) {
+	loader.use('use_module1', function(use_module1) {
 		start();
 		equal(use_module1.a, 1, 'use_module1.a is ok');
 	});
@@ -213,13 +223,13 @@ test('sub module appears before parent module', function() {
 	addModuleScriptToHead('module1', module1JS_parent);
 	var loader = object._loader;
 	stop();
-	loader.loadLib();
-	loader.use('module1.module2', function(exports, module1) {
+	loader.buildFileLib();
+	loader.use('module1.module2', function(module1) {
 		start();
 		equal(module1.a, 1, 'use module1.module2, module1.a is ok : 1');
 		equal(module1.module2.a, 2, 'use module1.module2, module1.module2.a is ok : 2');
 	});
-	loader.use('module1', function(exports, module1) {
+	loader.use('module1', function(module1) {
 		equal(module1.a, 1, 'only use module1, module1.a is ok : 1');
 	});
 });
@@ -231,7 +241,7 @@ test('use many modules', function() {
 	addModuleScriptToHead('moduleC', moduleCJS_abc);
 	var loader = object._loader;
 	stop();
-	loader.use('moduleA,moduleB,moduleC', function(exports, moduleA, moduleB, moduleC) {
+	loader.use('moduleA,moduleB,moduleC', function(moduleA, moduleB, moduleC) {
 		start();
 		equal(moduleA.a, 1, 'moduleA got');
 		equal(moduleB.b, 1, 'moduleB got');
