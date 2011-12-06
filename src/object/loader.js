@@ -151,6 +151,7 @@ function SeaDependency(id, owner) {
 		id = id.slice(2);
 		id = id.replace(/\//g, '.');
 		this.moduleId = owner.id + '.' + id;
+		this.isRelative = true;
 		id = './' + id;
 	} else {
 		id = id.replace(/\//g, '.');
@@ -168,23 +169,25 @@ SeaDependency.prototype = new Dependency();
 SeaDependency.prototype.load = function(runtime, callback) {
 	var ownerId = this.owner.id;
 	var id = this.id;
+	var context, isRelative = false;
 
-	var isRelative = false;
 	// Relative
-	if (id.indexOf('.\/') == 0) {
+	if (this.isRelative) {
 		id = id.slice(2);
 		// 去除root
-		var context = runtime.getName(ownerId);
+		context = runtime.getName(ownerId);
 		// 说明确实去除了root，是一个相对引用，在获取fullId时需要加上root
 		isRelative = (context != ownerId);
 	}
 
-	var fullId = isRelative? runtime.getId(id) : id;
-	runtime.loadModule(fullId, id, callback);
+	moduleId = (context? context + '.' : '') + id;
+
+	runtime.loadModule(this.moduleId, moduleId, callback);
 };
 
 SeaDependency.prototype.getExports = function(runtime) {
-	return runtime.modules[this.id];
+	var root = runtime.getName(this.moduleId);
+	return runtime.modules[root];
 };
 
 ObjectDependency = function(id, owner) {
@@ -278,10 +281,10 @@ function Package(id, deps, factory) {
 Package.prototype.initDeps = function() {
 	this.dependencies.forEach(function(depId) {
 		var dep;
-		if (depId.indexOf('.') != -1) {
-			dep = new ObjectDependency(depId, this);
-		} else {
+		if (depId.indexOf('/') > 0) {
 			dep = new SeaDependency(depId, this);
+		} else {
+			dep = new ObjectDependency(depId, this);
 		}
 		this.deps[depId] = dep;
 	}, this);
