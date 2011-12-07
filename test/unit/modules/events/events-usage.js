@@ -80,10 +80,10 @@ test('events.Events: addEvent/removeEvent/fireEvent', function() {
 		//event: not-exist, two handlers
 		a.addEvent('not-exist-2', function(e) {
 			ok(true, 'not-exist-2 event handler 1 executed (both handler 1 and 2)');
-			a.removeEvent('not-exist-2', arguments.callee);
+			// not execute in IE if remove here
+			// a.removeEvent('not-exist-2', arguments.callee);
 		}, false);
 		a.addEvent('not-exist-2', function(e) {
-			// not execute in IE
 			ok(true, 'not-exist-2 event handler 2 executed (both handler 1 and 2)');
 			a.removeEvent('not-exist-2', arguments.callee);
 		}, false);
@@ -120,8 +120,10 @@ test('events.Events: addEvent/removeEvent/fireEvent', function() {
 });
 
 var chrome = false;
+var ie = false;
 object.use('ua', function(exports, ua) {
 	chrome = ua.ua.chrome;
+	ie=  ua.ua.ie;
 });
 test('events.Events: play with the standard', function() {
 	expect(chrome ? 11 : 10);
@@ -152,16 +154,19 @@ test('events.Events: play with the standard', function() {
 		equal(counter2, 1, 'standard event(click) on obj should be fired manually');
 
 		// standard event : click on div
-		var div = dom.wrap(document.createElement('div'));
-		div.onclick = function() {
+		var node = dom.wrap(document.createElement('div'));
+		// must be in the DOM tree
+		//document.body.appendChild(node);
+		node.onclick = function() {
 			// not execute in IE
 			ok(true, 'div.onclick is executed, which is not executed in IE');
 		};
-		div.addEvent('click', function(e) {
+		node.addEvent('click', function(e) {
 			e.preventDefault();
 			ok(true, 'standard event(click) on div should be fired manually');
 		}, false);
-		div.fireEvent('click');
+		//document.body.appendChild(node);
+		node.fireEvent('click');
 
 		// throw error in event handler
 		var counter3 = 0;
@@ -186,3 +191,115 @@ test('events.Events: play with the standard', function() {
 		equal(counter3, 2, 'should not stop the event chain');
 	});
 });
+
+if (ie) {
+	test('events.Events : IE new dom node, onxxx - addEvent - fireEvent', function() {
+		expect(2);
+		object.use('dom', function(exports, dom) {
+			var node = dom.wrap(document.createElement('div'));
+			node.onclick = function() {
+				ok(true, 'div.onclick is executed, which is not executed in IE');
+			};
+			node.addEvent('click', function(e) {
+				e.preventDefault();
+				ok(true, 'standard event(click) on div should be fired manually');
+			}, false);
+			node.fireEvent('click');	
+		});
+	});
+	test('events.Events : IE new dom node, addEvent - onxxx - fireEvent', function() {
+		expect(2);
+		object.use('dom', function(exports, dom) {
+			var node = dom.wrap(document.createElement('div'));
+			node.onclick = function() {
+				ok(true, 'div.onclick is executed, which is not executed in IE');
+			};
+			node.addEvent('click', function(e) {
+				e.preventDefault();
+				ok(true, 'standard event(click) on div should be fired manually');
+			}, false);
+			node.fireEvent('click');	
+		});
+	});
+	test('events.Events : IE new dom node, appendChild - onxxx - addEvent - fireEvent', function() {
+		expect(2);
+		object.use('dom', function(exports, dom) {
+			var node = dom.wrap(document.createElement('div'));
+			document.body.appendChild(node);
+			node.onclick = function() {
+				ok(true, 'div.onclick is executed, which is not executed in IE');
+			};
+			node.addEvent('click', function(e) {
+				e.preventDefault();
+				ok(true, 'standard event(click) on div should be fired manually');
+			}, false);
+			node.fireEvent('click');	
+		});
+	});
+	test('events.Events : IE new dom node, onxxx - appendChild - addEvent - fireEvent', function() {
+		expect(2);
+		object.use('dom', function(exports, dom) {
+			var node = dom.wrap(document.createElement('div'));
+			node.onclick = function() {
+				ok(true, 'div.onclick is executed, which is not executed in IE');
+			};
+			document.body.appendChild(node);
+			node.addEvent('click', function(e) {
+				e.preventDefault();
+				ok(true, 'standard event(click) on div should be fired manually');
+			}, false);
+			node.fireEvent('click');	
+		});
+	});
+	test('events.Events : IE new dom node, onxxx - addEvent - appendChild - fireEvent', function() {
+		expect(2);
+		object.use('dom', function(exports, dom) {
+			var node = dom.wrap(document.createElement('div'));
+			node.onclick = function() {
+				ok(true, 'div.onclick is executed, which is not executed in IE');
+			};
+			node.addEvent('click', function(e) {
+				e.preventDefault();
+				ok(true, 'standard event(click) on div should be fired manually');
+			}, false);
+			document.body.appendChild(node);
+			node.fireEvent('click');	
+		});
+	});
+	
+	test('events.Events : IE new dom node, addEvent - onxxx - fireEvent - appendChild - fireEvent', function() {
+		expect(4);
+		object.use('dom', function(exports, dom) {
+			var node = dom.wrap(document.createElement('div'));
+			node.onclick = function() {
+				ok(true, 'div.onclick is executed, which is not executed in IE');
+			};
+			node.addEvent('click', function(e) {
+				e.preventDefault();
+				ok(true, 'standard event(click) on div should be fired manually');
+			}, false);
+			node.fireEvent('click');	
+			document.body.appendChild(node);
+			node.fireEvent('click');	
+		});
+	});
+
+	test('events.Events : IE new dom node, onxxx - addEvent - appendChild - onxxx - fireEvent', function() {
+		expect(2);
+		object.use('dom', function(exports, dom) {
+			var node = dom.wrap(document.createElement('div'));
+			node.onclick = function() {
+				ok(false, 'div.onclick is executed, which is not executed in IE');
+			};
+			node.addEvent('click', function(e) {
+				e.preventDefault();
+				ok(true, 'standard event(click) on div should be fired manually');
+			}, false);
+			document.body.appendChild(node);
+			node.onclick = function() {
+				ok(true, 'div.onclick, overwrite another');
+			};
+			node.fireEvent('click');	
+		});
+	});
+}

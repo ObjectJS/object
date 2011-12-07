@@ -200,10 +200,10 @@ test('String.trim', function() {
 	equal(' 1 123 1'.trim(), '1 123 1', '\' 1 123 1\'.trim is ok');
 	equal('                          1 123 1'.trim(), '1 123 1', '\'                           1 123 1\'.trim is ok');
 	var str = '';
-	for(var i=0; i<100000; i++) {
+	for(var i=0; i<100; i++) {
 		str += ' ';
 	}
-	equal(str.trim(), '', '100000 empty string trim is still ok');
+	equal(str.trim(), '', '100 empty string trim is still ok');
 });
 
 module("util-basic-Function");

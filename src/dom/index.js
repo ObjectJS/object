@@ -139,7 +139,7 @@ var wrap = this.wrap = function(node) {
 		node.__properties__ = wrapper.prototype.__properties__;
 		var wrapperInstance = Class.getInstance(wrapper);
 		for (var prop in wrapperInstance) {
-			if (prop in node || wrapperInstance[prop] === undefined) {
+			if ((prop != 'fireEvent' && prop in node) || wrapperInstance[prop] === undefined) {
 				continue;
 			}
 			node[prop] = wrapperInstance[prop];

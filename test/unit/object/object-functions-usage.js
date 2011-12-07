@@ -54,11 +54,13 @@ test('add and use, basic', function() {
 	} catch (e) {}
 
 	try {
-		object.use('a.b.c', function(exports, a){});
-		ok(false, 'un-exists module a.b.c, will cause error');
+		object.use('not_exists_a.b.c', function(exports, a){});
+		ok(false, 'un-exists module not_exists_a.b.c, will cause error');
 	} catch (e) {
-		ok(true, 'un-exists module a.b.c, will cause error : ' + e);
+		ok(true, 'un-exists module not_exists_a.b.c, will cause error : ' + e);
 	};
+	object.remove('1');
+	object.remove('not_exists_', true);
 });
 
 test('add and use, with seperator', function() {

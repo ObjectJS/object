@@ -1,4 +1,7 @@
 var Loader = object.Loader;
+
+// surround with closure
+(function() {
 function emptyCallback() {};
 var emptyJS = ($UNIT_TEST_CONFIG.needPath ? 'loader/': '') + 'empty.js';
 var head = document.getElementsByTagName('head')[0];
@@ -107,8 +110,7 @@ test('removeScript', function() {
 	Loader.loadScript(emptyJS, function() {});
 	equal(Object.keys(Loader.get('_urlNodeMap')).length, 0, 'no cache, so will not add to _urlNodeMap');
 	Loader.removeScript(emptyJS);
-	Loader.loadScript(emptyJS, function() {},
-	true);
+	Loader.loadScript(emptyJS, function() {}, true);
 	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, 'cache is true, so will add to _urlNodeMap');
 	notEqual(Loader.get('_urlNodeMap')[pageDir + emptyJS], undefined, pageDir + emptyJS + ' is cached in _urlNodeMap');
 	Loader.removeScript('_' + emptyJS);
@@ -236,6 +238,38 @@ test('loadScript basic test', function() {
 	equal(len2 - len1, 1, 'add one script tag in document after Loader.loadScript is called');
 });
 
+// if is executed by jsTestDriver
+if (isJsTestDriverRunning) {
+	// jsTestDriver testcases start
+	var AsynchronousTest_loadScriptWithUrl = AsyncTestCase('loadScriptBasicTest');
+
+	AsynchronousTest_loadScriptWithUrl.prototype.tearDown = function() {
+		var scripts = Sizzle('script');
+		for (var i = 0; i < scripts.length; i++) {
+			if (scripts[i].callbacks) {
+				head.removeChild(scripts[i]);
+			}
+		}	
+	}
+
+	AsynchronousTest_loadScriptWithUrl.prototype.testLoadScriptWithUrl = function(queue) {
+		var counter = 0;
+		queue.call('Step 1: loadScript.', function(callbacks) {
+			var onScriptLoaded = callbacks.add(function() {
+				counter = 1;
+			});
+			Loader.loadScript(emptyJS, function() {
+				onScriptLoaded();
+			});
+		});
+
+	  	queue.call('Step 2: assert counter', function() {
+			assertEquals('callback is called, script is loaded', 1, counter);
+	  	});
+	};
+	// jsTestDriver testcases end 
+} else {
+// normal qunit testcases
 test('loadScript with url', function() {
 	// null/''
 	// Loader.loadScript('',emptyCallback); will case error;
@@ -272,6 +306,7 @@ asyncTest('loadScript with/without callback', function() {
 	//		ok(false, 'callback is called when not-exists-url loaded');
 	//});
 })
+}
 
 test('loadScript with/without cache', function() {
 	var cacheIsOk = false;
@@ -290,4 +325,4 @@ test('loadScript with/without cache', function() {
 		equal(len1, len2, 'cache works, load same script, get from cache');
 	}
 })
-
+})();

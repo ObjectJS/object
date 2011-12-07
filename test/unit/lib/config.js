@@ -80,18 +80,27 @@
 		'{}' : {},
 		'{\'\':\'\'}' : {'':''},
 		'{undefined:undefined}' : {undefined:undefined},
-		//'{null:null}': {null:null},		// not allowed in IE
 		'{NaN:NaN}': {NaN:NaN},
 		'{0:0}': {0:0},
-		//'{false:false}': {false:false},  	// not allowed in IE
-		'{Object:Object}': {Object:Object},
-		//'{var:1}': {var:1}				// not allowed in IE
+		'{Object:Object}': {Object:Object}
 		//'{[]:[]}': {[]:[]},
 		//'{{}:{}}': {{}:{}},
-		//'{function(){}:function(){}}': {function(){}:function(){}},
 		//'{{a:1}:{a:1}}': {{a:1}:{a:1}}
 	};
 	config.SHOW_TRUE = config.showTrue = false;
 
 	global.$UNIT_TEST_CONFIG = config;
-})(window)
+})(window);
+
+window.Loader = object.Loader;
+
+window.isJsTestDriverRunning = typeof jstestdriver != 'undefined';
+if (isJsTestDriverRunning) {
+	console = console || {};
+	console.log = function() { jstestdriver.console.log.apply(jstestdriver.console, arguments); };
+	//console.debug = function() { jstestdriver.console.debug.apply(jstestdriver.console, arguments); };
+	//console.info = function() { jstestdriver.console.info.apply(jstestdriver.console, arguments); };
+	//console.warn = function() { jstestdriver.console.warn.apply(jstestdriver.console, arguments); };
+	//console.error = function() { jstestdriver.console.error.apply(jstestdriver.console, arguments); };
+	$UNIT_TEST_CONFIG.needPath = true;
+}
