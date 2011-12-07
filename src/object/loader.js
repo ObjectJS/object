@@ -712,7 +712,9 @@ var Loader = new Class(function() {
 		// 如果节点存在，则删除script，并从缓存中清空
 		if (scriptNode) {
 			delete urlNodeMap[absPath];
-			scriptNode.parentNode.removeChild(scriptNode);
+			if (scriptNode.parentNode) {
+				scriptNode.parentNode.removeChild(scriptNode);
+			}
 			scriptNode = null;
 		}
 	});
@@ -852,7 +854,9 @@ var Loader = new Class(function() {
 			});
 
 			if (['exports', 'e'].indexOf(/^function.*\((.*)\)/.exec(factory.toString())[1].split(/\s*,\s*/)[0]) != -1) {
-				console.warn('object.use即将不再支持第一个exports参数，请尽快删除。');
+				if (typeof console != 'undefined') {
+					console.warn('object.use即将不再支持第一个exports参数，请尽快删除。');
+				}
 				args.unshift(exports);
 			}
 			factory.apply(null, args);
