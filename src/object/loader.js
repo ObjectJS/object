@@ -183,7 +183,7 @@ SeaDependency.prototype.load = function(runtime, callback) {
 	runtime.loadModule(fullId, id, callback);
 };
 
-SeaDependency.prototype.getExports = function(runtime) {
+SeaDependency.prototype.getRoot = function(runtime) {
 	return runtime.modules[this.id];
 };
 
@@ -257,7 +257,7 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 	nextPart(null, context);
 };
 
-ObjectDependency.prototype.getExports = function(runtime) {
+ObjectDependency.prototype.getRoot = function(runtime) {
 	var root = runtime.getName(this.root);
 	return runtime.modules[root];
 };
