@@ -63,7 +63,7 @@ SeaPackage.prototype.createRequire = function(name, runtime) {
 		if (!dep) {
 			throw new ModuleRequiredError(id);
 		}
-		var exports = dep.getExports(runtime);
+		var exports = dep.getRoot(runtime);
 		// 有依赖却没有获取到，说明是由于循环依赖
 		if (!exports && module.dependencies.indexOf(id) != -1) {
 			throw new CyclicDependencyError(id);
@@ -101,7 +101,7 @@ ObjectPackage.prototype.execute = function(name, runtime) {
 	var exports = runtime.modules[name] || new Module(name);
 	var args = [exports];
 	this.dependencies.forEach(function(depId) {
-		var depExports = this.getDep(depId).getExports(runtime);
+		var depExports = this.getDep(depId).getRoot(runtime);
 		if (args.indexOf(depExports) == -1) {
 			args.push(depExports);
 		}
