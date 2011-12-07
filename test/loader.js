@@ -3,7 +3,8 @@ object.add('haha.lala', 'sys, dom', function(exports, sys, dom) {
 });
 object.define('haha.baba', function() {
 });
-object.define('xn/flashUploader/async', 'xn/flashUploader/async, haha, haha.lala, haha.baba', function(require) {
+object.define('xn/flashUploader/async/fuck/fuckyou', function() {return 1});
+object.define('xn/flashUploader/async', './fuck/fuckyou, haha, haha.lala, haha.baba', function(require) {
 
 	var haha = require('haha');
 
