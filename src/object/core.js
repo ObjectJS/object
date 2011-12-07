@@ -18,7 +18,9 @@ if ((function TEST(){}).name) {
 }
 // IE
 else {
-	var funcNameRegExp = /^function ([\w$]+)/;
+	// IE下方法toString返回的值有可能是(开头
+	var funcNameRegExp = /(?:^|\()function ([\w$]+)/;
+	//Function.__get_name__((function a() {})) -> (function a(){}) -> a
 	Function.__get_name__ = function(func) {
 		// IE 下没有 Function.prototype.name，通过代码获得
 		var result = funcNameRegExp.exec(func.toString());
