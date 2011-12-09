@@ -131,6 +131,127 @@ ObjectPackage.prototype.handleCyclicDependency = function(dep, pkg, runtime, nex
 	next(exports);
 };
 
+/**
+ * XX Package
+ */
+function Package(id, deps, factory) {
+	if (!id) return;
+
+	this.id = id.replace(/\//g, '.');
+	this.dependencies = this.parseDeps(deps);
+	this.factory = factory;
+	this.deps = {};
+	this.initDeps();
+}
+
+Package.prototype.initDeps = function() {
+	this.dependencies.forEach(function(depId) {
+		var dep;
+		if (depId.indexOf('/') != -1) {
+			dep = new CommonJSDependency(depId, this);
+		} else {
+			dep = new ObjectDependency(depId, this);
+		}
+		this.deps[depId] = dep;
+	}, this);
+};
+
+Package.prototype.execute = function(name, runtime) {
+	return new Module(name);
+};
+
+Package.prototype.load = function(name, runtime, callback) {
+	var currentUse = -1; 
+	var pkg = this;
+
+	/**
+	 * 顺序执行pkg中的dependencies
+	 * @param pExports 上一个nextDep返回的模块实例
+	 */
+	function nextDep(pExports) {
+		var deps = pkg.dependencies;
+		var factory = pkg.factory;
+		var dep, depPkg;
+
+		if (pExports) {
+			// 模块获取完毕，去除循环依赖检测
+			runtime.stack.pop();
+		}
+
+		currentUse++;
+
+		// 模块获取完毕，执行factory，将exports通过callback传回去。
+		// 已经处理到最后一个
+		if (currentUse == deps.length) {
+			doneDep();
+
+		} else {
+			dep = pkg.getDep(deps[currentUse]);
+			depPkg = dep.getModule(runtime);
+
+			// 记录开始获取当前模块
+			runtime.stack.push(depPkg);
+
+			// 刚刚push过，应该在最后一个，如果不在，说明循环依赖了
+			if (runtime.stack.indexOf(depPkg) != runtime.stack.length - 1) {
+				depPkg.handleCyclicDependency(dep, pkg, runtime, nextDep);
+
+			} else {
+				dep.load(runtime, nextDep);
+			}
+		}
+	}
+
+	/**
+	 * 已执行完毕最后一个dependency
+	 */
+	function doneDep() {
+		if (!name) name = pkg.id; // 没有指定name，则使用全名
+
+		var exports = pkg.execute(name, runtime);
+
+		runtime.addModule(name, exports);
+
+		// sys.modules
+		if (exports.__name__ === 'sys') exports.modules = runtime.modules;
+
+		if (callback) callback(exports, name);
+	}
+
+	nextDep();
+};
+
+Package.prototype.handleCyclicDependency = function(dep, pkg, runtime, next) {
+	// 但并不立刻报错，而是当作此模块没有获取到，继续获取下一个
+	next();
+};
+
+Package.prototype.getDep = function(id) {
+	return this.deps[id];
+};
+
+/**
+ * 处理传入的deps参数
+ * 在parseDeps阶段不需要根据名称判断去重（比如自己use自己），因为并不能避免所有冲突，还有循环引用的问题（比如 core use dom, dom use core）
+ * @param {String} deps 输入
+ */
+Package.prototype.parseDeps = function(deps) {
+	if (Array.isArray(deps)) return deps;
+
+	if (!deps) {
+		return [];
+	}
+
+	deps = deps.trim();
+	if (/^\.[^\/]|\.$/.test(deps)) {
+		throw new Error('deps should not startWith/endWith \'.\', except startWith \'./\'');
+	}
+	deps = deps.replace(/^,*|,*$/g, '');
+	deps = deps.split(/\s*,\s*/ig);
+
+	return deps;
+};
+
 function Dependency(id, owner) {
 	if (!id) return;
 	this.id = id;
@@ -263,127 +384,6 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 ObjectDependency.prototype.getRef = function(runtime) {
 	var root = runtime.getName(this.root);
 	return runtime.modules[root];
-};
-
-/**
- * XX Package
- */
-function Package(id, deps, factory) {
-	if (!id) return;
-
-	this.id = id.replace(/\//g, '.');
-	this.dependencies = this.parseDeps(deps);
-	this.factory = factory;
-	this.deps = {};
-	this.initDeps();
-}
-
-Package.prototype.initDeps = function() {
-	this.dependencies.forEach(function(depId) {
-		var dep;
-		if (depId.indexOf('/') != -1) {
-			dep = new CommonJSDependency(depId, this);
-		} else {
-			dep = new ObjectDependency(depId, this);
-		}
-		this.deps[depId] = dep;
-	}, this);
-};
-
-Package.prototype.execute = function(name, runtime) {
-	return new Module(name);
-};
-
-Package.prototype.load = function(name, runtime, callback) {
-	var currentUse = -1; 
-	var pkg = this;
-
-	/**
-	 * 顺序执行pkg中的dependencies
-	 * @param pExports 上一个nextDep返回的模块实例
-	 */
-	function nextDep(pExports) {
-		var deps = pkg.dependencies;
-		var factory = pkg.factory;
-		var dep, depPkg;
-
-		if (pExports) {
-			// 模块获取完毕，去除循环依赖检测
-			runtime.stack.pop();
-		}
-
-		currentUse++;
-
-		// 模块获取完毕，执行factory，将exports通过callback传回去。
-		// 已经处理到最后一个
-		if (currentUse == deps.length) {
-			doneDep();
-
-		} else {
-			dep = pkg.getDep(deps[currentUse]);
-			depPkg = dep.getModule(runtime);
-
-			// 记录开始获取当前模块
-			runtime.stack.push(depPkg);
-
-			// 刚刚push过，应该在最后一个，如果不在，说明循环依赖了
-			if (runtime.stack.indexOf(depPkg) != runtime.stack.length - 1) {
-				depPkg.handleCyclicDependency(dep, pkg, runtime, nextDep);
-
-			} else {
-				dep.load(runtime, nextDep);
-			}
-		}
-	}
-
-	/**
-	 * 已执行完毕最后一个dependency
-	 */
-	function doneDep() {
-		if (!name) name = pkg.id; // 没有指定name，则使用全名
-
-		var exports = pkg.execute(name, runtime);
-
-		runtime.addModule(name, exports);
-
-		// sys.modules
-		if (exports.__name__ === 'sys') exports.modules = runtime.modules;
-
-		if (callback) callback(exports, name);
-	}
-
-	nextDep();
-};
-
-Package.prototype.handleCyclicDependency = function(dep, pkg, runtime, next) {
-	// 但并不立刻报错，而是当作此模块没有获取到，继续获取下一个
-	next();
-};
-
-Package.prototype.getDep = function(id) {
-	return this.deps[id];
-};
-
-/**
- * 处理传入的deps参数
- * 在parseDeps阶段不需要根据名称判断去重（比如自己use自己），因为并不能避免所有冲突，还有循环引用的问题（比如 core use dom, dom use core）
- * @param {String} deps 输入
- */
-Package.prototype.parseDeps = function(deps) {
-	if (Array.isArray(deps)) return deps;
-
-	if (!deps) {
-		return [];
-	}
-
-	deps = deps.trim();
-	if (/^\.[^\/]|\.$/.test(deps)) {
-		throw new Error('deps should not startWith/endWith \'.\', except startWith \'./\'');
-	}
-	deps = deps.replace(/^,*|,*$/g, '');
-	deps = deps.split(/\s*,\s*/ig);
-
-	return deps;
 };
 
 /**
