@@ -7,7 +7,7 @@ function recoverEnv() {
 		if (scripts[i].callbacks || scripts[i].getAttribute('data-module') 
 				|| /(module[\dsA-Z])|empty/.test(scripts[i].src)) {
 			if (scripts[i].src) {
-				Loader.removeScript(scripts[i].src, scripts[i]);
+				Loader.removeScript(scripts[i].src);
 			} else {
 				scripts[i].parentNode.removeChild(scripts[i]);
 			}

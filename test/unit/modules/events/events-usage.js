@@ -80,8 +80,7 @@ test('events.Events: addEvent/removeEvent/fireEvent', function() {
 		//event: not-exist, two handlers
 		a.addEvent('not-exist-2', function(e) {
 			ok(true, 'not-exist-2 event handler 1 executed (both handler 1 and 2)');
-			// not execute in IE if remove here
-			// a.removeEvent('not-exist-2', arguments.callee);
+			a.removeEvent('not-exist-2', arguments.callee);
 		}, false);
 		a.addEvent('not-exist-2', function(e) {
 			ok(true, 'not-exist-2 event handler 2 executed (both handler 1 and 2)');
