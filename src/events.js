@@ -141,18 +141,22 @@ this.Events = new Class(function() {
 			var event = arguments.length > 1? eventData : exports.wrapEvent(window.event);
 			var funcs = self.__eventListeners? self.__eventListeners[type] : null;
 			if (funcs) {
+				funcs = funcs.slice(0);
 				funcs.forEach(function(func) {
 					try {
 						func.call(self, event);
 					} catch(e) {
 					}
 				});
+				funcs = null;
 			}
 			var natives = self.__nativeEvents? self.__nativeEvents[type] : null;
 			if (natives) {
+				natives = natives.slice(0);
 				natives.forEach(function(func) {
 					func.call(self, event);
 				});
+				natives = null;
 			}
 		});
 	}
@@ -239,7 +243,7 @@ this.Events = new Class(function() {
 		}
 		var parent = node.parentNode;
 		var top = document.documentElement;
-		while(parent) {
+		while (parent) {
 			if (parent == top) {
 				return true;
 			}
@@ -247,6 +251,7 @@ this.Events = new Class(function() {
 		}
 		return false;
 	}
+
 	this.initialize = function(self) {
 		if (!self.addEventListener) {
 			// 在一些情况下，你不知道传进来的self对象的情况，不要轻易的将其身上的__eventListeners清除掉
@@ -458,6 +463,7 @@ this.Events = new Class(function() {
 
 		var funcs = self.__eventListeners[type];
 		if (funcs) {
+			funcs = funcs.slice(0);
 			for (var i = 0, j = funcs.length; i < j; i++) {
 				if (funcs[i]) {
 					try {
@@ -466,13 +472,16 @@ this.Events = new Class(function() {
 					}
 				}
 			}
+			funcs = null;
 		}
 
 		var natives = self.__nativeEvents[type];
 		if (natives) {
+			natives = natives.slice(0);
 			natives.forEach(function(func) {
 				func.call(self, event);
 			});
+			natives = null;
 		}
 
 		return event;
