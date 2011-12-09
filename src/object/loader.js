@@ -37,15 +37,15 @@ CyclicDependencyError.prototype = new Error('循环依赖');
 /**
  * 普通Package
  */
-function SeaPackage(id, deps, factory) {
+function CommonJSPackage(id, deps, factory) {
 	Package.apply(this, arguments);
 }
 
-SeaPackage.prototype = new Package();
+CommonJSPackage.prototype = new Package();
 
-SeaPackage.prototype.constructor = SeaPackage;
+CommonJSPackage.prototype.constructor = CommonJSPackage;
 
-SeaPackage.prototype.execute = function(name, runtime) {
+CommonJSPackage.prototype.execute = function(name, runtime) {
 	var exports = runtime.modules[name] || new Module(name);
 	var returnExports = this.factory.call(exports, this.createRequire(name, runtime), exports, this);
 	if (returnExports) {
@@ -55,7 +55,7 @@ SeaPackage.prototype.execute = function(name, runtime) {
 	return exports;
 };
 
-SeaPackage.prototype.createRequire = function(name, runtime) {
+CommonJSPackage.prototype.createRequire = function(name, runtime) {
 	var loader = runtime.loader;
 	var module = this;
 	function require(id) {
@@ -73,7 +73,7 @@ SeaPackage.prototype.createRequire = function(name, runtime) {
 
 	require.async = function(deps, callback) {
 		deps = module.parseDeps(deps);
-		var pkg = new SeaPackage(name, deps, function(require) {
+		var pkg = new CommonJSPackage(name, deps, function(require) {
 			var args = [];
 			deps.forEach(function(dep) {
 				args.push(require(dep));
@@ -146,7 +146,7 @@ Dependency.prototype.getModule = function(runtime) {
  * @param id
  * @param module
  */
-function SeaDependency(id, owner) {
+function CommonJSDependency(id, owner) {
 	if (id.indexOf('./') == 0) {
 		id = id.slice(2);
 		id = id.replace(/\//g, '.');
@@ -159,32 +159,35 @@ function SeaDependency(id, owner) {
 	Dependency.call(this, id, owner);
 };
 
-SeaDependency.prototype = new Dependency();
+CommonJSDependency.prototype = new Dependency();
 
 /**
  * 处理当前模块
  * @param callback 异步方法，模块获取完毕后通过callback的唯一参数传回
  */
-SeaDependency.prototype.load = function(runtime, callback) {
+CommonJSDependency.prototype.load = function(runtime, callback) {
 	var ownerId = this.owner.id;
 	var id = this.id;
 
 	var isRelative = false;
+	var context;
 	// Relative
 	if (id.indexOf('.\/') == 0) {
 		id = id.slice(2);
+		context = runtime.getName(ownerId);
 		// 去除root
-		var context = runtime.getName(ownerId);
 		// 说明确实去除了root，是一个相对引用，在获取fullId时需要加上root
 		isRelative = (context != ownerId);
 	}
 
-	var fullId = isRelative? runtime.getId(id) : id;
+	id = context? (context + '.' + id) : id;
+	fullId = isRelative? runtime.getId(id) : id;
 	runtime.loadModule(fullId, id, callback);
 };
 
-SeaDependency.prototype.getRef = function(runtime) {
-	return runtime.modules[this.id];
+CommonJSDependency.prototype.getRef = function(runtime) {
+	var root = runtime.getName(this.moduleId);
+	return runtime.modules[root];
 };
 
 ObjectDependency = function(id, owner) {
@@ -278,10 +281,10 @@ function Package(id, deps, factory) {
 Package.prototype.initDeps = function() {
 	this.dependencies.forEach(function(depId) {
 		var dep;
-		if (depId.indexOf('.') != -1) {
-			dep = new ObjectDependency(depId, this);
+		if (depId.indexOf('/') != -1) {
+			dep = new CommonJSDependency(depId, this);
 		} else {
-			dep = new SeaDependency(depId, this);
+			dep = new ObjectDependency(depId, this);
 		}
 		this.deps[depId] = dep;
 	}, this);
@@ -443,11 +446,11 @@ LoaderRuntime.prototype = {
 	loadModule: function(id, name, callback) {
 		var loader = this.loader;
 
-		var module = this.modules[name];
+		var exports = this.modules[name];
 
 		// 使用缓存中的
-		if (module) {
-			callback(module, name);
+		if (exports) {
+			callback(exports, name);
 
 		} else {
 			loader.load(loader.getModule(id), name, this, callback);
@@ -828,7 +831,7 @@ var Loader = new Class(function() {
 	 * @param factory
 	 */
 	this.define = function(self, id, deps, factory) {
-		self.defineModule(SeaPackage, id, deps, factory);
+		self.defineModule(CommonJSPackage, id, deps, factory);
 	};
 
 	/**
