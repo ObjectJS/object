@@ -453,7 +453,7 @@ LoaderRuntime.prototype = {
 			callback(exports, name);
 
 		} else {
-			loader.load(loader.getModule(id), name, this, callback);
+			loader.load(id, name, this, callback);
 		}
 	},
 
@@ -571,11 +571,13 @@ var Loader = new Class(function() {
 	 * @param {LoaderRuntime} runtime
 	 * @param callback 异步方法，执行完毕后调用，传入模块实例及名字
 	 */
-	this.load = function(self, pkg, name, runtime, callback) {
+	this.load = function(self, id, name, runtime, callback) {
+
+		var pkg = self.getModule(id);
 
 		// No module
 		if (!pkg) {
-			throw new NoModuleError(name);
+			throw new NoModuleError(id);
 		}
 
 		// file
