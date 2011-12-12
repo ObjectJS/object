@@ -141,7 +141,7 @@ this.Component = new Class(dom.Element, function() {
 		ele.__properties__ = cls.prototype.__properties__;
 		var clsInstance = Class.getInstance(cls);
 		for (var prop in clsInstance) {
-			if (prop in ele || clsInstance[prop] === undefined) {
+			if ((prop != 'fireEvent' && prop in ele) || clsInstance[prop] === undefined) {
 				continue;
 			}
 			ele[prop] = clsInstance[prop];
