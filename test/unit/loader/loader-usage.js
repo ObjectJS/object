@@ -9,7 +9,9 @@ function recoverEnv() {
 			if (scripts[i].src) {
 				Loader.removeScript(scripts[i].src);
 			} else {
-				scripts[i].parentNode.removeChild(scripts[i]);
+				if(scripts[i].parentNode) {
+					scripts[i].parentNode.removeChild(scripts[i]);
+				}
 			}
 		}
 	}
