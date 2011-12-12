@@ -543,24 +543,6 @@ var Loader = new Class(function() {
 	};
 
 	/**
-	 * 建立前缀模块
-	 * 比如 a.b.c.d ，会建立 a a.b a.b.c 三个空模块，最后一个模块为目标模块
-	 */
-	this.definePrefixFor = function(self, id) {
-		if (!id || typeof id != 'string') return;
-		if (arguments.length < 2) return;
-		id = self.parseId(id);
-
-		var idParts = id.split('.');
-		for (var i = 0, prefix, pkg, l = idParts.length - 1; i < l; i++) {
-			prefix = idParts.slice(0, i + 1).join('.');
-			if (self.prefixLib[prefix]) continue;
-			pkg = new Package(prefix, [], function(){});
-			self.prefixLib[prefix] = pkg;
-		}
-	};
-
-	/**
 	 * 将路径形式的id转换成.形式
 	 */
 	this.parseId = function(self, id) {
@@ -783,7 +765,36 @@ var Loader = new Class(function() {
 	};
 
 	/**
-	 * 定义一个file，供异步加载
+	 * 建立前缀模块
+	 * 比如 a.b.c.d ，会建立 a a.b a.b.c 三个空模块，最后一个模块为目标模块
+	 */
+	this.definePrefixFor = function(self, id) {
+		if (!id || typeof id != 'string') return;
+		if (arguments.length < 2) return;
+		id = self.parseId(id);
+
+		var idParts = id.split('.');
+		for (var i = 0, prefix, pkg, l = idParts.length - 1; i < l; i++) {
+			prefix = idParts.slice(0, i + 1).join('.');
+			self.definePrefix(prefix);
+		}
+	};
+
+	/**
+	 * 定义一个prefix module
+	 */
+	this.definePrefix = function(self, id) {
+		if (!id || typeof id != 'string') return;
+		if (arguments.length < 2) return;
+
+		id = self.parseId(id);
+
+		if (self.prefixLib[id]) return;
+		self.prefixLib[id] = new Package(id, [], function(){});
+	};
+
+	/**
+	 * 定义一个file module，供异步加载
 	 */
 	this.defineFile = function(self, id, src) {
 		if (!id || typeof id != 'string') return;
@@ -792,8 +803,14 @@ var Loader = new Class(function() {
 
 		if (self.fileLib[id]) return;
 
+		// prefix已注册
+		if (id in self.prefixLib) {
+			delete self.prefixLib[id];
+		}
 		// 添加前缀module到prefixLib
-		self.definePrefixFor(id);
+		else {
+			self.definePrefixFor(id);
+		}
 
 		self.fileLib[id] = {
 			id: id,
@@ -801,6 +818,9 @@ var Loader = new Class(function() {
 		};
 	};
 
+	/**
+	 * 定义一个普通module
+	 */
 	this.defineModule = function(self, constructor, id, deps, factory) {
 		if (!id || typeof id != 'string') return;
 		if (arguments.length < 4) return;
@@ -816,16 +836,20 @@ var Loader = new Class(function() {
 		id = self.parseId(id);
 
 		// 不允许重复添加。
-		if (self.lib[id]) return;
+		if (id in self.lib) return;
 
 		// prefix已注册
-		if (self.prefixLib[id]) delete self.prefixLib[id];
-
-		// 文件已加载
-		if (self.fileLib[id]) delete self.fileLib[id];
-
+		if (id in self.prefixLib) {
+			delete self.prefixLib[id];
+		}
+		// file已注册
+		else if (id in self.fileLib) {
+			delete self.fileLib[id];
+		}
 		// 添加前缀module到prefixLib
-		self.definePrefixFor(id);
+		else {
+			self.definePrefixFor(id);
+		}
 
 		var pkg = new constructor(id, deps, factory);
 		self.lib[id] = pkg;
