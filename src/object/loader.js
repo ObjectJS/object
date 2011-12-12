@@ -282,6 +282,8 @@ function CommonJSDependency(id, owner) {
 
 CommonJSDependency.prototype = new Dependency();
 
+CommonJSDependency.prototype.constructor = CommonJSDependency;
+
 /**
  * 处理当前模块
  * @param callback 异步方法，模块获取完毕后通过callback的唯一参数传回
@@ -328,6 +330,8 @@ ObjectDependency = function(id, owner) {
 };
 
 ObjectDependency.prototype = new Dependency();
+
+ObjectDependency.prototype.constructor = ObjectDependency;
 
 ObjectDependency.prototype.load = function(runtime, callback) {
 	var ownerId = this.owner.id;
