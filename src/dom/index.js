@@ -302,7 +302,9 @@ var attributeproperty = function(defaultValue, attr) {
 		return value != null? value : defaultValue;
 	}, function(self, value) {
 		if (!attr) attr = prop.__name__.toLowerCase();
-		self.setAttribute(attr, value);
+		// Webkit 534.12中，value为null时，属性会被设置成字符串 null
+		if (!value) value = '';
+		if (value) self.setAttribute(attr, value);
 	});
 	return prop;
 };
