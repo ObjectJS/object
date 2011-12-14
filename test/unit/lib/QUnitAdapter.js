@@ -16,9 +16,7 @@ you need to set it up and tear it down in each test.
 */
 (function() {
 
-    if(!(window.equiv)) {
-      throw new Error("QUnitAdapter.js - Unable to find equiv function. Ensure you have added equiv.js to the load section of your jsTestDriver.conf");
-    }
+	window.equiv = QUnit.equiv;
 
     var QUnitTestCase;
 
