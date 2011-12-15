@@ -943,10 +943,11 @@ var Loader = new Class(function() {
 				}
 			});
 
-			if (['exports', 'e'].indexOf(/^function.*\((.*)\)/.exec(factory.toString())[1].split(/\s*,\s*/)[0]) != -1) {
-				console.warn('object.use即将不再支持第一个exports参数，请尽快删除。');
-				args.unshift(exports);
-			}
+			// 压缩后第一个参数不是exports了……
+			//if (['exports', 'e'].indexOf(/^function.*\((.*)\)/.exec(factory.toString())[1].split(/\s*,\s*/)[0]) != -1) {
+				//console.warn('object.use即将不再支持第一个exports参数，请尽快删除。');
+			args.unshift(exports);
+			//}
 			factory.apply(null, args);
 		});
 
