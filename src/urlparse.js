@@ -4,6 +4,9 @@ object.add('urlparse', function() {
 * 合并两段url
 */
 this.urljoin = function(base, url) {
+	if (!base || !url || typeof base != 'string' || typeof url != 'string') {
+		return '';
+	}
 	var baseparts = urlparse(base);
 	var urlparts = urlparse(url);
 	var output = [];
@@ -20,7 +23,11 @@ this.urljoin = function(base, url) {
 			output[2] = urlparts[2];
 		} else {
 			path = baseparts[2];
-			output[2] = path.substring(0, path.lastIndexOf('/') + 1) + urlparts[2];
+			if (path) {
+				output[2] = path.substring(0, path.lastIndexOf('/') + 1) + urlparts[2];
+			} else {
+				output[2] = '/' + urlparts[2];
+			}
 		}
 	} else {
 		return base;
@@ -34,16 +41,31 @@ this.urljoin = function(base, url) {
 * @see http://docs.python.org/library/urlparse.html
 */
 var urlparse = this.urlparse = function(url) {
-	var reg = /^(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))?(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i;
+	if (!url || typeof url != 'string') {
+		return null;
+	}
+	url = url.trim();
+	
+	if (url.indexOf('file') == 0) {
+		// file:///F:/works/workspace/objectjs.org/object/test/unit/modules/urlparse/index.html
+		var reg = /^(file)\:\/\/()([^\?]*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(.*))?$/i
+	} else {
+		// http://www.renren.com:8080/home;32131?id=31321321&a=1#//music/?from=homeleft#fdalfdjal
+		var reg = /^(?:(\w+?)\:\/(?:\/)?([\w-_.]+(?::\w+)?))?([^\?]*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(.*))?$/i;
+	}
 	if (reg.test(url)) {
 		return url.match(reg).slice(1);
 	}
+	
 };
 
 /**
 * 将兼容urlparse结果的url部分合并成url
 */
 var urlunparse = this.urlunparse = function(parts) {
+	if (!parts) {
+		return '';
+	}
 	var url = '';
 	if (parts[0]) url += parts[0] + '://' + parts[1];
 	url += parts[2];

@@ -1,4 +1,4 @@
-module('using-mustache');
+module('mustache-usage');
 
 test('use mustache', function() {
 

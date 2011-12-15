@@ -3,8 +3,8 @@ module('urlparse-usage');
 //python : scheme-netloc-path-params-query-fragment
 var urlResultMap = {
 	'http' : '[,,http,,,]',
-	'http:/': '[http,,/,,,]',
-	'http://' : '[http,,,,,]',
+//	'http:/': '[http,,/,,,]',
+//	'http://' : '[http,,,,,]',
 	'http://www' : '[http,www,,,,]',
 	'http://www.renren' :  '[http,www.renren,,,,]',
 	'http://www.renren.abc' : '[http,www.renren.abc,,,,]',
@@ -50,7 +50,7 @@ test('urlparse.urlparse : usage', function() {
 	object.use('urlparse', function(exports, urlparse) {
 		for(var prop in urlResultMap) {
 			var parts = urlparse.urlparse(prop);
-			equal('['+parts.join(',')+']', urlResultMap[prop]);
+			equal('['+parts.join(',')+']', urlResultMap[prop], prop);
 		}
 	});
 });
@@ -63,7 +63,7 @@ test('urlparse.urlunparse : usage', function() {
 			var partsArray = eval('(' + 
 				parts.replace(/,/g, '\',\'').replace(/^\[/, '\[\'').replace(/\]$/, '\'\]')+ ')');
 			var url = urlparse.urlunparse(partsArray);
-			equal(url, prop);
+			equal(url, prop, prop);
 		}
 	});
 });

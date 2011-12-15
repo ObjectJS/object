@@ -1,6 +1,6 @@
 $(document).ready(function() {
-	var path = $LAB.needPath ? 'modules/options/' : '';
-	$LAB
+	var path = $UNIT_TEST_CONFIG.needPath ? 'modules/options/' : '';
+	$UNIT_TEST_SCRIPT_LOADER
 	   .script(path + "../../../../src/options.js").wait()
 	   .script(path + "options-usage.js").wait()
 });

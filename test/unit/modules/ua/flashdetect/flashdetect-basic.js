@@ -1,4 +1,4 @@
-module('flashdetect')
+module('flashdetect-basic')
 test('use flashdetect', function() {
 	object.use('ua.flashdetect', function(exports, ua) {
 		ok(ua.flashdetect != null, 'flashdetect module is imported');

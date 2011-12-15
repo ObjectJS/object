@@ -58,8 +58,8 @@ Array.prototype.forEach = Array.prototype.forEach || function(fn, bind) {
  * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/indexOf
  */
 Array.prototype.indexOf = Array.prototype.indexOf || function(str) {
-	for (var i = 0; i < this.length; i++) {
-		if (str == this[i]) {
+	for (var i = 0, l = this.length; i < l; i++) {
+		if (str === this[i]) {
 			return i;
 		}
 	}
@@ -230,7 +230,9 @@ if ((function TEST(){}).name) {
 }
 // IE
 else {
-	var funcNameRegExp = /^function ([\w$]+)/;
+	// IE下方法toString返回的值有可能是(开头
+	var funcNameRegExp = /(?:^|\()function ([\w$]+)/;
+	//Function.__get_name__((function a() {})) -> (function a(){}) -> a
 	Function.__get_name__ = function(func) {
 		// IE 下没有 Function.prototype.name，通过代码获得
 		var result = funcNameRegExp.exec(func.toString());
@@ -311,6 +313,15 @@ this.add = function() {
 	object._loader.add.apply(object._loader, arguments);
 };
 
+/**
+ * 添加一个module
+ * @name object.add
+ * @borrows object.Loader.add
+ */
+this.remove = function() {
+	if (!object._loader) object._loader = new Loader();
+	object._loader.remove.apply(object._loader, arguments);
+};
 // 找不到模块Error
 this.NoModuleError = function(name) {
 	this.message = 'no module named ' + name;
@@ -382,6 +393,7 @@ var setter = function(prop, value) {
  * 会被放到cls.get
  */
 var membergetter = function(name) {
+	if (name == '@mixins') name = '__mixins__';
 	var cls = this;
 	var proto = this.prototype;
 	var properties = proto.__properties__;
@@ -392,6 +404,16 @@ var membergetter = function(name) {
 	if (!member) return member;
 	if (member.__class__ == instancemethod) return instancemethod(member.im_func, this);
 	return member;
+};
+
+/**
+ * 判断是否存在成员
+ * 会被放到cls.has
+ */
+var hasmember = function(name) {
+	if (name == '@mixins') name = '__mixins__';
+	var proto = this.prototype;
+	return (name in this || name in proto || name in proto.__properties__);
 };
 
 /**
@@ -407,18 +429,31 @@ var membersetter = overloadSetter(function(name, member) {
 	var subs = cls.__subclassesarray__;
 	var constructing = cls.__constructing__;
 
-	// 类构建完毕后才进行set，需要先删除之前的成员
-	if (!constructing) {
-		delete cls[name];
-		delete proto[name];
-		delete properties[name];
+	if (['__new__', '__this__', '__base__', '@mixins', '__mixins__'].indexOf(name) != -1) {
+		if (!member || (typeof member != 'object' && typeof member != 'function')) {
+			return;
+		}
 	}
 
-	// 这里的member指向new Class参数的书写的对象/函数
-	if (name == '@mixins') name = '__mixins__';
+	// 类构建完毕后才进行set，需要先删除之前的成员
+	// 为了避免子类构建时删除父类属性失败，这去掉constructing的判断
+	delete cls[name];
+	delete proto[name];
+	delete properties[name];
 
-	if (['__new__', '__metaclass__', '__mixins__'].indexOf(name) != -1) {
-		cls[name] = member;
+	// 这里的member指向new Class参数的书写的对象/函数
+	if (name == '@mixins') {
+		// 避免@mixins与Class.mixin设置的值相互覆盖
+		name = '__mixins__';
+		if (cls[name]) {
+			cls[name] = cls[name].concat(member);
+		} else {
+			cls[name] = member;
+		}
+	} else if (['__new__', '__metaclass__', '__mixins__'].indexOf(name) != -1) {
+		if (member && (typeof member == 'object' || typeof member == 'function')) {
+			cls[name] = member;
+		}
 
 	} else if (['__this__', '__base__'].indexOf(name) != -1) {
 		cls[name] = proto[name] = member;
@@ -443,6 +478,8 @@ var membersetter = overloadSetter(function(name, member) {
 	else if (member.__class__ === property) {
 		member.__name__ = name;
 		properties[name] = member;
+		// 当prototype覆盖instancemethod/classmethod/staticmethod时，需要去除prototype上的属性
+		proto[name] = undefined;
 	}
 	// this.a = classmethod(function() {})
 	else if (member.__class__ === classmethod) {
@@ -464,7 +501,8 @@ var membersetter = overloadSetter(function(name, member) {
 	// 所有子类cls上加入
 	if (!constructing && name in cls && subs) {
 		subs.forEach(function(sub) {
-			if (!name in sub) sub.set(name, member);
+			// !(name in sub) 与 !name in sub 得到的结果不一样
+			if (!(name in sub)) sub.set(name, member);
 		});
 	}
 });
@@ -537,8 +575,18 @@ type.__new__ = function(metaclass, name, base, dict) {
 		parent: function() {
 			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
 			var name = arguments.callee.caller.__name__;
+			if (!name) {
+				throw new Error('can not get function name when this.parent called');
+			}
 			var base = cls.__base__;
-			return base.get(name).apply(base, arguments);
+			if (!base || !base.get) {
+				throw new Error('no parent class, can not call parent');
+			}
+			var baseMember = base.get(name);
+			if (!baseMember || !baseMember.apply) {
+				throw new Error('no such method in parent : \'' + name + '\'');
+			}
+			return baseMember.apply(base, arguments);
 		}
 	});
 	cls.__new__ = base.__new__;
@@ -552,7 +600,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 	if (mixins) {
 		mixins.forEach(function(mixin) {
 			Class.keys(mixin).forEach(function(name) {
-				if (cls.get(name)) return; // 不要覆盖自定义的
+				if (cls.has(name)) return; // 不要覆盖自定义的
 
 				var member = mixin.get(name);
 
@@ -583,6 +631,9 @@ var Class = this.Class = function() {
 	if (length < 1) throw new Error('bad arguments');
 	// 父类
 	var base = length > 1? arguments[0] : type;
+	if (typeof base != 'function' && typeof base != 'object') {
+		throw new Error('base is not function or object');
+	}
 	if (base) {
 		// IE不能extend native function，用相应的class包装一下
 		if (!_nativeExtendable) {
@@ -596,6 +647,9 @@ var Class = this.Class = function() {
 
 	// 构造器
 	var dict = arguments[length - 1];
+	if (typeof dict != 'function' && typeof dict != 'object') {
+		throw new Error('constructor is not function or object');
+	}
 	if (dict instanceof Function) {
 		var f = dict;
 		dict = {};
@@ -605,7 +659,13 @@ var Class = this.Class = function() {
 	// metaclass
 	var metaclass = dict.__metaclass__ || base.__metaclass__ || type;
 
+	if (!metaclass.__new__ || !metaclass.initialize) {
+		throw new Error('__metaclass__ should have __new__ method and initialize method');
+	}
 	var cls = metaclass.__new__(metaclass, null, base, dict);
+	if (!cls || typeof cls != 'function') {
+		throw new Error('__new__ method should return cls');
+	}
 	metaclass.initialize(cls, null, base, dict);
 
 	return cls;
@@ -623,6 +683,7 @@ Class.create = function() {
 	cls.__subclasses__ = subclassesgetter;
 	cls.__mixin__ = cls.set = membersetter;
 	cls.get = membergetter;
+	cls.has = hasmember;
 	return cls;
 };
 
@@ -630,6 +691,9 @@ Class.create = function() {
  * mixin时调用mixin的initialize方法，保证其中的初始化成员能够被执行
  */
 Class.initMixins = function(cls, instance) {
+	if (!cls) {
+		return;
+	}
 	// 初始化父类的mixin
 	if (cls.__base__) {
 		Class.initMixins(cls.__base__, instance);
@@ -637,7 +701,9 @@ Class.initMixins = function(cls, instance) {
 	if (cls.__mixins__) {
 		for (var i = 0, l = cls.__mixins__.length, mixin; i < l; i++) {
 			mixin = cls.__mixins__[i];
-			if (mixin.prototype.initialize) mixin.prototype.initialize.call(instance);
+			if (mixin.prototype && typeof mixin.prototype.initialize == 'function') {
+				mixin.prototype.initialize.call(instance);
+			}
 		}
 	}
 };
@@ -649,19 +715,28 @@ Class.initMixins = function(cls, instance) {
  * })
  */
 Class.mixin = function(dict, cls) {
+	if (!dict || typeof dict != 'object') {
+		return;
+	}
+	if (cls === Array) {
+		cls = ArrayClass;
+	} else if (cls === String) {
+		cls = StringClass;
+	}
+
 	dict.__mixins__ = dict.__mixins__ || [];
 	dict.__mixins__.push(cls);
 };
 
 Class.hasProperty = function(obj, name) {
-	return (name in obj.__properties__);
+	return (obj && obj.__properties__) ? (name in obj.__properties__) : false;
 };
 
 /**
  * 所有properties
  */
 Class.getPropertyNames = function(obj) {
-	return Object.keys(obj.__properties__);
+	return (obj && obj.__properties__) ? Object.keys(obj.__properties__) : [];
 };
 
 /**
@@ -680,13 +755,16 @@ Class.inject = function(cls, host, args) {
 	var p = Class.getInstance(cls);
 	object.extend(host, p);
 	Class.initMixins(cls, host);
-	if (cls.prototype.initialize) cls.prototype.initialize.apply(host, args);
+	if (typeof cls.prototype.initialize == 'function') cls.prototype.initialize.apply(host, args);
 };
 
 /**
  * 获取一个class的继承链
  */
 Class.getChain = function(cls) {
+	if (!cls) {
+		return [];
+	}
 	var result = [cls];
 	while (cls.__base__) {
 		result.push(cls.__base__);
@@ -709,10 +787,10 @@ Class.getInstance = function(cls) {
  * 会在Class.mixin中用到
  */
 Class.getAllSubClasses = function(cls) {
+	if (!cls || !cls.__subclassesarray__) {
+		return [];
+	}
 	var array = cls.__subclassesarray__;
-    if (!array) {
-        return [];
-    }
 	var queue = [].concat(array), ele = queue.shift(), subs;
 	while (ele != null) {
 		subs = ele.__subclassesarray__;
@@ -730,6 +808,9 @@ Class.getAllSubClasses = function(cls) {
  * 获取类成员通过cls.get(name)
  */
 Class.keys = function(cls) {
+	if (!cls || !cls.prototype) {
+		return [];
+	}
 	keys = Object.keys(cls.prototype.__properties__);
 	for (var prop in cls.prototype) {
     	keys.push(prop);
@@ -806,8 +887,8 @@ var createNativeClass = function(source, methodNames) {
 
 ArrayClass = createNativeClass(Array, ["concat", "indexOf", "join", "lastIndexOf", "pop", "push", "reverse", "shift", "slice", "sort", "splice", "toString", "unshift", "valueOf", "forEach", "some", "every", "map", "filter", "reduce", "reduceRight"]);
 ArrayClass.prototype.length = 0;
-StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "indexOf", "lastIndexOf", "match", "replace", "search", "slice", "split", "substr", "substring", "toLowerCase", "toUpperCase", "valueOf"]);
-
+StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "indexOf", "lastIndexOf", "match", "replace", "search", "slice", "split", "substr", "substring", "toLowerCase", "toUpperCase", "valueOf", "trim"]);
+StringClass.prototype.length = 0;
 })();
 
 (function() {
@@ -907,21 +988,35 @@ LoaderRuntime.prototype.checkDone = function() {
 
 this.LoaderRuntime = LoaderRuntime;
 
+// 计算当前引用objectjs的页面文件的目录路径
+function calculatePageDir() {
+	var loc = window['location'];
+	var pageUrl = loc.protocol + '//' + loc.host + (loc.pathname.charAt(0) !== '/' ? '/' : '') + loc.pathname; 
+	// IE 下文件系统是以\为分隔符，统一改为/
+	if (pageUrl.indexOf('\\') != -1) {
+		pageUrl = pageUrl.replace(/\\/g, '/');
+	}
+	var pageDir = './';
+	if (pageUrl.indexOf('/') != -1) {
+		// 去除文件，留下目录path
+		pageDir = pageUrl.substring(0, pageUrl.lastIndexOf('/') + 1);
+	}
+	return pageDir;
+}
+
+
+var pageDir = calculatePageDir();
+
 /**
  * object的包管理器
  * 这个class依赖于object._lib ，且会修改它
  */
 this.Loader = new Class(function() {
 
-	// 模块
-	function Module(name) {
-		this.__name__ = name;
-	}
-	Module.prototype.toString = function() {
-		return '<module \'' + this.__name__ + '\'>';
-	};
-
 	this.scripts = document.getElementsByTagName('script');
+
+	// 用于保存url与script节点的键值对
+	this._urlNodeMap = {};
 
 	this.initialize = function(self) {
 		self.useCache = true;
@@ -1144,6 +1239,55 @@ this.Loader = new Class(function() {
 	};
 
 	/**
+	 * 通过一个src，获取对应文件的绝对路径
+	 * 例如：http://hg.xnimg.cn/a.js -> http://hg.xnimg.cn/a.js
+	 *       file:///dir/a.js -> file:///dir/a.js
+	 *       in http://host/b/c/d/e/f.html, load ../g.js -> http://host/a/b/d/g.js
+	 *       in file:///dir/b/c/d/e/f.html, load ../g.js -> file:///dir/a/b/d/g.js
+	 *
+	 * @param src 地址
+	 */
+	this._getAbsolutePath = staticmethod(function(src) {
+		// 如果本身是绝对路径，则返回src的清理版本
+		if (src.indexOf('://') != -1 || src.indexOf('//') === 0) {
+			return cleanPath(src);
+		} else {
+			return cleanPath(pageDir + src);
+		}
+
+		/**
+		 * 清理路径url，去除相对寻址符号
+		 */
+		function cleanPath(path) {
+			// 去除多余的/
+			path = path.replace(/([^:\/])\/+/g, '$1\/');
+			// 如果没有相对寻址，直接返回path
+			if (path.indexOf('.') === -1) {
+				return path;
+			}
+
+			var parts = path.split('/');
+			// 把所有的普通var变量都写在一行，便于压缩
+			var result = [];
+
+			for (var i = 0, part, len = parts.length; i < len; i++) {
+				part = parts[i];
+				if (part === '..') {
+					if (result.length === 0) {
+						throw new Error('invalid path: ' + path);
+					}
+					result.pop();
+				} else if (part !== '.') {
+					result.push(part);
+				}
+			}
+
+			// 去除尾部的#号
+			return result.join('/').replace(/#$/, '');
+		}
+	});
+
+	/**
 	 * 加载一个script, 执行callback
 	 * 有冲突检测，如果连续调用两次loadScript同一src的话，则第二个调用会等第一个完毕后直接执行callback，不会加载两次。
 	 *
@@ -1155,22 +1299,17 @@ this.Loader = new Class(function() {
 			throw new Error('src should be string');
 		}
 		src = src.trim();
-		if (!!useCache) {
-			var scripts = cls.get('scripts');
-			for (var i = 0, script, l = scripts.length; i < l; i++) {
-				script = scripts[i];
-				//src有可能是相对路径，而script.src是绝对路径，导致不一致
-				if (script.src && 
-						(script.src.indexOf(src) == script.src.length - src.length)) {
-					// 连续调用，此脚本正在加载呢
-					if (script.loading) {
-						// 增加一个回调即可
-						script.callbacks.push(callback);
-					} else {
-						callback(script);
-					}
-					return;
+		var absPath = cls._getAbsolutePath(src);
+		if (useCache) {
+			var urlNodeMap = cls.get('_urlNodeMap'), scriptNode = urlNodeMap[absPath];
+			if (scriptNode) {
+				if (scriptNode.loading) {
+					// 增加一个回调即可
+					scriptNode.callbacks.push(callback);
+				} else {
+					callback(scriptNode);
 				}
+				return;
 			}
 		}
 
@@ -1213,8 +1352,35 @@ this.Loader = new Class(function() {
 
 		document.getElementsByTagName('head')[0].insertBefore(ele, null);
 
+		if (useCache) { 
+			// 利用绝对路径来存键值对，key为绝对路径，value为script节点
+			urlNodeMap[absPath] = ele;
+		}
 	});
 
+	/**
+	 * 根据src属性，删除一个script标签，并且清除对应的键值对缓存记录
+	 * 目前只供单元测试还原测试环境使用
+	 *
+	 * @param src 路径
+	 */
+	this.removeScript = classmethod(function(cls, src) {
+		if (!src || typeof src != 'string') {
+			throw new Error('src should be string');
+		}
+		src = src.trim();
+		// 转换为绝对路径
+		var absPath = cls._getAbsolutePath(src);
+		// 获取节点
+		var urlNodeMap = cls.get('_urlNodeMap'), scriptNode = urlNodeMap[absPath];
+		// 如果节点存在，则删除script，并从缓存中清空
+		if (scriptNode) {
+			delete urlNodeMap[absPath];
+			scriptNode.parentNode.removeChild(scriptNode);
+			scriptNode = null;
+		}
+	});
+	
 	/**
 	 * 处理传入的uses参数
 	 * 在parseUses阶段不需要根据名称判断去重（比如自己use自己），因为并不能避免所有冲突，还有循环引用的问题（比如 core use dom, dom use core）
@@ -1226,6 +1392,10 @@ this.Loader = new Class(function() {
 			return uses;
 		}
 		if (typeof uses == 'string') {
+			uses = uses.trim();
+			if (/^\.[^\/]|\.$/.test(uses)) {
+				throw new Error('uses should not startWith/endWith \'.\', except startWith \'./\'');
+			}
 			uses = uses.replace(/^,*|,*$/g, '');
 			uses = uses.split(/\s*,\s*/ig);
 		}
@@ -1348,3 +1518,6 @@ this.Loader = new Class(function() {
 object.add('window', function(exports) {
 	return window;
 });
+
+
+

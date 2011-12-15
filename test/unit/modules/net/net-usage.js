@@ -15,41 +15,19 @@ test('net.ajaxRequst - correct url', function() {
 	});
 });
 
-test('net.ajaxRequst - wrong url', function() {
-	return;
-	expect(1);
-	object.use('net', function(exports, net) {
-		stop();
-		net.ajaxRequest('http://not-exists.renren.com', function(obj) {
-			start();
-			ok(false, 'wrong url, should not call the callback');
-		});
-		raises(function() {
-			net.ajaxRequest('http://fdasjlfjdajfa.abc.com', function(obj) {
-				start();
-				ok(false, 'wrong url, should not call the callback');
-			});
-		}, 'when ajaxproxy.htm is not exist, some information should be given');
-	});
-});
-
 test('net.ajaxRequst - ajaxProxies', function() {
 	object.use('net', function(exports, net) {
 		stop();
 		net.ajaxRequest('http://www.renren.com', function() {
 			start();
-			setTimeout(function() {
-				ok(net.ajaxProxies['www.renren.com'] != null, 'XHR object of www.renren.com is cached');
-				equal(Object.keys(net.ajaxProxies).length, 1, '1 cached XHR object');
-				stop();
-				net.ajaxRequest('http://blog.renren.com', function() {
-					start();
-					setTimeout(function() {
-						ok(net.ajaxProxies['blog.renren.com'] != null, 'XHR object of blog.renren.com is cached');
-						equal(Object.keys(net.ajaxProxies).length, 2, '2 cached XHR objects');
-					}, 10);
-				});
-			}, 10);
+			ok(net.ajaxProxies['www.renren.com'] != null, 'XHR object of www.renren.com is cached');
+			equal(Object.keys(net.ajaxProxies).length, 1, '1 cached XHR object');
+			stop();
+			net.ajaxRequest('http://blog.renren.com', function() {
+				start();
+				ok(net.ajaxProxies['blog.renren.com'] != null, 'XHR object of blog.renren.com is cached');
+				equal(Object.keys(net.ajaxProxies).length, 2, '2 cached XHR objects');
+			});
 		});
 	});
 });
@@ -89,6 +67,10 @@ test('net.Request - request framework', function() {
 	});
 });
 
+var chrome = false;
+object.use('ua', function(exports, ua) {
+	chrome = ua.ua.chrome;
+});
 test('net.Request - success', function() {
 	// some event fire error in IE, onsuccess will be executed after success event fired, so success execute twice
 	//expect(11);
@@ -100,7 +82,11 @@ test('net.Request - success', function() {
 			onSuccess : function(data) {
 				start();
 				ok(data.responseText != null, 'responseText is not null, from onSuccess');
-				ok(data.responseXML != null, 'responseXML is not null, from onSuccess');
+				//http://www.w3.org/TR/XMLHttpRequest/#the-responsexml-attribute
+				//http://www.w3.org/TR/XMLHttpRequest/#document-response-entity-body
+				//If final MIME type is not null, text/xml, application/xml, and does not end in +xml, return null.
+				var func = chrome ? equal : notEqual;
+				func(data.responseXML, null, 'responseXML is null, from onSuccess');
 				equal(data.responseText, request._xhr.responseText, 'data.responseText is from request._xhr');
 				equal(data.responseXML, request._xhr.responseXML, 'data.responseXML is from request._xhr');
 				equal(Object.keys(net.ajaxProxies).length, 1, 'net.ajaxProxies has one element now');
@@ -108,12 +94,14 @@ test('net.Request - success', function() {
 			},
 			onsuccess : function(data) {
 				start();
+				var func = chrome ? equal : notEqual;
 				ok(data.responseText != null, 'responseText is not null, from onsuccess');
-				ok(data.responseXML != null, 'responseXML is not null, from onsuccess');
+				func(data.responseXML, null, 'responseXML is null, from onsuccess');
 			},
 			oncomplete : function(data) {
-				start();
-				ok(data.responseXML != null, 'responstXML is not null, from oncomplete');
+				var func = chrome ? equal : notEqual;
+				ok(data.responseText != null, 'responseText is not null, from oncomplete');
+				func(data.responseXML, null, 'responstXML is null, from oncomplete');
 			}
 		});
 		request.addEvent('success', function(data) {
@@ -129,37 +117,7 @@ test('net.Request - success', function() {
 	});
 });
 
-test('net.Request - error host', function() {
-	return;
-	ok(false, 'how to catch this kind of error??? try { if(iframe.contentWindow.getTransport) ...} catch (e){}');
-	object.use('net', function(exports, net) {
-		try {
-			var request = new net.Request({
-				url : 'http://www.____.com',
-				onerror : function(data) {
-					ok(true, 'request onerror called');
-				}
-			});
-			request.send();
-		} catch (e) {
-			ok(false, 'not-exists host should raise error : ' + e);
-		}
-		try {
-			var request = new net.Request({
-				url : 'http://www.baidu.com',
-				onerror : function(data) {
-					ok(true, 'request onerror called');
-				}
-			});
-			request.send();
-		} catch (e) {
-			ok(false, 'not-exists host should raise error : ' + e);
-		}
-	});
-});
-
 test('net.Request - error url', function() {
-	return;
 	object.use('net', function(exports, net) {
 		stop();
 		var request = new net.Request({

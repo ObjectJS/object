@@ -8,7 +8,10 @@ var ajaxProxies = this.ajaxProxies = {};
  * callback唯一参数返回 XMLHttpRequest 对象实例
  */
 this.ajaxRequest = function(url, callback) {
-	if(!callback || typeof callback != 'function') {
+	if (!url || typeof url != 'string' || url.trim().length == 0) {
+		return;
+	}
+	if (!callback || typeof callback != 'function') {
 		callback = function(){};
 	}
 	var tmpA = document.createElement('a');
@@ -27,13 +30,25 @@ this.ajaxRequest = function(url, callback) {
 				iframe.src = protocol + '//' + hostname + '/ajaxproxy.htm';
 				if (iframe.attachEvent) {
 					iframe.attachEvent('onload', function () {
-						callback(iframe.contentWindow.getTransport());
+						try {
+							var transport = iframe.contentWindow.getTransport();
+						} catch (e) {
+							throw new Error('message : ' + e.message + ' from url : ' + url);
+						}
+						// ajaxProxies先缓存，避免callback异常导致缓存没有执行
 						ajaxProxies[hostname] = iframe.contentWindow;
+						callback(transport);
 					});
 				} else {
 					iframe.onload = function () {
-						callback(iframe.contentWindow.getTransport());
+						try {
+							var transport = iframe.contentWindow.getTransport();
+						} catch (e) {
+							throw new Error('message : ' + e.message + ' from url : ' + url);
+						}
+						// ajaxProxies先缓存，避免callback异常导致缓存没有执行
 						ajaxProxies[hostname] = iframe.contentWindow;
+						callback(transport);
 					};
 				}
 			});
@@ -76,6 +91,7 @@ this.Request = new Class(function() {
 	Class.mixin(this, events.Events);
 
 	this.initialize = function(self, options) {
+		options = options || {};
 		self.url = options.url || '';
 		self.method = options.method || 'get';
 		self.headers = {};
@@ -89,9 +105,9 @@ this.Request = new Class(function() {
 	};
 
 	/**
-	* 将data作为数据进行发送
-	* @param {string} data 发送的数据
-	*/
+ 	 * 将data作为数据进行发送
+	 * @param {string} data 发送的数据
+	 */
 	this.send = function(self, data) {
 		exports.ajaxRequest(self.url, function(xhr) {
 			self._xhr = xhr;
@@ -103,13 +119,13 @@ this.Request = new Class(function() {
 				if (xhr.readyState === 4) {
 
 					// IE6 dont's support getResponseHeader method
-					//if (xhr.getResponseHeader('Content-Type') == 'text/json') {
+					// if (xhr.getResponseHeader('Content-Type') == 'text/json') {
 						//xhr.responseJSON = JSON.parse(xhr.responseText)
-					//}
+					// }
 
 					self.responseText = xhr.responseText;
 					self.responseXML = xhr.responseXML;
-					//self.responseJSON = xhr.responseJSON;
+					// self.responseJSON = xhr.responseJSON;
 
 					// Compatible
 					eventData.responseText = xhr.responseText;

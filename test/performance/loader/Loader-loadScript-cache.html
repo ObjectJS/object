@@ -1,0 +1,23 @@
+<!doctype>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<script type="text/javascript" src="http://xnimg.cn/n/core/object-all.js"></script>
+		<script>
+			// var start = +new Date();
+			// for(var i=0; i<100; i++) {
+			// 	Loader.loadScript_old('./empty.js', function(){}, true);
+			// }
+			// var end = + new Date();
+			// console.log('old : ' + (end - start));
+			var start = +new Date();
+			for(var i=0; i<100; i++) {
+				Loader.loadScript('./empty.js', function(){}, true);
+			}
+			var end = + new Date();
+			console.log('new : ' + (end - start));
+		</script>
+	</head>
+	<body>
+	</body>
+</html>
