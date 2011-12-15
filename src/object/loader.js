@@ -308,6 +308,9 @@ CommonJSDependency.prototype.load = function(runtime, callback) {
 	runtime.loadModule(fullId, id, callback);
 };
 
+/**
+ * 获取此依赖的引用
+ */
 CommonJSDependency.prototype.getRef = function(runtime) {
 	var root = runtime.getName(this.moduleId);
 	return runtime.modules[root];
@@ -385,6 +388,9 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 	nextPart(null, context);
 };
 
+/**
+ * 获取此依赖的引用
+ */
 ObjectDependency.prototype.getRef = function(runtime) {
 	var root = runtime.getName(this.root);
 	return runtime.modules[root];
