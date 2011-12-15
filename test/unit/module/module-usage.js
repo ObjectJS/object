@@ -37,7 +37,7 @@ test('sys.molules - submodule by execute', function() {
 		equal(this.__name__, 'a.b.c');
 	});
     
-	object.add('test1.a', './b.c, sys', function(exports, b, sys) {
+	object.add('test1.a', './b/c, sys', function(exports, c, sys) {
 		this.name = 'test1.a';
 		equal(this.__name__, 'a');
 	});
@@ -49,7 +49,7 @@ test('sys.molules - submodule by execute', function() {
 			ok(false, 'sys is undefined when use ./a, test2, test2, test2, test2, sys');
 		} else {
 			ok(sys.modules['a'] != null, 'test1.a is used by ./a, so a is in sys.modules');
-			ok(sys.modules['a.b'] != null, 'a.b is in sys.modules');
+			ok(sys.modules['a.b'] == null, 'a.b is not in sys.modules');
 			ok(sys.modules['a.b.c'] != null, 'a.b.c is in sys.modules');
 			ok(sys.modules['test2'] != null, 'test2 is in sys.modules');
 			ok(sys.modules['test2.c'] != null, 'test2.c is in sys.modules');
@@ -71,7 +71,7 @@ test('sys.molules - submodule by use', function() {
 		equal(this.__name__, 'test4.a.b.c');
 	});
     
-	object.add('test4.a', './b.c, sys', function(exports, b, sys) {
+	object.add('test4.a', './b/c, sys', function(exports, c, sys) {
 		this.name = 'test4.a';
 		equal(this.__name__, 'test4.a');
 	});
@@ -82,7 +82,7 @@ test('sys.molules - submodule by use', function() {
 
 	object.use('test4, sys', function(exports, test, sys) {
 		ok(sys.modules['test4.a'] != null, 'test4.a is used by ./a, so a is in sys.modules');
-		ok(sys.modules['test4.a.b'] != null, 'a.b is in sys.modules');
+		ok(sys.modules['test4.a.b'] == null, 'a.b is not in sys.modules');
 		ok(sys.modules['test4.a.b.c'] != null, 'a.b.c is in sys.modules');
 		ok(sys.modules['test3'] != null, 'test3 is in sys.modules');
 		ok(sys.modules['test3.c'] != null, 'test3.c is in sys.modules');
@@ -152,9 +152,8 @@ test('relative module - use', function() {
 		equal(c.__name__, 'foo2.c', 'module name with same prefix.');
 	});
 	object.add('foo.a.b.c', function(exports) { });
-	object.add('foo.a', './b.c, sys', function(exports, b, sys) {
-		equal(b.__name__, 'foo.a.b', 'relative submodule name.');
-		equal(b.c.__name__, 'foo.a.b.c', 'global context name.');
+	object.add('foo.a', './b/c, sys', function(exports, c, sys) {
+		equal(c.__name__, 'foo.a.b.c', 'relative submodule name.');
 	});
 	object.add('foo.b', function(exports) {
 	});
@@ -170,9 +169,8 @@ test('relative module - use', function() {
 
 	object.add('foo.a.b.c', function(exports) {
 	});
-	object.add('foo.a', './b.c, sys', function(exports, b, sys) {
-		equal(b.__name__, 'a.b', 'relative submodule name.');
-		equal(b.c.__name__, 'a.b.c', 'ralative context module name.');
+	object.add('foo.a', './b/c, sys', function(exports, c, sys) {
+		equal(c.__name__, 'a.b.c', 'relative submodule name.');
 	});
 	object.add('foo', './a', function(exports, a) {
 	});
