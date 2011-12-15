@@ -45,6 +45,9 @@ CommonJSPackage.prototype = new Package();
 
 CommonJSPackage.prototype.constructor = CommonJSPackage;
 
+/**
+ * 执行一个package，返回其exports
+ */
 CommonJSPackage.prototype.execute = function(name, runtime) {
 	var exports = runtime.modules[name] || new Module(name);
 	var returnExports = this.factory.call(exports, this.createRequire(name, runtime), exports, this);
@@ -97,6 +100,9 @@ ObjectPackage.prototype = new Package();
 
 ObjectPackage.prototype.constructor = ObjectPackage;
 
+/**
+ * 执行一个package，返回其exports
+ */
 ObjectPackage.prototype.execute = function(name, runtime) {
 	var exports = runtime.modules[name] || new Module(name);
 	var args = [exports];
