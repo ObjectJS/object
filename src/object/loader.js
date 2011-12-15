@@ -950,8 +950,8 @@ var Loader = new Class(function() {
 			if (factory.length == args.length + 1) {
 				if (typeof console != 'undefined') {
 					console.warn('object.use即将不再支持第一个exports参数，请尽快删除。');
-					args.unshift(exports);
 				}
+				args.unshift(exports);
 			}
 			factory.apply(null, args);
 		});
