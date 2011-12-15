@@ -181,7 +181,7 @@ test('use-usage', function() {
 	loader.add('b', function(exports) {
 		exports.b = 1;
 	});
-	loader.use('a,b', function(a, b) {
+	loader.use('a,b', function(exports, a, b) {
 		equal(a.a, 1, 'module a used successfully');
 		equal(b.b, 1, 'module b used successfully');
 	});
