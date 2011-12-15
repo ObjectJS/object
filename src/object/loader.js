@@ -117,7 +117,9 @@ ObjectPackage.prototype.execute = function(name, runtime) {
 		// 检测是否有子模块引用了本模块
 		if (exports.__empty_refs__) {
 			exports.__empty_refs__.forEach(function(ref) {
-				if (console) console.warn(ref + '无法正确获得' + name + '模块的引用。因为该模块是通过return返回模块实例的。');
+				if (typeof console != 'undefined') {
+					console.warn(ref + '无法正确获得' + name + '模块的引用。因为该模块是通过return返回模块实例的。');
+				}
 			});
 		}
 
@@ -762,7 +764,9 @@ var Loader = new Class(function() {
 		// 如果节点存在，则删除script，并从缓存中清空
 		if (scriptNode) {
 			delete urlNodeMap[absPath];
-			scriptNode.parentNode.removeChild(scriptNode);
+			if (scriptNode.parentNode) {
+				scriptNode.parentNode.removeChild(scriptNode);
+			}
 			scriptNode = null;
 		}
 	});
@@ -944,7 +948,9 @@ var Loader = new Class(function() {
 			});
 
 			if (['exports', 'e'].indexOf(/^function.*\((.*)\)/.exec(factory.toString())[1].split(/\s*,\s*/)[0]) != -1) {
-				console.warn('object.use即将不再支持第一个exports参数，请尽快删除。');
+				if (typeof console != 'undefined') {
+					console.warn('object.use即将不再支持第一个exports参数，请尽快删除。');
+				}
 				args.unshift(exports);
 			}
 			factory.apply(null, args);

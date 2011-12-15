@@ -141,18 +141,22 @@ this.Events = new Class(function() {
 			var event = arguments.length > 1? eventData : exports.wrapEvent(window.event);
 			var funcs = self.__eventListeners? self.__eventListeners[type] : null;
 			if (funcs) {
+				funcs = funcs.slice(0);
 				funcs.forEach(function(func) {
 					try {
 						func.call(self, event);
 					} catch(e) {
 					}
 				});
+				funcs = null;
 			}
 			var natives = self.__nativeEvents? self.__nativeEvents[type] : null;
 			if (natives) {
+				natives = natives.slice(0);
 				natives.forEach(function(func) {
 					func.call(self, event);
 				});
+				natives = null;
 			}
 		});
 	}
@@ -190,7 +194,7 @@ this.Events = new Class(function() {
 	// IE下保证onxxx事件处理函数正常执行
 	function attachOnHandlerAsEventListener(self, type) {
 		// 只有DOM节点的标准事件，才会由浏览器来执行标准方法
-		if (type in NATIVE_EVENTS && self.nodeType == 1) return;
+		if (type in NATIVE_EVENTS && self.nodeType == 1 && isNodeInDOMTree(self)) return;
 
 		if (!self.__eventListeners) {
 			self.__eventListeners = {};
@@ -225,6 +229,27 @@ this.Events = new Class(function() {
 			// 将新的事件监听方法备份
 			self['__on' + type] = onhandler;
 		}
+	}
+
+	/**
+	 * 判断节点是否是DOM树中的节点
+	 *
+	 * 在IE下，如果不是DOM树中的节点，标准事件的onxxx监听不会触发
+	 * 因此在fireEvent时需要判断当前节点是否在DOM树中
+	 */
+	function isNodeInDOMTree(node) {
+		if (!node) {
+			return false;
+		}
+		var parent = node.parentNode;
+		var top = document.documentElement;
+		while (parent) {
+			if (parent == top) {
+				return true;
+			}
+			parent = parent.parentNode;
+		}
+		return false;
 	}
 
 	this.initialize = function(self) {
@@ -410,8 +435,27 @@ this.Events = new Class(function() {
 			var event = exports.wrapEvent(document.createEventObject());
 			object.extend(event, eventData);
 
-			nativeFireEvent.call(self, 'on' + type, event);
-			return event;
+			// 判断节点是否是加入DOM树的节点
+			if (isNodeInDOMTree(self)) {
+				// 如果节点在放入DOM树之前调用过addEvent，则标准事件的处理函数onxxx将会被备份
+				// 如果在备份之后，将节点插入DOM树，此时标准事件会自动调用onxxx，而onxxx已经备份过一次了
+				// 所以在fireEvent之前，需要先检查一下列表中是否已经添加过onxxx的备份，如果添加过，需要删除
+				var onhandlerBak = self['__on' + type];
+				var funcs = self.__eventListeners[type];
+				if (onhandlerBak && funcs) {
+					for (var i = 0, l = funcs.length; i < l; i++) {
+						if (funcs[i] == onhandlerBak) {
+							funcs.splice(i, 1);
+							break;
+						}
+					}
+					self['__on' + type] = null;
+				}
+
+				// 触发IE标准事件
+				nativeFireEvent.call(self, 'on' + type, event);
+				return event;
+			}
 		}
 
 		attachOnHandlerAsEventListener(self, type);
@@ -419,6 +463,7 @@ this.Events = new Class(function() {
 
 		var funcs = self.__eventListeners[type];
 		if (funcs) {
+			funcs = funcs.slice(0);
 			for (var i = 0, j = funcs.length; i < j; i++) {
 				if (funcs[i]) {
 					try {
@@ -427,13 +472,16 @@ this.Events = new Class(function() {
 					}
 				}
 			}
+			funcs = null;
 		}
 
 		var natives = self.__nativeEvents[type];
 		if (natives) {
+			natives = natives.slice(0);
 			natives.forEach(function(func) {
 				func.call(self, event);
 			});
+			natives = null;
 		}
 
 		return event;

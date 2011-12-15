@@ -6,6 +6,6 @@ $(document).ready(function() {
 		{}
 	];
 	for(var i=0,l=config.length - 1; i<l; i++) {
-		$LAB.script(config[i].url + '/index-special.js');
+		$UNIT_TEST_SCRIPT_LOADER.script(config[i].url + '/index-special.js');
 	}
 });
