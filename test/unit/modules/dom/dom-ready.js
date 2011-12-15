@@ -1,5 +1,13 @@
 module('dom.ready')
-var path = $UNIT_TEST_CONFIG.needPath ? 'modules/dom/' : '';
+
+
+if (isJsTestDriverRunning) {
+	var loc = window['location'];
+	var pageUrl = loc.protocol + '//' + loc.host;
+	var path = pageUrl + '/test/test/unit/modules/dom/';
+} else {
+	var path = $UNIT_TEST_CONFIG.needPath ? 'modules/dom/' : '';
+}
 
 function createIframeWithCallback(src, callback) {
 	var iframe = document.createElement('iframe');
@@ -24,6 +32,27 @@ test('dom.ready is usable', function() {
 	});
 });
 
+if (isJsTestDriverRunning) {
+	var domAsyncTest = AsyncTestCase('domAsyncTest');
+
+	// how to export value from iframe in jsTestDriver???
+	/*
+	domAsyncTest.prototype.testIframeIsUsableInJsTestDriver = function(queue) {
+		queue.call('go', function(callbacks) {
+			var callback = callbacks.add(function(value) {
+				assertEquals('ok', value, 1);
+			});
+			var iframe = createIframeWithCallback('dom-ready-iframe-test.html', function() {
+				clearTimeout(timeout);
+				callback(1);
+			});
+			var timeout = setTimeout(function() {
+				callback(0);
+			}, 1000);
+		});
+	}
+	*/
+} else {
 test('dom.ready is usable in iframe', function() {
 	if (document.location.href.indexOf('test-runner-special.html') != -1) {
 		ok(true, 'run http://xxxx.renren.com/objectjs.org/object/test/unit/modules/dom/index-special.html instead');
@@ -125,3 +154,4 @@ test('dom.ready - dom-ready-dynamic-by-button.html', function() {
 		}, 10);
 	});
 });
+}

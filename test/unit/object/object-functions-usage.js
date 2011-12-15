@@ -35,12 +35,12 @@ test('bind', function() {
 
 test('add and use, basic', function() {
 	object.add('1', function(exports){
-		equal(exports, this, 'exports is equals to this, in module');
+		//equal(exports, this, 'exports is equals to this, in module');
 		this.a = 1;
 	});
 	ok(object._loader.lib['1'] != null, 'module is added');
 	object.use('1', function(exports, a) {
-		equal(exports, this, 'exports is equals to this, in module');
+		//equal(exports, this, 'exports is equals to this, in module');
 		equal(a.a, 1, 'module add and use successfully');
 	});
 	try {
@@ -54,11 +54,13 @@ test('add and use, basic', function() {
 	} catch (e) {}
 
 	try {
-		object.use('a.b.c', function(exports, a){});
-		ok(false, 'un-exists module a.b.c, will cause error');
+		object.use('not_exists_a.b.c', function(exports, a){});
+		ok(false, 'un-exists module not_exists_a.b.c, will cause error');
 	} catch (e) {
-		ok(true, 'un-exists module a.b.c, will cause error : ' + e);
+		ok(true, 'un-exists module not_exists_a.b.c, will cause error : ' + e);
 	};
+	object.remove('1');
+	object.remove('not_exists_', true);
 });
 
 test('add and use, with seperator', function() {
