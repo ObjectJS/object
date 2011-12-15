@@ -1,58 +1,10 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<script type="text/javascript" src="../pub/object.js"></script>
+<script type="text/javascript" src="../pub/object-all.js"></script>
 <!--<script type="text/javascript" src="http://xnimg.cn/n/core/base-all.js"></script>-->
-<script>
-
-	object.add('test2.c', function() {});
-
-	object.add('test2', './c', function(exports, c) {
-	});
-
-	object.add('test.a.b.c', function(exports) {
-		this.name = 'test.a.b.c';
-		console.log(this.__name__);
-	});
-
-	object.add('test.b', function() {
-	});
-    
-	object.add('test.a', 'test, ./b', function(exports, test) {
-		setTimeout(function() {
-			console.log(test.a)
-		}, 0)
-	});
-
-	object.define('test', './a.b, sys', function(require, exports, module) {
-		var a = require('./a');
-		var sys = require('sys');
-
-		console.log(a)
-
-		require.async('./b, test', function(b, test) {
-		});
-
-		return {};
-	});
-
-	object.use('test', function(exports, test) {
-	});
-
-	/*
-	 * 应该输出
-	 * a.b
-	 * a
-	 * __main__
-	 */
-	// object.execute('test');
-
-	// object.use('test, sys', function(exports, test, sys) {
-	//	console.dir(sys.modules)
-	// });
-</script>
-<script>
-</script>
+<script data-src="flashUploader.js" data-module="xn.flashUploader"></script>
+<script src="loader.js"></script>
 </head>
 <body>
 

@@ -10,15 +10,17 @@ test('options is usable', function() {
 });
 
 test('options-usage: overloadsetter', function() {
-	expect(13);
+	expect(12);
 	object.use('options', function(exports, options) {
 		function A(a, b) {
 			equal(Number(a)+1, b, 'a+1 = b');
 		}
 		A(1,2);
 		var A2 = options.overloadsetter(A);
-		A2();		// not call
-		A2(1,2);	// not call
+		//A2();		// not call
+		
+		// key must be string
+		A2('1',2);	// not call
 		A2({1:2});
 		A2({'1':2});
 		A2({'1':2,'2':3});
@@ -71,6 +73,8 @@ test('options-usage: Options', function() {
 			ok(false, 'opt.setOption(name, type) raises error : ' + e);
 		}
 
+		opt.setOption('a', '', 0);
+		opt.setOption('b', '', 0);
 		opt.setOptions({a:1,b:2});
 		equal(opt.getOptions().a, 1, 'ok');
 		equal(opt.getOptions().b, 2, 'ok');

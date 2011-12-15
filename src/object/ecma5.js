@@ -48,7 +48,7 @@ Array.prototype.forEach = Array.prototype.forEach || function(fn, bind) {
  */
 Array.prototype.indexOf = Array.prototype.indexOf || function(str) {
 	for (var i = 0; i < this.length; i++) {
-		if (str == this[i]) {
+		if (str === this[i]) {
 			return i;
 		}
 	}
