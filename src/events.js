@@ -104,25 +104,11 @@ this.wrapEvent = function(e) {
 	return e;
 };
 
-// native events from Mootools
-var NATIVE_EVENTS = {
-	click: 2, dblclick: 2, mouseup: 2, mousedown: 2, contextmenu: 2, //mouse buttons
-	mousewheel: 2, DOMMouseScroll: 2, //mouse wheel
-	mouseover: 2, mouseout: 2, mousemove: 2, selectstart: 2, selectend: 2, //mouse movement
-	keydown: 2, keypress: 2, keyup: 2, //keyboard
-	orientationchange: 2, // mobile
-	touchstart: 2, touchmove: 2, touchend: 2, touchcancel: 2, // touch
-	gesturestart: 2, gesturechange: 2, gestureend: 2, // gesture
-	focus: 2, blur: 2, change: 2, reset: 2, select: 2, submit: 2, paste: 2, oninput: 2, //form elements
-	load: 2, unload: 1, beforeunload: 2, resize: 1, move: 1, DOMContentLoaded: 1, readystatechange: 1, //window
-	error: 1, abort: 1, scroll: 1 //misc
-};
-
 /**
  * 事件系统
  */
 this.Events = new Class(function() {
-	
+
 	// 在标准浏览器中使用的是系统事件系统，无法保证nativeEvents在事件最后执行。
 	// 需在每次addEvent时，都将nativeEvents的事件删除再添加，保证在事件队列最后，最后才执行。
 	function moveNativeEventsToTail(self, type) {
@@ -155,76 +141,6 @@ this.Events = new Class(function() {
 				});
 			}
 		});
-	}
-
-	// 不同浏览器对onhandler的执行顺序不一样
-	// 	  IE：最先执行onhandler，其次再执行其他监听函数
-	// 	  Firefox：如果添加多个onhandler，则第一次添加的位置为执行的位置
-	// 	  Chrome ：如果添加多个onhandler，最后一次添加的位置为执行的位置
-	// 
-	// Chrome的做法是符合标准的，因此在模拟事件执行时按照Chrome的顺序来进行
-	//
-	// 保证onxxx监听函数的正常执行，并维持onxxx类型的事件监听函数的执行顺序
-	function addOnHandlerAsEventListener(self, type) {
-		// 只有DOM节点的标准事件，才会由浏览器来执行标准方法
-		if (type in NATIVE_EVENTS && self.nodeType == 1) return;
-
-		var boss = self.__boss || self;
-		var onhandler = self['on' + type], onhandlerBak = boss['__on' + type];
-		// 如果onHandler为空，并且已经添加过，则需要remove
-		if (!onhandler && onhandlerBak) {
-			boss.removeEventListener(type, onhandlerBak, false);
-			boss['__on' + type] = null;
-		}
-		// 如果onHandler不为空，则需要判断是否已经添加过
-		else if (onhandler && onhandler != onhandlerBak) {
-			// 如果已经添加过，则先去除原先添加的方法，再将新的方法加入，并更新备份信息
-			boss.removeEventListener(type, onhandlerBak, false);
-			// 将新的事件监听方法加入列表
-			boss.addEventListener(type, onhandler, false);
-			// 将新的事件监听方法备份
-			boss['__on' + type] = onhandler;
-		}
-	}
-	
-	// IE下保证onxxx事件处理函数正常执行
-	function attachOnHandlerAsEventListener(self, type) {
-		// 只有DOM节点的标准事件，才会由浏览器来执行标准方法
-		if (type in NATIVE_EVENTS && self.nodeType == 1) return;
-
-		if (!self.__eventListeners) {
-			self.__eventListeners = {};
-		}
-		if (!self.__eventListeners[type]) {
-			self.__eventListeners[type] = [];
-		}
-		var funcs = self.__eventListeners[type];
-		var l = funcs.length;
-		var onhandler = self['on' + type], onhandlerBak = self['__on' + type];
-		// 如果onHandler为空，并且已经添加过，则需要remove
-		if (!onhandler && onhandlerBak) {
-			for (var i = 0; i < l; i++) {
-				if (funcs[i] == onhandlerBak) {
-					funcs.splice(i, 1);
-					break;
-				}
-			}
-			self['__on' + type] = null;
-		}
-		// 如果onHandler不为空，则需要判断是否已经添加过
-		else if (onhandler && onhandler != onhandlerBak) {
-			// 如果已经添加过，则先去除原先添加的方法，再将新的方法加入，并更新备份信息
-			for (var i = 0; i < l; i++) {
-				if (funcs[i] == onhandlerBak) {
-					funcs.splice(i, 1);
-					break;
-				}
-			}
-			// 将新的事件监听方法加入列表
-			funcs.push(onhandler);
-			// 将新的事件监听方法备份
-			self['__on' + type] = onhandler;
-		}
 	}
 
 	this.initialize = function(self) {
@@ -273,9 +189,6 @@ this.Events = new Class(function() {
 			type = 'mouseout';
 		}
 
-		//处理onxxx类型的事件处理函数
-		addOnHandlerAsEventListener(self, type);
-
 		boss.addEventListener(type, func, cap);
 		moveNativeEventsToTail(self, type);
 
@@ -300,7 +213,6 @@ this.Events = new Class(function() {
 			return f === func;
 		})) return;
 
-		attachOnHandlerAsEventListener(self, type);
 		funcs.push(func);
 
 	};
@@ -377,8 +289,6 @@ this.Events = new Class(function() {
 		}
 	};
 
-	var nativeFireEvent = document.dispatchEvent ? null : document.createElement('div').fireEvent;
-
 	/**
 	* 触发事件
 	* obj.fireEvent('name', {
@@ -389,43 +299,38 @@ this.Events = new Class(function() {
 	* @param eventData 扩展到event对象上的数据
 	*/
 	this.fireEvent = document.dispatchEvent? function(self, type, eventData) {
-		//fireEvent之前仍然需要检查onxxx类型的事件处理函数
-		addOnHandlerAsEventListener(self, type);
 		var boss = self.__boss || self;
 
+		var triggerName = 'on' + type.toLowerCase();
 		var event = document.createEvent('Event');
 		event.initEvent(type, false, true);
 		object.extend(event, eventData);
 
-		// 火狐下通过dispatchEvent触发事件，在事件监听函数中抛出的异常都不会在控制台给出
-		// see https://bugzilla.mozilla.org/show_bug.cgi?id=503244
+		if (self[triggerName]) {
+			var returnValue = self[triggerName].call(self, event);
+			if (returnValue === false) event.preventDefault();
+		}
+
 		boss.dispatchEvent(event);
 		return event;
 	} : function(self, type, eventData) {
 		if (!eventData) eventData = {};
-
-		// 如果是DOM节点的标准事件，则由浏览器处理onxxx类型的事件处理函数即可
-		// see http://js8.in/731.html
-		if (type in NATIVE_EVENTS && self.nodeType == 1) {
-			var event = exports.wrapEvent(document.createEventObject());
-			object.extend(event, eventData);
-
-			nativeFireEvent.call(self, 'on' + type, event);
-			return event;
-		}
-
-		attachOnHandlerAsEventListener(self, type);
+		var triggerName = 'on' + type.toLowerCase();
 		var event = exports.wrapEvent(eventData);
 
+		if (self[triggerName]) {
+			var returnValue = self[triggerName].call(self, event);
+			if (returnValue === false) event.preventDefault();
+		}
+
+		if (!self.__eventListeners[type]) return event;
 		var funcs = self.__eventListeners[type];
-		if (funcs) {
-			for (var i = 0, j = funcs.length; i < j; i++) {
-				if (funcs[i]) {
+		for (var i = 0, j = funcs.length; i < j; i++) {
+			if (funcs[i]) {
 					try {
 						funcs[i].call(self, event, true);
 					} catch(e) {
 					}
-				}
 			}
 		}
 
@@ -441,3 +346,4 @@ this.Events = new Class(function() {
 });
 
 });
+

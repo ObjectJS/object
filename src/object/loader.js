@@ -45,6 +45,9 @@ CommonJSPackage.prototype = new Package();
 
 CommonJSPackage.prototype.constructor = CommonJSPackage;
 
+/**
+ * 执行一个package，返回其exports
+ */
 CommonJSPackage.prototype.execute = function(name, runtime) {
 	var exports = runtime.modules[name] || new Module(name);
 	var returnExports = this.factory.call(exports, this.createRequire(name, runtime), exports, this);
@@ -97,6 +100,9 @@ ObjectPackage.prototype = new Package();
 
 ObjectPackage.prototype.constructor = ObjectPackage;
 
+/**
+ * 执行一个package，返回其exports
+ */
 ObjectPackage.prototype.execute = function(name, runtime) {
 	var exports = runtime.modules[name] || new Module(name);
 	var args = [exports];
@@ -111,7 +117,9 @@ ObjectPackage.prototype.execute = function(name, runtime) {
 		// 检测是否有子模块引用了本模块
 		if (exports.__empty_refs__) {
 			exports.__empty_refs__.forEach(function(ref) {
-				if (console) console.warn(ref + '无法正确获得' + name + '模块的引用。因为该模块是通过return返回模块实例的。');
+				if (typeof console != 'undefined') {
+					console.warn(ref + '无法正确获得' + name + '模块的引用。因为该模块是通过return返回模块实例的。');
+				}
 			});
 		}
 
@@ -308,6 +316,9 @@ CommonJSDependency.prototype.load = function(runtime, callback) {
 	runtime.loadModule(fullId, id, callback);
 };
 
+/**
+ * 获取此依赖的引用
+ */
 CommonJSDependency.prototype.getRef = function(runtime) {
 	var root = runtime.getName(this.moduleId);
 	return runtime.modules[root];
@@ -385,6 +396,9 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 	nextPart(null, context);
 };
 
+/**
+ * 获取此依赖的引用
+ */
 ObjectDependency.prototype.getRef = function(runtime) {
 	var root = runtime.getName(this.root);
 	return runtime.modules[root];
@@ -750,7 +764,9 @@ var Loader = new Class(function() {
 		// 如果节点存在，则删除script，并从缓存中清空
 		if (scriptNode) {
 			delete urlNodeMap[absPath];
-			scriptNode.parentNode.removeChild(scriptNode);
+			if (scriptNode.parentNode) {
+				scriptNode.parentNode.removeChild(scriptNode);
+			}
 			scriptNode = null;
 		}
 	});
@@ -931,8 +947,10 @@ var Loader = new Class(function() {
 				}
 			});
 
-			if (['exports', 'e'].indexOf(/^function.*\((.*)\)/.exec(factory.toString())[1].split(/\s*,\s*/)[0]) != -1) {
-				console.warn('object.use即将不再支持第一个exports参数，请尽快删除。');
+			if (factory.length == args.length + 1) {
+				if (typeof console != 'undefined') {
+					console.warn('object.use即将不再支持第一个exports参数，请尽快删除。');
+				}
 				args.unshift(exports);
 			}
 			factory.apply(null, args);

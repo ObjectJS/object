@@ -178,52 +178,113 @@ test('relative module - use', function() {
 	object.execute('foo');
 });
 
+
+if (window.isJsTestDriverRunning) {
+	var circularDependencyTestCase = AsyncTestCase('circular dependency - extra');
+
+	circularDependencyTestCase.prototype.testWaitForCircularDependencyModule = function(queue) {
+		expect(11);
+		queue.call('a->b->a', function(callbacks) {
+			var callback = callbacks.add(function() {
+				delete object._loader.lib['a'];
+				delete object._loader.lib['b'];
+			});
+			object.add('a', 'b', function(exports, b) {
+				exports.a = 1;
+			});
+			object.add('b', 'a', function(exports, a) {
+				equal(a.__name__, 'a', 'module a is ok in circular dependency');
+				equal(a.a, undefined, 'a.a is undefined in b, not prepared yet');
+				setTimeout(function() {
+					equal(a.a, 1, 'a.a is ok in b, after 100 ms');
+					callback();
+				}, 100);
+			});
+			object.use('a', function(exports, a) {
+				equal(a.__name__, 'a', 'module a is ok in circular dependency');
+				equal(a.a, 1, 'a.a is ok in circular dependency');
+			});
+		});
+		queue.call('c1->c2->c3->c2', function(callbacks) {
+			var callback = callbacks.add(function() {
+				delete object._loader.lib['c1'];
+				delete object._loader.lib['c2'];
+				delete object._loader.lib['c3'];
+			});
+			object.add('c1', 'c2', function(exports, c2) {
+				exports.c1 = 1;
+			});
+			object.add('c2', 'c3', function(exports, c3) {
+				equal(c3.c3, 1, 'c3.c3 is prepared when use in c2');
+				exports.c2 = 1;
+			});
+			object.add('c3', 'c2', function(exports, c2) {
+				equal(c2.c2, undefined, 'c2.c2 is not prepared when use in c3');
+				setTimeout(function() {
+					equal(c2.c2, 1, 'c2.c2 is prepared, after 100ms');
+					callback();
+				}, 100);
+				exports.c3 = 1;
+			});
+			object.use('c1, c2, c3', function(exports, c1, c2, c3) {
+				equal(c1.c1, 1, 'c1.c1 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
+				equal(c2.c2, 1, 'c2.c2 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
+				equal(c3.c3, 1, 'c3.c3 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
+			});
+		});
+	}
+} else {
+	test('circular dependency - extra', function() {
+		expect(11);
+		object.add('a', 'b', function(exports, b) {
+			exports.a = 1;
+		});
+		object.add('b', 'a', function(exports, a) {
+			equal(a.__name__, 'a', 'module a is ok in circular dependency');
+			equal(a.a, undefined, 'a.a is undefined in b, not prepared yet');
+			stop();
+			setTimeout(function() {
+				start();
+				equal(a.a, 1, 'a.a is ok in b, after 100 ms');
+			}, 100);
+		});
+		object.use('a', function(exports, a) {
+			equal(a.__name__, 'a', 'module a is ok in circular dependency');
+			equal(a.a, 1, 'a.a is ok in circular dependency');
+		});
+		delete object._loader.lib['a'];
+		delete object._loader.lib['b'];
+
+		object.add('c1', 'c2', function(exports, c2) {
+			exports.c1 = 1;
+		});
+		object.add('c2', 'c3', function(exports, c3) {
+			equal(c3.c3, 1, 'c3.c3 is prepared when use in c2');
+			exports.c2 = 1;
+		});
+		object.add('c3', 'c2', function(exports, c2) {
+			equal(c2.c2, undefined, 'c2.c2 is not prepared when use in c3');
+			stop();
+			setTimeout(function() {
+				start();
+				equal(c2.c2, 1, 'c2.c2 is prepared, after 100ms');
+			}, 100);
+			exports.c3 = 1;
+		});
+		object.use('c1, c2, c3', function(exports, c1, c2, c3) {
+			equal(c1.c1, 1, 'c1.c1 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
+			equal(c2.c2, 1, 'c2.c2 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
+			equal(c3.c3, 1, 'c3.c3 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
+		});
+		delete object._loader.lib['c1'];
+		delete object._loader.lib['c2'];
+		delete object._loader.lib['c3'];	
+	});
+}
+
 test('circular dependency', function() {
-	expect(14);
-	object.add('a', 'b', function(exports, b) {
-		exports.a = 1;
-	});
-	object.add('b', 'a', function(exports, a) {
-		equal(a.__name__, 'a', 'module a is ok in circular dependency');
-		equal(a.a, undefined, 'a.a is undefined in b, not prepared yet');
-		stop();
-		setTimeout(function() {
-			start();
-			equal(a.a, 1, 'a.a is ok in b, after 100 ms');
-		}, 100);
-	});
-	object.use('a', function(exports, a) {
-		equal(a.__name__, 'a', 'module a is ok in circular dependency');
-		equal(a.a, 1, 'a.a is ok in circular dependency');
-	});
-	delete object._loader.lib['a'];
-	delete object._loader.lib['b'];
-
-	object.add('c1', 'c2', function(exports, c2) {
-		exports.c1 = 1;
-	});
-	object.add('c2', 'c3', function(exports, c3) {
-		equal(c3.c3, 1, 'c3.c3 is prepared when use in c2');
-		exports.c2 = 1;
-	});
-	object.add('c3', 'c2', function(exports, c2) {
-		equal(c2.c2, undefined, 'c2.c2 is not prepared when use in c3');
-		stop();
-		setTimeout(function() {
-			start();
-			equal(c2.c2, 1, 'c2.c2 is prepared, after 100ms');
-		}, 100);
-		exports.c3 = 1;
-	});
-	object.use('c1, c2, c3', function(exports, c1, c2, c3) {
-		equal(c1.c1, 1, 'c1.c1 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
-		equal(c2.c2, 1, 'c2.c2 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
-		equal(c3.c3, 1, 'c3.c3 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
-	});
-	delete object._loader.lib['c1'];
-	delete object._loader.lib['c2'];
-	delete object._loader.lib['c3'];
-
+	expect(3);
+	
 	object.add('c', 'c', function(exports, c) {
 		exports.c = 1;
 	});
@@ -244,7 +305,6 @@ test('circular dependency', function() {
 	delete object._loader.lib['uuua.ooos'];
 	delete object._loader.lib['uuua'];
 });
-
 test('string starts/ends with .', function() {
 	object.add('used', function(exports) {});
 	try {

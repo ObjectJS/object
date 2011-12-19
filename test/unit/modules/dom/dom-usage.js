@@ -35,9 +35,12 @@ function getProps(obj) {
 	return props;
 }
 
-function createNode(tagName, className) {
+function createNode(tagName, className, id) {
 	var node = document.createElement(tagName);
 	node.className = className;
+	if(id) {
+		node.id = id;
+	}
 	node.style.display = 'none';
 	document.body.appendChild(node);
 	return node;
@@ -45,7 +48,7 @@ function createNode(tagName, className) {
 
 var image = document.createElement('img');
 var path = $UNIT_TEST_CONFIG.needPath ? 'modules/dom/' : '';
-image.src = path + 'image.jpg';
+image.src = 'http://s.xnimg.cn/imgpro/login/login-icon.png';
 
 object.use('dom', function(exports, dom) {
 	window.elementProps = Class.keys(dom.Element);
@@ -116,6 +119,10 @@ test('dom.wrap - method mixinined into element', function() {
 
 test('getElements/getElement', function() {
 	object.use('dom', function(exports, dom) {
+		if (isJsTestDriverRunning) {
+			createNode('div', 'div-for-jstestdriver1');
+			createNode('div', 'div-for-jstestdriver2');
+		}
 		var forms = dom.getElements('div');
 		for (var i=0,l=forms.length; i<l; i++) {
 			assertPropExists(elementProps, forms[i], 'dom.getElements(div)');
@@ -160,6 +167,9 @@ test('getElements/getElement', function() {
 
 test('dom.id', function() {
 	object.use('dom', function(exports, dom) {
+		if (isJsTestDriverRunning) {
+			createNode('div', 'class', 'qunit-header');
+		}
 		var ele = dom.id('qunit-header');
 		assertPropExists(elementProps, ele, 'dom.id(qunit-header)');
 	});
@@ -518,28 +528,29 @@ test('only dom.Element', function() {
 		equal(wrapped.get('tagName'), 'DIV', 'tagname is uppercase');
 		equal(wrapped.parentNode, document.body, 'before disposed, parent node is document.body');
 		wrapped.dispose();
-		notEqual(wrapped.parentNode, document.body, 'after disposed, parent node is not document.body now');
+		ok(wrapped.parentNode != document.body, 'after disposed, parent node is not document.body now');
 
 		var fragment = dom.Element.fromString('<div>text</div>');
 		equal(fragment.innerHTML, 'text', 'DocumentFragment is created, innerHTML is text');
 	});
 });
-//ImageElement
 
+//ImageElement
 test('dom.ImageElement', function() {
 	object.use('dom', function(exports, dom) {
 		image = dom.wrap(image);
 		ok('naturalWidth' in image.__properties__, 'img wrapped successfully');
-		equal(image.width, 50, 'width of head image is 50px');
-		equal(image.height, 50, 'height of head image is 50px');
+		notEqual(image.width, 20, 'width of head image is not 20px');
+		notEqual(image.height, 20, 'height of head image is not 20px');
 		image.width = image.height = 20;
 		equal(image.width, 20, 'width is modified');
 		equal(image.height, 20, 'height is modified');
-		equal(image.get('naturalWidth'), 50, 'image.get(naturalWidth) is still 50');
-		equal(image.get('naturalHeight'), 50, 'image.get(naturalHeight) is still 50');
+		notEqual(image.get('naturalWidth'), 20, 'image.get(naturalWidth) is still not 20');
+		notEqual(image.get('naturalHeight'), 20, 'image.get(naturalHeight) is still not 20');
 		
 	});
 });
+
 //FormElement
 
 test('dom.FormElement', function() {
@@ -622,7 +633,6 @@ test('dom.FormElement', function() {
 		document.body.removeChild(form);
 	});
 });
-
 var ie = false;
 object.use('ua', function(exports, ua) {
 	ie = ua.ua.ie;
@@ -667,6 +677,7 @@ test('dom.FormItemElement - selectionStart/selectionEnd', function() {
 		formItem.dispose();
 	});
 });
+
 //FormItemElement
 test('dom.FormItemElement', function() {
 	object.use('dom', function(exports, dom) {
@@ -793,3 +804,4 @@ test('dom.Elements', function() {
 		elements.dispose();
 	});
 });
+

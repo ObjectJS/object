@@ -350,6 +350,10 @@ test('two onxxx(standard event), 5 handlers, 1, onxxx, 2, onxxx, 3', function() 
 test('two onxxx(standard event in DOM Node), 5 handlers, 1, onxxx, 2, onxxx, 3', function() {
 	expect(5);
 	obj = document.getElementById('qunit-header');
+	if (!obj) {
+		obj = document.createElement('div');
+		document.body.appendChild(obj);
+	}
 	Class.inject(events.Events, obj);
 	var counter = 0;
 	obj.addEvent('click', function() {
@@ -382,7 +386,11 @@ test('two onxxx(standard event in DOM Node), 5 handlers, 1, onxxx, 2, onxxx, 3',
 
 test('two onxxx(standard event in DOM Node - for IE wrap), 5 handlers, 1, onxxx, 2, onxxx, 3', function() {
 	expect(6);
-	obj = dom.id('qunit-header');
+	var obj = dom.id('qunit-header')
+	if (!obj) {
+		obj = dom.wrap(document.createElement('div'));
+		document.body.appendChild(obj);
+	}
 	var counter = 0;
 	obj.addEvent('dblclick', function() {
 		var expect = isIE ? 1 : (isChrome ? 0 : 0);
