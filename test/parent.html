@@ -2,45 +2,24 @@
 <head>
 <meta charset="utf-8" />
 <title>继承</title>
-<script type="text/javascript" src="../src/object.js"></script>
+<script type="text/javascript" src="../pub/object.js"></script>
 <script>
-	var MyClass = new Class(function() {
-		this.initialize = classmethod(function(cls) {
-			alert(cls.__name__);
-		});
-		this.test = function(self) {
-			alert('a');
-		};
-	});
-	MyClass.__name__ = 'MyClass';
+var B = new Class({
+	value: 1,
+	m: function(self) {
+		alert(self.value);
+	}
+});
 
-	var MyClass2 = new Class(MyClass, function() {
-		this.initialize = function(self) {
-			this.parent('fuck');
-			alert('2');
-		};
-		this.test = staticmethod(function(cls, self) {
-			this.parent(self);
-			alert('b');
-		});
-	});
-	MyClass2.__name__ = 'MyClass2';
+var A = new Class({
+	__mixins__: [B],
+	m: function(self) {
+		this.parent(self);
+	}
+});
 
-	var MyClass3 = new Class(MyClass2, function() {
-		this.initialize = function(self) {
-			this.parent(self);
-			alert('3');
-		};
-		this.test = function(self) {
-			this.parent(self);
-			alert('c');
-		};
-	});
-	MyClass3.__name__ = 'MyClass3';
-
-	var myClass3 = new MyClass3();
-	myClass3.test();
-
+var a = new A();
+a.m();
 </script>
 </head>
 <body>
