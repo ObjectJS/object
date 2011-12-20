@@ -118,6 +118,13 @@ var NATIVE_EVENTS = {
 	error: 1, abort: 1, scroll: 1 //misc
 };
 
+function isNativeEventForNode(node, type) {
+	if (node.nativeEventNames) {
+		return node.nativeEventNames.indexOf(type) != -1;
+	}
+	return type in NATIVE_EVENTS;
+}
+
 /**
  * 事件系统
  */
@@ -171,7 +178,7 @@ this.Events = new Class(function() {
 	// 保证onxxx监听函数的正常执行，并维持onxxx类型的事件监听函数的执行顺序
 	function addOnHandlerAsEventListener(self, type) {
 		// 只有DOM节点的标准事件，才会由浏览器来执行标准方法
-		if (type in NATIVE_EVENTS && self.nodeType == 1) return;
+		if (self.nodeType == 1 && type in NATIVE_EVENTS) return;
 
 		var boss = self.__boss || self;
 		var onhandler = self['on' + type], onhandlerBak = boss['__on' + type];
@@ -194,7 +201,7 @@ this.Events = new Class(function() {
 	// IE下保证onxxx事件处理函数正常执行
 	function attachOnHandlerAsEventListener(self, type) {
 		// 只有DOM节点的标准事件，才会由浏览器来执行标准方法
-		if (type in NATIVE_EVENTS && self.nodeType == 1 && isNodeInDOMTree(self)) return;
+		if (self.nodeType == 1 && isNativeEventForNode(self, type) && isNodeInDOMTree(self)) return;
 
 		if (!self.__eventListeners) {
 			self.__eventListeners = {};
@@ -250,6 +257,15 @@ this.Events = new Class(function() {
 			parent = parent.parentNode;
 		}
 		return false;
+	}
+
+	function canFireNativeEvent(node, type, event) {
+		try {
+			nativeFireEvent.call(node, 'on' + type, event);
+			return true;
+		} catch (e) {
+			return false;
+		}
 	}
 
 	this.initialize = function(self) {
@@ -431,12 +447,12 @@ this.Events = new Class(function() {
 
 		// 如果是DOM节点的标准事件，则由浏览器处理onxxx类型的事件处理函数即可
 		// see http://js8.in/731.html
-		if (type in NATIVE_EVENTS && self.nodeType == 1) {
+		if (self.nodeType == 1 && isNativeEventForNode(self, type)) {
 			var event = exports.wrapEvent(document.createEventObject());
 			object.extend(event, eventData);
 
 			// 判断节点是否是加入DOM树的节点
-			if (isNodeInDOMTree(self)) {
+			if (isNodeInDOMTree(self) && isNativeEventForNode(self, type)) {
 				// 如果节点在放入DOM树之前调用过addEvent，则标准事件的处理函数onxxx将会被备份
 				// 如果在备份之后，将节点插入DOM树，此时标准事件会自动调用onxxx，而onxxx已经备份过一次了
 				// 所以在fireEvent之前，需要先检查一下列表中是否已经添加过onxxx的备份，如果添加过，需要删除
