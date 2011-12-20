@@ -105,6 +105,21 @@ this.wrapEvent = function(e) {
 };
 
 /**
+ * 判断某一个nativeEvent是不是适合Node
+ * 在IE下，如果Node不支持nativeEvent类型的事件监听，则nativeFireEvent.call(node, eventName, event)会报错
+ * 目前每一种Node支持的类型都已经在dom模块中进行了指定，详情请参见src/dom/index.js中元素的nativeEventNames属性
+ */
+function isNativeEventForNode(node, type) {
+	// 如果有nativeEventNames属性，说明是包装过的元素
+	if (node.nativeEventNames) {
+		// 判断此节点是否支持此事件类型的触发
+		return node.nativeEventNames.indexOf(type) != -1;
+	}
+	// 如果没有包装过，则继续按照默认的进行（可能会有错误发生）
+	return type in NATIVE_EVENTS;
+}
+
+/**
  * 事件系统
  */
 this.Events = new Class(function() {
@@ -141,6 +156,96 @@ this.Events = new Class(function() {
 				});
 			}
 		});
+	}
+
+	// 不同浏览器对onhandler的执行顺序不一样
+	// 	  IE：最先执行onhandler，其次再执行其他监听函数
+	// 	  Firefox：如果添加多个onhandler，则第一次添加的位置为执行的位置
+	// 	  Chrome ：如果添加多个onhandler，最后一次添加的位置为执行的位置
+	// 
+	// Chrome的做法是符合标准的，因此在模拟事件执行时按照Chrome的顺序来进行
+	//
+	// 保证onxxx监听函数的正常执行，并维持onxxx类型的事件监听函数的执行顺序
+	function addOnHandlerAsEventListener(self, type) {
+		// 只有DOM节点的标准事件，才会由浏览器来执行标准方法
+		if (type in NATIVE_EVENTS && self.nodeType == 1) return;
+
+		var boss = self.__boss || self;
+		var onhandler = self['on' + type], onhandlerBak = boss['__on' + type];
+		// 如果onHandler为空，并且已经添加过，则需要remove
+		if (!onhandler && onhandlerBak) {
+			boss.removeEventListener(type, onhandlerBak, false);
+			boss['__on' + type] = null;
+		}
+		// 如果onHandler不为空，则需要判断是否已经添加过
+		else if (onhandler && onhandler != onhandlerBak) {
+			// 如果已经添加过，则先去除原先添加的方法，再将新的方法加入，并更新备份信息
+			boss.removeEventListener(type, onhandlerBak, false);
+			// 将新的事件监听方法加入列表
+			boss.addEventListener(type, onhandler, false);
+			// 将新的事件监听方法备份
+			boss['__on' + type] = onhandler;
+		}
+	}
+	
+	// IE下保证onxxx事件处理函数正常执行
+	function attachOnHandlerAsEventListener(self, type) {
+		// 只有DOM节点的标准事件，并且此标准事件能够在节点上触发，才会由浏览器来执行标准方法
+		if (self.nodeType == 1 && isNativeEventForNode(self, type) && isNodeInDOMTree(self)) return;
+
+		if (!self.__eventListeners) {
+			self.__eventListeners = {};
+		}
+		if (!self.__eventListeners[type]) {
+			self.__eventListeners[type] = [];
+		}
+		var funcs = self.__eventListeners[type];
+		var l = funcs.length;
+		var onhandler = self['on' + type], onhandlerBak = self['__on' + type];
+		// 如果onHandler为空，并且已经添加过，则需要remove
+		if (!onhandler && onhandlerBak) {
+			for (var i = 0; i < l; i++) {
+				if (funcs[i] == onhandlerBak) {
+					funcs.splice(i, 1);
+					break;
+				}
+			}
+			self['__on' + type] = null;
+		}
+		// 如果onHandler不为空，则需要判断是否已经添加过
+		else if (onhandler && onhandler != onhandlerBak) {
+			// 如果已经添加过，则先去除原先添加的方法，再将新的方法加入，并更新备份信息
+			for (var i = 0; i < l; i++) {
+				if (funcs[i] == onhandlerBak) {
+					funcs.splice(i, 1);
+					break;
+				}
+			}
+			// 将新的事件监听方法加入列表
+			funcs.push(onhandler);
+			// 将新的事件监听方法备份
+			self['__on' + type] = onhandler;
+		}
+	}
+
+	/**
+	 * 判断节点是否是DOM树中的节点
+	 * 在IE下，如果不是DOM树中的节点，标准事件的onxxx监听不会触发
+	 * 因此在fireEvent时需要判断当前节点是否在DOM树中
+	 */
+	function isNodeInDOMTree(node) {
+		if (!node) {
+			return false;
+		}
+		var parent = node.parentNode;
+		var top = document.documentElement;
+		while (parent) {
+			if (parent == top) {
+				return true;
+			}
+			parent = parent.parentNode;
+		}
+		return false;
 	}
 
 	this.initialize = function(self) {
@@ -318,9 +423,33 @@ this.Events = new Class(function() {
 		var triggerName = 'on' + type.toLowerCase();
 		var event = exports.wrapEvent(eventData);
 
-		if (self[triggerName]) {
-			var returnValue = self[triggerName].call(self, event);
-			if (returnValue === false) event.preventDefault();
+		// 如果是DOM节点的标准事件，并且该事件能够在节点上由浏览器触发，则由浏览器处理onxxx类型的事件处理函数即可
+		// see http://js8.in/731.html
+		if (self.nodeType == 1 && isNativeEventForNode(self, type)) {
+			var event = exports.wrapEvent(document.createEventObject());
+			object.extend(event, eventData);
+
+			// 判断节点是否是加入DOM树的节点
+			if (isNodeInDOMTree(self)) {
+				// 如果节点在放入DOM树之前调用过addEvent，则标准事件的处理函数onxxx将会被备份
+				// 如果在备份之后，将节点插入DOM树，此时标准事件会自动调用onxxx，而onxxx已经备份过一次了
+				// 所以在fireEvent之前，需要先检查一下列表中是否已经添加过onxxx的备份，如果添加过，需要删除
+				var onhandlerBak = self['__on' + type];
+				var funcs = self.__eventListeners[type];
+				if (onhandlerBak && funcs) {
+					for (var i = 0, l = funcs.length; i < l; i++) {
+						if (funcs[i] == onhandlerBak) {
+							funcs.splice(i, 1);
+							break;
+						}
+					}
+					self['__on' + type] = null;
+				}
+
+				// 触发IE标准事件
+				nativeFireEvent.call(self, 'on' + type, event);
+				return event;
+			}
 		}
 
 		if (!self.__eventListeners[type]) return event;

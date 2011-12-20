@@ -461,4 +461,74 @@ test('remove onxxx at last', function() {
 	equal(counter, 2, 'two addEvent(xxx) are executed by fireEvent(xxx)');
 });
 
+test('standard event on DOM node - event can not be fired on node', function() {
+	expect(6);
+	var obj = dom.id('qunit-header')
+	if (!obj) {
+		obj = dom.wrap(document.createElement('div'));
+		document.body.appendChild(obj);
+	}
+	var counter = 0;
+	obj.addEvent('reset', function() {
+		var expect = isIE ? 0 : (isChrome ? 0 : 0);
+		equal(counter, expect, 'first addEvent, order : ' + expect);
+		counter ++;
+	}, false);
+	obj.onreset = function() {
+		ok(false, 'this onxxx should not be executed');
+		counter ++;	//should not add
+	}
+	obj.addEvent('reset', function(e) {
+		var expect = isIE ? 1 : (isChrome ? 1 : 2);
+		equal(e.a, 1, 'e.a is ok with IE nativeFireEvent');
+		equal(counter, expect, 'second addEvent, order : ' + expect);
+		counter ++;
+	}, false);
+	obj.onreset = function() {
+		var expect = isIE ? 2 : (isChrome ? 2 : 1);
+		equal(counter, expect, 'onxxx , order :  ' + expect);
+		counter ++;
+	}
+	obj.addEvent('reset', function() {
+		var expect = isIE ? 3 : (isChrome ? 3 : 3);
+		equal(counter, expect, 'third addEvent, order : ' + expect);
+		counter ++;
+	}, false);
+	obj.fireEvent('reset', {a:1});
+	equal(counter, 4, 'two onreset and three addEvent(reset) are executed by fireEvent(reset)');
+});
+
+test('standard event on DOM node - Node not inserted', function() {
+	expect(6);
+	obj = dom.wrap(document.createElement('div'));
+	var counter = 0;
+	obj.addEvent('reset', function() {
+		var expect = isIE ? 0 : (isChrome ? 0 : 0);
+		equal(counter, expect, 'first addEvent, order : ' + expect);
+		counter ++;
+	}, false);
+	obj.onreset = function() {
+		ok(false, 'this onxxx should not be executed');
+		counter ++;	//should not add
+	}
+	obj.addEvent('reset', function(e) {
+		var expect = isIE ? 1 : (isChrome ? 1 : 2);
+		equal(e.a, 1, 'e.a is ok with IE nativeFireEvent');
+		equal(counter, expect, 'second addEvent, order : ' + expect);
+		counter ++;
+	}, false);
+	obj.onreset = function() {
+		var expect = isIE ? 2 : (isChrome ? 2 : 1);
+		equal(counter, expect, 'onxxx , order :  ' + expect);
+		counter ++;
+	}
+	document.body.appendChild(obj)
+	obj.addEvent('reset', function() {
+		var expect = isIE ? 3 : (isChrome ? 3 : 3);
+		equal(counter, expect, 'third addEvent, order : ' + expect);
+		counter ++;
+	}, false);
+	obj.fireEvent('reset', {a:1});
+	equal(counter, 4, 'two onreset and three addEvent(reset) are executed by fireEvent(reset)');
+});
 //by fireEvent   / by operation
