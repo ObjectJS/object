@@ -104,6 +104,20 @@ this.wrapEvent = function(e) {
 	return e;
 };
 
+// native events from Mootools
+var NATIVE_EVENTS = {
+	click: 2, dblclick: 2, mouseup: 2, mousedown: 2, contextmenu: 2, //mouse buttons
+	mousewheel: 2, DOMMouseScroll: 2, //mouse wheel
+	mouseover: 2, mouseout: 2, mousemove: 2, selectstart: 2, selectend: 2, //mouse movement
+	keydown: 2, keypress: 2, keyup: 2, //keyboard
+	orientationchange: 2, // mobile
+	touchstart: 2, touchmove: 2, touchend: 2, touchcancel: 2, // touch
+	gesturestart: 2, gesturechange: 2, gestureend: 2, // gesture
+	focus: 2, blur: 2, change: 2, reset: 2, select: 2, submit: 2, paste: 2, oninput: 2, //form elements
+	load: 2, unload: 1, beforeunload: 2, resize: 1, move: 1, DOMContentLoaded: 1, readystatechange: 1, //window
+	error: 1, abort: 1, scroll: 1 //misc
+};
+
 /**
  * 判断某一个nativeEvent是不是适合Node
  * 在IE下，如果Node不支持nativeEvent类型的事件监听，则nativeFireEvent.call(node, eventName, event)会报错
@@ -123,7 +137,7 @@ function isNativeEventForNode(node, type) {
  * 事件系统
  */
 this.Events = new Class(function() {
-
+	
 	// 在标准浏览器中使用的是系统事件系统，无法保证nativeEvents在事件最后执行。
 	// 需在每次addEvent时，都将nativeEvents的事件删除再添加，保证在事件队列最后，最后才执行。
 	function moveNativeEventsToTail(self, type) {
@@ -142,18 +156,22 @@ this.Events = new Class(function() {
 			var event = arguments.length > 1? eventData : exports.wrapEvent(window.event);
 			var funcs = self.__eventListeners? self.__eventListeners[type] : null;
 			if (funcs) {
+				funcs = funcs.slice(0);
 				funcs.forEach(function(func) {
 					try {
 						func.call(self, event);
 					} catch(e) {
 					}
 				});
+				funcs = null;
 			}
 			var natives = self.__nativeEvents? self.__nativeEvents[type] : null;
 			if (natives) {
+				natives = natives.slice(0);
 				natives.forEach(function(func) {
 					func.call(self, event);
 				});
+				natives = null;
 			}
 		});
 	}
@@ -230,6 +248,7 @@ this.Events = new Class(function() {
 
 	/**
 	 * 判断节点是否是DOM树中的节点
+	 *
 	 * 在IE下，如果不是DOM树中的节点，标准事件的onxxx监听不会触发
 	 * 因此在fireEvent时需要判断当前节点是否在DOM树中
 	 */
@@ -294,6 +313,9 @@ this.Events = new Class(function() {
 			type = 'mouseout';
 		}
 
+		//处理onxxx类型的事件处理函数
+		addOnHandlerAsEventListener(self, type);
+
 		boss.addEventListener(type, func, cap);
 		moveNativeEventsToTail(self, type);
 
@@ -318,6 +340,7 @@ this.Events = new Class(function() {
 			return f === func;
 		})) return;
 
+		attachOnHandlerAsEventListener(self, type);
 		funcs.push(func);
 
 	};
@@ -394,6 +417,8 @@ this.Events = new Class(function() {
 		}
 	};
 
+	var nativeFireEvent = document.dispatchEvent ? null : document.createElement('div').fireEvent;
+
 	/**
 	* 触发事件
 	* obj.fireEvent('name', {
@@ -404,24 +429,20 @@ this.Events = new Class(function() {
 	* @param eventData 扩展到event对象上的数据
 	*/
 	this.fireEvent = document.dispatchEvent? function(self, type, eventData) {
+		//fireEvent之前仍然需要检查onxxx类型的事件处理函数
+		addOnHandlerAsEventListener(self, type);
 		var boss = self.__boss || self;
 
-		var triggerName = 'on' + type.toLowerCase();
 		var event = document.createEvent('Event');
 		event.initEvent(type, false, true);
 		object.extend(event, eventData);
 
-		if (self[triggerName]) {
-			var returnValue = self[triggerName].call(self, event);
-			if (returnValue === false) event.preventDefault();
-		}
-
+		// 火狐下通过dispatchEvent触发事件，在事件监听函数中抛出的异常都不会在控制台给出
+		// see https://bugzilla.mozilla.org/show_bug.cgi?id=503244
 		boss.dispatchEvent(event);
 		return event;
 	} : function(self, type, eventData) {
 		if (!eventData) eventData = {};
-		var triggerName = 'on' + type.toLowerCase();
-		var event = exports.wrapEvent(eventData);
 
 		// 如果是DOM节点的标准事件，并且该事件能够在节点上由浏览器触发，则由浏览器处理onxxx类型的事件处理函数即可
 		// see http://js8.in/731.html
@@ -452,22 +473,30 @@ this.Events = new Class(function() {
 			}
 		}
 
-		if (!self.__eventListeners[type]) return event;
+		attachOnHandlerAsEventListener(self, type);
+		var event = exports.wrapEvent(eventData);
+
 		var funcs = self.__eventListeners[type];
-		for (var i = 0, j = funcs.length; i < j; i++) {
-			if (funcs[i]) {
+		if (funcs) {
+			funcs = funcs.slice(0);
+			for (var i = 0, j = funcs.length; i < j; i++) {
+				if (funcs[i]) {
 					try {
 						funcs[i].call(self, event, true);
 					} catch(e) {
 					}
+				}
 			}
+			funcs = null;
 		}
 
 		var natives = self.__nativeEvents[type];
 		if (natives) {
+			natives = natives.slice(0);
 			natives.forEach(function(func) {
 				func.call(self, event);
 			});
+			natives = null;
 		}
 
 		return event;
