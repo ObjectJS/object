@@ -7,12 +7,19 @@
 var B = new Class({
 	value: 1,
 	m: function(self) {
-		alert(self.value);
+		alert('B');
+	}
+});
+
+var C = new Class({
+	value: 2,
+	m: function(self) {
+		alert('C');
 	}
 });
 
 var A = new Class({
-	__mixins__: [B],
+	__mixins__: [C, B],
 	m: function(self) {
 		this.parent(self);
 	}

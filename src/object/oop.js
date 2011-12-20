@@ -243,15 +243,29 @@ type.__new__ = function(metaclass, name, base, dict) {
 			if (!name) {
 				throw new Error('can not get function name when this.parent called');
 			}
+
 			var base = cls.__base__;
-			if (!base || !base.get) {
-				throw new Error('no parent class, can not call parent');
+			var mixins = cls.__mixins__;
+			var member, owner;
+
+			// 先从base中找同名func
+			if (base && base.get && base.has(name)) {
+				owner = base;
+				member = base.get(name);
 			}
-			var baseMember = base.get(name);
-			if (!baseMember || !baseMember.apply) {
+			// 再从mixins中找同名func
+			else if (mixins && mixins.length && mixins.some(function(mixin) {
+				owner = mixin;
+				return mixin.has(name);
+			})) {
+				member = owner.get(name);
+			}
+
+			if (!member || typeof member != 'function') {
 				throw new Error('no such method in parent : \'' + name + '\'');
+			} else {
+				return member.apply(base, arguments);
 			}
-			return baseMember.apply(base, arguments);
 		}
 	});
 	cls.__new__ = base.__new__;
