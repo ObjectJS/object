@@ -441,6 +441,9 @@ this.Element = new Class(function() {
 	Class.mixin(this, events.Events);
 	Class.mixin(this, dd.DragDrop);
 
+	this.nativeEventNames = ['click', 'dblclick', 'mouseup', 'mousedown', 'contextmenu',
+		'mouseover', 'mouseout', 'mousemove', 'selectstart', 'selectend', 'keydown', 'keypress', 'keyup'];
+
 	this.initialize = function(self, tagName) {
 		// 直接new Element，用来生成一个新元素
 		if (tagName) {
@@ -950,6 +953,8 @@ this.Element = new Class(function() {
  */
 this.ImageElement = new Class(exports.Element, function() {
 
+	this.nativeEventNames = exports.Element.get('nativeEventNames').slice(0).concat(['error', 'abort']);
+
 	// 获取naturalWidth和naturalHeight的方法
 	// http://jacklmoore.com/notes/naturalwidth-and-naturalheight-in-ie/
 	function _getNaturalSize(img) {
@@ -1002,6 +1007,8 @@ this.ImageElement = new Class(exports.Element, function() {
  * form元素的包装
  */
 this.FormElement = new Class(exports.Element, function() {
+
+	this.nativeEventNames = exports.Element.get('nativeEventNames').slice(0).concat(['reset', 'submit']);
 
 	this.initialize = function(self) {
 		this.parent(self);
@@ -1137,6 +1144,9 @@ this.FormElement = new Class(exports.Element, function() {
  * textarea / input / textarea / select / option 元素的包装
  */
 this.FormItemElement = new Class(exports.Element, function() {
+
+	this.nativeEventNames = exports.Element.get('nativeEventNames').slice(0).concat(
+		['focus', 'blur', 'change', 'select', 'paste']);
 
 	/**
 	 * selectionStart
@@ -1527,12 +1537,16 @@ this.TextAreaElement = new Class(exports.TextBaseElement, function() {
  * window元素的包装类
  */
 this.Window = new Class(exports.Element, function() {
+	this.nativeEventNames = exports.Element.get('nativeEventNames').slice(0).concat(
+		['load', 'unload', 'beforeunload', 'resize', 'move', 'DomContentLoaded', 'readystatechange', 'scroll', 'mousewheel', 'DOMMouseScroll']);
 });
 
 /**
  * document元素的包装类
  */
 this.Document = new Class(exports.Element, function() {
+	this.nativeEventNames = exports.Element.get('nativeEventNames').slice(0).concat(
+		['load', 'unload', 'beforeunload', 'resize', 'move', 'DomContentLoaded', 'readystatechange', 'scroll', 'mousewheel', 'DOMMouseScroll']);
 });
 
 /**
