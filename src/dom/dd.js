@@ -1,8 +1,4 @@
-/**
- * @namespace
- * @name dom
- */
-object.add('dom.dd', 'ua, events, sys', /**@lends dom*/ function(exports, ua, events, sys) {
+object.add('dom.dd', 'ua, events, sys', function(exports, ua, events, sys) {
 
 	//如何判断浏览器支持HTML5的拖拽：
 	//Detecting "draggable' in document.createElement('span') seems like a good idea, but in practice it doesn't work.
