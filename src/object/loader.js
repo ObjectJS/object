@@ -533,7 +533,13 @@ function calculatePageDir() {
 }
 
 
-var pageDir = calculatePageDir();
+try {
+	// 在IE6/7下，浏览器打开renren.com的login页面，刷新一次以后就不能获取到window.location，原因暂未查明
+	// 这里try-catch一下，如果有问题，则使用http://www.renren.com/作为pageDir
+	var pageDir = calculatePageDir();
+} catch (e) {
+	var pageDir = 'http://www.renren.com/';
+}
 
 /**
  * object的包管理器
