@@ -76,7 +76,7 @@ test('add and use, with seperator', function() {
 		exports.value = 1;
 	});
 	object.use('test.a.b.c.d, sys', function(exports, test, sys) {
-		equal(test.a.b.c, 1, 'c set in test.a.b is overwrited by module test.a.b.c.d');
+		notEqual(test.a.b.c, 1, 'c set in test.a.b is overwrited by module test.a.b.c.d');
 		equal(test.a.b.value, 1, 'test.a.b.value is not overwrited');
 		equal(test.a.b.c.d.value, 2, 'test.a.b.c.d.value is ok');
 	});

@@ -6,7 +6,7 @@ object.use('events, dom, ua', function(exports, events, dom, ua) {
 	window.ua = ua;
 });
 
-var isChrome = ua.ua.chrome;
+var isChrome = ua.ua.chrome || ua.ua.opera || ua.ua.safari;
 var isFF = ua.ua.firefox;
 var isIE = ua.ua.ie;
 
@@ -354,7 +354,9 @@ test('two onxxx(standard event in DOM Node), 5 handlers, 1, onxxx, 2, onxxx, 3',
 		obj = document.createElement('div');
 		document.body.appendChild(obj);
 	}
-	Class.inject(events.Events, obj);
+	object.use('dom', function(exports, dom) {
+		dom.wrap(obj);
+	});
 	var counter = 0;
 	obj.addEvent('click', function() {
 		var expect = isIE ? 1 : (isChrome ? 0 : 0);

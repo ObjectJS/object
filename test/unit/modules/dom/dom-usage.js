@@ -200,17 +200,27 @@ test('dom.eval_inner_JS', function() {
 		dom.eval_inner_JS(div3);
 		equal(window.a, 3, 'window.a = 3, assigned by script string, after dom.eval_inner_JS(div3)');
 
-		var div4 = document.createElement('div');
-		div4.innerHTML = '<div class="tpl-blank2">&nbsp;</div><script>document.write(\'<div id="by-write" class="by-write"></div>\');</sc' + 'ript>';
-		document.body.appendChild(div4);
-
-		try {
-			dom.eval_inner_JS(div4);
-			equal(document.getElementById('by-write').className, 'by-write', 'an div tag is written to document by script string document.write(<div id=by-write class=by-write></div>)');
-		} catch (e) {
-			ok(false, 'dom.eval_inner_JS(div4), with document.write, should not raise error ' + e);
+		var div = document.createElement('div');
+		div.innerHTML = '<script type="text/javascript">window.__testEval += 1;</script>';
+		document.body.appendChild(div);
+		if (window.__testEval != 0) {
+			var _needEval = false;
+		} else {
+			var _needEval = true;
 		}
-		document.body.removeChild(div4);
+		if (_needEval) {
+			var div4 = document.createElement('div');
+			div4.innerHTML = '<div class="tpl-blank2">&nbsp;</div><script>document.write(\'<div id="by-write" class="by-write"></div>\');</sc' + 'ript>';
+			document.body.appendChild(div4);
+
+			try {
+				dom.eval_inner_JS(div4);
+				equal(document.getElementById('by-write').className, 'by-write', 'an div tag is written to document by script string document.write(<div id=by-write class=by-write></div>)');
+			} catch (e) {
+				ok(false, 'dom.eval_inner_JS(div4), with document.write, should not raise error ' + e);
+			}
+			document.body.removeChild(div4);
+		}
 
 		//eval_inner_JS can handle string
 		dom.eval_inner_JS('<script>window.value = 2;</sc' + 'ript>');
@@ -260,11 +270,13 @@ test('dom.getDom', function() {
 		} catch (e) {
 			ok(true, 'fragment.getElementById is null for DocumentFragment ' + e);
 		}
-		try {
-			fragment.querySelector('test1');
-			ok(true, 'fragment.querySelector is ok');
-		} catch (e) {
-			ok(false, 'fragment.querySelector causes error : ' + e);
+		if (fragment.querySelector) {
+			try {
+				fragment.querySelector('test1');
+				ok(true, 'fragment.querySelector is ok');
+			} catch (e) {
+				ok(false, 'fragment.querySelector causes error : ' + e);
+			}
 		}
 	});
 });
@@ -570,8 +582,10 @@ test('dom.FormElement', function() {
 		input2.type = 'radio';
 		input2.name = 'test-form2';
 		input2.value = 'value2';
-		input2.checked = true;
 		form.appendChild(input2);
+		// set checked after appendChild, for IE6
+		// http://www.mularien.com/blog/2008/08/06/stupid-ie-6-bug-182478-check-boxes-added-through-javascript-arent-checked/
+		input2.checked = true;
 		equal(form.toQueryString(), 'test-form=value&test-form2=value2', 'got test-form=value&test-form2=value2');
 		form.removeChild(input);
 		form.removeChild(input2);
@@ -593,10 +607,11 @@ test('dom.FormElement', function() {
 		var newOpt = document.createElement('option');
 		newOpt.value = "2";
 		newOpt.text = "2";
-		newOpt.selected = true;
 		select.options.add(newOpt);
 
 		form.appendChild(select);
+		// for IE6
+		newOpt.selected = true;
 		equal(form.toQueryString(), 'test-name=test-value&test-select=2', 'got test-name=test-value&test-select=2');
 		form.removeChild(textarea);
 		form.removeChild(select);
@@ -621,10 +636,10 @@ test('dom.FormElement', function() {
 		// checkValidity, form must be appended to document.body
 		document.body.appendChild(form);
 		ok(form.checkValidity(), 'checkValidity is ok when no element in form');
-		var requiredInput = document.createElement('input');
+		var requiredInput = dom.wrap(document.createElement('input'));
 		requiredInput.type = 'text';
 		requiredInput.name = 'name';
-		requiredInput.required = true;
+		requiredInput.set('required', true);
 		requiredInput.value = '';
 		form.appendChild(requiredInput);
 		equal(form.checkValidity(), false, 'value of required input is empty, checkValidity must be false');
@@ -663,9 +678,10 @@ test('dom.FormItemElement - selectionStart/selectionEnd', function() {
 		try {
 			formItem.select();
 			equal(formItem.get('selectionStart'), 0, 'selectionStart is 0 after formItem.select()');
+			formItem.select();
 			equal(formItem.get('selectionEnd'), 4, 'selectionEnd is 4 after formItem.select()');
 		} catch (e) {
-			ok(false, 'formItem.get(selectionStart) after formItem.select(), should not raise error : ' + e);
+			ok(false, 'formItem.get(selectionStart) after formItem.select(), should not raise error : ' + e.message);
 		}
 		formItem.focusToPosition(2);
 		window.scrollTo(0, 0);
@@ -698,8 +714,8 @@ test('dom.FormItemElement', function() {
 		newOpt = document.createElement('option');
 		newOpt.value = "2";
 		newOpt.text = "2";
-		newOpt.selected = true;
 		selectItem.options.add(newOpt);
+		newOpt.selected = true;
 		
 		equal(selectItem.getSelected().length, 1, 'getSelected in selectItem is ok');
 		equal(selectItem.value, '2', 'selectItem.value = 2, ok');
