@@ -3,7 +3,14 @@ var Loader = object.Loader;
 // surround with closure
 (function() {
 function emptyCallback() {};
-var emptyJS = ($UNIT_TEST_CONFIG.needPath ? 'loader/': '') + 'empty.js';
+if (isJsTestDriverRunning) {
+	var loc = window['location'];
+	var pageUrl = loc.protocol + '//' + loc.host;
+	var path = pageUrl + '/test/test/unit/loader/';
+} else {
+	var path = ($UNIT_TEST_CONFIG.needPath ? 'loader/': '');
+}
+var emptyJS = path + 'empty.js';
 var head = document.getElementsByTagName('head')[0];
 // the only loader instance
 var loader = new Loader();
@@ -112,6 +119,10 @@ test('removeScript', function() {
 	Loader.removeScript(emptyJS);
 	Loader.loadScript(emptyJS, function() {}, true);
 	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, 'cache is true, so will add to _urlNodeMap');
+	// if jsTestDriver is running, emptyJS contains url, so do not need to add pageDir
+	if (isJsTestDriverRunning) {
+		pageDir = '';
+	}
 	notEqual(Loader.get('_urlNodeMap')[pageDir + emptyJS], undefined, pageDir + emptyJS + ' is cached in _urlNodeMap');
 	Loader.removeScript('_' + emptyJS);
 	notEqual(Loader.get('_urlNodeMap')[pageDir + emptyJS], undefined, 'remove failed, but should not raise error');

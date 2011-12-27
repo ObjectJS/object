@@ -264,10 +264,6 @@ test('Function.__get_name__', function() {
 module("util-basic-Class");
 test('Class.create', function() {
 	var C = Class.create();
-	try { C.set('d', 1); 
-		ok(false, 'class is not prepared after Class.create()');
-	} catch (e) {
-		ok(true, 'set can not be called : ' + e); }
 	try { C.__mixin__('d', 1); } catch (e) {
 		ok(true, '__mixin__ can not be called : ' + e); }
 	try { 

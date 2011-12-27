@@ -57,12 +57,14 @@ test('events.addEvent', function() {
 		try {
 			a.addEvent();
 		} catch (e) {
-			ok(false, 'a.addEvent() throw error : ' + e);
+			// should throw error, do not eat it
+			ok(true, 'a.addEvent() throw error : ' + e);
 		}
 		try {
 			a.addEvent('e');
 		} catch (e) {
-			ok(false, 'a.addEvent(e) throw error : ' + e);
+			// should throw error, do not eat it
+			ok(true, 'a.addEvent(e) throw error : ' + e);
 		}
 		try {
 			a.addEvent('e', function() {});
