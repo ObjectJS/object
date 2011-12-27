@@ -114,6 +114,9 @@ var wrap = this.wrap = function(node) {
 	} else {
 		// 已经wrap过了
 		if (node._wrapped) return node;
+		if (ua.ua.ie && node.fireEvent) {
+			node._oldFireEventInIE = node.fireEvent;
+		}
 
 		var wrapper;
 		if (node === window) {
@@ -422,6 +425,8 @@ this.ElementClassList = new Class(Array, function() {
 
 });
 
+var basicNativeEventNames = ['click', 'dblclick', 'mouseup', 'mousedown', 'contextmenu',
+		'mouseover', 'mouseout', 'mousemove', 'selectstart', 'selectend', 'keydown', 'keypress', 'keyup']
 /**
  * 普通元素的包装
  */
@@ -430,8 +435,7 @@ this.Element = new Class(function() {
 	Class.mixin(this, events.Events);
 	Class.mixin(this, dd.DragDrop);
 
-	this.nativeEventNames = ['click', 'dblclick', 'mouseup', 'mousedown', 'contextmenu',
-		'mouseover', 'mouseout', 'mousemove', 'selectstart', 'selectend', 'keydown', 'keypress', 'keyup'];
+	this.nativeEventNames = basicNativeEventNames;
 
 	this.initialize = function(self, tagName) {
 		// 直接new Element，用来生成一个新元素
@@ -942,7 +946,7 @@ this.Element = new Class(function() {
  */
 this.ImageElement = new Class(exports.Element, function() {
 
-	this.nativeEventNames = exports.Element.get('nativeEventNames').slice(0).concat(['error', 'abort']);
+	this.nativeEventNames = basicNativeEventNames.concat(['error', 'abort']);
 
 	// 获取naturalWidth和naturalHeight的方法
 	// http://jacklmoore.com/notes/naturalwidth-and-naturalheight-in-ie/
@@ -997,7 +1001,7 @@ this.ImageElement = new Class(exports.Element, function() {
  */
 this.FormElement = new Class(exports.Element, function() {
 
-	this.nativeEventNames = exports.Element.get('nativeEventNames').slice(0).concat(['reset', 'submit']);
+	this.nativeEventNames = basicNativeEventNames.concat(['reset', 'submit']);
 
 	this.initialize = function(self) {
 		this.parent(self);
@@ -1134,8 +1138,14 @@ this.FormElement = new Class(exports.Element, function() {
  */
 this.FormItemElement = new Class(exports.Element, function() {
 
-	this.nativeEventNames = exports.Element.get('nativeEventNames').slice(0).concat(
-		['focus', 'blur', 'change', 'select', 'paste']);
+	this.nativeEventNames = basicNativeEventNames.concat(['focus', 'blur', 'change', 'select', 'paste']);
+
+	this.required = _supportHTML5Forms ? nativeproperty() : attributeproperty(false);
+	this.pattern  = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
+	this.maxlength = _supportHTML5Forms ? nativeproperty() : attributeproperty(undefined);
+	this.type = _supportHTML5Forms ? nativeproperty() : attributeproperty('text');
+	this.min = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
+	this.max = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
 
 	/**
 	 * selectionStart
@@ -1253,6 +1263,8 @@ this.FormItemElement = new Class(exports.Element, function() {
 		var value = self.get('value');
 		
 		var validity = {
+			// 在firefox3.6.25中，self.getAttribute('required')只能获取到self.setAttribute('required', true)的值
+			// self.required = true设置的值无法获取
 			valueMissing: self.getAttribute('required') && !value? true : false,
 			typeMismatch: (function(type) {
 				if (type == 'url') return !(/^\s*(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i).test(value);
@@ -1526,7 +1538,7 @@ this.TextAreaElement = new Class(exports.TextBaseElement, function() {
  * window元素的包装类
  */
 this.Window = new Class(exports.Element, function() {
-	this.nativeEventNames = exports.Element.get('nativeEventNames').slice(0).concat(
+	this.nativeEventNames = basicNativeEventNames.concat(
 		['load', 'unload', 'beforeunload', 'resize', 'move', 'DomContentLoaded', 'readystatechange', 'scroll', 'mousewheel', 'DOMMouseScroll']);
 });
 
@@ -1534,7 +1546,7 @@ this.Window = new Class(exports.Element, function() {
  * document元素的包装类
  */
 this.Document = new Class(exports.Element, function() {
-	this.nativeEventNames = exports.Element.get('nativeEventNames').slice(0).concat(
+	this.nativeEventNames = basicNativeEventNames.concat(
 		['load', 'unload', 'beforeunload', 'resize', 'move', 'DomContentLoaded', 'readystatechange', 'scroll', 'mousewheel', 'DOMMouseScroll']);
 });
 

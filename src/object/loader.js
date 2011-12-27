@@ -532,14 +532,8 @@ function calculatePageDir() {
 	return pageDir;
 }
 
-
-try {
-	// 在IE6/7下，浏览器打开renren.com的login页面，刷新一次以后就不能获取到window.location，原因暂未查明
-	// 这里try-catch一下，如果有问题，则使用http://www.renren.com/作为pageDir
-	var pageDir = calculatePageDir();
-} catch (e) {
-	var pageDir = 'http://www.renren.com/';
-}
+// global pageDir
+var pageDir;
 
 /**
  * object的包管理器
@@ -550,8 +544,6 @@ var Loader = new Class(function() {
 	// 用于保存url与script节点的键值对
 	this._urlNodeMap = {};
 
-	this.scripts = document.getElementsByTagName('script');
-
 	this.initialize = function(self) {
 		self.useCache = true;
 		self.lib = {
@@ -560,6 +552,8 @@ var Loader = new Class(function() {
 		self.fileLib = {};
 		self.prefixLib = {};
 		self.anonymousModuleCount = 0;
+
+		self.scripts = document.getElementsByTagName('script');
 	};
 
 	/**
@@ -673,6 +667,9 @@ var Loader = new Class(function() {
 			return cleanPath(src);
 		}
 
+		if (typeof pageDir == 'undefined') {
+			pageDir = calculatePageDir();
+		}
 		return cleanPath(pageDir + src);
 	});
 
