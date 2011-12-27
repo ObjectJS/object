@@ -19,7 +19,8 @@ this.urljoin = function(base, url) {
 	}
 
 	if (urlparts[2]) {
-		if (urlparts[2][0] == '/') {
+		// 判断第一个字符，在IE6下不能用urlparts[2][0]的方式，而需要采用charAt
+		if (urlparts[2].charAt(0) == '/') {
 			output[2] = urlparts[2];
 		} else {
 			path = baseparts[2];
