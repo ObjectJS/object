@@ -137,8 +137,16 @@ var wrap = this.wrap = function(node) {
 		// 为了解决子类property覆盖父类instancemethod/classmethod等的问题，需要将property同名的prototype上的属性改为undefined
 		// Class.inject对node赋值时，会将undefined的值也进行赋值，而innerHTML、value等值，不能设置为undefined
 		Class.inject(wrapper, node, function(dest, src, prop) {
-			// dest原有的属性中，只覆盖fireEvent
-			return !((prop in dest && prop != 'fireEvent') || src[prop] === undefined)
+			// dest原有的属性中，function全部覆盖，属性不覆盖已有的
+			if (typeof src[prop] != 'function') {
+				if (!(prop in dest)) {
+					return true;
+				} else {
+					return false;
+				}
+			} else {
+				return true;
+			}
 		});
 
 		return node;
