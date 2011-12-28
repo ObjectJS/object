@@ -189,5 +189,3 @@ this.Request = new Class(function() {
 });
 
 });
-
-// 
