@@ -532,8 +532,8 @@ function calculatePageDir() {
 	return pageDir;
 }
 
-
-var pageDir = calculatePageDir();
+// global pageDir
+var pageDir;
 
 /**
  * object的包管理器
@@ -544,8 +544,6 @@ var Loader = new Class(function() {
 	// 用于保存url与script节点的键值对
 	this._urlNodeMap = {};
 
-	this.scripts = document.getElementsByTagName('script');
-
 	this.initialize = function(self) {
 		self.useCache = true;
 		self.lib = {
@@ -554,6 +552,8 @@ var Loader = new Class(function() {
 		self.fileLib = {};
 		self.prefixLib = {};
 		self.anonymousModuleCount = 0;
+
+		self.scripts = document.getElementsByTagName('script');
 	};
 
 	/**
@@ -667,6 +667,9 @@ var Loader = new Class(function() {
 			return cleanPath(src);
 		}
 
+		if (typeof pageDir == 'undefined') {
+			pageDir = calculatePageDir();
+		}
 		return cleanPath(pageDir + src);
 	});
 

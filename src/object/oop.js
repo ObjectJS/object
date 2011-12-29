@@ -423,15 +423,28 @@ Class.getPropertyNames = function(obj) {
  * @param host 注射进去的对象
  * @param args 构造的参数
  */
-Class.inject = function(cls, host, args) {
+Class.inject = function(cls, host, args, filter) {
 	if (typeof cls != 'function') {
 		throw new Error('cls should be function');
 	};
-	args = args || [];
+	var argsLen = arguments.length;
+	if (argsLen === 2) {
+		args = [];
+		filter = true;
+	} else if (argsLen === 3) {
+		if (Array.isArray(args)) {
+			args = args || [];
+			filter = true;
+		} else {
+			filter = args;
+			args = [];
+		}
+	}
+
 	host.__class__ = cls;
 	host.__properties__ = cls.prototype.__properties__;
 	var p = Class.getInstance(cls);
-	object.extend(host, p);
+	object.extend(host, p, filter);
 	Class.initMixins(cls, host);
 	if (typeof cls.prototype.initialize == 'function') cls.prototype.initialize.apply(host, args);
 };

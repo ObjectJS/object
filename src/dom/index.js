@@ -114,6 +114,9 @@ var wrap = this.wrap = function(node) {
 	} else {
 		// 已经wrap过了
 		if (node._wrapped) return node;
+		if (ua.ua.ie && node.fireEvent) {
+			node._oldFireEventInIE = node.fireEvent;
+		}
 
 		var wrapper;
 		if (node === window) {
@@ -133,21 +136,18 @@ var wrap = this.wrap = function(node) {
 
 		// 为了解决子类property覆盖父类instancemethod/classmethod等的问题，需要将property同名的prototype上的属性改为undefined
 		// Class.inject对node赋值时，会将undefined的值也进行赋值，而innerHTML、value等值，不能设置为undefined
-		// 因此这里不直接调用Class.inject，而是单独对wrapper的实例中的属性进行判断
-
-		node.__class__ = wrapper;
-		node.__properties__ = wrapper.prototype.__properties__;
-		var wrapperInstance = Class.getInstance(wrapper);
-		for (var prop in wrapperInstance) {
-			if ((prop != 'fireEvent' && prop in node) || wrapperInstance[prop] === undefined) {
-				continue;
+		Class.inject(wrapper, node, function(dest, src, prop) {
+			// dest原有的属性中，function全部覆盖，属性不覆盖已有的
+			if (typeof src[prop] != 'function') {
+				if (!(prop in dest)) {
+					return true;
+				} else {
+					return false;
+				}
+			} else {
+				return true;
 			}
-			node[prop] = wrapperInstance[prop];
-		}
-		Class.initMixins(wrapper, node);
-		if (typeof wrapper.prototype.initialize == 'function') {
-			wrapper.prototype.initialize.apply(node, []);
-		}
+		});
 
 		return node;
 	}
@@ -433,6 +433,8 @@ this.ElementClassList = new Class(Array, function() {
 
 });
 
+var basicNativeEventNames = ['click', 'dblclick', 'mouseup', 'mousedown', 'contextmenu',
+		'mouseover', 'mouseout', 'mousemove', 'selectstart', 'selectend', 'keydown', 'keypress', 'keyup']
 /**
  * 普通元素的包装
  */
@@ -440,6 +442,8 @@ this.Element = new Class(function() {
 
 	Class.mixin(this, events.Events);
 	Class.mixin(this, dd.DragDrop);
+
+	this.nativeEventNames = basicNativeEventNames;
 
 	this.initialize = function(self, tagName) {
 		// 直接new Element，用来生成一个新元素
@@ -950,6 +954,8 @@ this.Element = new Class(function() {
  */
 this.ImageElement = new Class(exports.Element, function() {
 
+	this.nativeEventNames = basicNativeEventNames.concat(['error', 'abort']);
+
 	// 获取naturalWidth和naturalHeight的方法
 	// http://jacklmoore.com/notes/naturalwidth-and-naturalheight-in-ie/
 	function _getNaturalSize(img) {
@@ -1002,6 +1008,8 @@ this.ImageElement = new Class(exports.Element, function() {
  * form元素的包装
  */
 this.FormElement = new Class(exports.Element, function() {
+
+	this.nativeEventNames = basicNativeEventNames.concat(['reset', 'submit']);
 
 	this.initialize = function(self) {
 		this.parent(self);
@@ -1138,6 +1146,15 @@ this.FormElement = new Class(exports.Element, function() {
  */
 this.FormItemElement = new Class(exports.Element, function() {
 
+	this.nativeEventNames = basicNativeEventNames.concat(['focus', 'blur', 'change', 'select', 'paste']);
+
+	this.required = _supportHTML5Forms ? nativeproperty() : attributeproperty(false);
+	this.pattern  = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
+	this.maxlength = _supportHTML5Forms ? nativeproperty() : attributeproperty(undefined);
+	this.type = _supportHTML5Forms ? nativeproperty() : attributeproperty('text');
+	this.min = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
+	this.max = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
+
 	/**
 	 * selectionStart
 	 */
@@ -1254,6 +1271,8 @@ this.FormItemElement = new Class(exports.Element, function() {
 		var value = self.get('value');
 		
 		var validity = {
+			// 在firefox3.6.25中，self.getAttribute('required')只能获取到self.setAttribute('required', true)的值
+			// self.required = true设置的值无法获取
 			valueMissing: self.getAttribute('required') && !value? true : false,
 			typeMismatch: (function(type) {
 				if (type == 'url') return !(/^\s*(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i).test(value);
@@ -1527,12 +1546,16 @@ this.TextAreaElement = new Class(exports.TextBaseElement, function() {
  * window元素的包装类
  */
 this.Window = new Class(exports.Element, function() {
+	this.nativeEventNames = basicNativeEventNames.concat(
+		['load', 'unload', 'beforeunload', 'resize', 'move', 'DomContentLoaded', 'readystatechange', 'scroll', 'mousewheel', 'DOMMouseScroll']);
 });
 
 /**
  * document元素的包装类
  */
 this.Document = new Class(exports.Element, function() {
+	this.nativeEventNames = basicNativeEventNames.concat(
+		['load', 'unload', 'beforeunload', 'resize', 'move', 'DomContentLoaded', 'readystatechange', 'scroll', 'mousewheel', 'DOMMouseScroll']);
 });
 
 /**

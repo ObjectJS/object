@@ -325,9 +325,13 @@ test('test resolution', function() {
 		ok(o.resolution.width > 0, 'resolution.width > 0');
 		ok(o.resolution.height > 0, 'resolution.height > 0');
 		window.devicePixelRatio = 2;
-		o2 = detectOS();
-		equal(o2.resolution.width, 2 * o.resolution.width, 'devicePixelRatio is used');
-		equal(o2.resolution.height, 2 * o.resolution.height, 'devicePixelRatio is used');
+
+		// window.devicePixelRatio == 1 in Opera...
+		if (window.devicePixelRatio == 2) {
+			o2 = detectOS();
+			equal(o2.resolution.width, 2 * o.resolution.width, 'devicePixelRatio is used');
+			equal(o2.resolution.height, 2 * o.resolution.height, 'devicePixelRatio is used');
+		}
 	});
 });
 
