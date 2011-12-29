@@ -533,4 +533,42 @@ test('standard event on DOM node - Node not inserted', function() {
 	obj.fireEvent('reset', {a:1});
 	equal(counter, 4, 'two onreset and three addEvent(reset) are executed by fireEvent(reset)');
 });
+
+test('wrap DOM node', function() {
+	var wrapper = dom.Element;
+	wrapper.prototype.innerHTML = '1';
+	wrapper.prototype.tagName = '2';
+	wrapper.prototype.testFunction = function() {
+		return 1;
+	}
+	window.fireEvent = function() {}
+	window.testFunction = function() {}
+
+	window.innerHTML = 'inner';
+	window.tagName = 'window';
+
+	Class.inject(wrapper, window, function(dest, src, prop) {
+		// dest原有的属性中，function全部覆盖，属性不覆盖已有的
+		if (typeof src[prop] != 'function') {
+			if (!(prop in dest)) {
+				return true;
+			} else {
+				return false;
+			}
+		} else {
+			return true;
+		}
+	});
+
+	notEqual(window.innerHTML, '1', 'innerHTML is not wrapped');
+	notEqual(window.tagName , '2', 'tagName is not wrapped');
+	equal(window.testFunction(), 1, 'testFunction is wrapped');
+	window.addEvent('a', function() {
+		ok(true, 'window.addEvent is ok');
+	});
+	window.ona = function() {
+		ok(true, 'window.one is ok');
+	}
+	window.fireEvent('a');
+});
 //by fireEvent   / by operation

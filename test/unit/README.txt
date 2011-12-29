@@ -13,3 +13,35 @@
 	object-extend.js	这些JS是具体的测试js，通过index.js的配置项可以获取
 
 	引入LAB.js控制顺序
+	
+
+
+	project
+	   |--- src
+	   |--- test
+	          |--- speed
+			  |--- function
+			  |--- unit
+					|--- test-runner.html
+					|--- index.js
+			        |--- lib
+					      |--- jsUnitMockTimeout.js
+						  |--- jquery-latest.js
+						  |--- qunit.js
+						  |--- qunit.css
+						  |--- QUnitAdapter.js
+						  |--- config.js
+					|--- module1_test
+						  |--- index.html
+						  |--- index.js
+						  |--- module1-basic.js
+						  |--- module1-usage.js
+					|--- module2_test
+						  |--- index.html
+						  |--- index.js
+						  |--- module2-basic.js
+						  |--- module2-usage.js
+					|--- ...
+					|--- moduleN_test
+
+
