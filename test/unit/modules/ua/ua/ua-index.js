@@ -156,6 +156,13 @@ var userAgents_index= [
 	shell_version: 3.04
 },
 {
+	str: 'Mozilla/5.0 (Windows; U; Windows NT 5.1; da-dk) AppleWebKit/523.15.1 (KHTML, like Gecko) Version/3.0.4 Safari/523.15',
+	core: 'webkit',
+	core_version: 523.151,
+	shell: 'safari',
+	shell_version: 3.04
+},
+{
 	str: 'Mozilla/5.0 (Macintosh; U; PPC Mac OS X; fi-fi) AppleWebKit/418.8 (KHTML, like Gecko) Safari/419.3',
 	core: 'webkit',
 	core_version: 418.8,
