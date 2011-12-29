@@ -20,9 +20,8 @@ object.execute = loader.execute.bind(loader);
  *        window.globalMember = 1;
  *    });
  */
-object.define('window', 'dom', function(require) {
-	var dom = require('dom');
-	return dom.wrap(window);
+object.define('window', function(require, exports) {
+	return window;
 });
 
 object.define('loader', function(require, exports) {
