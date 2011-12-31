@@ -14,8 +14,6 @@
 
 	引入LAB.js控制顺序
 	
-
-
 	project
 	   |--- src
 	   |--- test
