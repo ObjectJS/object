@@ -460,6 +460,7 @@ this.Element = new Class(function() {
 		if (self.classList === undefined && self !== document && self !== window) {
 			self.classList = new exports.ElementClassList(self);
 		}
+		self.delegates = {};
 	};
 
 	/**
@@ -504,12 +505,50 @@ this.Element = new Class(function() {
 	 * @param type 事件名称
 	 * @param callback 事件回调
 	 */
-	this.delegate = function(self, selector, type, callback) {
-		self.addEvent(type, function(e) {
+	this.delegate = function(self, selector, type, fn) {
+
+		function wrapper(e) {
 			var ele = e.srcElement || e.target;
 			do {
-				if (ele && exports.Element.get('matchesSelector')(ele, selector)) callback.call(wrap(ele), e);
+				if (ele && exports.Element.get('matchesSelector')(ele, selector)) fn.call(wrap(ele), e);
 			} while((ele = ele.parentNode));
+		}
+
+		var key = selector + '_' + type;
+		if (!self.delegates) {
+			self.delegates = {};
+		}
+		if (!(key in self.delegates)) {
+			self.delegates[key] = [];
+		}
+		self.delegates[key].push({
+			wrapper: wrapper,
+			fn: fn
+		});
+
+		self.addEvent(type, wrapper);
+	};
+
+	/**
+	 * 事件代理
+	 * @param selector 需要被代理的子元素selector
+	 * @param type 事件名称
+	 * @param callback 事件回调
+	 */
+	this.undelegate = function(self, selector, type, fn) {
+
+		var key = selector + '_' + type;
+		if (!self.delegates) {
+			self.delegates = {};
+		}
+		// 没有这个代理
+		if (!(key in self.delegates)) return;
+
+		self.delegates[key].forEach(function(item) {
+			if (item.fn === fn) {
+				self.removeEvent(type, item.wrapper);
+				return;
+			}
 		});
 	};
 

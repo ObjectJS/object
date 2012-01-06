@@ -547,6 +547,24 @@ test('only dom.Element', function() {
 	});
 });
 
+var ie = false;
+object.use('ua', function(exports, ua) {
+	ie = ua.ua.ie;
+});
+function fireMouseEventOnElement(element) {
+	if (ie) {
+		try {
+			element.click();
+		} catch (e){
+			ok(false, 'element.click() throw error in IE : ' + e);
+		}
+	} else {
+		var evt = document.createEvent("MouseEvents");
+		evt.initMouseEvent("click", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+		element.dispatchEvent(evt);	
+	}
+}
+
 test('events in dom.Element : delegate', function() {
 	expect(4);
 	object.use('dom, ua', function(exports, dom, ua) {
@@ -557,17 +575,7 @@ test('events in dom.Element : delegate', function() {
 			equal(this.tagName, 'SPAN', 'should delegate by span elements');
 		});
 		var innerSPAN = dom.wrap(element.firstChild.firstChild);	//innerSPAN
-		if (ua.ua.ie) {
-			try {
-				innerSPAN.click();
-			} catch (e){
-				ok(false, 'innerSPAN.click() throw error in IE : ' + e);
-			}
-		} else {
-			var evt = document.createEvent("MouseEvents");
-			evt.initMouseEvent("click", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
-			innerSPAN.dispatchEvent(evt);	
-		}
+		fireMouseEventOnElement(innerSPAN);
 		document.body.removeChild(element);
 
 		// two parents
@@ -577,17 +585,7 @@ test('events in dom.Element : delegate', function() {
 			equal(this.tagName, 'SPAN', 'should delegate by span elements');
 		});
 		var innerSPAN = dom.wrap(element.firstChild.firstChild);	//innerSPAN
-		if (ua.ua.ie) {
-			try {
-				innerSPAN.click();
-			} catch (e){
-				ok(false, 'innerSPAN.click() throw error in IE : ' + e);
-			}
-		} else {
-			var evt = document.createEvent("MouseEvents");
-			evt.initMouseEvent("click", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
-			innerSPAN.dispatchEvent(evt);	
-		}
+		fireMouseEventOnElement(innerSPAN);
 		document.body.removeChild(element);
 
 		// outer parent
@@ -597,20 +595,39 @@ test('events in dom.Element : delegate', function() {
 			equal(this.tagName, 'DIV', 'should delegate by div');
 		});
 		var innerSPAN = dom.wrap(element.firstChild);	//outerSPAN
-		if (ua.ua.ie) {
-			try {
-				innerSPAN.click();
-			} catch (e){
-				ok(false, 'innerSPAN.click() throw error in IE : ' + e);
-			}
-		} else {
-			var evt = document.createEvent("MouseEvents");
-			evt.initMouseEvent("click", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
-			innerSPAN.dispatchEvent(evt);	
-		}
+		fireMouseEventOnElement(innerSPAN);
 		document.body.removeChild(element);
 	});
 });
+
+
+test('events in dom.Element : undelegate', function() {
+	expect(1);
+	object.use('dom, ua', function(exports, dom, ua) {
+		// add delegate for div#outerDIV
+		var element = dom.Element.fromString('<div id="outerDIV"><span id="outerSPAN"><span id="innerSPAN"></span></span></div>');
+		// add node to DOM
+		document.body.appendChild(element);
+		var fn;
+		element.delegate('span#outerSPAN', 'click', fn = function() {
+			equal(this.tagName, 'SPAN', 'should delegate by span elements');
+		});
+		var innerSPAN = dom.wrap(element.firstChild.firstChild);	//innerSPAN
+		// fireEvent
+		fireMouseEventOnElement(innerSPAN);
+		// undelegate
+		element.undelegate('span#outerSPAN', 'click', fn);
+		fireMouseEventOnElement(innerSPAN);
+
+		// re delegate
+		element.delegate('span#outerSPAN', 'click', fn);
+		element.undelegate('span#outerSPAN', 'click', fn);
+		fireMouseEventOnElement(innerSPAN);
+		// remove from DOM
+		document.body.removeChild(element);
+	});
+});
+
 //ImageElement
 test('dom.ImageElement', function() {
 	object.use('dom', function(exports, dom) {
