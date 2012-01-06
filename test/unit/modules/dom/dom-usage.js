@@ -547,6 +547,70 @@ test('only dom.Element', function() {
 	});
 });
 
+test('events in dom.Element : delegate', function() {
+	expect(4);
+	object.use('dom, ua', function(exports, dom, ua) {
+		// one parent
+		var element = dom.Element.fromString('<div id="outerDIV"><span id="outerSPAN"><span id="innerSPAN"></span></span></div>');
+		document.body.appendChild(element);
+		element.delegate('span#outerSPAN', 'click', function() {
+			equal(this.tagName, 'SPAN', 'should delegate by span elements');
+		});
+		var innerSPAN = dom.wrap(element.firstChild.firstChild);	//innerSPAN
+		if (ua.ua.ie) {
+			try {
+				innerSPAN.click();
+			} catch (e){
+				ok(false, 'innerSPAN.click() throw error in IE : ' + e);
+			}
+		} else {
+			var evt = document.createEvent("MouseEvents");
+			evt.initMouseEvent("click", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+			innerSPAN.dispatchEvent(evt);	
+		}
+		document.body.removeChild(element);
+
+		// two parents
+		var element = dom.Element.fromString('<div id="outerDIV"><span id="outerSPAN"><span id="innerSPAN"></span></span></div>');
+		document.body.appendChild(element);
+		element.delegate('span', 'click', function() {
+			equal(this.tagName, 'SPAN', 'should delegate by span elements');
+		});
+		var innerSPAN = dom.wrap(element.firstChild.firstChild);	//innerSPAN
+		if (ua.ua.ie) {
+			try {
+				innerSPAN.click();
+			} catch (e){
+				ok(false, 'innerSPAN.click() throw error in IE : ' + e);
+			}
+		} else {
+			var evt = document.createEvent("MouseEvents");
+			evt.initMouseEvent("click", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+			innerSPAN.dispatchEvent(evt);	
+		}
+		document.body.removeChild(element);
+
+		// outer parent
+		var element = dom.Element.fromString('<div id="outerDIV"><span id="outerSPAN"><span id="innerSPAN"></span></span></div>');
+		document.body.appendChild(element);
+		element.delegate('div', 'click', function() {
+			equal(this.tagName, 'DIV', 'should delegate by div');
+		});
+		var innerSPAN = dom.wrap(element.firstChild);	//outerSPAN
+		if (ua.ua.ie) {
+			try {
+				innerSPAN.click();
+			} catch (e){
+				ok(false, 'innerSPAN.click() throw error in IE : ' + e);
+			}
+		} else {
+			var evt = document.createEvent("MouseEvents");
+			evt.initMouseEvent("click", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+			innerSPAN.dispatchEvent(evt);	
+		}
+		document.body.removeChild(element);
+	});
+});
 //ImageElement
 test('dom.ImageElement', function() {
 	object.use('dom', function(exports, dom) {

@@ -1,5 +1,27 @@
 object.add('events', 'ua', function(exports, ua) {
 
+/**
+ * 在Safari3.0(Webkit 523)下，preventDefault()无法获取事件是否被preventDefault的信息
+ * 这里通过一个事件的preventDefault来判断类似情况
+ * _needWrapPreventDefault用于在wrapPreventDefault中进行判断
+ */
+var _needWrapPreventDefault = (function() {
+	if (document.createEvent) {
+		var event = document.createEvent('Event');
+		event.initEvent(type, false, true);
+
+		if (event.preventDefault) {
+			event.preventDefault();
+			// preventDefault以后返回不了正确的结果
+			return !(event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented);
+		} 
+		// 没有preventDefault方法，则必然要wrap
+		else {
+			return true;
+		}
+	}
+})();
+
 function IEEvent() {
 
 }
@@ -103,6 +125,19 @@ this.wrapEvent = function(e) {
 
 	return e;
 };
+
+/**
+ * safari 3.0在preventDefault执行以后，defaultPrevented为undefined，此处包装一下
+ */
+this.wrapPreventDefault = function(e) {
+	if (_needWrapPreventDefault) {
+		var oldPreventDefault = e.preventDefault;
+		e.preventDefault = function() {
+			this.defaultPrevented = true;
+			oldPreventDefault.apply(this, arguments);
+		}
+	}
+}
 
 // native events from Mootools
 var NATIVE_EVENTS = {
@@ -434,6 +469,8 @@ this.Events = new Class(function() {
 		var event = document.createEvent('Event');
 		event.initEvent(type, false, true);
 		object.extend(event, eventData);
+
+		exports.wrapPreventDefault(event);
 
 		// 火狐下通过dispatchEvent触发事件，在事件监听函数中抛出的异常都不会在控制台给出
 		// see https://bugzilla.mozilla.org/show_bug.cgi?id=503244

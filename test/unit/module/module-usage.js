@@ -305,6 +305,7 @@ test('circular dependency', function() {
 	delete object._loader.lib['uuua.ooos'];
 	delete object._loader.lib['uuua'];
 });
+
 test('string starts/ends with .', function() {
 	object.add('used', function(exports) {});
 	try {
