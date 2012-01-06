@@ -11,7 +11,8 @@ test('events is usable', function() {
 				ok(true, 'funtion called : e');
 			});	
 			this.e_with_preventDefault = events.fireevent(function() {
-				ok(true, 'funtion called : e_with_preventDefault');
+				// preventDefault, should not be called
+				ok(false, 'funtion called : e_with_preventDefault');
 			});	
 		});
 		var a = new A();
@@ -21,8 +22,8 @@ test('events is usable', function() {
 		}, false);
 		a.addEvent('e_with_preventDefault', function(e) {
 			e.preventDefault();
-			a.removeEvent('e', arguments.callee);
 			ok(true, 'event e_with_preventDefault fired, event handler executed');
+			a.removeEvent('e', arguments.callee);
 		});
 		a.e();
 		a.e_with_preventDefault();

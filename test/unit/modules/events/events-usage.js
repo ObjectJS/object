@@ -121,8 +121,8 @@ test('events.Events: addEvent/removeEvent/fireEvent', function() {
 var chrome = false;
 var ie = false;
 object.use('ua', function(exports, ua) {
-	chrome = ua.ua.chrome || ua.ua.safari || ua.ua.opera;
-	ie=  ua.ua.ie;
+	chrome = ua.ua.chrome || ua.ua.webkit > 525 || ua.ua.opera;
+	ie =  ua.ua.ie;
 });
 
 test('events.Events: play with the standard - without error', function() {
