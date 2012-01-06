@@ -517,7 +517,9 @@ test('new Class, parent is Array/String', function() {
 	equal(string.b, 1, 'property in SubString instance is ok');
 	equal(string.method(), 1, 'SubString.method is ok');
 	notEqual(string.charAt, undefined, 'SubString.charAt is not undefined');
+	equal(string.charAt.call('1235', 1), 2, 'charAt is usable');
 	try {
+		// error in Firefox...
 		equal(string.length, 0, 'string.length is ok');
 	} catch (e) {
 	}
