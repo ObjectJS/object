@@ -622,7 +622,7 @@ var Loader = new Class(function() {
 			src = script.getAttribute('data-src');
 			ids = script.getAttribute('data-module');
 			if (!ids || !src) continue;
-			ids.split('\s+').forEach(function(id) {
+			ids.split(/\s+/ig).forEach(function(id) {
 				self.defineFile(id, src);
 			});
 		}

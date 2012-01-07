@@ -468,6 +468,32 @@ if (isJsTestDriverRunning) {
 		});
 	});
 
+	// 一个script通过data-module定义多个module
+	test('one module file, many modules in one script tag definition', function() {
+		recoverEnv();
+		addModuleScriptToHead('module1 module2 module3', module_manyModules);
+		var loader = object._loader;
+		loader.buildFileLib();
+		window.oneFileManyModules_load_times = 0;
+		stop();
+		loader.use('module1', function(module1) {
+			start();
+			equal(module1.a, 1, 'module1.a is ok : 1');
+			stop();
+			loader.use('module2', function(module2) {
+				start();
+				equal(module2.b, 1, 'module2.b is ok : 1');
+				stop();
+				loader.use('module3', function(module3) {
+					start();
+					equal(module3.c, 1, 'module3.c is ok : 1');
+					equal(window.oneFileManyModules_load_times, 1, 'only load script once');
+					recoverEnv();
+				});
+			});
+		});
+	});
+
 	test('file module1 is parent, file module1.module2 is sub', function() {
 		recoverEnv();
 		addModuleScriptToHead('module1', module1JS_parent);
