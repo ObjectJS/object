@@ -29,10 +29,18 @@ ModuleRequiredError.prototype = new Error();
 /**
  * 循环依赖Error
  */
-function CyclicDependencyError(id) {
-	this.message = id + ' cyclic dependency.';
+function CyclicDependencyError(stack) {
+	this.stack = stack;
+	var msg = '';
+	stack.forEach(function(m, i) {
+		msg += m.id;
+		if (i != stack.length - 1) {
+			msg += '-->';
+		}
+	});
+	this.message = msg + ' cyclic dependency.';
 }
-CyclicDependencyError.prototype = new Error('循环依赖');
+CyclicDependencyError.prototype = new Error();
 
 /**
  * 普通Package
@@ -69,7 +77,7 @@ CommonJSPackage.prototype.createRequire = function(name, runtime) {
 		var exports = dep.getRef(runtime);
 		// 有依赖却没有获取到，说明是由于循环依赖
 		if (!exports && module.dependencies.indexOf(id) != -1) {
-			throw new CyclicDependencyError(id);
+			throw new CyclicDependencyError(runtime.stack);
 		}
 		return exports;
 	}
