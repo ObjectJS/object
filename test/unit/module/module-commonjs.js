@@ -45,7 +45,7 @@ test('use object.define - submodule', function() {
 	object.define('subdefine.c', function(require, exports) {
 		exports.c = 1;
 	});
-	object.define('subdefine', 'subdefinex, ./a, subdefine/b, ./c', function(require, exports) {
+	object.define('subdefine/root', 'subdefinex, ./a, subdefine/b, ./c', function(require, exports) {
 		var x = require('subdefinex');
 		equal(x.x, 1, 'value from subdefinex is ok');
 		var a = require('./a');
@@ -65,8 +65,8 @@ test('use object.define - submodule', function() {
 		}, 'when write subdefine/b in depencencies, should use require(subdefine/b) instead of require(./b)');
 
 	});
-	object.use('subdefine', function(subdefine) {
-		equal(subdefine.value, 1, 'value from subdefine is ok');
+	object.use('subdefine/root', function(subdefine) {
+		equal(subdefine.value, 1, 'value from subdefine/root is ok');
 	});
 	object.remove('subdefine');
 });
