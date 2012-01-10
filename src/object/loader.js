@@ -258,12 +258,7 @@ Package.prototype.parseDeps = function(deps) {
 		return [];
 	}
 
-	deps = deps.trim();
-	if (/^\.[^\/]|\.$/.test(deps)) {
-		throw new Error('deps should not startWith/endWith \'.\', except startWith \'./\'');
-	}
-	deps = deps.replace(/^,*|,*$/g, '');
-	deps = deps.split(/\s*,\s*/ig);
+	deps = deps.trim().replace(/^,*|,*$/g, '').split(/\s*,\s*/ig);
 
 	return deps;
 };
@@ -284,14 +279,22 @@ Dependency.prototype.getModule = function(runtime) {
  * @param module
  */
 function CommonJSDependency(id, owner) {
-	var parentId;
-	if (id.indexOf('./') == 0) {
-		id = id.slice(2);
-		id = id.replace(/\//g, '.');
-		parentId = owner.id.substr(0, owner.id.lastIndexOf('.'));
-		this.moduleId = parentId? parentId + '.' + id : id;
-		id = './' + id;
-	} else {
+	var pParts, parts;
+	if (id.indexOf('/') == 0) { // absolute
+	} else if (id.indexOf('.') == 0) { // relative
+		pParts = owner.id.split('.');
+		pParts.pop();
+		parts = id.split(/\//ig);
+		parts.forEach(function(part) {
+			if (part == '.') {
+			} else if (part == '..') {
+				pParts.pop();
+			} else {
+				pParts.push(part);
+			}
+		});
+		this.moduleId = pParts.join('.');
+	} else { // root
 		id = id.replace(/\//g, '.');
 		this.moduleId = id;
 	}
