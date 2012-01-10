@@ -1189,7 +1189,7 @@ this.FormItemElement = new Class(exports.Element, function() {
 
 	this.required = _supportHTML5Forms ? nativeproperty() : attributeproperty(false);
 	this.pattern  = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
-	this.maxlength = _supportHTML5Forms ? nativeproperty() : attributeproperty(undefined);
+	this.maxlength = nativeproperty();
 	this.type = _supportHTML5Forms ? nativeproperty() : attributeproperty('text');
 	this.min = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
 	this.max = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
@@ -1325,7 +1325,7 @@ this.FormItemElement = new Class(exports.Element, function() {
 				else return false;
 			})(),
 			tooLong: (function() {
-				var maxlength = self.getAttribute('maxlength');
+				var maxlength = self.get('maxlength');
 				var n = Number(maxlength);
 				if (n != maxlength) return false;
 				return value.length > n;
@@ -1349,7 +1349,7 @@ this.FormItemElement = new Class(exports.Element, function() {
 			if (validity.valueMissing) return '请填写此字段。';
 			if (validity.typeMismatch) return '请输入一个' + self.getAttribute('type') + '。';
 			if (validity.patternMismatch) return '请匹配要求的格式。';
-			if (validity.tooLong) return '请将该文本减少为 ' + self.getAttribute('maxlength') + ' 个字符或更少（您当前使用了' + self.get('value').length + '个字符）。';
+			if (validity.tooLong) return '请将该文本减少为 ' + self.get('maxlength') + ' 个字符或更少（您当前使用了' + self.get('value').length + '个字符）。';
 			if (validity.rangeUnderflow) return '值必须大于或等于' + self.getAttribute('min') + '。';
 			if (validity.rangeOverflow) return '值必须小于或等于' + self.getAttribute('max') + '。';
 			if (validity.stepMismatch) return '值无效。';

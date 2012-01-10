@@ -714,8 +714,6 @@ test('dom.FormElement', function() {
 		equal(form.toQueryString(), '', 'disabled input element is ignored');
 		form.removeChild(disabledInput);
 
-		// checkValidity, form must be appended to document.body
-		document.body.appendChild(form);
 		ok(form.checkValidity(), 'checkValidity is ok when no element in form');
 		var requiredInput = dom.wrap(document.createElement('input'));
 		requiredInput.type = 'text';
@@ -723,9 +721,116 @@ test('dom.FormElement', function() {
 		requiredInput.set('required', true);
 		requiredInput.value = '';
 		form.appendChild(requiredInput);
+
+		// checkValidity, form must be appended to document.body
+		document.body.appendChild(form);
 		equal(form.checkValidity(), false, 'value of required input is empty, checkValidity must be false');
+		ok(requiredInput.get('validationMessage').length != 0, 'validation message appears');
 		requiredInput.value = 'value';
 		equal(form.checkValidity(), true, 'value of required input is not empty now, checkValidity should be true');
+		equal(requiredInput.get('validationMessage'), '', 'validation message is empty');
+		form.removeChild(requiredInput);
+		document.body.removeChild(form);
+		
+		var urlInput = dom.wrap(document.createElement('input'));
+		urlInput.type = 'text';
+		urlInput.name = 'urlInput';
+		urlInput.set('type', 'url');
+		urlInput.value = 'not-url';
+		form.appendChild(urlInput);
+
+		document.body.appendChild(form);
+		equal(form.checkValidity(), false, 'value of url input is not-url, checkValidity must be false');
+		ok(urlInput.get('validationMessage').length != 0, 'validation message appears');
+		urlInput.value = 'http://www.renren.com';
+		equal(form.checkValidity(), true, 'value of url input is http://www.renren.com now, checkValidity should be true');
+		equal(urlInput.get('validationMessage'), '', 'validation message is empty');
+		form.removeChild(urlInput);
+		document.body.removeChild(form);
+
+		var emailInput = dom.wrap(document.createElement('input'));
+		emailInput.type = 'text';
+		emailInput.name = 'emailInput';
+		emailInput.set('type', 'email');
+		emailInput.value = 'not-email';
+		form.appendChild(emailInput);
+
+		document.body.appendChild(form);
+		equal(form.checkValidity(), false, 'value of email input is not-email, checkValidity must be false');
+		ok(emailInput.get('validationMessage').length != 0, 'validation message appears');
+		emailInput.value = 'abc@renren-inc.com';
+		equal(form.checkValidity(), true, 'value of email input is abc@renren-inc.com now, checkValidity should be true');
+		equal(emailInput.get('validationMessage'), '', 'validation message is empty');
+		form.removeChild(emailInput);
+		document.body.removeChild(form);
+
+		var telInput = dom.wrap(document.createElement('input'));
+		telInput.type = 'text';
+		telInput.name = 'telInput';
+		telInput.set('type', 'tel');
+		telInput.value = 'not-tel';
+		form.appendChild(telInput);
+
+		document.body.appendChild(form);
+
+		// 电话号码的校验只是判断了\r\n，标准浏览器貌似也没判断...
+		equal(form.checkValidity(), true, 'value of tel input is not-tel, checkValidity must be false');
+		equal(telInput.get('validationMessage'), '', 'validation message is empty');
+		telInput.value = '010-15424515';
+		equal(form.checkValidity(), true, 'value of tel input is 010-15424515 now, checkValidity should be true');
+		equal(telInput.get('validationMessage'), '', 'validation message is empty');
+		form.removeChild(telInput);
+		document.body.removeChild(form);
+
+		var patternInput = dom.wrap(document.createElement('input'));
+		patternInput.type = 'text';
+		patternInput.name = 'patternInput';
+		patternInput.set('pattern', 'matched');
+		patternInput.value = 'not-matched';
+		form.appendChild(patternInput);
+
+		document.body.appendChild(form);
+		equal(form.checkValidity(), false, 'value of pattern input is not matched, checkValidity must be false');
+		ok(patternInput.get('validationMessage').length != 0, 'validation message appears');
+		patternInput.value = 'matched';
+		equal(form.checkValidity(), true, 'value of pattern input is matched now, checkValidity should be true');
+		equal(patternInput.get('validationMessage'), '', 'validation message is empty');
+		form.removeChild(patternInput);
+		document.body.removeChild(form);
+
+		// 很多新版浏览器现在都并没有实现too long的判断....
+		/*
+		var tooLongInput = dom.wrap(document.createElement('input'));
+		tooLongInput.type = 'text';
+		tooLongInput.name = 'tooLongInput';
+		tooLongInput.set('maxlength', 2);
+		tooLongInput.value = '123421132132';
+		form.appendChild(tooLongInput);
+
+		document.body.appendChild(form);
+		equal(form.checkValidity(), false, 'value of too long input is too long(123421132132), checkValidity must be false');
+		ok(tooLongInput.get('validationMessage').length != 0, 'validation message appears');
+		tooLongInput.value = 'ex';
+		equal(form.checkValidity(), true, 'value of too long input is not too long(ex) now, checkValidity should be true');
+		equal(tooLongInput.get('validationMessage'), '', 'validation message is empty');
+		form.removeChild(tooLongInput);
+		document.body.removeChild(form);
+		*/
+
+		var customErrorInput = dom.wrap(document.createElement('input'));
+		customErrorInput.type = 'text';
+		customErrorInput.name = 'customErrorInput';
+		customErrorInput.value = '1';
+		customErrorInput.setCustomValidity('customError');
+		form.appendChild(customErrorInput);
+
+		document.body.appendChild(form);
+		equal(form.checkValidity(), false, 'customErrorInput.setCustomValidity(customError), checkValidity must be false');
+		ok(customErrorInput.get('validationMessage').length != 0, 'validation message appears');
+		customErrorInput.setCustomValidity('');
+		equal(form.checkValidity(), true, 'customErrorInput.setCustomValidity(), checkValidity should be true');
+		equal(customErrorInput.get('validationMessage'), '', 'validation message is empty');
+		form.removeChild(customErrorInput);
 		document.body.removeChild(form);
 	});
 });
