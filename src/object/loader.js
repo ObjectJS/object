@@ -280,8 +280,8 @@ Dependency.prototype.getModule = function(runtime) {
  */
 function CommonJSDependency(id, owner) {
 	var pParts, parts;
-	if (id.indexOf('/') == 0) { // absolute
-	} else if (id.indexOf('.') == 0) { // relative
+	if (id.indexOf('/') == 0) { // root
+	} else if (id.indexOf('./') == 0 || id.indexOf('../') == 0) { // relative
 		pParts = owner.id.split('.');
 		pParts.pop();
 		parts = id.split(/\//ig);
@@ -294,7 +294,7 @@ function CommonJSDependency(id, owner) {
 			}
 		});
 		this.moduleId = pParts.join('.');
-	} else { // root
+	} else { // top level
 		id = id.replace(/\//g, '.');
 		this.moduleId = id;
 	}
