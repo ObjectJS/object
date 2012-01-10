@@ -284,10 +284,12 @@ Dependency.prototype.getModule = function(runtime) {
  * @param module
  */
 function CommonJSDependency(id, owner) {
+	var parentId;
 	if (id.indexOf('./') == 0) {
 		id = id.slice(2);
 		id = id.replace(/\//g, '.');
-		this.moduleId = owner.id + '.' + id;
+		parentId = owner.id.substr(0, owner.id.lastIndexOf('.'));
+		this.moduleId = parentId? parentId + '.' + id : id;
 		id = './' + id;
 	} else {
 		id = id.replace(/\//g, '.');
@@ -305,23 +307,7 @@ CommonJSDependency.prototype.constructor = CommonJSDependency;
  * @param callback 异步方法，模块获取完毕后通过callback的唯一参数传回
  */
 CommonJSDependency.prototype.load = function(runtime, callback) {
-	var ownerId = this.owner.id;
-	var id = this.id;
-
-	var isRelative = false;
-	var context;
-	// Relative
-	if (id.indexOf('.\/') == 0) {
-		id = id.slice(2);
-		context = runtime.getName(ownerId);
-		// 去除root
-		// 说明确实去除了root，是一个相对引用，在获取fullId时需要加上root
-		isRelative = (context != ownerId);
-	}
-
-	id = context? (context + '.' + id) : id;
-	fullId = isRelative? runtime.getId(id) : id;
-	runtime.loadModule(fullId, id, callback);
+	runtime.loadModule(this.moduleId, runtime.getName(this.moduleId), callback);
 };
 
 /**

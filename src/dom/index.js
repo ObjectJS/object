@@ -1,4 +1,4 @@
-object.add('dom', 'ua, events, string, ./dd, sys', function(exports, ua, events, string, dd, sys) {
+object.add('dom', 'ua, events, string, dom/dd, sys', function(exports, ua, events, string, dd, sys) {
 
 window.UID = 1;
 var storage = {};
@@ -1189,8 +1189,8 @@ this.FormItemElement = new Class(exports.Element, function() {
 
 	this.required = _supportHTML5Forms ? nativeproperty() : attributeproperty(false);
 	this.pattern  = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
-	this.maxlength = _supportHTML5Forms ? nativeproperty() : attributeproperty(undefined);
-	this.type = _supportHTML5Forms ? nativeproperty() : attributeproperty('text');
+	this.maxlength = nativeproperty();
+	this.type = nativeproperty();
 	this.min = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
 	this.max = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
 
@@ -1325,7 +1325,7 @@ this.FormItemElement = new Class(exports.Element, function() {
 				else return false;
 			})(),
 			tooLong: (function() {
-				var maxlength = self.getAttribute('maxlength');
+				var maxlength = self.get('maxlength');
 				var n = Number(maxlength);
 				if (n != maxlength) return false;
 				return value.length > n;
