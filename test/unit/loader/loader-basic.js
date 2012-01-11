@@ -3,7 +3,14 @@ var Loader = object.Loader;
 // surround with closure
 (function() {
 function emptyCallback() {};
-var emptyJS = ($UNIT_TEST_CONFIG.needPath ? 'loader/': '') + 'empty.js';
+if (isJsTestDriverRunning) {
+	var loc = window['location'];
+	var pageUrl = loc.protocol + '//' + loc.host;
+	var path = pageUrl + '/test/test/unit/loader/';
+} else {
+	var path = ($UNIT_TEST_CONFIG.needPath ? 'loader/': '');
+}
+var emptyJS = path + 'empty.js';
 var head = document.getElementsByTagName('head')[0];
 // the only loader instance
 var loader = new Loader();
@@ -112,6 +119,10 @@ test('removeScript', function() {
 	Loader.removeScript(emptyJS);
 	Loader.loadScript(emptyJS, function() {}, true);
 	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, 'cache is true, so will add to _urlNodeMap');
+	// if jsTestDriver is running, emptyJS contains url, so do not need to add pageDir
+	if (isJsTestDriverRunning) {
+		pageDir = '';
+	}
 	notEqual(Loader.get('_urlNodeMap')[pageDir + emptyJS], undefined, pageDir + emptyJS + ' is cached in _urlNodeMap');
 	Loader.removeScript('_' + emptyJS);
 	notEqual(Loader.get('_urlNodeMap')[pageDir + emptyJS], undefined, 'remove failed, but should not raise error');
@@ -126,6 +137,7 @@ test('add-basic', function() {
 		try {
 			loader.add(edges[prop], ['a']);
 			ok(true, 'loader.add(' + prop + ', [\'a\']) should be ok');
+			loader.remove(edges[prop]);
 		} catch(e) {
 			ok(false, 'loader.add(' + prop + ', [\'a\']) should be ok : ' + e);
 		}
@@ -144,12 +156,23 @@ test('add-usage', function() {
 
 	loader.add('d.dd', 'a,b,c', function() {});
 	equal(Object.keys(loader.lib).length, 5, 'd.dd are added to loader.lib');
-	equal(loader.lib['d.dd'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
+	equal(loader.lib['d/dd'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
 
 	loader.add('error1', 'a,b');
-	equal(loader.lib['error1'], undefined, 'add module without context, should not be added');
+	ok(loader.lib['error1'], 'add module without context, should be added');
 	loader.add('error2', 'a', 'a');
-	equal(loader.lib['error2'], undefined, 'add module with not-function context, should not be added');
+	ok(loader.lib['error2'], 'add module with not-function context, should be added');
+});
+
+module('loader-basic-remove');
+test('remove-usage', function() {
+	loader.add('a', function() {});
+	loader.add('a/b', function() {});
+	loader.remove('a');
+	ok(!('a' in loader.lib), 'remove ok.');
+	ok('a/b' in loader.lib, 'sub not removed, ok');
+	loader.remove('a', true);
+	ok(!('a/b' in loader.lib), 'sub removed, ok');
 });
 
 module("loader-basic-use");

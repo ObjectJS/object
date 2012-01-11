@@ -37,14 +37,17 @@ else {
  * @param ov 是否覆盖，默认true
  */
 this.extend = function(obj, properties, ov) {
-	if (ov !== false) ov = true;
+	if (typeof ov !== 'function') {
+		if (ov !== false) ov = true;
+		ov = function(dest, src, prop) {return ov};
+	}
 
 	for (var property in properties) {
-		if (ov || obj[property] === undefined) {
+		if (ov(obj, properties, property)) {
 			obj[property] = properties[property];
 		}
 	}
-	if (properties && properties.hasOwnProperty('call')) {
+	if (properties && properties.hasOwnProperty('call') && ov(obj, properties, 'call')) {
 		obj.call = properties.call;
 	}
 

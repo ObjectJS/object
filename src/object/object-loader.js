@@ -20,7 +20,10 @@ object.execute = loader.execute.bind(loader);
  *        window.globalMember = 1;
  *    });
  */
-object.define('window', function(require, exports) {
+object.define('window', 'sys', function(require) {
+	var sys = require('sys');
+	var dom = sys.modules['dom'];
+	if (dom) dom.wrap(window);
 	return window;
 });
 

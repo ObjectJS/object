@@ -31,8 +31,8 @@ test('mixin with String/Array/Date/RegExp', function() {
 	try {new Class(function(){Class.mixin(this,'string')});} catch(e) {ok(false, '"string" should be considered');}
 	try {new Class(function(){Class.mixin(this,Array)});} catch(e) {ok(false, 'Array should be considered : ' + e);}
 	try {new Class(function(){Class.mixin(this,[1,2])});} catch(e) {ok(false, '[1,2] should be considered');}
-	try {new Class(function(){Class.mixin(this,Date)});} catch(e) {ok(false, 'Date should be considered');}
-	try {new Class(function(){Class.mixin(this,new Date)});} catch(e) {ok(false, 'new Date should be considered');}
+	//try {new Class(function(){Class.mixin(this,Date)});} catch(e) {ok(false, 'Date should be considered');}
+	//try {new Class(function(){Class.mixin(this,new Date)});} catch(e) {ok(false, 'new Date should be considered');}
 	try {new Class(function(){Class.mixin(this,RegExp)});} catch(e) {ok(false, 'RegExp should be considered');}
 	try {new Class(function(){Class.mixin(this,/test/g)});} catch(e) {ok(false, '/test/g should be considered');}
 });

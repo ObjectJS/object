@@ -6,7 +6,7 @@ object.use('events, dom, ua', function(exports, events, dom, ua) {
 	window.ua = ua;
 });
 
-var isChrome = ua.ua.chrome;
+var isChrome = ua.ua.chrome || ua.ua.opera || ua.ua.webkit > 525;
 var isFF = ua.ua.firefox;
 var isIE = ua.ua.ie;
 
@@ -354,7 +354,9 @@ test('two onxxx(standard event in DOM Node), 5 handlers, 1, onxxx, 2, onxxx, 3',
 		obj = document.createElement('div');
 		document.body.appendChild(obj);
 	}
-	Class.inject(events.Events, obj);
+	object.use('dom', function(exports, dom) {
+		dom.wrap(obj);
+	});
 	var counter = 0;
 	obj.addEvent('click', function() {
 		var expect = isIE ? 1 : (isChrome ? 0 : 0);
@@ -366,12 +368,12 @@ test('two onxxx(standard event in DOM Node), 5 handlers, 1, onxxx, 2, onxxx, 3',
 		counter ++;	//should not add
 	}
 	obj.addEvent('click', function() {
-		var expect = isIE ? 2 : (isChrome ? 1 : 2);
+		var expect = isIE ? 2 : (isChrome || ua.ua.webkit < 525 ? 1 : 2);
 		equal(counter, expect, 'second addEvent, order : ' + expect);
 		counter ++;
 	}, false);
 	obj.onclick = function() {
-		var expect = isIE ? 0 : (isChrome ? 2 : 1);
+		var expect = isIE ? 0 : (isChrome  || ua.ua.webkit < 525 ? 2 : 1);
 		equal(counter, expect, 'onxxx , order :  ' + expect);
 		counter ++;
 	}
@@ -402,13 +404,13 @@ test('two onxxx(standard event in DOM Node - for IE wrap), 5 handlers, 1, onxxx,
 		counter ++;	//should not add
 	}
 	obj.addEvent('dblclick', function(e) {
-		var expect = isIE ? 2 : (isChrome ? 1 : 2);
+		var expect = isIE ? 2 : (isChrome || ua.ua.webkit < 525  ? 1 : 2);
 		equal(e.a, 1, 'e.a is ok with IE nativeFireEvent');
 		equal(counter, expect, 'second addEvent, order : ' + expect);
 		counter ++;
 	}, false);
 	obj.ondblclick = function() {
-		var expect = isIE ? 0 : (isChrome ? 2 : 1);
+		var expect = isIE ? 0 : (isChrome || ua.ua.webkit < 525  ? 2 : 1);
 		equal(counter, expect, 'onxxx , order :  ' + expect);
 		counter ++;
 	}
@@ -461,4 +463,112 @@ test('remove onxxx at last', function() {
 	equal(counter, 2, 'two addEvent(xxx) are executed by fireEvent(xxx)');
 });
 
+test('standard event on DOM node - event can not be fired on node', function() {
+	expect(6);
+	var obj = dom.id('qunit-header')
+	if (!obj) {
+		obj = dom.wrap(document.createElement('div'));
+		document.body.appendChild(obj);
+	}
+	var counter = 0;
+	obj.addEvent('reset', function() {
+		var expect = isIE ? 0 : (isChrome ? 0 : 0);
+		equal(counter, expect, 'first addEvent, order : ' + expect);
+		counter ++;
+	}, false);
+	obj.onreset = function() {
+		ok(false, 'this onxxx should not be executed');
+		counter ++;	//should not add
+	}
+	obj.addEvent('reset', function(e) {
+		var expect = isIE ? 1 : (isChrome || ua.ua.webkit < 525  ? 1 : 2);
+		equal(e.a, 1, 'e.a is ok with IE nativeFireEvent');
+		equal(counter, expect, 'second addEvent, order : ' + expect);
+		counter ++;
+	}, false);
+	obj.onreset = function() {
+		var expect = isIE ? 2 : (isChrome || ua.ua.webkit < 525  ? 2 : 1);
+		equal(counter, expect, 'onxxx , order :  ' + expect);
+		counter ++;
+	}
+	obj.addEvent('reset', function() {
+		var expect = isIE ? 3 : (isChrome ? 3 : 3);
+		equal(counter, expect, 'third addEvent, order : ' + expect);
+		counter ++;
+	}, false);
+	obj.fireEvent('reset', {a:1});
+	equal(counter, 4, 'two onreset and three addEvent(reset) are executed by fireEvent(reset)');
+});
+
+test('standard event on DOM node - Node not inserted', function() {
+	expect(6);
+	obj = dom.wrap(document.createElement('div'));
+	var counter = 0;
+	obj.addEvent('reset', function() {
+		var expect = isIE ? 0 : (isChrome ? 0 : 0);
+		equal(counter, expect, 'first addEvent, order : ' + expect);
+		counter ++;
+	}, false);
+	obj.onreset = function() {
+		ok(false, 'this onxxx should not be executed');
+		counter ++;	//should not add
+	}
+	obj.addEvent('reset', function(e) {
+		var expect = isIE ? 1 : (isChrome || ua.ua.webkit < 525  ? 1 : 2);
+		equal(e.a, 1, 'e.a is ok with IE nativeFireEvent');
+		equal(counter, expect, 'second addEvent, order : ' + expect);
+		counter ++;
+	}, false);
+	obj.onreset = function() {
+		var expect = isIE ? 2 : (isChrome || ua.ua.webkit < 525  ? 2 : 1);
+		equal(counter, expect, 'onxxx , order :  ' + expect);
+		counter ++;
+	}
+	document.body.appendChild(obj)
+	obj.addEvent('reset', function() {
+		var expect = isIE ? 3 : (isChrome ? 3 : 3);
+		equal(counter, expect, 'third addEvent, order : ' + expect);
+		counter ++;
+	}, false);
+	obj.fireEvent('reset', {a:1});
+	equal(counter, 4, 'two onreset and three addEvent(reset) are executed by fireEvent(reset)');
+});
+
+test('wrap DOM node', function() {
+	var wrapper = dom.Element;
+	wrapper.prototype.innerHTML = '1';
+	wrapper.prototype.tagName = '2';
+	wrapper.prototype.testFunction = function() {
+		return 1;
+	}
+	document.fireEvent = function() {}
+	document.testFunction = function() {}
+
+	document.innerHTML = 'inner';
+	document.tagName = 'window';
+
+	Class.inject(wrapper, document, function(dest, src, prop) {
+		// dest原有的属性中，function全部覆盖，属性不覆盖已有的
+		if (typeof src[prop] != 'function') {
+			if (!(prop in dest)) {
+				return true;
+			} else {
+				return false;
+			}
+		} else {
+			return true;
+		}
+	});
+
+	notEqual(document.innerHTML, '1', 'innerHTML is not wrapped');
+	notEqual(document.tagName , '2', 'tagName is not wrapped');
+	equal(document.testFunction(), 1, 'testFunction is wrapped');
+	document.addEvent('a', function() {
+		ok(true, 'window.addEvent is ok');
+	});
+	document.ona = function() {
+		ok(true, 'window.one is ok');
+	}
+	document.fireEvent('a');
+});
 //by fireEvent   / by operation

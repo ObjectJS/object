@@ -1,5 +1,27 @@
 object.add('events', 'ua', function(exports, ua) {
 
+/**
+ * 在Safari3.0(Webkit 523)下，preventDefault()无法获取事件是否被preventDefault的信息
+ * 这里通过一个事件的preventDefault来判断类似情况
+ * _needWrapPreventDefault用于在wrapPreventDefault中进行判断
+ */
+var _needWrapPreventDefault = (function() {
+	if (document.createEvent) {
+		var event = document.createEvent('Event');
+		event.initEvent(type, false, true);
+
+		if (event.preventDefault) {
+			event.preventDefault();
+			// preventDefault以后返回不了正确的结果
+			return !(event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented);
+		} 
+		// 没有preventDefault方法，则必然要wrap
+		else {
+			return true;
+		}
+	}
+})();
+
 function IEEvent() {
 
 }
@@ -105,10 +127,52 @@ this.wrapEvent = function(e) {
 };
 
 /**
+ * safari 3.0在preventDefault执行以后，defaultPrevented为undefined，此处包装一下
+ */
+this.wrapPreventDefault = function(e) {
+	if (_needWrapPreventDefault) {
+		var oldPreventDefault = e.preventDefault;
+		e.preventDefault = function() {
+			this.defaultPrevented = true;
+			oldPreventDefault.apply(this, arguments);
+		}
+	}
+}
+
+// native events from Mootools
+var NATIVE_EVENTS = {
+	click: 2, dblclick: 2, mouseup: 2, mousedown: 2, contextmenu: 2, //mouse buttons
+	mousewheel: 2, DOMMouseScroll: 2, //mouse wheel
+	mouseover: 2, mouseout: 2, mousemove: 2, selectstart: 2, selectend: 2, //mouse movement
+	keydown: 2, keypress: 2, keyup: 2, //keyboard
+	orientationchange: 2, // mobile
+	touchstart: 2, touchmove: 2, touchend: 2, touchcancel: 2, // touch
+	gesturestart: 2, gesturechange: 2, gestureend: 2, // gesture
+	focus: 2, blur: 2, change: 2, reset: 2, select: 2, submit: 2, paste: 2, oninput: 2, //form elements
+	load: 2, unload: 1, beforeunload: 2, resize: 1, move: 1, DOMContentLoaded: 1, readystatechange: 1, //window
+	error: 1, abort: 1, scroll: 1 //misc
+};
+
+/**
+ * 判断某一个nativeEvent是不是适合Node
+ * 在IE下，如果Node不支持nativeEvent类型的事件监听，则nativeFireEvent.call(node, eventName, event)会报错
+ * 目前每一种Node支持的类型都已经在dom模块中进行了指定，详情请参见src/dom/index.js中元素的nativeEventNames属性
+ */
+function isNativeEventForNode(node, type) {
+	// 如果有nativeEventNames属性，说明是包装过的元素
+	if (node.nativeEventNames) {
+		// 判断此节点是否支持此事件类型的触发
+		return node.nativeEventNames.indexOf(type) != -1;
+	}
+	// 如果没有包装过，则继续按照默认的进行（可能会有错误发生）
+	return type in NATIVE_EVENTS;
+}
+
+/**
  * 事件系统
  */
 this.Events = new Class(function() {
-
+	
 	// 在标准浏览器中使用的是系统事件系统，无法保证nativeEvents在事件最后执行。
 	// 需在每次addEvent时，都将nativeEvents的事件删除再添加，保证在事件队列最后，最后才执行。
 	function moveNativeEventsToTail(self, type) {
@@ -127,20 +191,115 @@ this.Events = new Class(function() {
 			var event = arguments.length > 1? eventData : exports.wrapEvent(window.event);
 			var funcs = self.__eventListeners? self.__eventListeners[type] : null;
 			if (funcs) {
+				funcs = funcs.slice(0);
 				funcs.forEach(function(func) {
 					try {
 						func.call(self, event);
 					} catch(e) {
 					}
 				});
+				funcs = null;
 			}
 			var natives = self.__nativeEvents? self.__nativeEvents[type] : null;
 			if (natives) {
+				natives = natives.slice(0);
 				natives.forEach(function(func) {
 					func.call(self, event);
 				});
+				natives = null;
 			}
 		});
+	}
+
+	// 不同浏览器对onhandler的执行顺序不一样
+	// 	  IE：最先执行onhandler，其次再执行其他监听函数
+	// 	  Firefox：如果添加多个onhandler，则第一次添加的位置为执行的位置
+	// 	  Chrome ：如果添加多个onhandler，最后一次添加的位置为执行的位置
+	// 
+	// Chrome的做法是符合标准的，因此在模拟事件执行时按照Chrome的顺序来进行
+	//
+	// 保证onxxx监听函数的正常执行，并维持onxxx类型的事件监听函数的执行顺序
+	function addOnHandlerAsEventListener(self, type) {
+		// 只有DOM节点的标准事件，才会由浏览器来执行标准方法
+		if (type in NATIVE_EVENTS && self.nodeType == 1) return;
+
+		var boss = self.__boss || self;
+		var onhandler = self['on' + type], onhandlerBak = boss['__on' + type];
+		// 如果onHandler为空，并且已经添加过，则需要remove
+		if (!onhandler && onhandlerBak) {
+			boss.removeEventListener(type, onhandlerBak, false);
+			boss['__on' + type] = null;
+		}
+		// 如果onHandler不为空，则需要判断是否已经添加过
+		else if (onhandler && onhandler != onhandlerBak) {
+			// 如果已经添加过，则先去除原先添加的方法，再将新的方法加入，并更新备份信息
+			boss.removeEventListener(type, onhandlerBak, false);
+			// 将新的事件监听方法加入列表
+			boss.addEventListener(type, onhandler, false);
+			// 将新的事件监听方法备份
+			boss['__on' + type] = onhandler;
+		}
+	}
+	
+	// IE下保证onxxx事件处理函数正常执行
+	function attachOnHandlerAsEventListener(self, type) {
+		// 只有DOM节点的标准事件，并且此标准事件能够在节点上触发，才会由浏览器来执行标准方法
+		if (self.nodeType == 1 && isNativeEventForNode(self, type) && isNodeInDOMTree(self)) return;
+
+		if (!self.__eventListeners) {
+			self.__eventListeners = {};
+		}
+		if (!self.__eventListeners[type]) {
+			self.__eventListeners[type] = [];
+		}
+		var funcs = self.__eventListeners[type];
+		var l = funcs.length;
+		var onhandler = self['on' + type], onhandlerBak = self['__on' + type];
+		// 如果onHandler为空，并且已经添加过，则需要remove
+		if (!onhandler && onhandlerBak) {
+			for (var i = 0; i < l; i++) {
+				if (funcs[i] == onhandlerBak) {
+					funcs.splice(i, 1);
+					break;
+				}
+			}
+			self['__on' + type] = null;
+		}
+		// 如果onHandler不为空，则需要判断是否已经添加过
+		else if (onhandler && onhandler != onhandlerBak) {
+			// 如果已经添加过，则先去除原先添加的方法，再将新的方法加入，并更新备份信息
+			for (var i = 0; i < l; i++) {
+				if (funcs[i] == onhandlerBak) {
+					funcs.splice(i, 1);
+					break;
+				}
+			}
+			// 将新的事件监听方法加入列表
+			funcs.push(onhandler);
+			// 将新的事件监听方法备份
+			self['__on' + type] = onhandler;
+		}
+	}
+
+	/**
+	 * 判断节点是否是DOM树中的节点
+	 *
+	 * 在IE下，如果不是DOM树中的节点，标准事件的onxxx监听不会触发
+	 * 因此在fireEvent时需要判断当前节点是否在DOM树中
+	 */
+	function isNodeInDOMTree(node) {
+		if (!node) {
+			return false;
+		}
+		var parent = node.parentNode;
+		var top = document.documentElement;
+		while (parent) {
+			if (parent == top) {
+				return true;
+			}
+			parent = parent.parentNode;
+		}
+		return false;
 	}
 
 	this.initialize = function(self) {
@@ -187,7 +346,19 @@ this.Events = new Class(function() {
 			};
 			func.innerFunc = innerFunc;
 			type = 'mouseout';
+
+			// 备份func，以便能够通过innerFunc来删除func
+			if (!self.__eventListeners) {
+				self.__eventListeners = {};
+			}
+			if (!self.__eventListeners[type]) {
+				self.__eventListeners[type] = [];
+			}
+			self.__eventListeners[type].push(func);
 		}
+
+		//处理onxxx类型的事件处理函数
+		addOnHandlerAsEventListener(self, type);
 
 		boss.addEventListener(type, func, cap);
 		moveNativeEventsToTail(self, type);
@@ -213,6 +384,7 @@ this.Events = new Class(function() {
 			return f === func;
 		})) return;
 
+		attachOnHandlerAsEventListener(self, type);
 		funcs.push(func);
 
 	};
@@ -273,7 +445,22 @@ this.Events = new Class(function() {
 	this.removeEvent = document.removeEventListener? function(self, type, func, cap) {
 		var boss = self.__boss || self;
 
-		boss.removeEventListener(type, func, cap);
+		if (!ua.ua.ie && type == 'mouseleave') {
+			type = 'mouseout';
+			if (self.__eventListeners && self.__eventListeners[type]) {
+				var funcs = self.__eventListeners[type];
+				for (var i = 0, current, l = funcs.length; i < l; i++) {
+					current = funcs[i];
+					if (current.innerFunc === func) {
+						boss.removeEventListener(type, current, cap);
+						funcs.splice(i, 1);
+						break;
+					}
+				}
+			}
+		} else {
+			boss.removeEventListener(type, func, cap);
+		}
 	} : function(self, type, func, cap) {
 		var boss = self.__boss || self;
 
@@ -299,46 +486,84 @@ this.Events = new Class(function() {
 	* @param eventData 扩展到event对象上的数据
 	*/
 	this.fireEvent = document.dispatchEvent? function(self, type, eventData) {
+		if (!ua.ua.ie && type == 'mouseleave') {
+			type = 'mouseout';
+		}
+		//fireEvent之前仍然需要检查onxxx类型的事件处理函数
+		addOnHandlerAsEventListener(self, type);
 		var boss = self.__boss || self;
 
-		var triggerName = 'on' + type.toLowerCase();
 		var event = document.createEvent('Event');
 		event.initEvent(type, false, true);
 		object.extend(event, eventData);
 
-		if (self[triggerName]) {
-			var returnValue = self[triggerName].call(self, event);
-			if (returnValue === false) event.preventDefault();
-		}
+		exports.wrapPreventDefault(event);
 
+		// 火狐下通过dispatchEvent触发事件，在事件监听函数中抛出的异常都不会在控制台给出
+		// see https://bugzilla.mozilla.org/show_bug.cgi?id=503244
 		boss.dispatchEvent(event);
 		return event;
 	} : function(self, type, eventData) {
 		if (!eventData) eventData = {};
-		var triggerName = 'on' + type.toLowerCase();
-		var event = exports.wrapEvent(eventData);
 
-		if (self[triggerName]) {
-			var returnValue = self[triggerName].call(self, event);
-			if (returnValue === false) event.preventDefault();
+		// 如果是DOM节点的标准事件，并且该事件能够在节点上由浏览器触发，则由浏览器处理onxxx类型的事件处理函数即可
+		// see http://js8.in/731.html
+		if (self.nodeType == 1 && isNativeEventForNode(self, type)) {
+			var event = exports.wrapEvent(document.createEventObject());
+			object.extend(event, eventData);
+
+			// 判断节点是否是加入DOM树的节点
+			if (isNodeInDOMTree(self)) {
+				// 如果节点在放入DOM树之前调用过addEvent，则标准事件的处理函数onxxx将会被备份
+				// 如果在备份之后，将节点插入DOM树，此时标准事件会自动调用onxxx，而onxxx已经备份过一次了
+				// 所以在fireEvent之前，需要先检查一下列表中是否已经添加过onxxx的备份，如果添加过，需要删除
+				var onhandlerBak = self['__on' + type];
+				var funcs = self.__eventListeners[type];
+				if (onhandlerBak && funcs) {
+					for (var i = 0, l = funcs.length; i < l; i++) {
+						if (funcs[i] == onhandlerBak) {
+							funcs.splice(i, 1);
+							break;
+						}
+					}
+					self['__on' + type] = null;
+				}
+
+				if (self._oldFireEventInIE) {
+					self._oldFireEventInIE('on' + type, event);
+					return event;
+				} else {
+					if (typeof console != 'undefined') {
+						console.warn('请使用dom.wrap方法包装对象以添加事件处理函数');
+					}
+				}
+			}
 		}
 
-		if (!self.__eventListeners[type]) return event;
+		attachOnHandlerAsEventListener(self, type);
+		var event = exports.wrapEvent(eventData);
+
 		var funcs = self.__eventListeners[type];
-		for (var i = 0, j = funcs.length; i < j; i++) {
-			if (funcs[i]) {
+		if (funcs) {
+			funcs = funcs.slice(0);
+			for (var i = 0, j = funcs.length; i < j; i++) {
+				if (funcs[i]) {
 					try {
 						funcs[i].call(self, event, true);
 					} catch(e) {
 					}
+				}
 			}
+			funcs = null;
 		}
 
 		var natives = self.__nativeEvents[type];
 		if (natives) {
+			natives = natives.slice(0);
 			natives.forEach(function(func) {
 				func.call(self, event);
 			});
+			natives = null;
 		}
 
 		return event;
@@ -346,4 +571,3 @@ this.Events = new Class(function() {
 });
 
 });
-

@@ -121,11 +121,12 @@ test('events.Events: addEvent/removeEvent/fireEvent', function() {
 var chrome = false;
 var ie = false;
 object.use('ua', function(exports, ua) {
-	chrome = ua.ua.chrome;
-	ie=  ua.ua.ie;
+	chrome = ua.ua.chrome || ua.ua.webkit > 525 || ua.ua.opera;
+	ie =  ua.ua.ie;
 });
-test('events.Events: play with the standard', function() {
-	expect(chrome ? 11 : 10);
+
+test('events.Events: play with the standard - without error', function() {
+	expect(7);
 	object.use('events, dom', function(exports, events, dom) {
 		var A = new Class(function() {
 			Class.mixin(this, events.Events);
@@ -166,6 +167,53 @@ test('events.Events: play with the standard', function() {
 		}, false);
 		//document.body.appendChild(node);
 		node.fireEvent('click');
+	});
+});
+
+// only ok in chrome, other browsers will cause error which will not be caught, this will make testcase fail
+if (isJsTestDriverRunning && chrome) {
+	var AsyncTestCase_throwErrorInHandler = AsyncTestCase('throwErrorInHandler');
+
+	AsyncTestCase_throwErrorInHandler.prototype['testEvents.Events:PlayWithTheStandard-WithError']= function(queue) {
+		expect(chrome ? 4 : 3);
+		queue.call('test', function(callbacks) {
+			var callback = callbacks.add(function(){});
+			var A = new Class(function() {
+				Class.mixin(this, events.Events);
+			});
+			var a = new A();
+
+			// throw error in event handler
+			var counter3 = 0;
+			a.addEvent('fire-error', function() {
+				ok(true, 'fire event fire-error, should not stop the event chain - handler 1');
+				counter3 ++;
+				throw new Error('throw error in handler');
+			}, false);
+			a.addEvent('fire-error', function() {
+				counter3 ++;
+				ok(true, 'fire event fire-error, should not stop the event chain - handler 2');
+			}, false);
+			// can not get the error in this way, because error is throwed from another function
+			var oldError = window.onerror;
+			window.onerror = function(a,b,c) {
+				ok(true, 'should raise error after fireEvent(fire-error), but should not stop the event chain');
+				window.onerror = oldError;
+				callback();
+				return true;
+			};
+			a.fireEvent('fire-error');
+			equal(counter3, 2, 'should not stop the event chain');
+		});
+	};
+} else {
+test('events.Events: play with the standard - throw error', function() {
+	expect(chrome ? 4 : 3);
+	object.use('events, dom', function(exports, events, dom) {
+		var A = new Class(function() {
+			Class.mixin(this, events.Events);
+		});
+		var a = new A();
 
 		// throw error in event handler
 		var counter3 = 0;
@@ -190,6 +238,7 @@ test('events.Events: play with the standard', function() {
 		equal(counter3, 2, 'should not stop the event chain');
 	});
 });
+}
 
 if (ie) {
 	test('events.Events : IE new dom node, onxxx - addEvent - fireEvent', function() {
@@ -302,3 +351,30 @@ if (ie) {
 		});
 	});
 }
+
+test('addEvent/removeEvent : mouseleave', function() {
+	expect(ie ? 4 : 6);
+	object.use('dom', function(exports, dom) {
+		var node = dom.wrap(document.createElement('div'));
+		node.addEvent('mouseleave', function(e) {
+			ok(true, 'mouseleave is fired');
+		}, false);
+		node.fireEvent('mouseleave');
+
+		var handler = function(e) {
+			ok(true, 'should be remove after node.removeEvent called');
+		}
+		node.addEvent('mouseleave', handler, false);
+		node.fireEvent('mouseleave');
+		if (!ie) {
+			// except IE
+			equal(node.__eventListeners['mouseout'].length, 2, 'handler is added to __eventListeners');
+		}
+		node.removeEvent('mouseleave', handler);
+		if (!ie) {
+			// except IE
+			equal(node.__eventListeners['mouseout'].length, 1, 'handler is removed from __eventListeners');
+		}
+		node.fireEvent('mouseleave');
+	});
+});

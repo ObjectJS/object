@@ -243,15 +243,29 @@ type.__new__ = function(metaclass, name, base, dict) {
 			if (!name) {
 				throw new Error('can not get function name when this.parent called');
 			}
+
 			var base = cls.__base__;
-			if (!base || !base.get) {
-				throw new Error('no parent class, can not call parent');
+			var mixins = cls.__mixins__;
+			var member, owner;
+
+			// 先从base中找同名func
+			if (base && base.get && base.has(name)) {
+				owner = base;
+				member = base.get(name);
 			}
-			var baseMember = base.get(name);
-			if (!baseMember || !baseMember.apply) {
+			// 再从mixins中找同名func
+			else if (mixins && mixins.length && mixins.some(function(mixin) {
+				owner = mixin;
+				return mixin.has(name);
+			})) {
+				member = owner.get(name);
+			}
+
+			if (!member || typeof member != 'function') {
 				throw new Error('no such method in parent : \'' + name + '\'');
+			} else {
+				return member.apply(base, arguments);
 			}
-			return baseMember.apply(base, arguments);
 		}
 	});
 	cls.__new__ = base.__new__;
@@ -409,15 +423,28 @@ Class.getPropertyNames = function(obj) {
  * @param host 注射进去的对象
  * @param args 构造的参数
  */
-Class.inject = function(cls, host, args) {
+Class.inject = function(cls, host, args, filter) {
 	if (typeof cls != 'function') {
 		throw new Error('cls should be function');
 	};
-	args = args || [];
+	var argsLen = arguments.length;
+	if (argsLen === 2) {
+		args = [];
+		filter = true;
+	} else if (argsLen === 3) {
+		if (Array.isArray(args)) {
+			args = args || [];
+			filter = true;
+		} else {
+			filter = args;
+			args = [];
+		}
+	}
+
 	host.__class__ = cls;
 	host.__properties__ = cls.prototype.__properties__;
 	var p = Class.getInstance(cls);
-	object.extend(host, p);
+	object.extend(host, p, filter);
 	Class.initMixins(cls, host);
 	if (typeof cls.prototype.initialize == 'function') cls.prototype.initialize.apply(host, args);
 };

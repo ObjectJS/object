@@ -1,4 +1,4 @@
-object.add('dom', 'ua, events, string, ./dd, sys', function(exports, ua, events, string, dd, sys) {
+object.add('dom', 'ua, events, string, dom/dd, sys', function(exports, ua, events, string, dd, sys) {
 
 window.UID = 1;
 var storage = {};
@@ -114,6 +114,9 @@ var wrap = this.wrap = function(node) {
 	} else {
 		// 已经wrap过了
 		if (node._wrapped) return node;
+		if (ua.ua.ie && node.fireEvent) {
+			node._oldFireEventInIE = node.fireEvent;
+		}
 
 		var wrapper;
 		if (node === window) {
@@ -133,21 +136,18 @@ var wrap = this.wrap = function(node) {
 
 		// 为了解决子类property覆盖父类instancemethod/classmethod等的问题，需要将property同名的prototype上的属性改为undefined
 		// Class.inject对node赋值时，会将undefined的值也进行赋值，而innerHTML、value等值，不能设置为undefined
-		// 因此这里不直接调用Class.inject，而是单独对wrapper的实例中的属性进行判断
-
-		node.__class__ = wrapper;
-		node.__properties__ = wrapper.prototype.__properties__;
-		var wrapperInstance = Class.getInstance(wrapper);
-		for (var prop in wrapperInstance) {
-			if ((prop != 'fireEvent' && prop in node) || wrapperInstance[prop] === undefined) {
-				continue;
+		Class.inject(wrapper, node, function(dest, src, prop) {
+			// dest原有的属性中，function全部覆盖，属性不覆盖已有的
+			if (typeof src[prop] != 'function') {
+				if (!(prop in dest)) {
+					return true;
+				} else {
+					return false;
+				}
+			} else {
+				return true;
 			}
-			node[prop] = wrapperInstance[prop];
-		}
-		Class.initMixins(wrapper, node);
-		if (typeof wrapper.prototype.initialize == 'function') {
-			wrapper.prototype.initialize.apply(node, []);
-		}
+		});
 
 		return node;
 	}
@@ -433,6 +433,8 @@ this.ElementClassList = new Class(Array, function() {
 
 });
 
+var basicNativeEventNames = ['click', 'dblclick', 'mouseup', 'mousedown', 'contextmenu',
+		'mouseover', 'mouseout', 'mousemove', 'selectstart', 'selectend', 'keydown', 'keypress', 'keyup']
 /**
  * 普通元素的包装
  */
@@ -440,6 +442,8 @@ this.Element = new Class(function() {
 
 	Class.mixin(this, events.Events);
 	Class.mixin(this, dd.DragDrop);
+
+	this.nativeEventNames = basicNativeEventNames;
 
 	this.initialize = function(self, tagName) {
 		// 直接new Element，用来生成一个新元素
@@ -456,6 +460,7 @@ this.Element = new Class(function() {
 		if (self.classList === undefined && self !== document && self !== window) {
 			self.classList = new exports.ElementClassList(self);
 		}
+		self.delegates = {};
 	};
 
 	/**
@@ -500,12 +505,50 @@ this.Element = new Class(function() {
 	 * @param type 事件名称
 	 * @param callback 事件回调
 	 */
-	this.delegate = function(self, selector, type, callback) {
-		self.addEvent(type, function(e) {
+	this.delegate = function(self, selector, type, fn) {
+
+		function wrapper(e) {
 			var ele = e.srcElement || e.target;
 			do {
-				if (ele && exports.Element.get('matchesSelector')(ele, selector)) callback.call(wrap(ele), e);
+				if (ele && exports.Element.get('matchesSelector')(ele, selector)) fn.call(wrap(ele), e);
 			} while((ele = ele.parentNode));
+		}
+
+		var key = selector + '_' + type;
+		if (!self.delegates) {
+			self.delegates = {};
+		}
+		if (!(key in self.delegates)) {
+			self.delegates[key] = [];
+		}
+		self.delegates[key].push({
+			wrapper: wrapper,
+			fn: fn
+		});
+
+		self.addEvent(type, wrapper);
+	};
+
+	/**
+	 * 事件代理
+	 * @param selector 需要被代理的子元素selector
+	 * @param type 事件名称
+	 * @param callback 事件回调
+	 */
+	this.undelegate = function(self, selector, type, fn) {
+
+		var key = selector + '_' + type;
+		if (!self.delegates) {
+			self.delegates = {};
+		}
+		// 没有这个代理
+		if (!(key in self.delegates)) return;
+
+		self.delegates[key].forEach(function(item) {
+			if (item.fn === fn) {
+				self.removeEvent(type, item.wrapper);
+				return;
+			}
 		});
 	};
 
@@ -950,6 +993,8 @@ this.Element = new Class(function() {
  */
 this.ImageElement = new Class(exports.Element, function() {
 
+	this.nativeEventNames = basicNativeEventNames.concat(['error', 'abort']);
+
 	// 获取naturalWidth和naturalHeight的方法
 	// http://jacklmoore.com/notes/naturalwidth-and-naturalheight-in-ie/
 	function _getNaturalSize(img) {
@@ -1002,6 +1047,8 @@ this.ImageElement = new Class(exports.Element, function() {
  * form元素的包装
  */
 this.FormElement = new Class(exports.Element, function() {
+
+	this.nativeEventNames = basicNativeEventNames.concat(['reset', 'submit']);
 
 	this.initialize = function(self) {
 		this.parent(self);
@@ -1138,6 +1185,15 @@ this.FormElement = new Class(exports.Element, function() {
  */
 this.FormItemElement = new Class(exports.Element, function() {
 
+	this.nativeEventNames = basicNativeEventNames.concat(['focus', 'blur', 'change', 'select', 'paste']);
+
+	this.required = _supportHTML5Forms ? nativeproperty() : attributeproperty(false);
+	this.pattern  = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
+	this.maxlength = nativeproperty();
+	this.type = _supportHTML5Forms ? nativeproperty() : attributeproperty('text');
+	this.min = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
+	this.max = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
+
 	/**
 	 * selectionStart
 	 */
@@ -1254,6 +1310,8 @@ this.FormItemElement = new Class(exports.Element, function() {
 		var value = self.get('value');
 		
 		var validity = {
+			// 在firefox3.6.25中，self.getAttribute('required')只能获取到self.setAttribute('required', true)的值
+			// self.required = true设置的值无法获取
 			valueMissing: self.getAttribute('required') && !value? true : false,
 			typeMismatch: (function(type) {
 				if (type == 'url') return !(/^\s*(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i).test(value);
@@ -1267,7 +1325,7 @@ this.FormItemElement = new Class(exports.Element, function() {
 				else return false;
 			})(),
 			tooLong: (function() {
-				var maxlength = self.getAttribute('maxlength');
+				var maxlength = self.get('maxlength');
 				var n = Number(maxlength);
 				if (n != maxlength) return false;
 				return value.length > n;
@@ -1291,7 +1349,7 @@ this.FormItemElement = new Class(exports.Element, function() {
 			if (validity.valueMissing) return '请填写此字段。';
 			if (validity.typeMismatch) return '请输入一个' + self.getAttribute('type') + '。';
 			if (validity.patternMismatch) return '请匹配要求的格式。';
-			if (validity.tooLong) return '请将该文本减少为 ' + self.getAttribute('maxlength') + ' 个字符或更少（您当前使用了' + self.get('value').length + '个字符）。';
+			if (validity.tooLong) return '请将该文本减少为 ' + self.get('maxlength') + ' 个字符或更少（您当前使用了' + self.get('value').length + '个字符）。';
 			if (validity.rangeUnderflow) return '值必须大于或等于' + self.getAttribute('min') + '。';
 			if (validity.rangeOverflow) return '值必须小于或等于' + self.getAttribute('max') + '。';
 			if (validity.stepMismatch) return '值无效。';
@@ -1527,12 +1585,16 @@ this.TextAreaElement = new Class(exports.TextBaseElement, function() {
  * window元素的包装类
  */
 this.Window = new Class(exports.Element, function() {
+	this.nativeEventNames = basicNativeEventNames.concat(
+		['load', 'unload', 'beforeunload', 'resize', 'move', 'DomContentLoaded', 'readystatechange', 'scroll', 'mousewheel', 'DOMMouseScroll']);
 });
 
 /**
  * document元素的包装类
  */
 this.Document = new Class(exports.Element, function() {
+	this.nativeEventNames = basicNativeEventNames.concat(
+		['load', 'unload', 'beforeunload', 'resize', 'move', 'DomContentLoaded', 'readystatechange', 'scroll', 'mousewheel', 'DOMMouseScroll']);
 });
 
 /**

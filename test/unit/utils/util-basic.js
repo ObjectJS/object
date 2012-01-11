@@ -1,8 +1,10 @@
 module("util-basic-Object");
 
 var ie = false;
+var old_webkit = false;
 object.use('ua', function(exports, ua) {
 	ie = ua.ua.ie;
+	old_webkit = ua.ua.webkit < 525;
 });
 
 test('Object.keys', function() {
@@ -72,7 +74,7 @@ test('Array.forEach', function() {
 	a.forEach(function(value, index, array) {
 		array.splice(index);
 	});
-	var result = ie ? 3 : 0;
+	var result = ie || old_webkit ? 3 : 0;
 	equal(a.length, result, 'array can be modified in forEach');
 
 	var a = [undefined, null];
@@ -264,10 +266,6 @@ test('Function.__get_name__', function() {
 module("util-basic-Class");
 test('Class.create', function() {
 	var C = Class.create();
-	try { C.set('d', 1); 
-		ok(false, 'class is not prepared after Class.create()');
-	} catch (e) {
-		ok(true, 'set can not be called : ' + e); }
 	try { C.__mixin__('d', 1); } catch (e) {
 		ok(true, '__mixin__ can not be called : ' + e); }
 	try { 
