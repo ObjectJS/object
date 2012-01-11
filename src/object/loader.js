@@ -1,5 +1,8 @@
 ;(function(object) {
 
+/**
+ * 将name中的“.”换成id形式的“/”
+ */
 function name2id(name) {
 	return name.replace(/\./g, '/');
 }
@@ -17,16 +20,16 @@ Module.prototype.toString = function() {
 /**
  * 找不到模块Error
  */
-function NoModuleError(name) {
-	this.message = 'no module named ' + name;
+function NoModuleError(id) {
+	this.message = 'no module named ' + id;
 };
 NoModuleError.prototype = new Error();
 
 /**
  * 未对模块进行依赖
  */
-function ModuleRequiredError(name) {
-	this.message = 'module ' + name + ' required';
+function ModuleRequiredError(id) {
+	this.message = 'module ' + id + ' required';
 };
 ModuleRequiredError.prototype = new Error();
 
@@ -34,7 +37,7 @@ ModuleRequiredError.prototype = new Error();
  * 循环依赖Error
  */
 function CyclicDependencyError(stack) {
-	this.stack = stack;
+	this.runStack = stack;
 	var msg = '';
 	stack.forEach(function(m, i) {
 		msg += m.id;
