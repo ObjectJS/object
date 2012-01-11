@@ -346,9 +346,6 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 	 * @param name 截止到当前部分的包含context前缀的名字
 	 */
 	function nextPart(pExports) {
-		if (arguments.length > 1) {
-			console.log(arguments)
-		}
 
 		var depModule;
 
