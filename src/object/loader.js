@@ -1,5 +1,9 @@
 ;(function(object) {
 
+function name2id(name) {
+	return name.replace(/\./g, '/');
+}
+
 /**
  * 模块
  */
@@ -153,7 +157,7 @@ ObjectPackage.prototype.handleCyclicDependency = function(dep, pkg, runtime, nex
 function Package(id, deps, factory) {
 	if (!id) return;
 
-	this.id = id.replace(/\//g, '.');
+	this.id = id;
 	this.dependencies = this.parseDeps(deps);
 	this.factory = factory;
 	this.deps = {};
@@ -231,7 +235,7 @@ Package.prototype.load = function(name, runtime, callback) {
 		// sys.modules
 		if (exports.__name__ === 'sys') exports.modules = runtime.modules;
 
-		if (callback) callback(exports, name);
+		if (callback) callback(exports);
 	}
 
 	nextDep();
@@ -263,28 +267,28 @@ Package.prototype.parseDeps = function(deps) {
 	return deps;
 };
 
-function Dependency(id, owner) {
-	if (!id) return;
-	this.id = id;
+function Dependency(name, owner) {
+	if (!name) return;
+	this.name = name;
 	this.owner = owner;
 }
 
 Dependency.prototype.getModule = function(runtime) {
-	var pkg = runtime.loader.getModule(this.moduleId); 
+	var pkg = runtime.loader.getModule(this.id); 
 	return pkg;
 };
 
 /**
- * @param id
+ * @param name
  * @param module
  */
-function CommonJSDependency(id, owner) {
+function CommonJSDependency(name, owner) {
 	var pParts, parts;
-	if (id.indexOf('/') == 0) { // root
-	} else if (id.indexOf('./') == 0 || id.indexOf('../') == 0) { // relative
-		pParts = owner.id.split('.');
+	if (name.indexOf('/') == 0) { // root
+	} else if (name.indexOf('./') == 0 || name.indexOf('../') == 0) { // relative
+		pParts = owner.id.split('/');
 		pParts.pop();
-		parts = id.split(/\//ig);
+		parts = name.split(/\//ig);
 		parts.forEach(function(part) {
 			if (part == '.') {
 			} else if (part == '..') {
@@ -293,12 +297,11 @@ function CommonJSDependency(id, owner) {
 				pParts.push(part);
 			}
 		});
-		this.moduleId = pParts.join('.');
+		this.id = pParts.join('/');
 	} else { // top level
-		id = id.replace(/\//g, '.');
-		this.moduleId = id;
+		this.id = name2id(name);
 	}
-	Dependency.call(this, id, owner);
+	Dependency.call(this, name, owner);
 };
 
 CommonJSDependency.prototype = new Dependency();
@@ -310,22 +313,22 @@ CommonJSDependency.prototype.constructor = CommonJSDependency;
  * @param callback 异步方法，模块获取完毕后通过callback的唯一参数传回
  */
 CommonJSDependency.prototype.load = function(runtime, callback) {
-	runtime.loadModule(this.moduleId, runtime.getName(this.moduleId), callback);
+	runtime.loadModule(this.id, runtime.getName(this.id), callback);
 };
 
 /**
  * 获取此依赖的引用
  */
 CommonJSDependency.prototype.getRef = function(runtime) {
-	var root = runtime.getName(this.moduleId);
+	var root = runtime.getName(this.id);
 	return runtime.modules[root];
 };
 
-ObjectDependency = function(id, owner) {
-	this.idParts = id.split('.');
-	this.root = this.idParts[0];
-	this.moduleId = id;
-	Dependency.call(this, id, owner);
+ObjectDependency = function(name, owner) {
+	this.nameParts = name.split('.');
+	this.root = this.nameParts[0];
+	this.id = name2id(name);
+	Dependency.call(this, name, owner);
 };
 
 ObjectDependency.prototype = new Dependency();
@@ -334,39 +337,42 @@ ObjectDependency.prototype.constructor = ObjectDependency;
 
 ObjectDependency.prototype.load = function(runtime, callback) {
 	var dep = this;
-	var pId, part, partId, currentPart = -1;
+	var pName, part, name, currentPart = -1;
 
 	/**
 	 * 依次获取当前模块的每个部分
 	 * 如a.b.c，依次获取a、a.b、a.b.c
 	 * @param pExprorts 上一部分的模块实例，如果是初次调用，为空
-	 * @param id 截止到当前部分的包含context前缀的名字
+	 * @param name 截止到当前部分的包含context前缀的名字
 	 */
-	function nextPart(pExports, id) {
+	function nextPart(pExports) {
+		if (arguments.length > 1) {
+			console.log(arguments)
+		}
 
 		var depModule;
 
 		if (pExports) {
-			runtime.setModule(id, pExports);
+			runtime.setModule(name, pExports);
 			// 生成对象链
-			runtime.setMemberTo(pId, part, pExports);
+			runtime.setMemberTo(pName, part, pExports);
 		}
 
-		pId = id;
+		pName = name;
 
 		currentPart++;
 
-		if (currentPart == dep.idParts.length) {
+		if (currentPart == dep.nameParts.length) {
 			callback(runtime.modules[dep.root]);
 
 		} else {
-			part = dep.idParts[currentPart];
-			partId = (pId? pId + '.' : '') + part;
-			runtime.loadModule(partId, partId, nextPart);
+			part = dep.nameParts[currentPart];
+			name = (pName? pName + '.' : '') + part;
+			runtime.loadModule(name2id(name), runtime.getName(name), nextPart);
 		};
 	}
 
-	nextPart(null, null);
+	nextPart();
 };
 
 /**
@@ -441,7 +447,7 @@ LoaderRuntime.prototype = {
 
 		// 使用缓存中的
 		if (exports) {
-			callback(exports, name);
+			callback(exports);
 
 		} else {
 			loader.load(id, name, this, callback);
@@ -460,10 +466,10 @@ LoaderRuntime.prototype = {
 	 */
 	getName: function(id) {
 		var root = this.root;
-		if (id == root || id.indexOf(root + '.') == 0) {
+		if (id == root || id.indexOf(root + '/') == 0) {
 			id = id.slice(root.length + 1);
 		}
-		return id;
+		return id.replace(/\//g, '.');
 	},
 
 	/**
@@ -530,13 +536,6 @@ var Loader = new Class(function() {
 	};
 
 	/**
-	 * 将路径形式的id转换成.形式
-	 */
-	this.parseId = function(self, id) {
-		return id.replace(/\//g, '.');
-	};
-
-	/**
 	 * 加载一个module
 	 *
 	 * @param pkg 被执行的module
@@ -582,13 +581,13 @@ var Loader = new Class(function() {
 
 		var scripts = self.scripts;
 
-		for (var i = 0, script, ids, src, l = scripts.length; i < l; i++) {
+		for (var i = 0, script, names, src, l = scripts.length; i < l; i++) {
 			script = scripts[i];
 			src = script.getAttribute('data-src');
-			ids = script.getAttribute('data-module');
-			if (!ids || !src) continue;
-			ids.split(/\s+/ig).forEach(function(id) {
-				self.defineFile(id, src);
+			names = script.getAttribute('data-module');
+			if (!names || !src) continue;
+			names.split(/\s+/ig).forEach(function(name) {
+				self.defineFile(name2id(name), src);
 			});
 		}
 	};
@@ -763,11 +762,10 @@ var Loader = new Class(function() {
 	this.definePrefixFor = function(self, id) {
 		if (!id || typeof id != 'string') return;
 		if (arguments.length < 2) return;
-		id = self.parseId(id);
 
-		var idParts = id.split('.');
+		var idParts = id.split('/');
 		for (var i = 0, prefix, pkg, l = idParts.length - 1; i < l; i++) {
-			prefix = idParts.slice(0, i + 1).join('.');
+			prefix = idParts.slice(0, i + 1).join('/');
 			self.definePrefix(prefix);
 		}
 	};
@@ -779,8 +777,6 @@ var Loader = new Class(function() {
 		if (!id || typeof id != 'string') return;
 		if (arguments.length < 2) return;
 
-		id = self.parseId(id);
-
 		if (self.prefixLib[id]) return;
 		self.prefixLib[id] = new Package(id, [], function(){});
 	};
@@ -791,7 +787,6 @@ var Loader = new Class(function() {
 	this.defineFile = function(self, id, src) {
 		if (!id || typeof id != 'string') return;
 		if (arguments.length < 2) return;
-		id = self.parseId(id);
 
 		if (self.fileLib[id]) return;
 
@@ -825,8 +820,6 @@ var Loader = new Class(function() {
 
 		if (!factory || typeof factory != 'function') return;
 
-		id = self.parseId(id);
-
 		// 不允许重复添加。
 		if (id in self.lib) return;
 
@@ -848,21 +841,23 @@ var Loader = new Class(function() {
 	};
 
 	/**
-	 * @param id
+	 * @param name
 	 * @param deps
 	 * @param factory
 	 */
-	this.define = function(self, id, deps, factory) {
-		self.defineModule(CommonJSPackage, id, deps, factory);
+	this.define = function(self, name, deps, factory) {
+		if (typeof name != 'string') return;
+		self.defineModule(CommonJSPackage, name2id(name), deps, factory);
 	};
 
 	/**
-	 * @param id
+	 * @param name
 	 * @param deps
 	 * @param factory
 	 */
-	this.add = function(self, id, deps, factory) {
-		self.defineModule(ObjectPackage, id, deps, factory);
+	this.add = function(self, name, deps, factory) {
+		if (typeof name != 'string') return;
+		self.defineModule(ObjectPackage, name2id(name), deps, factory);
 	};
 
 	/**
@@ -881,7 +876,7 @@ var Loader = new Class(function() {
 		delete self.lib[id];
 		if (all) {
 			Object.keys(self.lib).forEach(function(key) {
-				if (key.indexOf(id + '.') == 0) delete self.lib[key];
+				if (key.indexOf(id + '/') == 0) delete self.lib[key];
 			});
 		}
 	};
@@ -897,7 +892,7 @@ var Loader = new Class(function() {
 		self.buildFileLib();
 
 		var runtime = self.createRuntime(id);
-		runtime.loadModule(id, '__main__');
+		runtime.loadModule(id.replace(/\./g, '/'), '__main__');
 	};
 
 	/**
@@ -933,7 +928,7 @@ var Loader = new Class(function() {
 		});
 
 		var runtime = self.createRuntime(id);
-		runtime.loadModule(id, '__main__', function() {});
+		runtime.loadModule(id.replace(/\./g, '/'), '__main__', function() {});
 	};
 
 });

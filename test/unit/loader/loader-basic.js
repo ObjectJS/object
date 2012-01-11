@@ -155,12 +155,23 @@ test('add-usage', function() {
 
 	loader.add('d.dd', 'a,b,c', function() {});
 	equal(Object.keys(loader.lib).length, 5, 'd.dd are added to loader.lib');
-	equal(loader.lib['d.dd'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
+	equal(loader.lib['d/dd'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
 
 	loader.add('error1', 'a,b');
 	equal(loader.lib['error1'], undefined, 'add module without context, should not be added');
 	loader.add('error2', 'a', 'a');
 	equal(loader.lib['error2'], undefined, 'add module with not-function context, should not be added');
+});
+
+module('loader-basic-remove');
+test('remove-usage', function() {
+	loader.add('a', function() {});
+	loader.add('a/b', function() {});
+	loader.remove('a');
+	ok(!('a' in loader.lib), 'remove ok.');
+	ok('a/b' in loader.lib, 'sub not removed, ok');
+	loader.remove('a', true);
+	ok(!('a/b' in loader.lib), 'sub removed, ok');
 });
 
 module("loader-basic-use");
