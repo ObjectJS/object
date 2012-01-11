@@ -809,16 +809,7 @@ var Loader = new Class(function() {
 	 * 定义一个普通module
 	 */
 	this.defineModule = function(self, constructor, id, deps, factory) {
-		if (!id || typeof id != 'string') return;
-		if (arguments.length < 4) return;
-
-		// deps 参数是可选的
-		if (typeof deps == 'function') {
-			factory = deps;
-			deps = [];
-		}
-
-		if (!factory || typeof factory != 'function') return;
+		if (arguments.length < 5) return;
 
 		// 不允许重复添加。
 		if (id in self.lib) return;
@@ -847,6 +838,12 @@ var Loader = new Class(function() {
 	 */
 	this.define = function(self, name, deps, factory) {
 		if (typeof name != 'string') return;
+
+		if (typeof deps == 'function') {
+			factory = deps;
+			deps = [];
+		}
+
 		self.defineModule(CommonJSPackage, name2id(name), deps, factory);
 	};
 
@@ -857,6 +854,12 @@ var Loader = new Class(function() {
 	 */
 	this.add = function(self, name, deps, factory) {
 		if (typeof name != 'string') return;
+
+		if (typeof deps == 'function') {
+			factory = deps;
+			deps = [];
+		}
+
 		self.defineModule(ObjectPackage, name2id(name), deps, factory);
 	};
 

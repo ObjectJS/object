@@ -137,6 +137,7 @@ test('add-basic', function() {
 		try {
 			loader.add(edges[prop], ['a']);
 			ok(true, 'loader.add(' + prop + ', [\'a\']) should be ok');
+			loader.remove(edges[prop]);
 		} catch(e) {
 			ok(false, 'loader.add(' + prop + ', [\'a\']) should be ok : ' + e);
 		}
@@ -158,9 +159,9 @@ test('add-usage', function() {
 	equal(loader.lib['d/dd'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
 
 	loader.add('error1', 'a,b');
-	equal(loader.lib['error1'], undefined, 'add module without context, should not be added');
+	ok(loader.lib['error1'], 'add module without context, should be added');
 	loader.add('error2', 'a', 'a');
-	equal(loader.lib['error2'], undefined, 'add module with not-function context, should not be added');
+	ok(loader.lib['error2'], 'add module with not-function context, should be added');
 });
 
 module('loader-basic-remove');
