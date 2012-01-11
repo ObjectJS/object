@@ -27,63 +27,28 @@ test('sys.modules - exists', function() {
 	object.remove('ttt', true);
 });
 
-test('sys.molules - submodule by execute', function() {
-	object.add('test2.c', function() {});
-
-	object.add('test2', './c', function(exports, c) {});
-
-	object.add('test1.a.b.c', function(exports) {
-		this.name = 'test1.a.b.c';
-		equal(this.__name__, 'a.b.c');
-	});
-    
-	object.add('test1.a', './b/c, sys', function(exports, c, sys) {
-		this.name = 'test1.a';
-		equal(this.__name__, 'a');
-	});
-
-	object.add('test1', './a, test2, test2, test2, test2, sys', function(exports, a, test2, sys) {
-		this.name = 'test1';
-		equal(this.__name__, '__main__');
-		if(!sys) {
-			ok(false, 'sys is undefined when use ./a, test2, test2, test2, test2, sys');
-		} else {
-			ok(sys.modules['a'] != null, 'test1.a is used by ./a, so a is in sys.modules');
-			ok(sys.modules['a.b'] == null, 'a.b is not in sys.modules');
-			ok(sys.modules['a.b.c'] != null, 'a.b.c is in sys.modules');
-			ok(sys.modules['test2'] != null, 'test2 is in sys.modules');
-			ok(sys.modules['test2.c'] != null, 'test2.c is in sys.modules');
-		}
-	});
-
-	object.execute('test1');
-	object.remove('test1', true);
-	object.remove('test2', true);
-});
-
 test('sys.molules - submodule by use', function() {
 	object.add('test3.c', function() {});
 
-	object.add('test3', './c', function(exports, c) {});
+	object.add('test3', './test3/c', function(exports, c) {});
 
 	object.add('test4.a.b.c', function(exports) {
 		this.name = 'test4.a.b.c';
 		equal(this.__name__, 'test4.a.b.c');
 	});
     
-	object.add('test4.a', './b/c, sys', function(exports, c, sys) {
+	object.add('test4.a', './a/b/c, sys', function(exports, c, sys) {
 		this.name = 'test4.a';
 		equal(this.__name__, 'test4.a');
 	});
 
-	object.add('test4', './a, test3, test3, test3, test3, sys', function(exports, a, test3, sys) {
+	object.add('test4', 'test4/a, test3, test3, test3, test3, sys', function(exports, test3, sys) {
 		equal(this.__name__, 'test4');
 	});
 
 	object.use('test4, sys', function(exports, test, sys) {
 		ok(sys.modules['test4.a'] != null, 'test4.a is used by ./a, so a is in sys.modules');
 		ok(sys.modules['test4.a.b'] == null, 'a.b is not in sys.modules');
-		ok(sys.modules['test4.a.b.c'] != null, 'a.b.c is in sys.modules');
 		ok(sys.modules['test3'] != null, 'test3 is in sys.modules');
 		ok(sys.modules['test3.c'] != null, 'test3.c is in sys.modules');
 	});
@@ -148,18 +113,18 @@ test('return value of module', function() {
 test('relative module - use', function() {
 
 	object.add('foo2.c', function() {});
-	object.add('foo2', './c', function(exports, c) {
+	object.add('foo2', './foo2/c', function(exports, c) {
 		equal(c.__name__, 'foo2.c', 'module name with same prefix.');
 	});
 	object.add('foo.a.b.c', function(exports) { });
-	object.add('foo.a', './b/c, sys', function(exports, c, sys) {
+	object.add('foo.a', './a/b/c, sys', function(exports, c, sys) {
 		equal(c.__name__, 'foo.a.b.c', 'relative submodule name.');
 	});
 	object.add('foo.b', function(exports) {
 	});
 	object.add('foo.c', function(exports) {
 	});
-	object.add('foo', './a, ./b, ./c, foo2, sys', function(exports, a, b, c, foo2, sys) {
+	object.add('foo', './foo/a, ./foo/b, ./foo/c, foo2, sys', function(exports, a, b, c, foo2, sys) {
 		ok(a.__name__ == 'foo.a' && b.__name__ == 'foo.b' && c.__name__ == 'foo.c', 'arguments pass.');
 	});
 	object.use('foo', function() {
@@ -169,10 +134,10 @@ test('relative module - use', function() {
 
 	object.add('foo.a.b.c', function(exports) {
 	});
-	object.add('foo.a', './b/c, sys', function(exports, c, sys) {
+	object.add('foo.a', './a/b/c, sys', function(exports, c, sys) {
 		equal(c.__name__, 'a.b.c', 'relative submodule name.');
 	});
-	object.add('foo', './a', function(exports, a) {
+	object.add('foo', './foo/a', function(exports, a) {
 	});
 
 	object.execute('foo');
@@ -294,7 +259,7 @@ test('circular dependency', function() {
 	});
 	delete object._loader.lib['c'];
 
-	object.add('uuua.ooos', function(exports) {});
+	object.add('ooos', function(exports) {});
 	object.add('uuua', './ooos', function(exports) {});
 	try {
 		object.use('uuua', function(exports, uuua) {});

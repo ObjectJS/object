@@ -258,12 +258,7 @@ Package.prototype.parseDeps = function(deps) {
 		return [];
 	}
 
-	deps = deps.trim();
-	if (/^\.[^\/]|\.$/.test(deps)) {
-		throw new Error('deps should not startWith/endWith \'.\', except startWith \'./\'');
-	}
-	deps = deps.replace(/^,*|,*$/g, '');
-	deps = deps.split(/\s*,\s*/ig);
+	deps = deps.trim().replace(/^,*|,*$/g, '').split(/\s*,\s*/ig);
 
 	return deps;
 };
@@ -284,12 +279,22 @@ Dependency.prototype.getModule = function(runtime) {
  * @param module
  */
 function CommonJSDependency(id, owner) {
-	if (id.indexOf('./') == 0) {
-		id = id.slice(2);
-		id = id.replace(/\//g, '.');
-		this.moduleId = owner.id + '.' + id;
-		id = './' + id;
-	} else {
+	var pParts, parts;
+	if (id.indexOf('/') == 0) { // root
+	} else if (id.indexOf('./') == 0 || id.indexOf('../') == 0) { // relative
+		pParts = owner.id.split('.');
+		pParts.pop();
+		parts = id.split(/\//ig);
+		parts.forEach(function(part) {
+			if (part == '.') {
+			} else if (part == '..') {
+				pParts.pop();
+			} else {
+				pParts.push(part);
+			}
+		});
+		this.moduleId = pParts.join('.');
+	} else { // top level
 		id = id.replace(/\//g, '.');
 		this.moduleId = id;
 	}
@@ -305,23 +310,7 @@ CommonJSDependency.prototype.constructor = CommonJSDependency;
  * @param callback 异步方法，模块获取完毕后通过callback的唯一参数传回
  */
 CommonJSDependency.prototype.load = function(runtime, callback) {
-	var ownerId = this.owner.id;
-	var id = this.id;
-
-	var isRelative = false;
-	var context;
-	// Relative
-	if (id.indexOf('.\/') == 0) {
-		id = id.slice(2);
-		context = runtime.getName(ownerId);
-		// 去除root
-		// 说明确实去除了root，是一个相对引用，在获取fullId时需要加上root
-		isRelative = (context != ownerId);
-	}
-
-	id = context? (context + '.' + id) : id;
-	fullId = isRelative? runtime.getId(id) : id;
-	runtime.loadModule(fullId, id, callback);
+	runtime.loadModule(this.moduleId, runtime.getName(this.moduleId), callback);
 };
 
 /**
@@ -333,18 +322,9 @@ CommonJSDependency.prototype.getRef = function(runtime) {
 };
 
 ObjectDependency = function(id, owner) {
-	if (id.indexOf('./') == 0) {
-		id = id.slice(2);
-		this.moduleId = owner.id + '.' + id;
-		this.idParts = id.split('.');
-		this.root = owner.id + '.' + this.idParts[0];
-		this.isRelative = true;
-		id = './' + id;
-	} else {
-		this.idParts = id.split('.');
-		this.root = this.idParts[0];
-		this.moduleId = id;
-	}
+	this.idParts = id.split('.');
+	this.root = this.idParts[0];
+	this.moduleId = id;
 	Dependency.call(this, id, owner);
 };
 
@@ -353,11 +333,7 @@ ObjectDependency.prototype = new Dependency();
 ObjectDependency.prototype.constructor = ObjectDependency;
 
 ObjectDependency.prototype.load = function(runtime, callback) {
-	var ownerId = this.owner.id;
-	var idParts = this.idParts;
-	var context = null; // 当前dep是被某个模块通过相对路径调用的
-	var moduleId = ''; // 当前模块在运行时保存在modules中的名字，为context+idParts的第一部分
-	var isRelative = false; // 当前dep是否属于execute的模块的子模块，如果是，生成的名称应不包含其前缀
+	var dep = this;
 	var pId, part, partId, currentPart = -1;
 
 	/**
@@ -368,7 +344,7 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 	 */
 	function nextPart(pExports, id) {
 
-		var fullId, depModule;
+		var depModule;
 
 		if (pExports) {
 			runtime.setModule(id, pExports);
@@ -380,28 +356,17 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 
 		currentPart++;
 
-		if (currentPart == idParts.length) {
-			callback(runtime.modules[moduleId]);
+		if (currentPart == dep.idParts.length) {
+			callback(runtime.modules[dep.root]);
 
 		} else {
-			part = idParts[currentPart];
+			part = dep.idParts[currentPart];
 			partId = (pId? pId + '.' : '') + part;
-			fullId = isRelative? runtime.getId(partId) : partId;
-			runtime.loadModule(fullId, partId, nextPart);
+			runtime.loadModule(partId, partId, nextPart);
 		};
 	}
 
-	// Relative
-	if (this.isRelative) {
-		// 去除root
-		context = runtime.getName(ownerId);
-		// 说明确实去除了root，是一个相对引用，在获取fullId时需要加上root
-		isRelative = (context != ownerId);
-	}
-
-	moduleId = (context? context + '.' : '') + idParts[0];
-
-	nextPart(null, context);
+	nextPart(null, null);
 };
 
 /**
