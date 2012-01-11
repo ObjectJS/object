@@ -346,6 +346,15 @@ this.Events = new Class(function() {
 			};
 			func.innerFunc = innerFunc;
 			type = 'mouseout';
+
+			// 备份func，以便能够通过innerFunc来删除func
+			if (!self.__eventListeners) {
+				self.__eventListeners = {};
+			}
+			if (!self.__eventListeners[type]) {
+				self.__eventListeners[type] = [];
+			}
+			self.__eventListeners[type].push(func);
 		}
 
 		//处理onxxx类型的事件处理函数
@@ -436,7 +445,22 @@ this.Events = new Class(function() {
 	this.removeEvent = document.removeEventListener? function(self, type, func, cap) {
 		var boss = self.__boss || self;
 
-		boss.removeEventListener(type, func, cap);
+		if (!ua.ua.ie && type == 'mouseleave') {
+			type = 'mouseout';
+			if (self.__eventListeners && self.__eventListeners[type]) {
+				var funcs = self.__eventListeners[type];
+				for (var i = 0, current, l = funcs.length; i < l; i++) {
+					current = funcs[i];
+					if (current.innerFunc === func) {
+						boss.removeEventListener(type, current, cap);
+						funcs.splice(i, 1);
+						break;
+					}
+				}
+			}
+		} else {
+			boss.removeEventListener(type, func, cap);
+		}
 	} : function(self, type, func, cap) {
 		var boss = self.__boss || self;
 
@@ -462,6 +486,9 @@ this.Events = new Class(function() {
 	* @param eventData 扩展到event对象上的数据
 	*/
 	this.fireEvent = document.dispatchEvent? function(self, type, eventData) {
+		if (!ua.ua.ie && type == 'mouseleave') {
+			type = 'mouseout';
+		}
 		//fireEvent之前仍然需要检查onxxx类型的事件处理函数
 		addOnHandlerAsEventListener(self, type);
 		var boss = self.__boss || self;
