@@ -495,30 +495,30 @@ LoaderRuntime.prototype = {
 	}
 };
 
-// 计算当前引用objectjs的页面文件的目录路径
-function calculatePageDir() {
-	var loc = window['location'];
-	var pageUrl = loc.protocol + '//' + loc.host + (loc.pathname.charAt(0) !== '/' ? '/' : '') + loc.pathname; 
-	// IE 下文件系统是以\为分隔符，统一改为/
-	if (pageUrl.indexOf('\\') != -1) {
-		pageUrl = pageUrl.replace(/\\/g, '/');
-	}
-	var pageDir = './';
-	if (pageUrl.indexOf('/') != -1) {
-		// 去除文件，留下目录path
-		pageDir = pageUrl.substring(0, pageUrl.lastIndexOf('/') + 1);
-	}
-	return pageDir;
-}
-
-// global pageDir
-var pageDir;
-
 /**
  * object的包管理器
  * 这个class依赖于object._lib ，且会修改它
  */
 var Loader = new Class(function() {
+
+	// 计算当前引用objectjs的页面文件的目录路径
+	function calculatePageDir() {
+		var loc = window['location'];
+		var pageUrl = loc.protocol + '//' + loc.host + (loc.pathname.charAt(0) !== '/' ? '/' : '') + loc.pathname; 
+		// IE 下文件系统是以\为分隔符，统一改为/
+		if (pageUrl.indexOf('\\') != -1) {
+			pageUrl = pageUrl.replace(/\\/g, '/');
+		}
+		var pageDir = './';
+		if (pageUrl.indexOf('/') != -1) {
+			// 去除文件，留下目录path
+			pageDir = pageUrl.substring(0, pageUrl.lastIndexOf('/') + 1);
+		}
+		return pageDir;
+	}
+
+	// global pageDir
+	var pageDir;
 
 	// 用于保存url与script节点的键值对
 	this._urlNodeMap = {};
@@ -757,7 +757,7 @@ var Loader = new Class(function() {
 
 	/**
 	 * 建立前缀模块
-	 * 比如 a.b.c.d ，会建立 a a.b a.b.c 三个空模块，最后一个模块为目标模块
+	 * 比如 a/b/c/d ，会建立 a a/b a/b/c 三个空模块，最后一个模块为目标模块
 	 */
 	this.definePrefixFor = function(self, id) {
 		if (!id || typeof id != 'string') return;
@@ -777,7 +777,7 @@ var Loader = new Class(function() {
 		if (!id || typeof id != 'string') return;
 		if (arguments.length < 2) return;
 
-		if (self.prefixLib[id]) return;
+		if (id in self.lib || id in self.prefixLib) return;
 		self.prefixLib[id] = new Package(id, [], function(){});
 	};
 
