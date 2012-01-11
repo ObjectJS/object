@@ -351,3 +351,30 @@ if (ie) {
 		});
 	});
 }
+
+test('addEvent/removeEvent : mouseleave', function() {
+	expect(ie ? 4 : 6);
+	object.use('dom', function(exports, dom) {
+		var node = dom.wrap(document.createElement('div'));
+		node.addEvent('mouseleave', function(e) {
+			ok(true, 'mouseleave is fired');
+		}, false);
+		node.fireEvent('mouseleave');
+
+		var handler = function(e) {
+			ok(true, 'should be remove after node.removeEvent called');
+		}
+		node.addEvent('mouseleave', handler, false);
+		node.fireEvent('mouseleave');
+		if (!ie) {
+			// except IE
+			equal(node.__eventListeners['mouseout'].length, 2, 'handler is added to __eventListeners');
+		}
+		node.removeEvent('mouseleave', handler);
+		if (!ie) {
+			// except IE
+			equal(node.__eventListeners['mouseout'].length, 1, 'handler is removed from __eventListeners');
+		}
+		node.fireEvent('mouseleave');
+	});
+});
