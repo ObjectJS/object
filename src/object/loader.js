@@ -334,7 +334,6 @@ ObjectDependency.prototype.constructor = ObjectDependency;
 
 ObjectDependency.prototype.load = function(runtime, callback) {
 	var dep = this;
-	var isRelative = false; // 当前dep是否属于execute的模块的子模块，如果是，生成的名称应不包含其前缀
 	var pId, part, partId, currentPart = -1;
 
 	/**
@@ -345,7 +344,7 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 	 */
 	function nextPart(pExports, id) {
 
-		var fullId, depModule;
+		var depModule;
 
 		if (pExports) {
 			runtime.setModule(id, pExports);
@@ -363,8 +362,7 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 		} else {
 			part = dep.idParts[currentPart];
 			partId = (pId? pId + '.' : '') + part;
-			fullId = isRelative? runtime.getId(partId) : partId;
-			runtime.loadModule(fullId, partId, nextPart);
+			runtime.loadModule(partId, partId, nextPart);
 		};
 	}
 
