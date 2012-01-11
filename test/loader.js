@@ -3,6 +3,7 @@ object.define('a/b/d', function() {
 });
 object.define('a/b/c', './d', function(require) {
 	var d = require('./d')
-	console.log(d)
 });
-object.use('a/b/c', function(c) {})
+object.use('a.b.c, sys', function(a, sys) {
+	console.log(sys.modules)
+})

@@ -153,7 +153,7 @@ ObjectPackage.prototype.handleCyclicDependency = function(dep, pkg, runtime, nex
 function Package(id, deps, factory) {
 	if (!id) return;
 
-	this.id = id.replace(/\//g, '.');
+	this.id = id.replace(/\./g, '/');
 	this.dependencies = this.parseDeps(deps);
 	this.factory = factory;
 	this.deps = {};
@@ -263,28 +263,28 @@ Package.prototype.parseDeps = function(deps) {
 	return deps;
 };
 
-function Dependency(id, owner) {
-	if (!id) return;
-	this.id = id;
+function Dependency(name, owner) {
+	if (!name) return;
+	this.name = name;
 	this.owner = owner;
 }
 
 Dependency.prototype.getModule = function(runtime) {
-	var pkg = runtime.loader.getModule(this.moduleId); 
+	var pkg = runtime.loader.getModule(this.id); 
 	return pkg;
 };
 
 /**
- * @param id
+ * @param name
  * @param module
  */
-function CommonJSDependency(id, owner) {
+function CommonJSDependency(name, owner) {
 	var pParts, parts;
-	if (id.indexOf('/') == 0) { // root
-	} else if (id.indexOf('./') == 0 || id.indexOf('../') == 0) { // relative
-		pParts = owner.id.split('.');
+	if (name.indexOf('/') == 0) { // root
+	} else if (name.indexOf('./') == 0 || name.indexOf('../') == 0) { // relative
+		pParts = owner.id.split('/');
 		pParts.pop();
-		parts = id.split(/\//ig);
+		parts = name.split(/\//ig);
 		parts.forEach(function(part) {
 			if (part == '.') {
 			} else if (part == '..') {
@@ -293,12 +293,11 @@ function CommonJSDependency(id, owner) {
 				pParts.push(part);
 			}
 		});
-		this.moduleId = pParts.join('.');
+		this.id = pParts.join('/');
 	} else { // top level
-		id = id.replace(/\//g, '.');
-		this.moduleId = id;
+		this.id = name.replace(/\./g, '/');
 	}
-	Dependency.call(this, id, owner);
+	Dependency.call(this, name, owner);
 };
 
 CommonJSDependency.prototype = new Dependency();
@@ -310,22 +309,22 @@ CommonJSDependency.prototype.constructor = CommonJSDependency;
  * @param callback 异步方法，模块获取完毕后通过callback的唯一参数传回
  */
 CommonJSDependency.prototype.load = function(runtime, callback) {
-	runtime.loadModule(this.moduleId, runtime.getName(this.moduleId), callback);
+	runtime.loadModule(this.id, runtime.getName(this.id), callback);
 };
 
 /**
  * 获取此依赖的引用
  */
 CommonJSDependency.prototype.getRef = function(runtime) {
-	var root = runtime.getName(this.moduleId);
+	var root = runtime.getName(this.id);
 	return runtime.modules[root];
 };
 
-ObjectDependency = function(id, owner) {
-	this.idParts = id.split('.');
-	this.root = this.idParts[0];
-	this.moduleId = id;
-	Dependency.call(this, id, owner);
+ObjectDependency = function(name, owner) {
+	this.nameParts = name.split('.');
+	this.root = this.nameParts[0];
+	this.id = name.replace(/\./g, '/');
+	Dependency.call(this, name, owner);
 };
 
 ObjectDependency.prototype = new Dependency();
@@ -334,39 +333,40 @@ ObjectDependency.prototype.constructor = ObjectDependency;
 
 ObjectDependency.prototype.load = function(runtime, callback) {
 	var dep = this;
-	var pId, part, partId, currentPart = -1;
+	var pName, part, partId, currentPart = -1;
 
 	/**
 	 * 依次获取当前模块的每个部分
 	 * 如a.b.c，依次获取a、a.b、a.b.c
 	 * @param pExprorts 上一部分的模块实例，如果是初次调用，为空
-	 * @param id 截止到当前部分的包含context前缀的名字
+	 * @param name 截止到当前部分的包含context前缀的名字
 	 */
-	function nextPart(pExports, id) {
+	function nextPart(pExports, name) {
 
 		var depModule;
 
 		if (pExports) {
-			runtime.setModule(id, pExports);
+			runtime.setModule(name, pExports);
 			// 生成对象链
-			runtime.setMemberTo(pId, part, pExports);
+			runtime.setMemberTo(pName, part, pExports);
 		}
 
-		pId = id;
+		pName = name;
 
 		currentPart++;
 
-		if (currentPart == dep.idParts.length) {
+		if (currentPart == dep.nameParts.length) {
 			callback(runtime.modules[dep.root]);
 
 		} else {
-			part = dep.idParts[currentPart];
-			partId = (pId? pId + '.' : '') + part;
-			runtime.loadModule(partId, partId, nextPart);
+			part = dep.nameParts[currentPart];
+			partId = (pName? pName + '.' : '') + part;
+			partName = (pName? pName +)
+			runtime.loadModule(partId.replace(/\./g, '/'), partId, nextPart);
 		};
 	}
 
-	nextPart(null, null);
+	nextPart();
 };
 
 /**
@@ -460,10 +460,10 @@ LoaderRuntime.prototype = {
 	 */
 	getName: function(id) {
 		var root = this.root;
-		if (id == root || id.indexOf(root + '.') == 0) {
+		if (id == root || id.indexOf(root + '/') == 0) {
 			id = id.slice(root.length + 1);
 		}
-		return id;
+		return id.replace(/\//g, '.');
 	},
 
 	/**
@@ -533,7 +533,7 @@ var Loader = new Class(function() {
 	 * 将路径形式的id转换成.形式
 	 */
 	this.parseId = function(self, id) {
-		return id.replace(/\//g, '.');
+		return id.replace(/\./g, '/');
 	};
 
 	/**
@@ -765,9 +765,9 @@ var Loader = new Class(function() {
 		if (arguments.length < 2) return;
 		id = self.parseId(id);
 
-		var idParts = id.split('.');
+		var idParts = id.split('/');
 		for (var i = 0, prefix, pkg, l = idParts.length - 1; i < l; i++) {
-			prefix = idParts.slice(0, i + 1).join('.');
+			prefix = idParts.slice(0, i + 1).join('/');
 			self.definePrefix(prefix);
 		}
 	};
