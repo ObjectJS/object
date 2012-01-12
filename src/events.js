@@ -357,6 +357,32 @@ this.Events = new Class(function() {
 			self.__eventListeners[type].push(func);
 		}
 
+		// 如果需要包装preventDefault方法，则在事件处理函数最前面添加一个简单的事件监听
+		// 该事件监听只负责包装event，使其preventDefault正确执行
+		if (_needWrapPreventDefault) {
+			if (!boss['__preEventAdded_' + type]) {
+				// 标识该事件类型的preventDefault已经包装过了
+				boss['__preEventAdded_' + type] = true;
+				// 如果有onxxx类型的处理函数，则也暂时去除，待包装函数添加完以后，再添加回去
+				if (boss['on' + type]) {
+					boss['__on' + type] = boss['on' + type];
+					boss['on' + type] = null;
+				}
+				// 添加事件监听
+				boss.addEventListener(type, function(event) {
+					exports.wrapPreventDefault(event);
+				}, cap);
+				// 把onxxx监听函数添加回去
+				if (boss['__on' + type]) {
+					boss['on' + type] = boss['__on' + type];
+					boss['__on' + type] = null;
+					try {
+						delete boss['__on' + type];
+					} catch (e) {}
+				}
+			}
+		}
+
 		//处理onxxx类型的事件处理函数
 		addOnHandlerAsEventListener(self, type);
 

@@ -417,13 +417,13 @@ test('wrapPreventDefault for events fired by browser', function() {
 			event.preventDefault();
 			var prevented = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
 			if (prevented) {
-				counter = counter + 1;
+				counter = counter + 2;
 			}
 		});
 		document.body.appendChild(node);
 		fireMouseEventOnElement(node);
 		document.body.removeChild(node);
 
-		equal(counter, 2, 'preventDefault in both onxxx and addEvent are ok');
+		equal(counter, 3, 'preventDefault in both onxxx and addEvent are ok');
 	});
 });
