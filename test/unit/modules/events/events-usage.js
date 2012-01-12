@@ -378,3 +378,45 @@ test('addEvent/removeEvent : mouseleave', function() {
 		node.fireEvent('mouseleave');
 	});
 });
+
+function fireMouseEventOnElement(element) {
+	if (ie) {
+		try {
+			element.click();
+		} catch (e){
+			ok(false, 'element.click() throw error in IE : ' + e);
+		}
+	} else {
+		var evt = document.createEvent("MouseEvents");
+		evt.initMouseEvent("click", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+		element.dispatchEvent(evt);	
+	}
+}
+
+test('wrapPreventDefault for events fired by browser', function() {
+	expect(3);
+	object.use('dom', function(exports, dom) {
+		// preventDefault in onclick
+		var node = dom.wrap(document.createElement('div'));
+		node.onclick = function(event) {
+			event.preventDefault();
+			ok(event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented, 'preventDefault is ok in onclick');
+		};
+		node.addEvent('click', function(event) {
+			ok(event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented, 'preventDefault is ok in addEvent handler');
+		});
+		document.body.appendChild(node);
+		fireMouseEventOnElement(node);
+		document.body.removeChild(node);
+
+		// preventDefault in addEvent handler
+		var node = dom.wrap(document.createElement('div'));
+		node.addEvent('click', function(event) {
+			event.preventDefault();
+			ok(event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented, 'preventDefault is ok in addEvent handler');
+		});
+		document.body.appendChild(node);
+		fireMouseEventOnElement(node);
+		document.body.removeChild(node);
+	});
+});
