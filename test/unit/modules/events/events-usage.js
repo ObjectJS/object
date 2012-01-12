@@ -428,7 +428,6 @@ test('wrapPreventDefault for events fired by browser', function() {
 	});
 });
 
-
 test('onxxx, addEvent and addNativeEvent', function() {
 	object.use('dom', function(exports, dom) {
 		var counter = 0;
@@ -471,3 +470,40 @@ test('onxxx, addEvent and addNativeEvent', function() {
 		node.fireEvent('click');
 	});
 });
+
+test('addNativeEvent and preventDefault', function() {
+	object.use('dom', function(exports, dom) {
+		var counter = 0;
+		// preventDefault in onclick
+		var node = dom.wrap(document.createElement('div'));
+		node.onclick = function(event) {
+			event.preventDefault();
+		};
+		node.addNativeEvent('click', function(event) {
+			var prevented = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
+			if (prevented) {
+				counter = counter + 1;
+			}
+		});
+		node.addEvent('click', function(event) {}, false);
+		document.body.appendChild(node);
+		fireMouseEventOnElement(node);
+		document.body.removeChild(node);
+
+		// preventDefault in addEvent handler
+		var node = dom.wrap(document.createElement('div'));
+		node.addNativeEvent('click', function(event) {
+			event.preventDefault();
+			var prevented = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
+			if (prevented) {
+				counter = counter + 2;
+			}
+		});
+		document.body.appendChild(node);
+		fireMouseEventOnElement(node);
+		document.body.removeChild(node);
+
+		equal(counter, 3, 'preventDefault in both onxxx and addNativeEvent are ok');
+	});
+});
+
