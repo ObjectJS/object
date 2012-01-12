@@ -34,11 +34,12 @@ test('bind', function() {
 });
 
 test('add and use, basic', function() {
+	object.remove('1');
 	object.add('1', function(exports){
 		//equal(exports, this, 'exports is equals to this, in module');
 		this.a = 1;
 	});
-	ok(object._loader.lib['1'] != null, 'module is added');
+	//ok(object._loader.lib['1'] != null, 'module is added');
 	object.use('1', function(exports, a) {
 		//equal(exports, this, 'exports is equals to this, in module');
 		equal(a.a, 1, 'module add and use successfully');

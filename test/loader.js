@@ -1,15 +1,9 @@
-object.define('a', 'b', function(require) {
-	var b = require('b')
-	console.log(b)
+object.define('a/b/d', function() {
+	return {d: 1}
 });
-object.define('b', 'c', function(require) {
-	var c = require('c');
-	console.log(c)
+object.define('a/b/c', './d', function(require) {
+	var d = require('./d')
 });
-object.define('c', 'a', function(require) {
-	var a = require('a');
-	console.log(a)
-});
-
-object.use('a', function() {
-});
+object.use('a.b.c, sys', function(a, sys) {
+	console.log(sys.modules)
+})
