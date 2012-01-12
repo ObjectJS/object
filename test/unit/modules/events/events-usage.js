@@ -427,3 +427,47 @@ test('wrapPreventDefault for events fired by browser', function() {
 		equal(counter, 3, 'preventDefault in both onxxx and addEvent are ok');
 	});
 });
+
+
+test('onxxx, addEvent and addNativeEvent', function() {
+	object.use('dom', function(exports, dom) {
+		var counter = 0;
+		var node = dom.wrap(document.createElement('div'));
+		node.onttt = function() {
+			equal(counter, 0, 'onttt execute first');
+			counter++;
+		}
+		node.addEvent('ttt', function(){
+			equal(counter, 1, 'first addEvent execute first');
+			counter ++;
+		}, false);
+		node.addNativeEvent('ttt', function(){
+			equal(counter, 3, 'addNativeEvent execute last');
+			counter ++;
+		}, false);
+		node.addEvent('ttt', function(){
+			equal(counter, 2, 'second addEvent execute second');
+			counter ++;
+		}, false);
+		node.fireEvent('ttt');
+
+		var counter2 = 0;
+		node.onclick = function() {
+			equal(counter2, 0, 'onttt execute first');
+			counter2++;
+		}
+		node.addEvent('click', function(){
+			equal(counter2, 1, 'first addEvent execute first');
+			counter2 ++;
+		}, false);
+		node.addNativeEvent('click', function(){
+			equal(counter2, 3, 'addNativeEvent execute last');
+			counter2 ++;
+		}, false);
+		node.addEvent('click', function(){
+			equal(counter2, 2, 'second addEvent execute second');
+			counter2 ++;
+		}, false);
+		node.fireEvent('click');
+	});
+});
