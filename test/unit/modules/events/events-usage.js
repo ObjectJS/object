@@ -394,16 +394,18 @@ function fireMouseEventOnElement(element) {
 }
 
 test('wrapPreventDefault for events fired by browser', function() {
-	expect(3);
 	object.use('dom', function(exports, dom) {
+		var counter = 0;
 		// preventDefault in onclick
 		var node = dom.wrap(document.createElement('div'));
 		node.onclick = function(event) {
 			event.preventDefault();
-			ok(event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented, 'preventDefault is ok in onclick');
 		};
 		node.addEvent('click', function(event) {
-			ok(event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented, 'preventDefault is ok in addEvent handler');
+			var prevented = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
+			if (prevented) {
+				counter = counter + 1;
+			}
 		});
 		document.body.appendChild(node);
 		fireMouseEventOnElement(node);
@@ -413,10 +415,15 @@ test('wrapPreventDefault for events fired by browser', function() {
 		var node = dom.wrap(document.createElement('div'));
 		node.addEvent('click', function(event) {
 			event.preventDefault();
-			ok(event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented, 'preventDefault is ok in addEvent handler');
+			var prevented = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
+			if (prevented) {
+				counter = counter + 1;
+			}
 		});
 		document.body.appendChild(node);
 		fireMouseEventOnElement(node);
 		document.body.removeChild(node);
+
+		equal(counter, 2, 'preventDefault in both onxxx and addEvent are ok');
 	});
 });
