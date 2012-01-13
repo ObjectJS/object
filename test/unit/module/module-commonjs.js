@@ -70,3 +70,29 @@ test('use object.define - submodule', function() {
 	});
 	object.remove('subdefine');
 });
+
+test('require.async', function() {
+	object.define('a', function() {
+	});
+	object.define('b', function(require) {
+		require.async('a', function(a) {
+			equal(a.__name__, 'a', 'require.async ok.')
+		})
+	});
+	object.use('b', function() {
+	})
+	object.remove('a');
+	object.remove('b');
+});
+
+test('require.async - relative', function() {
+	object.define('a/a', function() {
+	});
+	object.define('a/b', function(require) {
+		require.async('./a', function(a) {
+			equal(a.__name__, 'a.a', 'require.async ok.')
+		})
+	});
+	object.execute('a/b');
+	object.remove('a', true);
+});

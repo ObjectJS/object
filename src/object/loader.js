@@ -91,7 +91,7 @@ CommonJSPackage.prototype.createRequire = function(name, runtime) {
 
 	require.async = function(deps, callback) {
 		deps = module.parseDeps(deps);
-		var pkg = new CommonJSPackage(name, deps, function(require) {
+		var pkg = new CommonJSPackage(module.id, deps, function(require) {
 			var args = [];
 			deps.forEach(function(dep) {
 				args.push(require(dep));
