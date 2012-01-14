@@ -379,7 +379,7 @@ ObjectDependency.prototype.getId = function(runtime) {
 	// 当前模块的同级模块；
 	// 全局模块；
 	// 运行时路径上的模块
-	var paths = [this.owner.id + '/', dirname(this.owner.id) + '/', '', runtime.root + '/'];
+	var paths = [this.owner.id + '/', dirname(this.owner.id) + '/', '', runtime.context + '/'];
 	var id;
 	paths.some(function(path) {
 		id = path + name2id(this.name);
@@ -392,7 +392,9 @@ ObjectDependency.prototype.getId = function(runtime) {
 
 ObjectDependency.prototype.load = function(runtime, callback) {
 	var dep = this;
-	var pName, part, name, currentPart = -1;
+	var currentPart = -1, part;
+	var pName, name;
+	var nameParts = dep.getId(runtime).split('.');
 
 	/**
 	 * 依次获取当前模块的每个部分
@@ -413,14 +415,11 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 
 		currentPart++;
 
-		var id = dep.getId(runtime);
-		var idParts = id.split('/');
-
-		if (currentPart == idParts.length) {
+		if (currentPart == nameParts.length) {
 			callback(dep.getRef(runtime));
 
 		} else {
-			part = idParts[currentPart];
+			part = nameParts[currentPart];
 			name = (pName? pName + '.' : '') + part;
 			runtime.loadModule(name2id(name), runtime.getName(name), nextPart);
 		};
@@ -440,7 +439,7 @@ ObjectDependency.prototype.getRef = function(runtime) {
 /**
  * Loader运行时，每一个use、execute产生一个
  */
-function LoaderRuntime(root) {
+function LoaderRuntime(context) {
 
 	/**
 	 * 此次use运行过程中用到的所有module
@@ -462,7 +461,7 @@ function LoaderRuntime(root) {
 	/**
 	 * 运行入口模块的名字
 	 */
-	this.root = root;
+	this.context = context;
 }
 
 LoaderRuntime.prototype = {
@@ -503,19 +502,19 @@ LoaderRuntime.prototype = {
 	},
 
 	/**
-	 * 加上root前缀的完整id
+	 * 加上context前缀的完整id
 	 */
 	getId: function(name) {
-		return this.root + '.' + name;
+		return this.context + '/' + name;
 	},
 
 	/**
-	 * 去掉root前缀的模块名
+	 * 去掉context前缀的模块名
 	 */
 	getName: function(id) {
-		var root = this.root;
-		if (id == root || id.indexOf(root + '/') == 0) {
-			id = id.slice(root.length + 1);
+		var context = this.context;
+		if (id == context || id.indexOf(context + '/') == 0) {
+			id = id.slice(context.length + 1);
 		}
 		name = id.replace(/\//ig, '.');
 		return name;
