@@ -73,6 +73,21 @@ CommonJSPackage.prototype.execute = function(name, runtime) {
 	return exports;
 };
 
+/**
+ * object.define中，“.”作为分隔符的被认为是ObjectDependency，其他都是CommenJSDependency
+ */
+CommonJSPackage.prototype.initDeps = function() {
+	this.dependencies.forEach(function(depId) {
+		var dep;
+		if (depId.indexOf('/') == -1 && depId.indexOf('.') != -1) {
+			dep = new ObjectDependency(depId, this);
+		} else {
+			dep = new CommonJSDependency(depId, this);
+		}
+		this.deps[depId] = dep;
+	}, this);
+};
+
 CommonJSPackage.prototype.createRequire = function(name, runtime) {
 	var loader = runtime.loader;
 	var module = this;
@@ -147,11 +162,27 @@ ObjectPackage.prototype.execute = function(name, runtime) {
 };
 
 ObjectPackage.prototype.handleCyclicDependency = function(dep, pkg, runtime, next) {
-	var exports = runtime.modules[dep.id] || new Module(dep.id);
-	runtime.modules[dep.id] = exports;
+	var depId = dep.getId(runtime);
+	var exports = runtime.modules[depId] || new Module(depId);
+	runtime.modules[depId] = exports;
 	if (!exports.__empty_refs__) exports.__empty_refs__ = [];
 	exports.__empty_refs__.push(pkg.id);
 	next(exports);
+};
+
+/**
+ * object.add中，“/”作为分隔符的被认为是CommonJSDependency，其他都是ObjectDependency
+ */
+ObjectPackage.prototype.initDeps = function() {
+	this.dependencies.forEach(function(depId) {
+		var dep;
+		if (depId.indexOf('/') != -1) {
+			dep = new CommonJSDependency(depId, this);
+		} else {
+			dep = new ObjectDependency(depId, this);
+		}
+		this.deps[depId] = dep;
+	}, this);
 };
 
 /**
@@ -167,20 +198,11 @@ function Package(id, deps, factory) {
 	this.initDeps();
 }
 
-Package.prototype.initDeps = function() {
-	this.dependencies.forEach(function(depId) {
-		var dep;
-		if (depId.indexOf('/') != -1) {
-			dep = new CommonJSDependency(depId, this);
-		} else {
-			dep = new ObjectDependency(depId, this);
-		}
-		this.deps[depId] = dep;
-	}, this);
-};
-
 Package.prototype.execute = function(name, runtime) {
 	return new Module(name);
+};
+
+Package.prototype.initDeps = function() {
 };
 
 Package.prototype.load = function(name, runtime, callback) {
@@ -279,7 +301,7 @@ function Dependency(name, owner) {
 }
 
 Dependency.prototype.getModule = function(runtime) {
-	var pkg = runtime.loader.getModule(this.id); 
+	var pkg = runtime.loader.getModule(this.getId(runtime)); 
 	return pkg;
 };
 
@@ -313,32 +335,48 @@ CommonJSDependency.prototype = new Dependency();
 
 CommonJSDependency.prototype.constructor = CommonJSDependency;
 
+CommonJSDependency.prototype.getId = function() {
+	return this.id;
+};
+
 /**
  * 处理当前模块
  * @param callback 异步方法，模块获取完毕后通过callback的唯一参数传回
  */
 CommonJSDependency.prototype.load = function(runtime, callback) {
-	runtime.loadModule(this.id, this.id, callback);
+	var depId = this.getId(runtime);
+	runtime.loadModule(depId, depId, callback);
 };
 
 /**
  * 获取此依赖的引用
  */
 CommonJSDependency.prototype.getRef = function(runtime) {
-	var root = this.id;
+	var root = this.getId(runtime);
 	return runtime.modules[root];
 };
 
 ObjectDependency = function(name, owner) {
 	this.nameParts = name.split('.');
 	this.root = this.nameParts[0];
-	this.id = name2id(name);
 	Dependency.call(this, name, owner);
 };
 
 ObjectDependency.prototype = new Dependency();
 
 ObjectDependency.prototype.constructor = ObjectDependency;
+
+ObjectDependency.prototype.getId = function(runtime) {
+	var paths = [this.owner.id.substr(0, this.owner.id.lastIndexOf('/') + 1), ''];
+	var id;
+	paths.some(function(path) {
+		id = path + name2id(this.name);
+		if (runtime.loader.getModule(id)) {
+			return true;
+		}
+	}, this);
+	return id;
+};
 
 ObjectDependency.prototype.load = function(runtime, callback) {
 	var dep = this;
@@ -355,7 +393,6 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 		var depModule;
 
 		if (pExports) {
-			runtime.setModule(name, pExports);
 			// 生成对象链
 			runtime.setMemberTo(pName, part, pExports);
 		}
@@ -364,11 +401,14 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 
 		currentPart++;
 
-		if (currentPart == dep.nameParts.length) {
-			callback(runtime.modules[dep.root]);
+		var id = dep.getId(runtime);
+		var idParts = id.split('/');
+
+		if (currentPart == idParts.length) {
+			callback(dep.getRef(runtime));
 
 		} else {
-			part = dep.nameParts[currentPart];
+			part = idParts[currentPart];
 			name = (pName? pName + '.' : '') + part;
 			runtime.loadModule(name2id(name), runtime.getName(name), nextPart);
 		};
@@ -414,6 +454,7 @@ function LoaderRuntime(root) {
 }
 
 LoaderRuntime.prototype = {
+
 	/**
 	 * 加入一个module
 	 */
@@ -430,13 +471,6 @@ LoaderRuntime.prototype = {
 		}
 
 		return exports;
-	},
-
-	/**
-	 * 设置一个已存在的module
-	 */
-	setModule: function(name, exports) {
-		this.modules[name] = exports;
 	},
 
 	/**
@@ -889,16 +923,18 @@ var Loader = new Class(function() {
 
 	/**
 	 * execute
-	 * @param id 执行的入口模块名称
+	 * @param name 执行的入口模块名称
 	 */ 
-	this.execute = function(self, id) {
-		if (!id || typeof id != 'string') {
+	this.execute = function(self, name) {
+		if (!name || typeof name != 'string') {
 			return;
 		}
 		self.buildFileLib();
 
+		var id = name2id(name)
+
 		var runtime = self.createRuntime(id);
-		runtime.loadModule(id.replace(/\./g, '/'), '__main__');
+		runtime.loadModule(id, '__main__');
 	};
 
 	/**
@@ -934,7 +970,7 @@ var Loader = new Class(function() {
 		});
 
 		var runtime = self.createRuntime(id);
-		runtime.loadModule(id.replace(/\./g, '/'), '__main__', function() {});
+		runtime.loadModule(id, '__main__', function() {});
 	};
 
 });

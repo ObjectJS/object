@@ -4,7 +4,8 @@ object.define('test/a/b/d', function() {
 object.define('test/a/b/c', './d', function(require) {
 	this.d = require('./d');
 });
-object.add('test.a', 'sys', function(exports, sys) {
+object.add('test.b')
+object.add('test.a', 'sys, b', function(exports, sys) {
 	if (this.__name__ == '__main__') {
 		console.dir(sys.modules);
 	}
