@@ -393,7 +393,6 @@ ObjectDependency.prototype.getId = function(runtime) {
 ObjectDependency.prototype.load = function(runtime, callback) {
 	var dep = this;
 	var pName, part, name, currentPart = -1;
-	console.log(this.getId(runtime))
 
 	/**
 	 * 依次获取当前模块的每个部分
