@@ -7,6 +7,10 @@ function name2id(name) {
 	return name.replace(/\./g, '/');
 }
 
+function dirname(path) {
+	return path.substr(0, path.lastIndexOf('/'));
+}
+
 /**
  * 模块
  */
@@ -135,6 +139,7 @@ ObjectPackage.prototype.constructor = ObjectPackage;
  */
 ObjectPackage.prototype.execute = function(name, runtime) {
 	var exports = runtime.modules[name] || new Module(name);
+	var returnExports;
 	var args = [exports];
 	this.dependencies.forEach(function(depId) {
 		var depExports = this.getDep(depId).getRef(runtime);
@@ -142,7 +147,9 @@ ObjectPackage.prototype.execute = function(name, runtime) {
 			args.push(depExports);
 		}
 	}, this);
-	var returnExports = this.factory.apply(exports, args);
+	if (this.factory) {
+		returnExports = this.factory.apply(exports, args);
+	}
 	if (returnExports) {
 		// 检测是否有子模块引用了本模块
 		if (exports.__empty_refs__) {
@@ -367,7 +374,12 @@ ObjectDependency.prototype = new Dependency();
 ObjectDependency.prototype.constructor = ObjectDependency;
 
 ObjectDependency.prototype.getId = function(runtime) {
-	var paths = [this.owner.id.substr(0, this.owner.id.lastIndexOf('/') + 1), ''];
+	// 分别为：
+	// 当前模块的子模块；
+	// 当前模块的同级模块；
+	// 全局模块；
+	// 运行时路径上的模块
+	var paths = [this.owner.id + '/', dirname(this.owner.id) + '/', '', runtime.root + '/'];
 	var id;
 	paths.some(function(path) {
 		id = path + name2id(this.name);
@@ -381,6 +393,7 @@ ObjectDependency.prototype.getId = function(runtime) {
 ObjectDependency.prototype.load = function(runtime, callback) {
 	var dep = this;
 	var pName, part, name, currentPart = -1;
+	console.log(this.getId(runtime))
 
 	/**
 	 * 依次获取当前模块的每个部分

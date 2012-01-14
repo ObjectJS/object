@@ -1,14 +1,15 @@
-object.define('test/a/b/d', function() {
-	return {d: 1};
+object.add('a/sys', function() {
+	console.log('fuck')
+})
+object.add('a/sys2', function() {
+	console.log('fuck')
+})
+object.add('a', 'b', function(exports, b) {
+})
+object.add('a/b', 'c', function(exports, b) {
+})
+object.add('a/c', function(exports) {
 });
-object.define('test/a/b/c', './d', function(require) {
-	this.d = require('./d');
+object.add('a/b/c', 'sys, sys2', function(exports, sys, sys2) {
 });
-object.add('test.b')
-object.add('test.a', 'sys, b', function(exports, sys) {
-	if (this.__name__ == '__main__') {
-		console.dir(sys.modules);
-	}
-});
-
-object.execute('test.a');
+object.execute('a')
