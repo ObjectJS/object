@@ -236,7 +236,9 @@ Package.prototype.load = function(name, runtime, callback) {
 		runtime.addModule(name, exports);
 
 		// sys.modules
-		if (exports.__name__ === 'sys') exports.modules = runtime.modules;
+		if (exports.__name__ === 'sys') {
+			exports.modules = runtime.modules;
+		}
 
 		if (callback) callback(exports);
 	}
@@ -316,14 +318,14 @@ CommonJSDependency.prototype.constructor = CommonJSDependency;
  * @param callback 异步方法，模块获取完毕后通过callback的唯一参数传回
  */
 CommonJSDependency.prototype.load = function(runtime, callback) {
-	runtime.loadModule(this.id, runtime.getName(this.id), callback);
+	runtime.loadModule(this.id, this.id, callback);
 };
 
 /**
  * 获取此依赖的引用
  */
 CommonJSDependency.prototype.getRef = function(runtime) {
-	var root = runtime.getName(this.id);
+	var root = this.id;
 	return runtime.modules[root];
 };
 
@@ -469,7 +471,8 @@ LoaderRuntime.prototype = {
 		if (id == root || id.indexOf(root + '/') == 0) {
 			id = id.slice(root.length + 1);
 		}
-		return id.replace(/\//g, '.');
+		name = id.replace(/\//ig, '.');
+		return name;
 	},
 
 	/**

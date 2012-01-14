@@ -1,11 +1,13 @@
-object.define('a/b/d', function() {
-	return {d: 1}
+object.define('test/a/b/d', function() {
+	return {d: 1};
 });
-object.define('a/b/c', './d', function(require) {
-	require.async('./d', function(d) {
-		console.log(d)
-	})
+object.define('test/a/b/c', './d', function(require) {
+	this.d = require('./d');
 });
-object.use('a.b.c, sys', function(a, sys) {
-	console.log(sys.modules)
-})
+object.add('test.a', 'sys', function(exports, sys) {
+	if (this.__name__ == '__main__') {
+		console.dir(sys.modules);
+	}
+});
+
+object.execute('test.a');
