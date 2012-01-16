@@ -99,7 +99,7 @@ CommonJSPackage.prototype.initDeps = function() {
 /**
  * 出现循环依赖但并不立刻报错，而是当作此模块没有获取到，继续获取下一个
  */
-CommonJSPackage.prototype.handleCyclicDependency = function(dep, pkg, runtime, next) {
+CommonJSPackage.prototype.handleCyclicDependency = function(name, owner, runtime, next) {
 	next();
 };
 
@@ -163,7 +163,7 @@ ObjectPackage.prototype.execute = function(name, runtime) {
 			args.push(depExports);
 		}
 	}, this);
-	// 最后再放入exports，因为当错误的自己依赖自己时，会导致少传一个参数
+	// 最后再放入exports，否则当错误的自己依赖自己时，会导致少传一个参数
 	args.unshift(exports);
 	if (this.factory) {
 		returnExports = this.factory.apply(exports, args);
@@ -191,8 +191,7 @@ ObjectPackage.prototype.execute = function(name, runtime) {
 /**
  * 出现循环依赖时建立一个空的exports返回，待所有流程走完后会将此模块填充完整。
  */
-ObjectPackage.prototype.handleCyclicDependency = function(dep, pkg, runtime, next) {
-	var name = dep.name;
+ObjectPackage.prototype.handleCyclicDependency = function(name, owner, runtime, next) {
 	if (!(name in runtime.modules)) {
 		runtime.modules[name] = new Module(name);
 	}
@@ -201,7 +200,7 @@ ObjectPackage.prototype.handleCyclicDependency = function(dep, pkg, runtime, nex
 	if (!exports.__empty_refs__) {
 		exports.__empty_refs__ = [];
 	}
-	exports.__empty_refs__.push(pkg.id);
+	exports.__empty_refs__.push(owner.id);
 	next(exports);
 };
 
@@ -273,7 +272,7 @@ Package.prototype.load = function(name, runtime, callback) {
 
 			// 刚刚push过，应该在最后一个，如果不在，说明循环依赖了
 			if (runtime.stack.indexOf(depPkg) != runtime.stack.length - 1) {
-				depPkg.handleCyclicDependency(dep, pkg, runtime, nextDep);
+				depPkg.handleCyclicDependency(name, pkg, runtime, nextDep);
 
 			} else {
 				dep.load(runtime, nextDep);
@@ -304,7 +303,7 @@ Package.prototype.load = function(name, runtime, callback) {
 	nextDep();
 };
 
-Package.prototype.handleCyclicDependency = function(dep, pkg, runtime, next) {
+Package.prototype.handleCyclicDependency = function(name, owner, runtime, next) {
 	throw new CyclicDependencyError(runtime.stack);
 };
 
@@ -386,6 +385,7 @@ CommonJSDependency.prototype.getRef = function(runtime) {
  * @param {Package} owner
  */
 function ObjectDependency(name, owner) {
+	this.nameParts = name.split('.');
 	Dependency.call(this, name, owner);
 };
 
@@ -413,13 +413,8 @@ ObjectDependency.prototype.getId = function(runtime) {
 ObjectDependency.prototype.load = function(runtime, callback) {
 	var dep = this;
 	var pName, name, id;
-	// 根据nameParts去一层一层获取其引用
-	var nameParts = dep.name.split('.');
 	var currentPart = -1, part;
-	// 通过比较id和name，得知此依赖在获取时前缀是什么
-	var idParts = dep.getId(runtime).split('/');
-	// id长度减去名字长度的组合，即为此依赖的前缀
-	var idPrefix = idParts.slice(0, idParts.length - nameParts.length).join('/');
+	var idPrefix = dep.getIdPrefix(runtime);
 
 	/**
 	 * 依次获取当前模块的每个部分
@@ -440,11 +435,11 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 
 		currentPart++;
 
-		if (currentPart == nameParts.length) {
+		if (currentPart == dep.nameParts.length) {
 			callback(dep.getRef(runtime));
 
 		} else {
-			part = nameParts[currentPart];
+			part = dep.nameParts[currentPart];
 			name = (pName? pName + '.' : '') + part;
 			id = pathjoin(idPrefix, name2id(name));
 			runtime.loadModule(id, name, nextPart);
@@ -454,11 +449,20 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 	nextPart();
 };
 
+ObjectDependency.prototype.getIdPrefix = function(runtime) {
+	// 通过比较id和name，得知此依赖在获取时前缀是什么
+	var idParts = this.getId(runtime).split('/');
+	// id长度减去名字长度的组合，即为此依赖的前缀
+	var idPrefix = idParts.slice(0, idParts.length - this.nameParts.length).join('/');
+	return idPrefix;
+};
+
 /**
  * 获取此依赖的引用
  */
 ObjectDependency.prototype.getRef = function(runtime) {
-	return runtime.modules[this.name.split('.')[0]];
+	var name = pathjoin(this.getIdPrefix(runtime), this.nameParts[0]).replace(/\//ig, '.');
+	return runtime.modules[name];
 };
 
 /**

@@ -22,4 +22,17 @@ object.add('a/b/c', 'sys, sys2', function(exports, sys, sys2) {
 		console.dir(sys.modules);
 	})
 });
-object.execute('a')
+//object.execute('a');
+
+object.add('XN.dom', 'dom', function(exports, dom) {
+	exports.haha = 1;
+	setTimeout(function() {
+		console.log(dom)
+	})
+});
+object.add('lala', 'XN.dom', function(exports, XN) {
+	console.log(XN.dom)
+});
+object.use('lala, sys', function(lala, sys) {
+	console.dir(sys.modules)
+});
