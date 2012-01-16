@@ -509,7 +509,33 @@ LoaderRuntime.prototype = {
 			callback(exports);
 
 		} else {
-			loader.load(id, name, this, callback);
+			var pkg = loader.getModule(id);
+
+			// No module
+			if (!pkg) {
+				throw new NoModuleError(id);
+			}
+
+			// file
+			else if (pkg.file) {
+				// TODO 加入预处理过程，跑出所有需要加载的文件并行加载，在此执行useScript而不是loadScript
+				loader.loadScript(pkg.file, function() {
+					var id = pkg.id;
+					var file = pkg.file;
+					// 重新读取pkg，之前的pkg只是个fileLib中的占位
+					pkg = loader.lib[id];
+
+					// 加载进来的脚本没有替换掉相应的模块，文件有问题。
+					if (!pkg) {
+						throw new Error(file + ' do not add ' + id);
+					}
+					pkg.load(name, this, callback);
+				}, true);
+
+			// Already define
+			} else {
+				pkg.load(name, this, callback);
+			}
 		}
 	},
 
@@ -561,7 +587,9 @@ LoaderRuntime.prototype = {
  */
 var Loader = new Class(function() {
 
-	// 计算当前引用objectjs的页面文件的目录路径
+	/**
+	 * 计算当前引用objectjs的页面文件的目录路径
+	 */
 	function calculatePageDir() {
 		var loc = window['location'];
 		var pageUrl = loc.protocol + '//' + loc.host + (loc.pathname.charAt(0) !== '/' ? '/' : '') + loc.pathname; 
@@ -575,6 +603,59 @@ var Loader = new Class(function() {
 			pageDir = pageUrl.substring(0, pageUrl.lastIndexOf('/') + 1);
 		}
 		return pageDir;
+	}
+
+	/**
+	 * 清理路径url，去除相对寻址符号
+	 */
+	function cleanPath(path) {
+		// 去除多余的/
+		path = path.replace(/([^:\/])\/+/g, '$1\/');
+		// 如果没有相对寻址，直接返回path
+		if (path.indexOf('.') === -1) {
+			return path;
+		}
+
+		var parts = path.split('/');
+		// 把所有的普通var变量都写在一行，便于压缩
+		var result = [];
+
+		for (var i = 0, part, len = parts.length; i < len; i++) {
+			part = parts[i];
+			if (part === '..') {
+				if (result.length === 0) {
+					throw new Error('invalid path: ' + path);
+				}
+				result.pop();
+			} else if (part !== '.') {
+				result.push(part);
+			}
+		}
+
+		// 去除尾部的#号
+		return result.join('/').replace(/#$/, '');
+	}
+
+	/**
+	 * 通过一个src，获取对应文件的绝对路径
+	 * 例如：http://hg.xnimg.cn/a.js -> http://hg.xnimg.cn/a.js
+	 *       file:///dir/a.js -> file:///dir/a.js
+	 *       in http://host/b/c/d/e/f.html, load ../g.js -> http://host/a/b/d/g.js
+	 *       in file:///dir/b/c/d/e/f.html, load ../g.js -> file:///dir/a/b/d/g.js
+	 *
+	 * @param src 地址
+	 */
+	function getAbsolutePath(src) {
+
+		// 如果本身是绝对路径，则返回src的清理版本
+		if (src.indexOf('://') != -1 || src.indexOf('//') === 0) {
+			return cleanPath(src);
+		}
+
+		if (typeof pageDir == 'undefined') {
+			pageDir = calculatePageDir();
+		}
+		return cleanPath(pageDir + src);
 	}
 
 	// global pageDir
@@ -596,45 +677,6 @@ var Loader = new Class(function() {
 	};
 
 	/**
-	 * 加载一个module
-	 *
-	 * @param pkg 被执行的module
-	 * @param name 执行时的name
-	 * @param {LoaderRuntime} runtime
-	 * @param callback 异步方法，执行完毕后调用，传入模块实例及名字
-	 */
-	this.load = function(self, id, name, runtime, callback) {
-
-		var pkg = self.getModule(id);
-
-		// No module
-		if (!pkg) {
-			throw new NoModuleError(id);
-		}
-
-		// file
-		else if (pkg.file) {
-			// TODO 加入预处理过程，跑出所有需要加载的文件并行加载，在此执行useScript而不是loadScript
-			self.loadScript(pkg.file, function() {
-				var id = pkg.id;
-				var file = pkg.file;
-				// 重新读取pkg，之前的pkg只是个fileLib中的占位
-				pkg = self.lib[id];
-
-				// 加载进来的脚本没有替换掉相应的模块，文件有问题。
-				if (!pkg) {
-					throw new Error(file + ' do not add ' + id);
-				}
-				pkg.load(name, runtime, callback);
-			}, true);
-
-		// Already define
-		} else {
-			pkg.load(name, runtime, callback);
-		}
-	};
-
-	/**
 	 * 查找页面中的标记script标签，更新 self.fileLib
 	 */
 	this.buildFileLib = function(self) {
@@ -651,59 +693,6 @@ var Loader = new Class(function() {
 			});
 		}
 	};
-
-	/**
-	 * 通过一个src，获取对应文件的绝对路径
-	 * 例如：http://hg.xnimg.cn/a.js -> http://hg.xnimg.cn/a.js
-	 *       file:///dir/a.js -> file:///dir/a.js
-	 *       in http://host/b/c/d/e/f.html, load ../g.js -> http://host/a/b/d/g.js
-	 *       in file:///dir/b/c/d/e/f.html, load ../g.js -> file:///dir/a/b/d/g.js
-	 *
-	 * @param src 地址
-	 */
-	this._getAbsolutePath = staticmethod(function(src) {
-
-		/**
-		 * 清理路径url，去除相对寻址符号
-		 */
-		function cleanPath(path) {
-			// 去除多余的/
-			path = path.replace(/([^:\/])\/+/g, '$1\/');
-			// 如果没有相对寻址，直接返回path
-			if (path.indexOf('.') === -1) {
-				return path;
-			}
-
-			var parts = path.split('/');
-			// 把所有的普通var变量都写在一行，便于压缩
-			var result = [];
-
-			for (var i = 0, part, len = parts.length; i < len; i++) {
-				part = parts[i];
-				if (part === '..') {
-					if (result.length === 0) {
-						throw new Error('invalid path: ' + path);
-					}
-					result.pop();
-				} else if (part !== '.') {
-					result.push(part);
-				}
-			}
-
-			// 去除尾部的#号
-			return result.join('/').replace(/#$/, '');
-		}
-
-		// 如果本身是绝对路径，则返回src的清理版本
-		if (src.indexOf('://') != -1 || src.indexOf('//') === 0) {
-			return cleanPath(src);
-		}
-
-		if (typeof pageDir == 'undefined') {
-			pageDir = calculatePageDir();
-		}
-		return cleanPath(pageDir + src);
-	});
 
 	/**
 	 * TODO
@@ -723,7 +712,7 @@ var Loader = new Class(function() {
 			throw new Error('src should be string');
 		}
 		src = src.trim();
-		var absPath = cls._getAbsolutePath(src);
+		var absPath = getAbsolutePath(src);
 		if (useCache) {
 			var urlNodeMap = cls.get('_urlNodeMap'), scriptNode = urlNodeMap[absPath];
 			if (scriptNode) {
@@ -793,7 +782,7 @@ var Loader = new Class(function() {
 		}
 		src = src.trim();
 		// 转换为绝对路径
-		var absPath = cls._getAbsolutePath(src);
+		var absPath = getAbsolutePath(src);
 		// 获取节点
 		var urlNodeMap = cls.get('_urlNodeMap'), scriptNode = urlNodeMap[absPath];
 		// 如果节点存在，则删除script，并从缓存中清空
