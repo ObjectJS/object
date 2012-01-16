@@ -100,15 +100,15 @@ function calculatePageDir() {
 var pageDir = calculatePageDir();
 
 test('getAbsolutePath', function() {
-	equal(Loader._getAbsolutePath('file://dir/a.js'), 'file://dir/a.js', 'return cleaned path');
-	equal(Loader._getAbsolutePath('http://host/a.js'), 'http://host/a.js', 'return cleaned absolute path');
-	equal(Loader._getAbsolutePath('http://host//b/c/../../a.js'), 'http://host/a.js', 'http://host//b/c/../../a.js -> http://host/a.js');
-	equal(Loader._getAbsolutePath('//a/b/c/../../a.js'), '//a/a.js', '//a/b/c/../../a.js -> //a/a.js');
+	equal(Loader.getAbsolutePath('file://dir/a.js'), 'file://dir/a.js', 'return cleaned path');
+	equal(Loader.getAbsolutePath('http://host/a.js'), 'http://host/a.js', 'return cleaned absolute path');
+	equal(Loader.getAbsolutePath('http://host//b/c/../../a.js'), 'http://host/a.js', 'http://host//b/c/../../a.js -> http://host/a.js');
+	equal(Loader.getAbsolutePath('//a/b/c/../../a.js'), '//a/a.js', '//a/b/c/../../a.js -> //a/a.js');
 
-	equal(Loader._getAbsolutePath('/a/b/c/../../a.js'), pageDir + 'a/a.js', '/a/b/c/../../a.js -> ' + pageDir + 'a/a/.js');
-	equal(Loader._getAbsolutePath('/a/b/c/../../a.js?a=1'), pageDir + 'a/a.js?a=1', '/a/b/c/../../a.js?a=1 -> ' + pageDir + 'a/a/.js?a=1');
-	equal(Loader._getAbsolutePath('/a/b/c/../../a.js?a=1#'), pageDir + 'a/a.js?a=1', '/a/b/c/../../a.js?a=1# -> ' + pageDir + 'a/a/.js?a=1');
-	equal(Loader._getAbsolutePath('http://hg.xnimg.cn/object/src/dom/index.js'), 'http://hg.xnimg.cn/object/src/dom/index.js', 'http://hg.xnimg.cn/object/src/dom/index.js -> http://hg.xnimg.cn/object/src/dom/index.js');
+	equal(Loader.getAbsolutePath('/a/b/c/../../a.js'), pageDir + 'a/a.js', '/a/b/c/../../a.js -> ' + pageDir + 'a/a/.js');
+	equal(Loader.getAbsolutePath('/a/b/c/../../a.js?a=1'), pageDir + 'a/a.js?a=1', '/a/b/c/../../a.js?a=1 -> ' + pageDir + 'a/a/.js?a=1');
+	equal(Loader.getAbsolutePath('/a/b/c/../../a.js?a=1#'), pageDir + 'a/a.js?a=1', '/a/b/c/../../a.js?a=1# -> ' + pageDir + 'a/a/.js?a=1');
+	equal(Loader.getAbsolutePath('http://hg.xnimg.cn/object/src/dom/index.js'), 'http://hg.xnimg.cn/object/src/dom/index.js', 'http://hg.xnimg.cn/object/src/dom/index.js -> http://hg.xnimg.cn/object/src/dom/index.js');
 });
 
 module('loader-basic-removeScript');

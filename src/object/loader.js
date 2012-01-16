@@ -36,8 +36,8 @@ NoModuleError.prototype = new Error();
 /**
  * 未对模块进行依赖
  */
-function ModuleRequiredError(id) {
-	this.message = 'module ' + id + ' required';
+function ModuleRequiredError(name, owner) {
+	this.message = owner.id + ': module ' + name + ' required';
 };
 ModuleRequiredError.prototype = new Error();
 
@@ -85,14 +85,14 @@ CommonJSPackage.prototype.execute = function(name, runtime) {
  * object.define中，“.”作为分隔符的被认为是ObjectDependency，其他都是CommenJSDependency
  */
 CommonJSPackage.prototype.initDeps = function() {
-	this.dependencies.forEach(function(depId) {
+	this.dependencies.forEach(function(name) {
 		var dep;
-		if (depId.indexOf('/') == -1 && depId.indexOf('.') != -1) {
-			dep = new ObjectDependency(depId, this);
+		if (name.indexOf('/') == -1 && name.indexOf('.') != -1) {
+			dep = new ObjectDependency(name, this);
 		} else {
-			dep = new CommonJSDependency(depId, this);
+			dep = new CommonJSDependency(name, this);
 		}
-		this.deps[depId] = dep;
+		this.deps[name] = dep;
 	}, this);
 };
 
@@ -106,15 +106,20 @@ CommonJSPackage.prototype.handleCyclicDependency = function(dep, pkg, runtime, n
 CommonJSPackage.prototype.createRequire = function(name, runtime) {
 	var loader = runtime.loader;
 	var module = this;
-	function require(id) {
-		var dep = module.getDep(id);
+	function require(name) {
+		var dep = module.getDep(name);
 		if (!dep) {
-			throw new ModuleRequiredError(id);
+			throw new ModuleRequiredError(name, module);
 		}
 		var exports = dep.getRef(runtime);
-		// 有依赖却没有获取到，说明是由于循环依赖
-		if (!exports && module.dependencies.indexOf(id) != -1) {
-			throw new CyclicDependencyError(runtime.stack);
+		if (!exports) {
+			// 有依赖却没有获取到，说明是由于循环依赖
+			if (module.dependencies.indexOf(name) != -1) {
+				throw new CyclicDependencyError(runtime.stack);
+			} else {
+				console.warn('Unknown Error.');
+				// 出错
+			}
 		}
 		return exports;
 	}
@@ -152,8 +157,8 @@ ObjectPackage.prototype.execute = function(name, runtime) {
 	var exports = runtime.modules[name] || new Module(name);
 	var returnExports;
 	var args = [exports];
-	this.dependencies.forEach(function(depId) {
-		var depExports = this.getDep(depId).getRef(runtime);
+	this.dependencies.forEach(function(name) {
+		var depExports = this.getDep(name).getRef(runtime);
 		if (args.indexOf(depExports) == -1) {
 			args.push(depExports);
 		}
@@ -185,11 +190,11 @@ ObjectPackage.prototype.execute = function(name, runtime) {
  * 出现循环依赖时建立一个空的exports返回，待所有流程走完后会将此模块填充完整。
  */
 ObjectPackage.prototype.handleCyclicDependency = function(dep, pkg, runtime, next) {
-	var depId = dep.getId(runtime);
-	if (!(depId in runtime.modules)) {
-		runtime.modules[depId] = new Module(depId);
+	var name = dep.name;
+	if (!(name in runtime.modules)) {
+		runtime.modules[name] = new Module(name);
 	}
-	var exports = runtime.modules[depId];
+	var exports = runtime.modules[name];
 	// 在空的exports上建立一个数组，用来存储依赖了此模块的所有模块
 	if (!exports.__empty_refs__) {
 		exports.__empty_refs__ = [];
@@ -202,14 +207,14 @@ ObjectPackage.prototype.handleCyclicDependency = function(dep, pkg, runtime, nex
  * object.add中，“/”作为分隔符的被认为是CommonJSDependency，其他都是ObjectDependency
  */
 ObjectPackage.prototype.initDeps = function() {
-	this.dependencies.forEach(function(depId) {
+	this.dependencies.forEach(function(name) {
 		var dep;
-		if (depId.indexOf('/') != -1) {
-			dep = new CommonJSDependency(depId, this);
+		if (name.indexOf('/') != -1) {
+			dep = new CommonJSDependency(name, this);
 		} else {
-			dep = new ObjectDependency(depId, this);
+			dep = new ObjectDependency(name, this);
 		}
-		this.deps[depId] = dep;
+		this.deps[name] = dep;
 	}, this);
 };
 
@@ -259,7 +264,7 @@ Package.prototype.load = function(name, runtime, callback) {
 
 		} else {
 			dep = pkg.getDep(deps[currentUse]);
-			depPkg = dep.getModule(runtime);
+			depPkg = runtime.loader.getModule(dep.getId(runtime));
 
 			// 记录开始获取当前模块
 			runtime.stack.push(depPkg);
@@ -329,14 +334,6 @@ function Dependency(name, owner) {
 }
 
 /**
- * 从loader中获取此依赖所指向的那个package
- */
-Dependency.prototype.getModule = function(runtime) {
-	var pkg = runtime.loader.getModule(this.getId(runtime)); 
-	return pkg;
-};
-
-/**
  * @param name
  * @param module
  */
@@ -370,10 +367,6 @@ CommonJSDependency.prototype.getId = function() {
 	return this.id;
 };
 
-/**
- * 处理当前模块
- * @param callback 异步方法，模块获取完毕后通过callback的唯一参数传回
- */
 CommonJSDependency.prototype.load = function(runtime, callback) {
 	var depId = this.getId(runtime);
 	runtime.loadModule(depId, depId, callback);
@@ -390,7 +383,7 @@ CommonJSDependency.prototype.getRef = function(runtime) {
  * @param name
  * @param {Package} owner
  */
-ObjectDependency = function(name, owner) {
+function ObjectDependency(name, owner) {
 	Dependency.call(this, name, owner);
 };
 
@@ -417,17 +410,14 @@ ObjectDependency.prototype.getId = function(runtime) {
 
 ObjectDependency.prototype.load = function(runtime, callback) {
 	var dep = this;
-	var pName, name;
-	var idParts = dep.getId(runtime).split('/');
-	var contextParts = runtime.context.split('/');
+	var pName, name, id;
+	// 根据nameParts去一层一层获取其引用
+	var nameParts = dep.name.split('.');
 	var currentPart = -1, part;
-	for (var i = 0, l = idParts.length; i < l; i++) {
-		if (!contextParts[i] || contextParts[i] !== idParts[i]) {
-			break;
-		}
-	}
-	currentPart += i;
-	var prefix = i? runtime.context : '';
+	// 通过比较id和name，得知此依赖在获取时前缀是什么
+	var idParts = dep.getId(runtime).split('/');
+	// id长度减去名字长度的组合，即为此依赖的前缀
+	var idPrefix = idParts.slice(0, idParts.length - nameParts.length).join('/');
 
 	/**
 	 * 依次获取当前模块的每个部分
@@ -448,14 +438,13 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 
 		currentPart++;
 
-		if (currentPart == idParts.length) {
+		if (currentPart == nameParts.length) {
 			callback(dep.getRef(runtime));
 
 		} else {
-			part = idParts[currentPart];
+			part = nameParts[currentPart];
 			name = (pName? pName + '.' : '') + part;
-			id = name2id(name);
-			if (prefix) id = prefix + '/' + id;
+			id = pathjoin(idPrefix, name2id(name));
 			runtime.loadModule(id, name, nextPart);
 		};
 	}
@@ -658,28 +647,6 @@ var Loader = new Class(function() {
 		return result.join('/').replace(/#$/, '');
 	}
 
-	/**
-	 * 通过一个src，获取对应文件的绝对路径
-	 * 例如：http://hg.xnimg.cn/a.js -> http://hg.xnimg.cn/a.js
-	 *       file:///dir/a.js -> file:///dir/a.js
-	 *       in http://host/b/c/d/e/f.html, load ../g.js -> http://host/a/b/d/g.js
-	 *       in file:///dir/b/c/d/e/f.html, load ../g.js -> file:///dir/a/b/d/g.js
-	 *
-	 * @param src 地址
-	 */
-	function getAbsolutePath(src) {
-
-		// 如果本身是绝对路径，则返回src的清理版本
-		if (src.indexOf('://') != -1 || src.indexOf('//') === 0) {
-			return cleanPath(src);
-		}
-
-		if (typeof pageDir == 'undefined') {
-			pageDir = calculatePageDir();
-		}
-		return cleanPath(pageDir + src);
-	}
-
 	// global pageDir
 	var pageDir;
 
@@ -697,6 +664,28 @@ var Loader = new Class(function() {
 
 		self.scripts = document.getElementsByTagName('script');
 	};
+
+	/**
+	 * 通过一个src，获取对应文件的绝对路径
+	 * 例如：http://hg.xnimg.cn/a.js -> http://hg.xnimg.cn/a.js
+	 *       file:///dir/a.js -> file:///dir/a.js
+	 *       in http://host/b/c/d/e/f.html, load ../g.js -> http://host/a/b/d/g.js
+	 *       in file:///dir/b/c/d/e/f.html, load ../g.js -> file:///dir/a/b/d/g.js
+	 *
+	 * @param src 地址
+	 */
+	this.getAbsolutePath = staticmethod(function(src) {
+
+		// 如果本身是绝对路径，则返回src的清理版本
+		if (src.indexOf('://') != -1 || src.indexOf('//') === 0) {
+			return cleanPath(src);
+		}
+
+		if (typeof pageDir == 'undefined') {
+			pageDir = calculatePageDir();
+		}
+		return cleanPath(pageDir + src);
+	});
 
 	/**
 	 * 查找页面中的标记script标签，更新 self.fileLib
@@ -734,7 +723,7 @@ var Loader = new Class(function() {
 			throw new Error('src should be string');
 		}
 		src = src.trim();
-		var absPath = getAbsolutePath(src);
+		var absPath = cls.getAbsolutePath(src);
 		if (useCache) {
 			var urlNodeMap = cls.get('_urlNodeMap'), scriptNode = urlNodeMap[absPath];
 			if (scriptNode) {
@@ -804,7 +793,7 @@ var Loader = new Class(function() {
 		}
 		src = src.trim();
 		// 转换为绝对路径
-		var absPath = getAbsolutePath(src);
+		var absPath = cls.getAbsolutePath(src);
 		// 获取节点
 		var urlNodeMap = cls.get('_urlNodeMap'), scriptNode = urlNodeMap[absPath];
 		// 如果节点存在，则删除script，并从缓存中清空
