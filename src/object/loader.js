@@ -156,13 +156,15 @@ ObjectPackage.prototype.constructor = ObjectPackage;
 ObjectPackage.prototype.execute = function(name, runtime) {
 	var exports = runtime.modules[name] || new Module(name);
 	var returnExports;
-	var args = [exports];
+	var args = [];
 	this.dependencies.forEach(function(name) {
 		var depExports = this.getDep(name).getRef(runtime);
 		if (args.indexOf(depExports) == -1) {
 			args.push(depExports);
 		}
 	}, this);
+	// 最后再放入exports，因为当错误的自己依赖自己时，会导致少传一个参数
+	args.unshift(exports);
 	if (this.factory) {
 		returnExports = this.factory.apply(exports, args);
 	}
