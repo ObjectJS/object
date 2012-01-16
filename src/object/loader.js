@@ -511,9 +511,9 @@ LoaderRuntime.prototype = {
 	* 加载一个module
 	*/
 	loadModule: function(id, name, callback) {
-		var loader = this.loader;
-
-		var exports = this.modules[name];
+		var runtime = this;
+		var loader = runtime.loader;
+		var exports = runtime.modules[name];
 
 		// 使用缓存中的
 		if (exports) {
@@ -540,12 +540,12 @@ LoaderRuntime.prototype = {
 					if (!pkg) {
 						throw new Error(file + ' do not add ' + id);
 					}
-					pkg.load(name, this, callback);
+					pkg.load(name, runtime, callback);
 				}, true);
 
 			// Already define
 			} else {
-				pkg.load(name, this, callback);
+				pkg.load(name, runtime, callback);
 			}
 		}
 	},
