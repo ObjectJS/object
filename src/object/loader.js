@@ -258,7 +258,9 @@ Package.prototype.load = function(name, runtime, callback) {
 	 * 已执行完毕最后一个dependency
 	 */
 	function doneDep() {
-		if (!name) name = pkg.id; // 没有指定name，则使用全名
+		if (!name) {
+			name = pkg.id; // 没有指定name，则使用全名
+		}
 
 		var exports = pkg.execute(name, runtime);
 
@@ -392,9 +394,17 @@ ObjectDependency.prototype.getId = function(runtime) {
 
 ObjectDependency.prototype.load = function(runtime, callback) {
 	var dep = this;
-	var currentPart = -1, part;
 	var pName, name;
-	var nameParts = dep.getId(runtime).split('.');
+	var idParts = dep.getId(runtime).split('/');
+	var contextParts = runtime.context.split('/');
+	var currentPart = -1, part;
+	for (var i = 0, l = idParts.length; i < l; i++) {
+		if (!contextParts[i] || contextParts[i] !== idParts[i]) {
+			break;
+		}
+	}
+	currentPart += i;
+	var prefix = i? runtime.context : '';
 
 	/**
 	 * 依次获取当前模块的每个部分
@@ -415,13 +425,15 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 
 		currentPart++;
 
-		if (currentPart == nameParts.length) {
+		if (currentPart == idParts.length) {
 			callback(dep.getRef(runtime));
 
 		} else {
-			part = nameParts[currentPart];
+			part = idParts[currentPart];
 			name = (pName? pName + '.' : '') + part;
-			runtime.loadModule(name2id(name), runtime.getName(name), nextPart);
+			id = name2id(name);
+			if (prefix) id = prefix + '/' + id;
+			runtime.loadModule(id, name, nextPart);
 		};
 	}
 
