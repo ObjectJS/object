@@ -28,8 +28,9 @@ object.remove('a', true);
 object.add('a.b.c.d.e.f.g', function(exports) {
 });
 object.add('a.b.c.d.e', 'f.g', function(exports, f) {
+	console.log(f)
 });
-object.add('a.b.c', 'a.b.c.d.e', function(exports, a) {
-	console.log(arguments)
+object.add('a.b.c', 'sys, a.b.c.d.e', function(exports, sys, a) {
+	console.log(a);
 });
 object.execute('a/b/c');
