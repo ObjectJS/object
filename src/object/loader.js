@@ -8,6 +8,13 @@ function name2id(name) {
 }
 
 /**
+ * 将id中的“/”换成name形式的“.”
+ */
+function id2name(id) {
+	return id.replace(/\//g, '.');
+}
+
+/**
  * 去掉路径中的最后文件部分
  */
 function dirname(path) {
@@ -116,7 +123,7 @@ CommonJSPackage.prototype.initDeps = function() {
 /**
  * 出现循环依赖但并不立刻报错，而是当作此模块没有获取到，继续获取下一个
  */
-CommonJSPackage.prototype.handleCyclicDependency = function(ownerName, owner, runtime, next) {
+CommonJSPackage.prototype.handleCyclicDependency = function(dep, owner, runtime, next) {
 	next();
 };
 
@@ -175,7 +182,8 @@ ObjectPackage.prototype.execute = function(name, runtime) {
 	var returnExports;
 	var args = [];
 	this.dependencies.forEach(function(name) {
-		var depExports = this.getDep(name).getRef(runtime);
+		var dep = this.getDep(name);
+		var depExports = dep.getRef(runtime);
 		if (args.indexOf(depExports) == -1) {
 			args.push(depExports);
 		}
@@ -208,11 +216,12 @@ ObjectPackage.prototype.execute = function(name, runtime) {
 /**
  * 出现循环依赖时建立一个空的exports返回，待所有流程走完后会将此模块填充完整。
  */
-ObjectPackage.prototype.handleCyclicDependency = function(ownerName, owner, runtime, next) {
-	if (!(ownerName in runtime.modules)) {
-		runtime.modules[ownerName] = new Module(ownerName);
+ObjectPackage.prototype.handleCyclicDependency = function(dep, owner, runtime, next) {
+	var name = dep.getRuntimeName(runtime);
+	if (!(name in runtime.modules)) {
+		runtime.modules[name] = new Module(name);
 	}
-	var exports = runtime.modules[ownerName];
+	var exports = runtime.modules[name];
 	// 在空的exports上建立一个数组，用来存储依赖了此模块的所有模块
 	if (!exports.__empty_refs__) {
 		exports.__empty_refs__ = [];
@@ -293,7 +302,7 @@ Package.prototype.load = function(name, runtime, callback) {
 
 			// 刚刚push过，应该在最后一个，如果不在，说明循环依赖了
 			if (runtime.stack.indexOf(depPkg) != runtime.stack.length - 1) {
-				depPkg.handleCyclicDependency(name, pkg, runtime, nextDep);
+				depPkg.handleCyclicDependency(dep, pkg, runtime, nextDep);
 
 			} else {
 				dep.load(name, runtime, nextDep);
@@ -321,7 +330,7 @@ Package.prototype.load = function(name, runtime, callback) {
 	nextDep();
 };
 
-Package.prototype.handleCyclicDependency = function(ownerName, owner, runtime, next) {
+Package.prototype.handleCyclicDependency = function(dep, owner, runtime, next) {
 	throw new CyclicDependencyError(runtime.stack);
 };
 
@@ -386,6 +395,10 @@ CommonJSDependency.prototype.getId = function() {
 	return this.id;
 };
 
+CommonJSDependency.prototype.getRuntimeName = function(runtime) {
+	return this.id;
+};
+
 CommonJSDependency.prototype.load = function(ownerName, runtime, callback) {
 	var depId = this.getId(runtime);
 	runtime.loadModule(depId, depId, callback);
@@ -411,33 +424,41 @@ ObjectDependency.prototype = new Dependency();
 
 ObjectDependency.prototype.constructor = ObjectDependency;
 
-ObjectDependency.prototype.getId = function(runtime) {
+ObjectDependency.prototype.getId = function(runtime, withFoundPath) {
 	// 分别在以下空间中找：
 	// 当前模块(sys.path中通过'.'定义)；
 	// 全局模块(sys.path中通过'/'定义)；
 	// 运行时路径上的模块(默认的)。
 	var paths = [this.owner.id, '', runtime.context];
-	var id;
+	var id, foundPath;
 	paths.some(function(path) {
 		var part = name2id(this.name);
 		// 先找子模块
 		id = pathjoin(path, part);
+		foundPath = path;
 		if (runtime.loader.getModule(id)) {
 			return true;
 		}
 		// 再找同级模块
 		id = pathjoin(dirname(path), part);
+		foundPath = path;
 		if (runtime.loader.getModule(id)) {
 			return true;
 		}
 	}, this);
-	return id;
+
+	// 除了返回id，还返回此id的查找途径
+	if (withFoundPath) {
+		return {
+			id: id,
+			foundPath: foundPath
+		};
+	} else {
+		return id;
+	}
 };
 
 ObjectDependency.prototype.load = function(ownerName, runtime, callback) {
-	var dep = this;
-	var pName, name;
-	var currentPart = -1, part;
 
 	// 当一个名为 a/b/c/d/e/f/g 的模块被 a/b/c/d/e/ 在 a/b/c 运行空间下通过 f.g 依赖时：
 	// runtime.context: a/b/c
@@ -457,18 +478,23 @@ ObjectDependency.prototype.load = function(ownerName, runtime, callback) {
 	// dep->runtimeNamePrefix: a.b.c.d.e
 	// dep->rootName: a.b.c.d.e.f
 
-	var depId = this.getId(runtime);
+	var dep = this;
+	var idInfo = this.getId(runtime, true);
+	var depId = idInfo.id;
+	var idFoundPath = idInfo.foundPath;
+
 	var idParts = depId.split('/');
+	var currentPart, pName;
+	var relativeId;
+
 	if (depId.indexOf(runtime.context + '/') == 0) {
-		// runtimeNamePrefix
-		name = idParts.slice(runtime.context.split('/').length, idParts.length - this.nameParts.length).join('.');
-		idPrefix = runtime.context;
+		currentPart = idFoundPath.split('/').length - 1;
+		relativeId = idFoundPath.slice(runtime.context.length + 1, idFoundPath.length);
 	} else {
-		// runtimeNamePrefix
-		name = idParts.slice(0, idParts.length - this.nameParts.length).join('.');
-		idPrefix = '';
+		currentPart = -1;
+		relativeId = idFoundPath;
 	}
-	var rootName = (name? name + '.' : '') + dep.nameParts[0];
+	var rootName = id2name(pathjoin(relativeId, this.nameParts[0]));
 
 	/**
 	 * 依次获取当前模块的每个部分
@@ -478,24 +504,22 @@ ObjectDependency.prototype.load = function(ownerName, runtime, callback) {
 	 */
 	function nextPart(pExports) {
 
-		var id;
+		var id, name;
 
 		if (pExports) {
 			// 生成对象链
-			runtime.setMemberTo(pName, part, pExports);
+			runtime.setMemberTo(pName, idParts[currentPart], pExports);
 		}
 
-		pName = name;
-
 		currentPart++;
-		part = dep.nameParts[currentPart];
-		name = (pName? pName + '.' : '') + part;
-		id = pathjoin(idPrefix, name2id(name));
 
-		if (currentPart == dep.nameParts.length) {
+		if (currentPart == idParts.length) {
 			callback(runtime.modules[rootName]);
 
 		} else {
+			id = idParts.slice(0, currentPart + 1).join('/');
+			name = id2name(runtime.getRelativeId(id));
+			pName = name;
 			runtime.loadModule(id, name, nextPart);
 		};
 	}
@@ -503,19 +527,15 @@ ObjectDependency.prototype.load = function(ownerName, runtime, callback) {
 	nextPart();
 };
 
-ObjectDependency.prototype.getIdPrefix = function(runtime) {
-	// 通过比较id和name，得知此依赖在获取时前缀是什么
-	var idParts = this.getId(runtime).split('/');
-	// id长度减去名字长度的组合，即为此依赖的前缀
-	var idPrefix = idParts.slice(0, idParts.length - this.nameParts.length).join('/');
-	return idPrefix;
-};
-
 /**
  * 获取此依赖的引用
  */
+ObjectDependency.prototype.getRuntimeName = function(runtime) {
+	return id2name(runtime.getRelativeId(this.getId(runtime)));
+};
+
 ObjectDependency.prototype.getRef = function(runtime) {
-	return runtime.modules[rootName];
+	return runtime.modules[this.getRuntimeName(runtime)];
 };
 
 /**
@@ -547,6 +567,17 @@ function LoaderRuntime(context) {
 }
 
 LoaderRuntime.prototype = {
+
+	/**
+	 * 返回去掉了context前缀的id
+	 */
+	getRelativeId: function(id) {
+		if (id.indexOf(this.context + '/') == 0) {
+			return id.slice(this.context.length + 1, id.length);
+		} else {
+			return id;
+		}
+	},
 
 	/**
 	 * 加入一个module

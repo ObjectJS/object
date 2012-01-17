@@ -51,7 +51,7 @@ test('buildFileLib', function() {
 	var len3 = loader.scripts.length;
 	equal(len1 + 2, len3, 'when new script inserted, loader.scripts should be added automatically');
 	loader.buildFileLib();
-	ok(Object.keys(loader.fileLib).length == 1, 'new script tag inserted, new module loaded');
+	equal(Object.keys(loader.fileLib).length, 1, 'new script tag inserted, new module loaded');
 	ok(loader.fileLib['test_module'] != null, 'module test_module is added');
 	ok(loader.fileLib['test_module'].id == 'test_module', 'module test_module is added, name is ok');
 	ok(loader.fileLib['test_module'].file == emptyJS, 'module test_module is added, file is ok');
