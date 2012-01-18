@@ -115,7 +115,7 @@ CommonJSPackage.prototype.load = function() {
  */
 CommonJSPackage.prototype.execute = function(name, deps, runtime) {
 	var exports = runtime.modules[name] || new Module(name);
-	var returnExports = this.factory.call(exports, this.createRequire(name, runtime), exports, this);
+	var returnExports = this.factory.call(exports, this.createRequire(name, deps, runtime), exports, this);
 	if (returnExports) {
 		returnExports.__name__ = exports.__name__;
 		exports = returnExports;
@@ -130,15 +130,16 @@ CommonJSPackage.prototype.handleCyclicDependency = function(dep, depName, owner,
 	next();
 };
 
-CommonJSPackage.prototype.createRequire = function(name, runtime) {
+CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 	var loader = runtime.loader;
 	var pkg = this;
 	function require(name) {
-		var dep = pkg.getDep(name);
-		if (!dep) {
+		var index = pkg.dependencies.indexOf(name);
+		if (index == -1) {
 			throw new ModuleRequiredError(name, pkg);
 		}
-		var exports = dep.getRef(runtime);
+		var dep = deps[index];
+		var exports = dep.exports;
 		if (!exports) {
 			// 有依赖却没有获取到，说明是由于循环依赖
 			if (pkg.dependencies.indexOf(name) != -1) {
