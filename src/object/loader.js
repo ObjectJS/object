@@ -423,6 +423,7 @@ function ObjectDependency(name, owner, runtime) {
 		id = pathjoin(path, part);
 		prefix = path;
 		if (runtime.loader.getModule(id)) {
+			runtimeName = id2name(id.slice(prefix.length));
 			return true;
 		}
 
@@ -431,27 +432,16 @@ function ObjectDependency(name, owner, runtime) {
 		id = pathjoin(path, part);
 		prefix = path;
 		if (runtime.loader.getModule(id)) {
+			runtimeName = id2name(id.slice(prefix.length));
 			return true;
 		}
 	}, this);
-
-	if ((prefix + '/').indexOf(runtime.context + '/') == 0) {
-		relativeId = prefix.slice(runtime.context.length + 1, prefix.length);
-		start = prefix.split('/').length - 1;
-	} else {
-		relativeId = prefix;
-		start = 0;
-	}
-
-	runtimeName = '';
-	rootName = id2name(pathjoin(relativeId, name.split('.')[0]));
 
 	// 当一个名为 a/b/c/d/e/f/g 的模块被 a/b/c/d/e/ 在 a/b/c 运行空间下通过 f.g 依赖时：
 	// runtime.context: a/b/c
 	// dep->name: f.g
 	// dep->id: a/b/c/d/e/f/g
 	// dep->runtimeName: d.e.f.g
-	// dep->idPrefix: a/b/c/d/e
 	// dep->runtimeNamePrefix: d.e
 	// dep->rootName: d.e.f
 
@@ -460,15 +450,12 @@ function ObjectDependency(name, owner, runtime) {
 	// dep->name: f.g
 	// dep->id: a/b/c/d/e/f/g
 	// dep->runtimeName: a.b.c.d.e.f.g
-	// dep->idPrefix: 
 	// dep->runtimeNamePrefix: a.b.c.d.e
 	// dep->rootName: a.b.c.d.e.f
 
 	this.id = id;
-	this.idParts = id.split('/');
 	//this.idPrefix = prefix;
 	this.rootName = rootName;
-	this.start = start;
 	this.runtimeName = runtimeName;
 	this.module = runtime.loader.getModule(this.id);
 };
@@ -479,9 +466,9 @@ ObjectDependency.prototype.constructor = ObjectDependency;
 
 ObjectDependency.prototype.load = function(runtime, callback) {
 
-	var dep = this;
-	var idParts = this.idParts;
-	var currentPart = this.start;
+	var parts = this.runtimeName.split('.');
+	var rootName = this.rootName;
+	var currentPart = -1;
 	var pName, name;
 
 	/**
@@ -494,20 +481,20 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 
 		var id;
 
-		if (pExports) {
+		if (currentPart > 0) {
 			// 生成对象链
-			runtime.setMemberTo(pName, idParts[currentPart], pExports);
+			//runtime.setMemberTo(pName, parts[currentPart], pExports);
 		}
 
 		currentPart++;
 
-		if (currentPart == idParts.length) {
-			callback(runtime.modules[dep.rootName]);
+		if (currentPart == parts.length) {
+			callback(runtime.modules[rootName]);
 
 		} else {
-			id = idParts.slice(0, currentPart + 1).join('/');
+			id = parts.slice(0, currentPart + 1).join('/');
 			pName = name;
-			name = pName? pName + '.' + idParts[currentPart] : idParts[currentPart];
+			name = pName? pName + '.' + parts[currentPart] : parts[currentPart];
 			runtime.loadModule(id, name, nextPart);
 		};
 	}
