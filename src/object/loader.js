@@ -1017,7 +1017,7 @@ var Loader = new Class(function() {
 		var id = '__anonymous_' + self.anonymousModuleCount + '__';
 		self.anonymousModuleCount++;
 
-		object.define(id, dependencies, function(require, exports, module) {
+		self.defineModule(CommonJSPackage, id, dependencies, function(require, exports, module) {
 			var args = [];
 			module.dependencies.forEach(function(dep) {
 				dep = require(dep);
