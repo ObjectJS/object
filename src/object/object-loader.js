@@ -20,14 +20,14 @@ object.execute = loader.execute.bind(loader);
  *        window.globalMember = 1;
  *    });
  */
-object.define('window', 'sys', function(require) {
+object.define('/root/window', 'sys', function(require) {
 	var sys = require('sys');
 	var dom = sys.modules['dom'];
 	if (dom) dom.wrap(window);
 	return window;
 });
 
-object.define('loader', function(require, exports) {
+object.define('/root/loader', function(require, exports) {
 	exports.Loader = object.Loader;
 });
 
