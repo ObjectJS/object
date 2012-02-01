@@ -426,8 +426,8 @@ function ObjectDependency(name, runtime) {
 		if (runtime.loader.getModule(id)) {
 			// TODO
 			runtimeNameRoot = id2name(context);
-			console.log(context, ownerRuntimeName, rootName)
 			rootName = (runtimeNameRoot? runtimeNameRoot + '.' : '') + nameParts[0];
+			console.log(runtime.context, name, ',context:', context, ',foundContext:', pathjoin(owner.id, foundContext), ',ownerRuntimeName:', name2id(ownerRuntimeName), ',runtimeName:', runtimeNameRoot + '.' + name)
 			return true;
 		}
 		return false;
@@ -445,12 +445,16 @@ function ObjectDependency(name, runtime) {
 		// 先找子模块
 		findpath = pathjoin(owner.id, path);
 		findIn(findpath);
-		if (checkExists(id, path)) return true;
+		if (checkExists(id, path)) {
+			return true;
+		}
 
 		// 再找同级模块
 		findpath = dirname(findpath)
 		findIn(findpath)
-		if (checkExists(id, path)) return true;
+		if (checkExists(id, path)) {
+			return true;
+		}
 	}, this);
 
 	// 当一个名为 a/b/c/d/e/f/g 的模块被 a/b/c/d/e/ 在 a/b/c 运行空间下通过 f.g 依赖时：
