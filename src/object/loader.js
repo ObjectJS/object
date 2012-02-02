@@ -70,19 +70,19 @@ NoModuleError.prototype = new Error();
  * 未对模块进行依赖
  * @class
  */
-function ModuleRequiredError(name, owner) {
-	this.message = owner.id + ': module ' + name + ' required';
+function ModuleRequiredError(name, parent) {
+	this.message = parent.module.id + ': module ' + name + ' required';
 };
 ModuleRequiredError.prototype = new Error();
 
 /**
  * 循环依赖Error
  * @class
- * @param stack 出现循环依赖时的堆栈
+ * @param runtime 出现循环依赖时的堆栈
  * @param pkg 触发了循环依赖的模块
  */
-function CyclicDependencyError(stack, pkg) {
-	this.runStack = stack;
+function CyclicDependencyError(runtime, pkg) {
+	this.runStack = runtime.stack;
 	var msg = '';
 	stack.forEach(function(m, i) {
 		msg += m.module.id + '-->';
@@ -160,7 +160,7 @@ CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 			if (!exports) {
 				// 有依赖却没有获取到，说明是由于循环依赖
 				if (pkg.dependencies.indexOf(name) != -1) {
-					throw new CyclicDependencyError(runtime.stack, dep.module);
+					throw new CyclicDependencyError(runtime, dep.module);
 				} else {
 					console.warn('Unknown Error.');
 					// 出错
@@ -291,13 +291,13 @@ ObjectPackage.prototype.cyclicLoad = function(depName, runtime, next) {
 		runtime.addModule(depName, new Module(depName));
 	}
 	var exports = runtime.modules[depName];
-	// stack中，最后一个是自己，倒数第二个是owner
-	var owner = runtime.stack[runtime.stack.length - 2].module;
+	// stack中，最后一个是自己，倒数第二个是parent
+	var parent = runtime.stack[runtime.stack.length - 2];
 	// 在空的exports上建立一个数组，用来存储依赖了此模块的所有模块
 	if (!exports.__empty_refs__) {
 		exports.__empty_refs__ = [];
 	}
-	exports.__empty_refs__.push(owner.id);
+	exports.__empty_refs__.push(parent.module.id);
 	next(exports);
 };
 
@@ -339,7 +339,7 @@ Package.prototype.load = function(name, runtime, callback) {
  * @param next 处理完毕，执行下一个依赖
  */
 Package.prototype.cyclicLoad = function(depName, runtime, next) {
-	throw new CyclicDependencyError(runtime.stack);
+	throw new CyclicDependencyError(runtime);
 };
 
 /**
@@ -370,10 +370,10 @@ function Dependency(name) {
  */
 function CommonJSDependency(name, runtime) {
 	var pParts, parts;
-	var owner = runtime.stack[runtime.stack.length - 1].module;
+	var parent = runtime.stack[runtime.stack.length - 1];
 	if (name.indexOf('/') == 0) { // root
 	} else if (name.indexOf('./') == 0 || name.indexOf('../') == 0) { // relative
-		pParts = owner.id.split('/');
+		pParts = parent.module.id.split('/');
 		pParts.pop();
 		parts = name.split(/\//ig);
 		parts.forEach(function(part) {
@@ -407,10 +407,8 @@ CommonJSDependency.prototype.load = function(runtime, callback) {
 function ObjectDependency(name, runtime) {
 	Dependency.call(this, name);
 
-	var ownerInfo = runtime.stack[runtime.stack.length - 1];
-
-	var owner = ownerInfo.module;
-	var ownerRuntimeName = ownerInfo.name;
+	// 依赖自己的模块
+	var parent = runtime.stack[runtime.stack.length - 1];
 
 	// 分别在以下空间中找：
 	// 当前模块(sys.path中通过'.'定义)；
@@ -424,10 +422,12 @@ function ObjectDependency(name, runtime) {
 	// 检测此id的模块是否存在，若存在，则返回true
 	function checkExists(id, foundContext) {
 		if (runtime.loader.getModule(id)) {
-			// TODO
-			runtimeNameRoot = id2name(context);
+			if (foundContext.indexOf('/') != -1 || parent.name == '__main__') {
+				runtimeNameRoot = '';
+			} else {
+				runtimeNameRoot = parent.name;
+			}
 			rootName = (runtimeNameRoot? runtimeNameRoot + '.' : '') + nameParts[0];
-			console.log(runtime.context, name, ',context:', context, ',foundContext:', pathjoin(owner.id, foundContext), ',ownerRuntimeName:', name2id(ownerRuntimeName), ',runtimeName:', runtimeNameRoot + '.' + name)
 			return true;
 		}
 		return false;
@@ -443,7 +443,7 @@ function ObjectDependency(name, runtime) {
 		}
 
 		// 先找子模块
-		findpath = pathjoin(owner.id, path);
+		findpath = pathjoin(parent.module.id, path);
 		findIn(findpath);
 		if (checkExists(id, path)) {
 			return true;
