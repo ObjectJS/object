@@ -9,14 +9,6 @@ function name2id(name) {
 }
 
 /**
- * 将id中的“/”换成name形式的“.”
- */
-function id2name(id) {
-	if (id.indexOf('/') == 0) id = id.slice(1);
-	return id.replace(/\//g, '.');
-}
-
-/**
  * 去掉路径中的最后文件部分
  */
 function dirname(path) {
@@ -372,6 +364,7 @@ function CommonJSDependency(name, runtime) {
 	var pParts, parts;
 	var parent = runtime.stack[runtime.stack.length - 1];
 	if (name.indexOf('/') == 0) { // root
+		this.id = name;
 	} else if (name.indexOf('./') == 0 || name.indexOf('../') == 0) { // relative
 		pParts = parent.module.id.split('/');
 		pParts.pop();
@@ -417,17 +410,16 @@ function ObjectDependency(name, runtime) {
 	// 运行时路径上的模块(默认的)。
 	var paths = runtime.path.concat([runtime.context]);
 	var nameParts = this.name.split('.');
-	var id, context, runtimeNameRoot, rootName;
+	var id, context, prefix;
 
 	// 检测此id的模块是否存在，若存在，则返回true
 	function checkExists(id, foundContext) {
 		if (runtime.loader.getModule(id)) {
 			if (foundContext.indexOf('/') != -1 || parent.name == '__main__') {
-				runtimeNameRoot = '';
+				prefix = '';
 			} else {
-				runtimeNameRoot = parent.name;
+				prefix = parent.name;
 			}
-			rootName = (runtimeNameRoot? runtimeNameRoot + '.' : '') + nameParts[0];
 			return true;
 		}
 		return false;
@@ -461,13 +453,11 @@ function ObjectDependency(name, runtime) {
 	// runtime.context: a/b/c
 	// dep->name: f.g
 	// dep->id: a/b/c/d/e/f/g
-	// dep->rootName: d.e.f
 
 	// 当一个名为 a/b/c/d/e/f/g 的模块被 a/b/c/d/e/ 在 xxx/xxx 运行空间下通过 f.g 依赖时：
 	// runtime.context: xxx/xxx
 	// dep->name: f.g
 	// dep->id: a/b/c/d/e/f/g
-	// dep->rootName: a.b.c.d.e.f
 
 	// 完整模块id
 	this.id = id;
@@ -476,9 +466,7 @@ function ObjectDependency(name, runtime) {
 	// 模块name
 	this.nameParts = nameParts;
 	// 运行名字的前缀
-	this.runtimeNameRoot = runtimeNameRoot;
-	// 获取该引用时的name
-	this.rootName = rootName;
+	this.prefix = prefix;
 	// 模块
 	this.module = runtime.loader.getModule(this.id);
 };
@@ -490,10 +478,11 @@ ObjectDependency.prototype.constructor = ObjectDependency;
 ObjectDependency.prototype.load = function(runtime, callback) {
 
 	var parts = this.nameParts;
-	var dep = this;
+	var context = this.context;
+	var prefix = this.prefix;
 	var currentPart = -1;
 	var pName;
-	var name = this.runtimeNameRoot;;
+	var name = this.prefix;
 
 	/**
 	 * 依次获取当前模块的每个部分
@@ -513,12 +502,12 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 
 		// 循环完毕
 		if (currentPart == parts.length) {
-			callback(runtime.modules[dep.rootName]);
+			callback(runtime.modules[(prefix? prefix + '.' : '') + parts[0]]);
 
 		}
 		// load part
 		else {
-			id = pathjoin(dep.context, parts.slice(0, currentPart + 1).join('/'));
+			id = pathjoin(context, parts.slice(0, currentPart + 1).join('/'));
 			pName = name;
 			name = (pName? pName + '.' : '') + parts[currentPart];
 			runtime.loadModule(id, name, nextPart);
