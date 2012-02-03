@@ -402,20 +402,25 @@ function ObjectDependency(name, runtime) {
 
 	// 依赖自己的模块
 	var parent = runtime.stack[runtime.stack.length - 1];
-
-	// 分别在以下空间中找：
-	// 当前模块(sys.path中通过'.'定义)；
-	// 全局模块(sys.path中通过'/root'定义)；
-	// 用户模块(sys.path中通过'/home'定义)；
-	// 运行时路径上的模块(默认的)。
+	// 需要搜索的所有路径，runtime.context是内置默认的
 	var paths = runtime.path.concat([runtime.context]);
-	var nameParts = this.name.split('.');
+	// context + partId == id
+	var partId = name2id(this.name);
+	// context为id的前缀部分，prefix为name的前缀部分
 	var id, context, prefix;
 
-	// 检测此id的模块是否存在，若存在，则返回true
-	function checkExists(id, foundContext) {
-		if (runtime.loader.getModule(id)) {
-			if (foundContext.indexOf('/') != -1 || parent.name == '__main__') {
+	/**
+	 * 检测此id的模块是否存在，若存在，则返回true
+	 * @param tempContext 在此路径中寻找
+	 * @param path sys.path中当前在寻找的路径
+	 */
+	function find(tempContext, path) {
+		var tempId = pathjoin(tempContext, partId);
+		// 检测此tempId是否存在
+		if (runtime.loader.getModule(tempId)) {
+			id = tempId;
+			context = tempContext;
+			if (path.indexOf('/') != -1 || parent.name == '__main__') {
 				prefix = '';
 			} else {
 				prefix = parent.name;
@@ -425,29 +430,26 @@ function ObjectDependency(name, runtime) {
 		return false;
 	}
 
-	paths.some(function(path) {
-		var part = name2id(this.name);
-		var findpath;
-
-		function findIn(path) {
-			id = pathjoin(path, part);
-			context = path;
-		}
+	// 分别在以下空间中找：
+	// 当前模块(sys.path中通过'.'定义)；
+	// 全局模块(sys.path中通过'/root'定义)；
+	// 用户模块(sys.path中通过'/home'定义)；
+	// 运行时路径上的模块(默认的)。
+	for (var i = 0, l = paths.length, path, findpath; i < l; i++) {
+		path = paths[i];
 
 		// 先找子模块
 		findpath = pathjoin(parent.module.id, path);
-		findIn(findpath);
-		if (checkExists(id, path)) {
-			return true;
+		if (find(findpath, path)) {
+			break;
 		}
 
 		// 再找同级模块
 		findpath = dirname(findpath)
-		findIn(findpath)
-		if (checkExists(id, path)) {
-			return true;
+		if (find(findpath, path)) {
+			break;
 		}
-	}, this);
+	}
 
 	// 当一个名为 a/b/c/d/e/f/g 的模块被 a/b/c/d/e/ 在 a/b/c 运行空间下通过 f.g 依赖时：
 	// runtime.context: a/b/c
@@ -459,12 +461,12 @@ function ObjectDependency(name, runtime) {
 	// dep->name: f.g
 	// dep->id: a/b/c/d/e/f/g
 
+	// 模块name
+	this.nameParts = this.name.split('.');
 	// 完整模块id
 	this.id = id;
-	// 找到此模块的路径
+	// id的前缀
 	this.context = context;
-	// 模块name
-	this.nameParts = nameParts;
 	// 运行名字的前缀
 	this.prefix = prefix;
 	// 模块
@@ -482,7 +484,7 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 	var prefix = this.prefix;
 	var currentPart = -1;
 	var pName;
-	var name = this.prefix;
+	var name = prefix;
 
 	/**
 	 * 依次获取当前模块的每个部分

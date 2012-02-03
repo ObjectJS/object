@@ -9,5 +9,4 @@ object.add('/home/a/b', 'sys, c.d', function(exports, sys, c) {
 	exports.haha = 1;
 });
 
-object.use('/home/a/b', function() {
-});
+object.execute('/home/a/b');
