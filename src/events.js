@@ -20,6 +20,7 @@ var _needWrapPreventDefault = (function() {
 			return true;
 		}
 	}
+	return false;
 })();
 
 function IEEvent() {
@@ -302,6 +303,35 @@ this.Events = new Class(function() {
 		return false;
 	}
 
+	/**
+	 * 在preventDefault方法不靠谱的情况下，如果事件由浏览器自动触发，则需要在第一个事件处理函数中将preventDefault覆盖
+	 *
+	 * 此方法在事件列表最前面（在onxxx之前）添加一个专门处理preventDefault的事件监听函数
+	 */
+	function insertWrapPreventDefaultHandler(boss, type, cap) {
+		if (!boss['__preEventAdded_' + type]) {
+			// 标识该事件类型的preventDefault已经包装过了
+			boss['__preEventAdded_' + type] = true;
+			// 如果有onxxx类型的处理函数，则也暂时去除，待包装函数添加完以后，再添加回去
+			if (boss['on' + type]) {
+				boss['__on' + type] = boss['on' + type];
+				boss['on' + type] = null;
+			}
+			// 添加事件监听
+			boss.addEventListener(type, function(event) {
+				exports.wrapPreventDefault(event);
+			}, cap);
+			// 把onxxx监听函数添加回去
+			if (boss['__on' + type]) {
+				boss['on' + type] = boss['__on' + type];
+				boss['__on' + type] = null;
+				try {
+					delete boss['__on' + type];
+				} catch (e) {}
+			}
+		}
+	}
+
 	this.initialize = function(self) {
 		if (!self.addEventListener) {
 			// 在一些情况下，你不知道传进来的self对象的情况，不要轻易的将其身上的__eventListeners清除掉
@@ -357,6 +387,12 @@ this.Events = new Class(function() {
 			self.__eventListeners[type].push(func);
 		}
 
+		// 如果需要包装preventDefault方法，则在事件处理函数最前面添加一个简单的事件监听
+		// 该事件监听只负责包装event，使其preventDefault正确执行
+		if (_needWrapPreventDefault) {
+			insertWrapPreventDefaultHandler(boss, type, cap);
+		}
+
 		//处理onxxx类型的事件处理函数
 		addOnHandlerAsEventListener(self, type);
 
@@ -397,6 +433,9 @@ this.Events = new Class(function() {
 	*/
 	this.addNativeEvent = document.addEventListener? function(self, type, func) {
 		var boss = self.__boss || self;
+		if (_needWrapPreventDefault) {
+			insertWrapPreventDefaultHandler(boss, type, false);
+		}
 		var natives;
 		if (!self.__nativeEvents) self.__nativeEvents = {};
 		if (!self.__nativeEvents[type]) {

@@ -1209,11 +1209,6 @@ this.FormItemElement = new Class(exports.Element, function() {
 
 		// IE
 		if (document.selection) {
-			// 如果当前元素没有焦点，则selectionEnd为0（保持与XN.form中的返回值一致）
-			// 在没有焦点的情况下，无法获取selectionEnd的准确值，目前jquery及其插件也没有解决这个问题
-			if (document.activeElement != self) {
-				return 0;
-			}
 			// 参考JQuery插件：fieldSelection
 			var range = document.selection.createRange();
 			if (range == null) {
@@ -1245,10 +1240,6 @@ this.FormItemElement = new Class(exports.Element, function() {
 
 		// IE
 		if (document.selection) {
-			// 如果当前元素没有焦点，则selectionEnd为内容末尾
-			if (document.activeElement != self) {
-				return 0;
-			}
 			// 参考JQuery插件：fieldSelection
 			var range = document.selection.createRange();
 			if (range == null) {

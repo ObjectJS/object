@@ -1,6 +1,6 @@
 // test
 // test
-object.add('net', 'dom, events', /**@lends net*/ function(exports, dom, events) {
+object.add('net', 'dom, events', function(exports, dom, events) {
 
 var ajaxProxies = this.ajaxProxies = {};
 

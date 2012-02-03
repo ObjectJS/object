@@ -9,7 +9,15 @@ object.add('ua.extra', 'sys', function(exports, sys) {
 		object.extend(uamodule.ua, o);
 	}
 
+	/**
+	 * 检测UAExtra的主方法
+	 *
+	 * @param {String} ua userAgent字符串
+	 */
 	function detectUAExtra(ua) {
+		if(!ua && typeof ua != 'string') {
+			ua = navigator.userAgent;
+		}
 		/* Copy start here */
 
 		var m, shell, o = {}, numberify = uamodule.numberify;
@@ -21,9 +29,6 @@ object.add('ua.extra', 'sys', function(exports, sys) {
 		 * 世界之窗 & 360 浏览器，在 3.x 以下的版本都无法通过 UA 或者特性检测进行判断，所以目前只要检测到 UA 关键字就认为起版本号为 3
 		 */
 		
-		if(!ua && typeof ua != 'string') {
-			ua = navigator.userAgent;
-		}
 		// 360Browser
 		var getExternal = function(key){
 			try{

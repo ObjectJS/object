@@ -65,6 +65,10 @@ function addModuleScriptToHead(name, src) {
 	return script;
 }
 
+var supportOnError = true;
+object.use('ua', function(exports, ua) {
+	supportOnError = !ua.ua.webkit || ua.ua.webkit > 525;
+});
 // if is executed by jsTestDriver
 if (isJsTestDriverRunning) {
 	var loader = object._loader;
@@ -118,6 +122,12 @@ if (isJsTestDriverRunning) {
 				callback(1);
 				return true;
 			};
+			// if not support onerror, just execute the callback, otherwise the process will be blocked for 30s
+			if (!supportOnError) {
+				setTimeout(function() {
+					callback(1);
+				}, 1000);
+			}
 			loader.use('module1', function(module1) {});
 		});
 	};

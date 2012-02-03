@@ -378,3 +378,132 @@ test('addEvent/removeEvent : mouseleave', function() {
 		node.fireEvent('mouseleave');
 	});
 });
+
+function fireMouseEventOnElement(element) {
+	if (ie) {
+		try {
+			element.click();
+		} catch (e){
+			ok(false, 'element.click() throw error in IE : ' + e);
+		}
+	} else {
+		var evt = document.createEvent("MouseEvents");
+		evt.initMouseEvent("click", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+		element.dispatchEvent(evt);	
+	}
+}
+
+test('wrapPreventDefault for events fired by browser', function() {
+	object.use('dom', function(exports, dom) {
+		var counter = 0;
+		// preventDefault in onclick
+		var node = dom.wrap(document.createElement('div'));
+		node.onclick = function(event) {
+			event.preventDefault();
+		};
+		node.addEvent('click', function(event) {
+			var prevented = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
+			if (prevented) {
+				counter = counter + 1;
+			}
+		});
+		document.body.appendChild(node);
+		fireMouseEventOnElement(node);
+		document.body.removeChild(node);
+
+		// preventDefault in addEvent handler
+		var node = dom.wrap(document.createElement('div'));
+		node.addEvent('click', function(event) {
+			event.preventDefault();
+			var prevented = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
+			if (prevented) {
+				counter = counter + 2;
+			}
+		});
+		document.body.appendChild(node);
+		fireMouseEventOnElement(node);
+		document.body.removeChild(node);
+
+		equal(counter, 3, 'preventDefault in both onxxx and addEvent are ok');
+	});
+});
+
+test('onxxx, addEvent and addNativeEvent', function() {
+	object.use('dom', function(exports, dom) {
+		var counter = 0;
+		var node = dom.wrap(document.createElement('div'));
+		node.onttt = function() {
+			equal(counter, 0, 'onttt execute first');
+			counter++;
+		}
+		node.addEvent('ttt', function(){
+			equal(counter, 1, 'first addEvent execute first');
+			counter ++;
+		}, false);
+		node.addNativeEvent('ttt', function(){
+			equal(counter, 3, 'addNativeEvent execute last');
+			counter ++;
+		}, false);
+		node.addEvent('ttt', function(){
+			equal(counter, 2, 'second addEvent execute second');
+			counter ++;
+		}, false);
+		node.fireEvent('ttt');
+
+		var counter2 = 0;
+		node.onclick = function() {
+			equal(counter2, 0, 'onttt execute first');
+			counter2++;
+		}
+		node.addEvent('click', function(){
+			equal(counter2, 1, 'first addEvent execute first');
+			counter2 ++;
+		}, false);
+		node.addNativeEvent('click', function(){
+			equal(counter2, 3, 'addNativeEvent execute last');
+			counter2 ++;
+		}, false);
+		node.addEvent('click', function(){
+			equal(counter2, 2, 'second addEvent execute second');
+			counter2 ++;
+		}, false);
+		node.fireEvent('click');
+	});
+});
+
+test('addNativeEvent and preventDefault', function() {
+	object.use('dom', function(exports, dom) {
+		var counter = 0;
+		// preventDefault in onclick
+		var node = dom.wrap(document.createElement('div'));
+		node.onclick = function(event) {
+			event.preventDefault();
+		};
+		node.addNativeEvent('click', function(event) {
+			var prevented = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
+			if (prevented) {
+				counter = counter + 1;
+			}
+		});
+		node.addEvent('click', function(event) {}, false);
+		document.body.appendChild(node);
+		fireMouseEventOnElement(node);
+		document.body.removeChild(node);
+
+		// preventDefault in addEvent handler
+		var node = dom.wrap(document.createElement('div'));
+		node.addNativeEvent('click', function(event) {
+			event.preventDefault();
+			var prevented = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
+			if (prevented) {
+				counter = counter + 2;
+			}
+		});
+		document.body.appendChild(node);
+		fireMouseEventOnElement(node);
+		document.body.removeChild(node);
+
+		equal(counter, 3, 'preventDefault in both onxxx and addNativeEvent are ok');
+	});
+});
+
