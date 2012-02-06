@@ -433,6 +433,9 @@ this.ElementClassList = new Class(Array, function() {
 
 });
 
+/**
+ * 每一个待封装DOM元素都包含的事件
+ */
 var basicNativeEventNames = ['click', 'dblclick', 'mouseup', 'mousedown', 'contextmenu',
 		'mouseover', 'mouseout', 'mousemove', 'selectstart', 'selectend', 'keydown', 'keypress', 'keyup']
 /**
