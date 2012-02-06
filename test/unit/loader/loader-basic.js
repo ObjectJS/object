@@ -52,9 +52,9 @@ test('buildFileLib', function() {
 	equal(len1 + 2, len3, 'when new script inserted, loader.scripts should be added automatically');
 	loader.buildFileLib();
 	equal(Object.keys(loader.fileLib).length, 1, 'new script tag inserted, new module loaded');
-	ok(loader.fileLib['test_module'] != null, 'module test_module is added');
-	ok(loader.fileLib['test_module'].id == 'test_module', 'module test_module is added, name is ok');
-	ok(loader.fileLib['test_module'].file == emptyJS, 'module test_module is added, file is ok');
+	ok(loader.fileLib['/temp/test_module'] != null, 'module test_module is added');
+	ok(loader.fileLib['/temp/test_module'].id == '/temp/test_module', 'module test_module is added, id is ok');
+	ok(loader.fileLib['/temp/test_module'].file == emptyJS, 'module test_module is added, file is ok');
 
 	var script = document.createElement('script');
 	script.setAttribute('data-src', 'test_module_null_data-module');

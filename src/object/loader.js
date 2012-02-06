@@ -433,7 +433,7 @@ function ObjectDependency(name, runtime) {
 	// 分别在以下空间中找：
 	// 当前模块(sys.path中通过'.'定义)；
 	// 全局模块(sys.path中通过'/root'定义)；
-	// 用户模块(sys.path中通过'/home'定义)；
+	// 用户模块(sys.path中通过'/temp'定义)；
 	// 运行时路径上的模块(默认的)。
 	for (var i = 0, l = paths.length, path, findpath; i < l; i++) {
 		path = paths[i];
@@ -549,7 +549,7 @@ function LoaderRuntime(context) {
 	/**
 	 * sys.path
 	 */
-	this.path = ['', '/home', '/root'];
+	this.path = ['', '/temp', '/root'];
 }
 
 LoaderRuntime.prototype = {
@@ -771,7 +771,7 @@ var Loader = new Class(function() {
 			names = script.getAttribute('data-module');
 			if (!names || !src) continue;
 			names.split(/\s+/ig).forEach(function(name) {
-				self.defineFile(pathjoin('/root', name2id(name)), src);
+				self.defineFile(pathjoin('/temp', name2id(name)), src);
 			});
 		}
 	};
@@ -979,6 +979,13 @@ var Loader = new Class(function() {
 	};
 
 	/**
+	 * @param id
+	 */
+	this.getModule = function(self, id) {
+		return self.lib[id] || self.fileLib[id] || self.prefixLib[id];
+	};
+
+	/**
 	 * @param name
 	 * @param dependencies
 	 * @param factory
@@ -991,16 +998,9 @@ var Loader = new Class(function() {
 			dependencies = [];
 		}
 
-		// 若为相对路径，则放在root上
-		var id = pathjoin('/root', name2id(name));
+		// 若为相对路径，则放在temp上
+		var id = pathjoin('/temp', name2id(name));
 		self.defineModule(ObjectPackage, id, dependencies, factory);
-	};
-
-	/**
-	 * @param id
-	 */
-	this.getModule = function(self, id) {
-		return self.lib[id] || self.fileLib[id] || self.prefixLib[id];
 	};
 
 	/**
@@ -1009,6 +1009,9 @@ var Loader = new Class(function() {
 	 * @param all 是否移除其所有子模块
 	 */
 	this.remove = function(self, id, all) {
+		if (typeof id == 'string') {
+			id = pathjoin('/temp', id);
+		}
 		delete self.lib[id];
 		if (all) {
 			Object.keys(self.lib).forEach(function(key) {
@@ -1027,7 +1030,7 @@ var Loader = new Class(function() {
 		}
 		self.buildFileLib();
 
-		var id = pathjoin('/home', name2id(name));
+		var id = pathjoin('/temp', name2id(name));
 
 		var runtime = self.createRuntime(id);
 		runtime.loadModule(id, '__main__');
