@@ -1101,12 +1101,26 @@ this.FormElement = new Class(exports.Element, function() {
 					self.submit();
 				}
 
-				// 提交之后再恢复回来
-				self.action = oldAction;
-				self.method = oldMethod;
-				self.enctype = self.encoding = oldEnctype;
-				self.formNoValidate = oldNoValidate;
-				self.target = oldTarget;
+				// 傲游3的webkit内核在执行submit时是异步的，导致submit真正执行前，下面这段代码已经执行，action和target都被恢复回去了。
+				// 做一个兼容，maxthon3中用setTimeout进行恢复。
+				if (ua.ua.webkit <= 534.12) {
+					setTimeout(function() {
+						// 提交之后再恢复回来
+						self.action = oldAction;
+						self.method = oldMethod;
+						self.enctype = self.encoding = oldEnctype;
+						self.formNoValidate = oldNoValidate;
+						self.target = oldTarget;
+					}, 0);
+				} else {
+					// 提交之后再恢复回来
+					self.action = oldAction;
+					self.method = oldMethod;
+					self.enctype = self.encoding = oldEnctype;
+					self.formNoValidate = oldNoValidate;
+					self.target = oldTarget;
+				}
+
 			});
 		}
 	};
