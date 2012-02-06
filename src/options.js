@@ -74,10 +74,17 @@ this.Options = new Class({
 	 * 提供一个实现了 makeOption 接口的“提供者”参数，这样，在 setOption 时会自动根据name获取value，不用手工调用
 	 */
 	initialize: function(self, provider) {
-		if (provider) self._provider = provider;
+		if (provider) {
+			/** provider */
+			self._provider = provider;
+		}
+		/** 用于保存所有的选项 */
 		self._options = {};
 	},
 
+	/**
+	 * 设置options属性
+	 */
 	setOptions: function(self, options, host) {
 		if (!host) host = self._options;
 
@@ -87,6 +94,9 @@ this.Options = new Class({
 		}
 	},
 
+	/**
+	 * 设置一个option
+	 */
 	setOption: function(self, name, type, value) {
 		if (value !== undefined) {
 			self._options[name] = value;
@@ -97,6 +107,9 @@ this.Options = new Class({
 		}
 	},
 
+	/**
+	 * 获取options
+	 */
 	getOptions: function(self) {
 		return self._options;
 	}

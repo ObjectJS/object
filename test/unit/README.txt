@@ -13,8 +13,7 @@
 	object-extend.js	这些JS是具体的测试js，通过index.js的配置项可以获取
 
 	引入LAB.js控制顺序
-	
-	
+		
 	测试目录结构设置：
 	project
 	   |--- src
