@@ -197,7 +197,6 @@ CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 		}
 		var dep = deps[index];
 		var result;
-		// CommonJSPackage.prototype.load已经做了预处理，确保文件已经记载进来，此dep.load一定是同步的
 		dep.load(runtime, function(exports) {
 			if (!exports) {
 				// 有依赖却没有获取到，说明是由于循环依赖
@@ -429,7 +428,7 @@ function CommonJSDependency(name, runtime) {
 		});
 		this.id = pParts.join('/');
 	} else { // top level
-		this.id = pathjoin('/temp', name2id(name));
+		this.id = pathjoin('/root', name2id(name));
 	}
 	this.runtimeName = this.id.slice(1);
 	this.module = runtime.loader.getModule(this.id);
@@ -441,6 +440,8 @@ CommonJSDependency.prototype = new Dependency();
 CommonJSDependency.prototype.constructor = CommonJSDependency;
 
 CommonJSDependency.prototype.load = function(runtime, callback) {
+	//runtime.loader.getModule(this.id).execute(this.runtimeName, deps, runtime);
+	//callback(runtime.modules[this.runtimeName]);
 	runtime.loadModule(this.id, this.runtimeName, callback);
 };
 
@@ -602,113 +603,110 @@ function LoaderRuntime(context) {
 	this.path = ['', '/temp', '/root'];
 }
 
-LoaderRuntime.prototype = {
+/**
+ * 加入一个module
+ */
+LoaderRuntime.prototype.addModule = function(name, exports) {
+	exports = exports || new Module(name);
+	this.modules[name] = exports;
 
-	/**
-	 * 加入一个module
-	 */
-	addModule: function(name, exports) {
-		exports = exports || new Module(name);
-		this.modules[name] = exports;
+	// 已获取到了此host的引用，将其子模块都注册上去。
+	var members = this.members[name];
+	if (members) {
+		members.forEach(function(member) {
+		  this.modules[name][member.id] = member.value;
+		}, this);
+	}
 
-		// 已获取到了此host的引用，将其子模块都注册上去。
-		var members = this.members[name];
-		if (members) {
-			members.forEach(function(member) {
-			  this.modules[name][member.id] = member.value;
-			}, this);
-		}
+	return exports;
+};
 
-		return exports;
-	},
+/**
+* 加载一个module
+*/
+LoaderRuntime.prototype.loadModule = function(id, name, callback) {
 
-	/**
-	* 加载一个module
-	*/
-	loadModule: function(id, name, callback) {
+	var runtime = this;
+	var loader = this.loader;
+	var stack = this.stack;
 
-		var runtime = this;
-		var loader = this.loader;
-		var stack = this.stack;
+	var exports = this.modules[name];
+	// 使用缓存中的
+	if (exports) {
+		if (callback) callback(exports);
+		return
+	}
 
-		var exports = this.modules[name];
-		// 使用缓存中的
-		if (exports) {
-			if (callback) callback(exports);
-			return
-		}
+	var pkg = loader.getModule(id);
+	// No module
+	if (!pkg) {
+		throw new NoModuleError(id);
+	}
 
-		var pkg = loader.getModule(id);
-		// No module
+	function done(exports) {
+		// 模块获取完毕，去除循环依赖检测
+		stack.pop();
+		if (callback) callback(exports);
+	}
+
+	function fileDone() {
+		var id = pkg.id;
+		var file = pkg.file;
+		// 重新读取pkg，之前的pkg只是个fileLib中的占位
+		pkg = loader.lib[id];
+
+		// 加载进来的脚本没有替换掉相应的模块，文件有问题。
 		if (!pkg) {
-			throw new NoModuleError(id);
+			throw new Error(file + ' do not add ' + id);
 		}
+		pkg.load(name, runtime, done);
+	}
 
-		function done(exports) {
-			// 模块获取完毕，去除循环依赖检测
-			stack.pop();
-			if (callback) callback(exports);
+	var info = {
+		name: name,
+		module: pkg
+	};
+
+	// 记录开始获取当前模块
+	stack.push(info);
+
+	// 刚刚push过，应该在最后一个，如果不在，说明循环依赖了
+	if (stack.some(function(m, i) {
+		// 非最后一个，且名字相等。
+		return (i != stack.length - 1) && (m.name === info.name);
+	}, this)) {
+		pkg.cyclicLoad(name, this, done);
+	}
+
+	// file
+	else if (pkg.file) {
+		// TODO 加入预处理过程，跑出所有需要加载的文件并行加载，在此执行useScript而不是loadScript
+		loader.loadScript(pkg.file, fileDone, true);
+
+	// Already define
+	} else {
+		pkg.load(name, this, done);
+	}
+};
+
+/**
+ * 为名为host的module设置member成员为value
+ */
+LoaderRuntime.prototype.setMemberTo = function(host, member, value) {
+
+	// 向host添加member成员
+	if (host) {
+		// 已存在host
+		if (this.modules[host]) {
+			this.modules[host][member] = value;
 		}
-
-		function fileDone() {
-			var id = pkg.id;
-			var file = pkg.file;
-			// 重新读取pkg，之前的pkg只是个fileLib中的占位
-			pkg = loader.lib[id];
-
-			// 加载进来的脚本没有替换掉相应的模块，文件有问题。
-			if (!pkg) {
-				throw new Error(file + ' do not add ' + id);
-			}
-			pkg.load(name, runtime, done);
-		}
-
-		var info = {
-			name: name,
-			module: pkg
-		};
-
-		// 记录开始获取当前模块
-		stack.push(info);
-
-		// 刚刚push过，应该在最后一个，如果不在，说明循环依赖了
-		if (stack.some(function(m, i) {
-			// 非最后一个，且名字相等。
-			return (i != stack.length - 1) && (m.name === info.name);
-		}, this)) {
-			pkg.cyclicLoad(name, this, done);
-		}
-
-		// file
-		else if (pkg.file) {
-			// TODO 加入预处理过程，跑出所有需要加载的文件并行加载，在此执行useScript而不是loadScript
-			loader.loadScript(pkg.file, fileDone, true);
-
-		// Already define
-		} else {
-			pkg.load(name, this, done);
-		}
-	},
-
-	/**
-	 * 为名为host的module设置member成员为value
-	 */
-	setMemberTo: function(host, member, value) {
-
-		// 向host添加member成员
-		if (host) {
-		    // 已存在host
-		    if (this.modules[host]) {
-		  		this.modules[host][member] = value;
-		    }
-		    // host不存在，记录在members对象中
-		    else {
-		  		if (!this.members[host]) this.members[host] = [];
-		  	  	this.members[host].push({
-		  	  	    id: member,
-		  	  	    value: value
-		  	  	});
-		    }
+		// host不存在，记录在members对象中
+		else {
+			if (!this.members[host]) this.members[host] = [];
+			this.members[host].push({
+				id: member,
+				value: value
+			});
 		}
 	}
 };
@@ -969,7 +967,7 @@ Loader.prototype.define = function(name, dependencies, factory) {
 		dependencies = [];
 	}
 
-	this.defineModule(CommonJSPackage, name2id(name), dependencies, factory);
+	this.defineModule(CommonJSPackage, pathjoin('/temp', name2id(name)), dependencies, factory);
 };
 
 /**

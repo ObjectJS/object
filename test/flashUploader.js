@@ -1,5 +1,4 @@
-object.define('xn/flashUploader', 'sys', function(require, exports) {
-	var sys = require('sys');
+object.define('xn/flashUploader', function(require, exports) {
 	return {
 		init: function() {
 				  console.log('init');
