@@ -1213,6 +1213,9 @@ this.FormItemElement = new Class(exports.Element, function() {
 
 	/**
 	 * selectionStart
+	 * IE下获取selectionStart时，必须先在业务代码中focus该元素，否则返回-1
+	 *
+	 * @return 获取过程中发生任何问题，返回-1，否则返回正常的selectionStart
 	 */
 	this.selectionStart = property(function(self) {
 		try {
@@ -1221,15 +1224,16 @@ this.FormItemElement = new Class(exports.Element, function() {
 				return self.selectionStart;
 			}
 		} catch (e) {
-			return 0;
+			return -1;
 		}
 
 		// IE
 		if (document.selection) {
 			// 参考JQuery插件：fieldSelection
 			var range = document.selection.createRange();
-			if (range == null) {
-				return 0;
+			// IE下要求元素在获取selectionStart时必须先focus，如果focus的元素不是自己，则返回0
+			if (range == null || range.parentElement() != self) {
+				return -1;
 			}
 			var elementRange = self.createTextRange();
 			var duplicated = elementRange.duplicate();
@@ -1238,12 +1242,15 @@ this.FormItemElement = new Class(exports.Element, function() {
 			duplicated.setEndPoint('EndToStart', elementRange);
 			return duplicated.text.length; 
 		} else {
-			return 0;
+			return -1;
 		}
 	});
         
 	/**
 	 * selectionEnd
+	 * IE下获取selectionEnd时，必须先在业务代码中focus该元素，否则返回-1
+	 *
+	 * @return 获取过程中发生任何问题，返回-1，否则返回正常的selectionEnd
 	 */
 	this.selectionEnd = property(function(self) {
 		try {
@@ -1252,15 +1259,16 @@ this.FormItemElement = new Class(exports.Element, function() {
 				return self.selectionEnd;
 			}
 		} catch (e) {
-			return 0;
+			return -1;
 		}
 
 		// IE
 		if (document.selection) {
 			// 参考JQuery插件：fieldSelection
 			var range = document.selection.createRange();
-			if (range == null) {
-				return 0;
+			// IE下要求元素在获取selectionEnd时必须先focus，如果focus的元素不是自己，则返回0
+			if (range == null || range.parentElement() != self) {
+				return -1;
 			}
 			var elementRange = self.createTextRange();
 			var duplicated = elementRange.duplicate();
@@ -1268,7 +1276,7 @@ this.FormItemElement = new Class(exports.Element, function() {
 			duplicated.setEndPoint('EndToStart', elementRange);
 			return duplicated.text.length + range.text.length; 
 		} else {
-			return 0;
+			return -1;
 		}
 	});
 
