@@ -1,0 +1,25 @@
+<!doctype>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<script type="text/javascript" src="http://xnimg.cn/n/core/object-all.js"></script>
+		<script>
+			function wrap() {
+				object.use('dom', function(exports, dom) {
+					var element = dom.wrap(document.getElementById('test'));
+				});
+			}
+			function runTest() {
+				object.use('dom', function(exports, dom) {
+					var element = dom.wrap(document.getElementById('test'));
+					alert(element.get('selectionStart'));
+					alert(element.get('selectionEnd'));
+				});
+			}
+		</script>
+	</head>
+	<body onload="wrap()">
+		<input type='button' id='test2' value='111' onclick='runTest()'/>
+		<input type='text' id='test' value='111'/>
+	</body>
+</html>

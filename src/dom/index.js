@@ -315,6 +315,8 @@ var _supportNaturalWH = 'naturalWidth' in document.createElement('img');
 var _supportHTML5Forms = 'checkValidity' in document.createElement('input');
 var _supportHidden = 'hidden' in document.createElement('div');
 var _supportMultipleSubmit = 'formAction' in document.createElement('input');
+// 检测一下是否支持利用selectionStart获取所选区域的光标位置
+var _supportSelectionStart = 'selectionStart' in document.createElement('input');
 
 var nativeproperty = function() {
 	var prop = property(function(self) {
@@ -433,6 +435,9 @@ this.ElementClassList = new Class(Array, function() {
 
 });
 
+/**
+ * 每一个待封装DOM元素都包含的事件
+ */
 var basicNativeEventNames = ['click', 'dblclick', 'mouseup', 'mousedown', 'contextmenu',
 		'mouseover', 'mouseout', 'mousemove', 'selectstart', 'selectend', 'keydown', 'keypress', 'keyup']
 /**
@@ -1210,6 +1215,9 @@ this.FormItemElement = new Class(exports.Element, function() {
 
 	/**
 	 * selectionStart
+	 * IE下获取selectionStart时，必须先在业务代码中focus该元素，否则返回-1
+	 *
+	 * @return 获取过程中发生任何问题，返回-1，否则返回正常的selectionStart
 	 */
 	this.selectionStart = property(function(self) {
 		try {
@@ -1218,15 +1226,20 @@ this.FormItemElement = new Class(exports.Element, function() {
 				return self.selectionStart;
 			}
 		} catch (e) {
-			return 0;
+			return -1;
 		}
 
 		// IE
 		if (document.selection) {
 			// 参考JQuery插件：fieldSelection
 			var range = document.selection.createRange();
-			if (range == null) {
-				return 0;
+			// IE下要求元素在获取selectionStart时必须先focus，如果focus的元素不是自己，则返回-1
+			if (range == null || range.parentElement() != self) {
+				if (self.__selectionPos) {
+					return self.__selectionPos.start;
+				} else {
+					return -1;
+				}
 			}
 			var elementRange = self.createTextRange();
 			var duplicated = elementRange.duplicate();
@@ -1235,12 +1248,15 @@ this.FormItemElement = new Class(exports.Element, function() {
 			duplicated.setEndPoint('EndToStart', elementRange);
 			return duplicated.text.length; 
 		} else {
-			return 0;
+			return -1;
 		}
 	});
         
 	/**
 	 * selectionEnd
+	 * IE下获取selectionEnd时，必须先在业务代码中focus该元素，否则返回-1
+	 *
+	 * @return 获取过程中发生任何问题，返回-1，否则返回正常的selectionEnd
 	 */
 	this.selectionEnd = property(function(self) {
 		try {
@@ -1249,15 +1265,20 @@ this.FormItemElement = new Class(exports.Element, function() {
 				return self.selectionEnd;
 			}
 		} catch (e) {
-			return 0;
+			return -1;
 		}
 
 		// IE
 		if (document.selection) {
 			// 参考JQuery插件：fieldSelection
 			var range = document.selection.createRange();
-			if (range == null) {
-				return 0;
+			// IE下要求元素在获取selectionEnd时必须先focus，如果focus的元素不是自己，则返回0
+			if (range == null || range.parentElement() != self) {
+				if (self.__selectionPos) {
+					return self.__selectionPos.end;
+				} else {
+					return -1;
+				}
 			}
 			var elementRange = self.createTextRange();
 			var duplicated = elementRange.duplicate();
@@ -1265,7 +1286,7 @@ this.FormItemElement = new Class(exports.Element, function() {
 			duplicated.setEndPoint('EndToStart', elementRange);
 			return duplicated.text.length + range.text.length; 
 		} else {
-			return 0;
+			return -1;
 		}
 	});
 
@@ -1427,11 +1448,41 @@ this.FormItemElement = new Class(exports.Element, function() {
  */
 this.TextBaseElement = new Class(exports.FormItemElement, function() {
 
+	/**
+	 * IE下，在焦点即将离开此元素时，计算一下selectionStart和selectionEnd备用
+	 *
+	 * @param {HTMLElement} field 焦点即将离开的元素，input/textarea
+	 * @return {Object} 位置信息对象，包含{start:起始位置, end:终止位置}
+	 */
+	function calculateSelectionPos(field) {
+		// 参考JQuery插件：fieldSelection
+		var range = document.selection.createRange();
+		if (range == null || range.parentElement() != field) {
+			return {start:-1, end:-1};
+		}
+		var elementRange = field.createTextRange();
+		var duplicated = elementRange.duplicate();
+		elementRange.moveToBookmark(range.getBookmark());
+		//将选中区域的起始点作为整个元素区域的终点
+		duplicated.setEndPoint('EndToStart', elementRange);
+		return {
+			start: duplicated.text.length, 
+			end  : duplicated.text.length + range.text.length
+		};
+	}
+
 	this.initialize = function(self) {
 		this.parent(self);
 
 		if (!_supportPlaceholder) {
 			self.bindPlaceholder();
+		}
+		if (!_supportSelectionStart) {
+			// 在每一次即将失去焦点之前，保存一下当前的selectionStart和selectionEnd的值
+			self.addEvent('beforedeactivate', function() {
+				/** 在失去焦点时保存selectionStart和selectionEnd的值，只在IE下用 */
+				self.__selectionPos = calculateSelectionPos(self);
+			});
 		}
 	};
 
