@@ -25,8 +25,8 @@ module("loader-basic-buildFileLib", {
 			}
 		}
 		for (var prop in loader.lib) {
-			if (prop != 'sys') {
-				delete loader.lib[prop];
+			if (prop != '/root/sys') {
+				loader.remove(prop);
 			}
 		}
 	}
@@ -144,6 +144,7 @@ test('add-basic', function() {
 });
 
 test('add-usage', function() {
+	console.dir(loader.lib);
 	equal(Object.keys(loader.lib).length, 1, 'only sys in loader.lib');
 	loader.add('a', function() {});
 	equal(Object.keys(loader.lib).length, 2, 'a is added to loader.lib');
@@ -151,16 +152,16 @@ test('add-usage', function() {
 	equal(Object.keys(loader.lib).length, 3, 'b is added to loader.lib');
 	loader.add('c', 'a,b', function() {});
 	equal(Object.keys(loader.lib).length, 4, 'c is added to loader.lib');
-	equal(loader.lib['c'].dependencies.length, 2, 'c dependencies a and b, so lib[c].dependencies.length = 2');
+	equal(loader.lib['/temp/c'].dependencies.length, 2, 'c dependencies a and b, so lib[c].dependencies.length = 2');
 
 	loader.add('d.dd', 'a,b,c', function() {});
 	equal(Object.keys(loader.lib).length, 5, 'd.dd are added to loader.lib');
-	equal(loader.lib['d/dd'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
+	equal(loader.lib['/temp/d/dd'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
 
 	loader.add('error1', 'a,b');
-	ok(loader.lib['error1'], 'add module without context, should be added');
+	ok(loader.lib['/temp/error1'], 'add module without context, should be added');
 	loader.add('error2', 'a', 'a');
-	ok(loader.lib['error2'], 'add module with not-function context, should be added');
+	ok(loader.lib['/temp/error2'], 'add module with not-function context, should be added');
 	loader.remove('a');
 	loader.remove('b');
 	loader.remove('c');
@@ -175,7 +176,7 @@ test('remove-usage', function() {
 	loader.add('a/b', function() {});
 	loader.remove('a');
 	ok(!('a' in loader.lib), 'remove ok.');
-	ok('a/b' in loader.lib, 'sub not removed, ok');
+	ok('/temp/a/b' in loader.lib, 'sub not removed, ok');
 	loader.remove('a', true);
 	ok(!('a/b' in loader.lib), 'sub removed, ok');
 });
@@ -235,8 +236,8 @@ test('execute-basic', function() {
 test('execute-usage', function() {
 	expect(2);
 	var loader = object._loader;
-	delete loader.lib['a'];
-	delete loader.lib['b'];
+	loader.remove('a');
+	loader.remove('b');
 	loader.add('a', function(exports) {
 		exports.a = 1;
 		ok(true, 'module a executed by loader.execute(a)');
