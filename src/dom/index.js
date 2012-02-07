@@ -1231,7 +1231,7 @@ this.FormItemElement = new Class(exports.Element, function() {
 		if (document.selection) {
 			// 参考JQuery插件：fieldSelection
 			var range = document.selection.createRange();
-			// IE下要求元素在获取selectionStart时必须先focus，如果focus的元素不是自己，则返回0
+			// IE下要求元素在获取selectionStart时必须先focus，如果focus的元素不是自己，则返回-1
 			if (range == null || range.parentElement() != self) {
 				return -1;
 			}
