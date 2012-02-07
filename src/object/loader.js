@@ -156,15 +156,45 @@ CommonJSPackage.prototype.getDependency = function(name, runtime) {
 };
 
 CommonJSPackage.prototype.load = function(name, runtime, callback) {
-	// TODO 遍历依赖树，确保文件都加载进来了
-	var deps = [];
-	this.dependencies.forEach(function(dep, i) {
-		deps.push(this.getDependency(dep, runtime));
-	}, this);
+	var currentUse = -1; 
+	var deps = [], dep;
+	var pkg = this;
 
-	var exports = this.execute(name, deps, runtime);
-	runtime.addModule(name, exports);
-	if (callback) callback(exports);
+	/**
+	 * 顺序执行pkg中的dependencies
+	 * @param pExports 上一个nextDep返回的模块实例
+	 */
+	function nextDep(pExports) {
+
+		if (currentUse >= 0) {
+			// 上一个依赖的exports
+			dep.exports = pExports;
+			deps.push(dep);
+		}
+
+		currentUse++;
+
+		// 模块获取完毕，执行factory，将exports通过callback传回去。
+		// 已经处理到最后一个
+		if (currentUse == pkg.dependencies.length) {
+			doneDep();
+
+		} else {
+			dep = pkg.getDependency(pkg.dependencies[currentUse], runtime);
+			var depPkg = runtime.loader.getModule(dep.id);
+			if (depPkg.file) {
+				runtime.loader.loadScript(depPkg.file, nextDep);
+			} else {
+				nextDep();
+			}
+		}
+	}
+
+	function doneDep() {
+		if (callback) callback();
+	}
+
+	nextDep();
 };
 
 /**
@@ -440,8 +470,6 @@ CommonJSDependency.prototype = new Dependency();
 CommonJSDependency.prototype.constructor = CommonJSDependency;
 
 CommonJSDependency.prototype.load = function(runtime, callback) {
-	//runtime.loader.getModule(this.id).execute(this.runtimeName, deps, runtime);
-	//callback(runtime.modules[this.runtimeName]);
 	runtime.loadModule(this.id, this.runtimeName, callback);
 };
 
