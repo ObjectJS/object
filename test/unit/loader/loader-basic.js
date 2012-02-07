@@ -33,14 +33,13 @@ module("loader-basic-buildFileLib", {
 });
 
 test('buildFileLib', function() {
-	//ok(false, 'what is the difference between self.scripts and cls.scripts in Loader? when to use??');
 	ok(Object.keys(loader.lib).length == 1, 'only sys in loader.lib');
 	loader.buildFileLib();
 	ok(Object.keys(loader.lib).length == 1, 'still only sys in loader.lib');
 	ok(loader.scripts != null, 'self.scripts should not be null');
 	var len1 = loader.scripts.length;
 
-	Loader.loadScript(emptyJS, emptyCallback);
+	loader.loadScript(emptyJS, emptyCallback);
 	var len2 = loader.scripts.length;
 	equal(len1 + 1, len2, 'when new script inserted, loader.scripts should be added automatically');
 
@@ -114,20 +113,20 @@ test('getAbsolutePath', function() {
 module('loader-basic-removeScript');
 
 test('removeScript', function() {
-	Loader.loadScript(emptyJS, function() {});
-	equal(Object.keys(Loader.get('_urlNodeMap')).length, 0, 'no cache, so will not add to _urlNodeMap');
-	Loader.removeScript(emptyJS);
-	Loader.loadScript(emptyJS, function() {}, true);
-	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, 'cache is true, so will add to _urlNodeMap');
+	loader.loadScript(emptyJS, function() {});
+	equal(Object.keys(Loader._urlNodeMap).length, 0, 'no cache, so will not add to _urlNodeMap');
+	loader.removeScript(emptyJS);
+	loader.loadScript(emptyJS, function() {}, true);
+	equal(Object.keys(Loader._urlNodeMap).length, 1, 'cache is true, so will add to _urlNodeMap');
 	// if jsTestDriver is running, emptyJS contains url, so do not need to add pageDir
 	if (isJsTestDriverRunning) {
 		pageDir = '';
 	}
-	notEqual(Loader.get('_urlNodeMap')[pageDir + emptyJS], undefined, pageDir + emptyJS + ' is cached in _urlNodeMap');
-	Loader.removeScript('_' + emptyJS);
-	notEqual(Loader.get('_urlNodeMap')[pageDir + emptyJS], undefined, 'remove failed, but should not raise error');
-	Loader.removeScript(emptyJS);
-	equal(Loader.get('_urlNodeMap')[pageDir + emptyJS], undefined, pageDir + emptyJS + ' is remove from _urlNodeMap');
+	notEqual(Loader._urlNodeMap[pageDir + emptyJS], undefined, pageDir + emptyJS + ' is cached in _urlNodeMap');
+	loader.removeScript('_' + emptyJS);
+	notEqual(Loader._urlNodeMap[pageDir + emptyJS], undefined, 'remove failed, but should not raise error');
+	loader.removeScript(emptyJS);
+	equal(Loader._urlNodeMap[pageDir + emptyJS], undefined, pageDir + emptyJS + ' is remove from _urlNodeMap');
 });
 
 module("loader-basic-add");
@@ -162,6 +161,12 @@ test('add-usage', function() {
 	ok(loader.lib['error1'], 'add module without context, should be added');
 	loader.add('error2', 'a', 'a');
 	ok(loader.lib['error2'], 'add module with not-function context, should be added');
+	loader.remove('a');
+	loader.remove('b');
+	loader.remove('c');
+	loader.remove('d', true);
+	loader.remove('error1');
+	loader.remove('error2');
 });
 
 module('loader-basic-remove');
@@ -195,6 +200,7 @@ test('use-basic', function() {
 	} catch(e) {
 		ok(false, 'loader.use(str, str), context should be function : ' + e);
 	}
+	loader.remove('a');
 });
 test('use-usage', function() {
 	var loader = object._loader;
@@ -208,6 +214,8 @@ test('use-usage', function() {
 		equal(a.a, 1, 'module a used successfully');
 		equal(b.b, 1, 'module b used successfully');
 	});
+	loader.remove('a');
+	loader.remove('b');
 });
 
 module("loader-basic-execute");
@@ -237,8 +245,8 @@ test('execute-usage', function() {
 		ok(true, 'module b executed by loader.execute(b)');
 	});
 	loader.execute('b');
-	delete loader.lib['a'];
-	delete loader.lib['b'];
+	loader.remove('a');
+	loader.remove('b');
 });
 
 module('loader-basic-loadScript', {
@@ -254,9 +262,9 @@ module('loader-basic-loadScript', {
 });
 
 test('loadScript basic test', function() {
-	ok(Loader.loadScript, 'loadScript is visible in Loader');
+	ok(loader.loadScript, 'loadScript is visible in Loader');
 	var len1 = Sizzle('script').length;
-	Loader.loadScript(emptyJS, emptyCallback);
+	loader.loadScript(emptyJS, emptyCallback);
 	var len2 = Sizzle('script').length;
 	equal(len2 - len1, 1, 'add one script tag in document after Loader.loadScript is called');
 });
@@ -281,7 +289,7 @@ if (isJsTestDriverRunning) {
 			var onScriptLoaded = callbacks.add(function() {
 				counter = 1;
 			});
-			Loader.loadScript(emptyJS, function() {
+			loader.loadScript(emptyJS, function() {
 				onScriptLoaded();
 			});
 		});
@@ -295,13 +303,13 @@ if (isJsTestDriverRunning) {
 // normal qunit testcases
 test('loadScript with url', function() {
 	// null/''
-	// Loader.loadScript('',emptyCallback); will case error;
+	// loader.loadScript('',emptyCallback); will case error;
 	//ok(false, 'can not loadScript with null url, which will cause empty script tag');
 	//ok(false, 'can not loadScript with empty url, which will cause empty script tag');
 	//ok(false, 'can not loadScript with an non-javascript url');
 	//ok(false, 'can not loadScript with html/jsp/asp...');
 	//raises(function() {
-	//	Loader.loadScript('not-exists-url', emptyCallback);
+	//	loader.loadScript('not-exists-url', emptyCallback);
 	//}, 'can not loadScript with not exists url');
 	var oldOnError = window.onerror;
 	window.onerror = function() {
@@ -309,11 +317,11 @@ test('loadScript with url', function() {
 		window.onerror = oldOnError;
 		return true;
 	};
-	Loader.loadScript('not-exists-url.js', emptyCallback);
+	loader.loadScript('not-exists-url.js', emptyCallback);
 	//equal(Sizzle('script[src=not-exists-url.js]').length, 0, 'not exists url, script tag should be deleted');
 	stop();
 	// is js, and exists
-	Loader.loadScript(emptyJS, function() {
+	loader.loadScript(emptyJS, function() {
 		start();
 		ok(true, 'callback is called');
 	});
@@ -321,11 +329,11 @@ test('loadScript with url', function() {
 
 asyncTest('loadScript with/without callback', function() {
 	//ok(false, 'callback can not be null');
-	Loader.loadScript(emptyJS, function() {
+	loader.loadScript(emptyJS, function() {
 		start();
 		ok(true, 'callback is called');
 	});
-	//Loader.loadScript('not-exists-url', function() {
+	//loader.loadScript('not-exists-url', function() {
 	//		ok(false, 'callback is called when not-exists-url loaded');
 	//});
 })
@@ -334,16 +342,16 @@ asyncTest('loadScript with/without callback', function() {
 test('loadScript with/without cache', function() {
 	var cacheIsOk = false;
 	try {
-		Loader.loadScript(emptyJS, emptyCallback, true);
+		loader.loadScript(emptyJS, emptyCallback, true);
 		cacheIsOk = true;
 	} catch(e) {
-		ok(false, 'cache should work with Loader.loadScript(emptyJS, emptyCallback, true) : ' + e);
+		ok(false, 'cache should work with loader.loadScript(emptyJS, emptyCallback, true) : ' + e);
 	}
 
 	if (cacheIsOk) {
-		Loader.loadScript(emptyJS, emptyCallback, true);
+		loader.loadScript(emptyJS, emptyCallback, true);
 		var len1 = Sizzle('script').length;
-		Loader.loadScript(emptyJS, emptyCallback, true);
+		loader.loadScript(emptyJS, emptyCallback, true);
 		var len2 = Sizzle('script').length;
 		equal(len1, len2, 'cache works, load same script, get from cache');
 	}

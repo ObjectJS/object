@@ -39,6 +39,55 @@ function pathjoin(path1, path2) {
 }
 
 /**
+ * 计算当前引用objectjs的页面文件的目录路径
+ */
+function calculatePageDir() {
+	var loc = window['location'];
+	var pageUrl = loc.protocol + '//' + loc.host + (loc.pathname.charAt(0) !== '/' ? '/' : '') + loc.pathname; 
+	// IE 下文件系统是以\为分隔符，统一改为/
+	if (pageUrl.indexOf('\\') != -1) {
+		pageUrl = pageUrl.replace(/\\/g, '/');
+	}
+	var pageDir = './';
+	if (pageUrl.indexOf('/') != -1) {
+		// 去除文件，留下目录path
+		pageDir = pageUrl.substring(0, pageUrl.lastIndexOf('/') + 1);
+	}
+	return pageDir;
+}
+
+/**
+ * 清理路径url，去除相对寻址符号
+ */
+function cleanPath(path) {
+	// 去除多余的/
+	path = path.replace(/([^:\/])\/+/g, '$1\/');
+	// 如果没有相对寻址，直接返回path
+	if (path.indexOf('.') === -1) {
+		return path;
+	}
+
+	var parts = path.split('/');
+	// 把所有的普通var变量都写在一行，便于压缩
+	var result = [];
+
+	for (var i = 0, part, len = parts.length; i < len; i++) {
+		part = parts[i];
+		if (part === '..') {
+			if (result.length === 0) {
+				throw new Error('invalid path: ' + path);
+			}
+			result.pop();
+		} else if (part !== '.') {
+			result.push(part);
+		}
+	}
+
+	// 去除尾部的#号
+	return result.join('/').replace(/#$/, '');
+}
+
+/**
  * 模块
  * @class
  */
@@ -379,7 +428,7 @@ function CommonJSDependency(name, runtime) {
 		});
 		this.id = pParts.join('/');
 	} else { // top level
-		this.id = pathjoin('/root', name2id(name));
+		this.id = pathjoin('/temp', name2id(name));
 	}
 	this.runtimeName = this.id.slice(1);
 	this.module = runtime.loader.getModule(this.id);
@@ -480,7 +529,7 @@ ObjectDependency.prototype.constructor = ObjectDependency;
 ObjectDependency.prototype.load = function(runtime, callback) {
 
 	var parts = this.nameParts;
-	var context = this.context;
+	var context = this.context || '';
 	var prefix = this.prefix;
 	var currentPart = -1;
 	var pName;
@@ -665,414 +714,354 @@ LoaderRuntime.prototype = {
 
 /**
  * object的包管理器
- * 这个class依赖于object._lib ，且会修改它
  */
-var Loader = new Class(function() {
+function Loader() {
+	this.useCache = true;
+	this.lib = {
+		'/root/sys': new Package('/root/sys', [], function() {})
+	};
+	this.fileLib = {};
+	this.prefixLib = {};
+	this.anonymousModuleCount = 0;
 
-	/**
-	 * 计算当前引用objectjs的页面文件的目录路径
-	 */
-	function calculatePageDir() {
-		var loc = window['location'];
-		var pageUrl = loc.protocol + '//' + loc.host + (loc.pathname.charAt(0) !== '/' ? '/' : '') + loc.pathname; 
-		// IE 下文件系统是以\为分隔符，统一改为/
-		if (pageUrl.indexOf('\\') != -1) {
-			pageUrl = pageUrl.replace(/\\/g, '/');
-		}
-		var pageDir = './';
-		if (pageUrl.indexOf('/') != -1) {
-			// 去除文件，留下目录path
-			pageDir = pageUrl.substring(0, pageUrl.lastIndexOf('/') + 1);
-		}
-		return pageDir;
+	this.scripts = document.getElementsByTagName('script');
+}
+
+// 用于保存url与script节点的键值对
+Loader._urlNodeMap = {};
+
+// global pageDir
+Loader._pageDir = null;
+
+/**
+ * 通过一个src，获取对应文件的绝对路径
+ * 例如：http://hg.xnimg.cn/a.js -> http://hg.xnimg.cn/a.js
+ *       file:///dir/a.js -> file:///dir/a.js
+ *       in http://host/b/c/d/e/f.html, load ../g.js -> http://host/a/b/d/g.js
+ *       in file:///dir/b/c/d/e/f.html, load ../g.js -> file:///dir/a/b/d/g.js
+ *
+ * @param src 地址
+ */
+Loader.getAbsolutePath = function(src) {
+
+	// 如果本身是绝对路径，则返回src的清理版本
+	if (src.indexOf('://') != -1 || src.indexOf('//') === 0) {
+		return cleanPath(src);
 	}
 
-	/**
-	 * 清理路径url，去除相对寻址符号
-	 */
-	function cleanPath(path) {
-		// 去除多余的/
-		path = path.replace(/([^:\/])\/+/g, '$1\/');
-		// 如果没有相对寻址，直接返回path
-		if (path.indexOf('.') === -1) {
-			return path;
-		}
-
-		var parts = path.split('/');
-		// 把所有的普通var变量都写在一行，便于压缩
-		var result = [];
-
-		for (var i = 0, part, len = parts.length; i < len; i++) {
-			part = parts[i];
-			if (part === '..') {
-				if (result.length === 0) {
-					throw new Error('invalid path: ' + path);
-				}
-				result.pop();
-			} else if (part !== '.') {
-				result.push(part);
-			}
-		}
-
-		// 去除尾部的#号
-		return result.join('/').replace(/#$/, '');
+	if (!Loader._pageDir) {
+		Loader._pageDir = calculatePageDir();
 	}
+	return cleanPath(Loader._pageDir + src);
+};
 
-	// global pageDir
-	var pageDir;
+/**
+ * 查找页面中的标记script标签，更新 this.fileLib
+ */
+Loader.prototype.buildFileLib = function() {
 
-	// 用于保存url与script节点的键值对
-	this._urlNodeMap = {};
+	var scripts = this.scripts;
 
-	this.initialize = function(self) {
-		self.useCache = true;
-		self.lib = {
-			'/root/sys': new Package('/root/sys', [], function() {})
-		};
-		self.fileLib = {};
-		self.prefixLib = {};
-		self.anonymousModuleCount = 0;
+	for (var i = 0, script, names, src, l = scripts.length; i < l; i++) {
+		script = scripts[i];
+		src = script.getAttribute('data-src');
+		names = script.getAttribute('data-module');
+		if (!names || !src) continue;
+		names.split(/\s+/ig).forEach(function(name) {
+			this.defineFile(pathjoin('/temp', name2id(name)), src);
+		}, this);
+	}
+};
 
-		self.scripts = document.getElementsByTagName('script');
-	};
+/**
+ * TODO
+ */
+Loader.prototype.useScript = function(src, callback) {
+};
 
-	/**
-	 * 通过一个src，获取对应文件的绝对路径
-	 * 例如：http://hg.xnimg.cn/a.js -> http://hg.xnimg.cn/a.js
-	 *       file:///dir/a.js -> file:///dir/a.js
-	 *       in http://host/b/c/d/e/f.html, load ../g.js -> http://host/a/b/d/g.js
-	 *       in file:///dir/b/c/d/e/f.html, load ../g.js -> file:///dir/a/b/d/g.js
-	 *
-	 * @param src 地址
-	 */
-	this.getAbsolutePath = staticmethod(function(src) {
-
-		// 如果本身是绝对路径，则返回src的清理版本
-		if (src.indexOf('://') != -1 || src.indexOf('//') === 0) {
-			return cleanPath(src);
-		}
-
-		if (typeof pageDir == 'undefined') {
-			pageDir = calculatePageDir();
-		}
-		return cleanPath(pageDir + src);
-	});
-
-	/**
-	 * 查找页面中的标记script标签，更新 self.fileLib
-	 */
-	this.buildFileLib = function(self) {
-
-		var scripts = self.scripts;
-
-		for (var i = 0, script, names, src, l = scripts.length; i < l; i++) {
-			script = scripts[i];
-			src = script.getAttribute('data-src');
-			names = script.getAttribute('data-module');
-			if (!names || !src) continue;
-			names.split(/\s+/ig).forEach(function(name) {
-				self.defineFile(pathjoin('/temp', name2id(name)), src);
-			});
-		}
-	};
-
-	/**
-	 * TODO
-	 */
-	this.useScript = function(self, src, callback) {
-	};
-
-	/**
-	 * 加载一个script, 执行callback
-	 * 有冲突检测，如果连续调用两次loadScript同一src的话，则第二个调用会等第一个完毕后直接执行callback，不会加载两次。
-	 *
-	 * @param src 地址
-	 * @param callback callback函数
-	 */
-	this.loadScript = classmethod(function(cls, src, callback, useCache) {
-		if (!src || typeof src != 'string') {
-			throw new Error('src should be string');
-		}
-		src = src.trim();
-		var absPath = cls.getAbsolutePath(src);
-		if (useCache) {
-			var urlNodeMap = cls.get('_urlNodeMap'), scriptNode = urlNodeMap[absPath];
-			if (scriptNode) {
-				if (scriptNode.loading) {
-					// 增加一个回调即可
-					scriptNode.callbacks.push(callback);
-				} else {
-					callback(scriptNode);
-				}
-				return;
-			}
-		}
-
-		var ele = document.createElement('script');
-		ele.type = "text/javascript";
-		ele.src = src;
-		ele.async = true;
-		ele.loading = true;
-		ele.callbacks = [];
-
-		var doCallback = function() {
-			ele.loading = null;
-			ele.callbacks.forEach(function(callback) {
-				callback(ele);
-			});
-			for (var i = 0, l = ele.callbacks.length; i < l; i++) {
-				ele.callbacks[i] = null;
-			}
-			ele.callbacks = null;
-		};
-
-		ele.callbacks.push(callback);
-
-		if (window.ActiveXObject) { // IE
-			ele.onreadystatechange = function() {
-				var rs = this.readyState;
-				if ('loaded' === rs || 'complete' === rs) {
-					ele.onreadystatechange = null;
-					doCallback();
-				}
-			};
-
-		} else if (ele.addEventListener) { // Standard
-			ele.addEventListener('load', doCallback, false);
-			ele.addEventListener('error', doCallback, false);
-
-		} else { // Old browser
-			ele.onload = ele.onerror = doCallback;
-		}
-
-		document.getElementsByTagName('head')[0].insertBefore(ele, null);
-
-		if (useCache) { 
-			// 利用绝对路径来存键值对，key为绝对路径，value为script节点
-			urlNodeMap[absPath] = ele;
-		}
-	});
-
-	/**
-	 * 根据src属性，删除一个script标签，并且清除对应的键值对缓存记录
-	 * 目前只供单元测试还原测试环境使用
-	 * @param src 路径
-	 */
-	this.removeScript = classmethod(function(cls, src) {
-		if (!src || typeof src != 'string') {
-			throw new Error('src should be string');
-		}
-		src = src.trim();
-		// 转换为绝对路径
-		var absPath = cls.getAbsolutePath(src);
-		// 获取节点
-		var urlNodeMap = cls.get('_urlNodeMap'), scriptNode = urlNodeMap[absPath];
-		// 如果节点存在，则删除script，并从缓存中清空
+/**
+ * 加载一个script, 执行callback
+ * 有冲突检测，如果连续调用两次loadScript同一src的话，则第二个调用会等第一个完毕后直接执行callback，不会加载两次。
+ *
+ * @param src 地址
+ * @param callback callback函数
+ */
+Loader.prototype.loadScript = function(src, callback, useCache) {
+	if (!src || typeof src != 'string') {
+		throw new Error('bad arguments.');
+	}
+	src = src.trim();
+	var absPath = Loader.getAbsolutePath(src);
+	if (useCache) {
+		var urlNodeMap = Loader._urlNodeMap, scriptNode = urlNodeMap[absPath];
 		if (scriptNode) {
-			delete urlNodeMap[absPath];
-			if (scriptNode.parentNode) {
-				scriptNode.parentNode.removeChild(scriptNode);
+			if (scriptNode.loading) {
+				// 增加一个回调即可
+				scriptNode.callbacks.push(callback);
+			} else {
+				callback(scriptNode);
 			}
-			scriptNode = null;
+			return;
 		}
-	});
+	}
 
-	/**
-	 * 建立一个runtime
-	 */
-	this.createRuntime = function(self, id) {
-		var runtime = new LoaderRuntime(id);
-		runtime.loader = self;
-		return runtime;
+	var ele = document.createElement('script');
+	ele.type = "text/javascript";
+	ele.src = src;
+	ele.async = true;
+	ele.loading = true;
+	ele.callbacks = [];
+
+	var doCallback = function() {
+		ele.loading = null;
+		ele.callbacks.forEach(function(callback) {
+			callback(ele);
+		});
+		for (var i = 0, l = ele.callbacks.length; i < l; i++) {
+			ele.callbacks[i] = null;
+		}
+		ele.callbacks = null;
 	};
 
-	/**
-	 * 建立前缀模块
-	 * 比如 a/b/c/d ，会建立 a a/b a/b/c 三个空模块，最后一个模块为目标模块
-	 */
-	this.definePrefixFor = function(self, id) {
-		if (!id || typeof id != 'string') return;
-		if (arguments.length < 2) return;
+	ele.callbacks.push(callback);
 
-		var idParts = id.split('/');
-		for (var i = 0, prefix, pkg, l = idParts.length - 1; i < l; i++) {
-			prefix = idParts.slice(0, i + 1).join('/');
-			self.definePrefix(prefix);
-		}
-	};
-
-	/**
-	 * 定义一个prefix module
-	 */
-	this.definePrefix = function(self, id) {
-		if (!id || typeof id != 'string') return;
-		if (arguments.length < 2) return;
-
-		if (id in self.lib || id in self.prefixLib) return;
-		self.prefixLib[id] = new Package(id, [], function(){});
-	};
-
-	/**
-	 * 定义一个file module，供异步加载
-	 */
-	this.defineFile = function(self, id, src) {
-		if (!id || typeof id != 'string') return;
-		if (arguments.length < 2) return;
-
-		if (self.fileLib[id]) return;
-
-		// prefix已注册
-		if (id in self.prefixLib) {
-			delete self.prefixLib[id];
-		}
-		// 添加前缀module到prefixLib
-		else {
-			self.definePrefixFor(id);
-		}
-
-		self.fileLib[id] = {
-			id: id,
-			file: src
+	if (window.ActiveXObject) { // IE
+		ele.onreadystatechange = function() {
+			var rs = this.readyState;
+			if ('loaded' === rs || 'complete' === rs) {
+				ele.onreadystatechange = null;
+				doCallback();
+			}
 		};
+
+	} else if (ele.addEventListener) { // Standard
+		ele.addEventListener('load', doCallback, false);
+		ele.addEventListener('error', doCallback, false);
+
+	} else { // Old browser
+		ele.onload = ele.onerror = doCallback;
+	}
+
+	document.getElementsByTagName('head')[0].insertBefore(ele, null);
+
+	if (useCache) { 
+		// 利用绝对路径来存键值对，key为绝对路径，value为script节点
+		urlNodeMap[absPath] = ele;
+	}
+};
+
+/**
+ * 根据src属性，删除一个script标签，并且清除对应的键值对缓存记录
+ * @param src 路径
+ */
+Loader.prototype.removeScript = function(src) {
+	if (!src || typeof src != 'string') {
+		throw new Error('bad arguments.');
+	}
+	src = src.trim();
+	// 转换为绝对路径
+	var absPath = Loader.getAbsolutePath(src);
+	// 获取节点
+	var urlNodeMap = Loader._urlNodeMap, scriptNode = urlNodeMap[absPath];
+	// 如果节点存在，则删除script，并从缓存中清空
+	if (scriptNode) {
+		delete urlNodeMap[absPath];
+		if (scriptNode.parentNode) {
+			scriptNode.parentNode.removeChild(scriptNode);
+		}
+		scriptNode = null;
+	}
+};
+
+/**
+ * 建立一个runtime
+ */
+Loader.prototype.createRuntime = function(id) {
+	var runtime = new LoaderRuntime(id);
+	runtime.loader = this;
+	return runtime;
+};
+
+/**
+ * 建立前缀模块
+ * 比如 a/b/c/d ，会建立 a a/b a/b/c 三个空模块，最后一个模块为目标模块
+ */
+Loader.prototype.definePrefixFor = function(id) {
+	if (!id || typeof id != 'string') return;
+
+	var idParts = id.split('/');
+	for (var i = 0, prefix, pkg, l = idParts.length - 1; i < l; i++) {
+		prefix = idParts.slice(0, i + 1).join('/');
+		this.definePrefix(prefix);
+	}
+};
+
+/**
+ * 定义一个prefix module
+ */
+Loader.prototype.definePrefix = function(id) {
+	if (!id || typeof id != 'string') return;
+
+	if (id in this.lib || id in this.prefixLib) return;
+	this.prefixLib[id] = new Package(id, [], function(){});
+};
+
+/**
+ * 定义一个file module，供异步加载
+ */
+Loader.prototype.defineFile = function(id, src) {
+	if (!id || typeof id != 'string') return;
+
+	if (this.fileLib[id]) return;
+
+	// prefix已注册
+	if (id in this.prefixLib) {
+		delete this.prefixLib[id];
+	}
+	// 添加前缀module到prefixLib
+	else {
+		this.definePrefixFor(id);
+	}
+
+	this.fileLib[id] = {
+		id: id,
+		file: src
 	};
+};
 
-	/**
-	 * 定义一个普通module
-	 */
-	this.defineModule = function(self, constructor, id, dependencies, factory) {
-		if (arguments.length < 5) return;
+/**
+ * 定义一个普通module
+ */
+Loader.prototype.defineModule = function(constructor, id, dependencies, factory) {
+	if (arguments.length < 4) return;
 
-		// 不允许重复添加。
-		if (id in self.lib) return;
+	// 不允许重复添加。
+	if (id in this.lib) return;
 
-		// prefix已注册
-		if (id in self.prefixLib) {
-			delete self.prefixLib[id];
-		}
-		// file已注册
-		else if (id in self.fileLib) {
-			delete self.fileLib[id];
-		}
-		// 添加前缀module到prefixLib
-		else {
-			self.definePrefixFor(id);
-		}
+	// prefix已注册
+	if (id in this.prefixLib) {
+		delete this.prefixLib[id];
+	}
+	// file已注册
+	else if (id in this.fileLib) {
+		delete this.fileLib[id];
+	}
+	// 添加前缀package到prefixLib
+	else {
+		this.definePrefixFor(id);
+	}
 
-		var pkg = new constructor(id, dependencies, factory);
-		self.lib[id] = pkg;
-	};
+	var pkg = new constructor(id, dependencies, factory);
+	this.lib[id] = pkg;
+};
 
-	/**
-	 * @param name
-	 * @param dependencies
-	 * @param factory
-	 */
-	this.define = function(self, name, dependencies, factory) {
-		if (typeof name != 'string') return;
+/**
+ * @param name
+ * @param dependencies
+ * @param factory
+ */
+Loader.prototype.define = function(name, dependencies, factory) {
+	if (typeof name != 'string') return;
 
-		if (typeof dependencies == 'function') {
-			factory = dependencies;
-			dependencies = [];
-		}
+	if (typeof dependencies == 'function') {
+		factory = dependencies;
+		dependencies = [];
+	}
 
-		self.defineModule(CommonJSPackage, name2id(name), dependencies, factory);
-	};
+	this.defineModule(CommonJSPackage, name2id(name), dependencies, factory);
+};
 
-	/**
-	 * @param id
-	 */
-	this.getModule = function(self, id) {
-		return self.lib[id] || self.fileLib[id] || self.prefixLib[id];
-	};
+/**
+ * @param id
+ */
+Loader.prototype.getModule = function(id) {
+	return this.lib[id] || this.fileLib[id] || this.prefixLib[id];
+};
 
-	/**
-	 * @param name
-	 * @param dependencies
-	 * @param factory
-	 */
-	this.add = function(self, name, dependencies, factory) {
-		if (typeof name != 'string') return;
+/**
+ * @param name
+ * @param dependencies
+ * @param factory
+ */
+Loader.prototype.add = function(name, dependencies, factory) {
+	if (typeof name != 'string') return;
 
-		if (typeof dependencies == 'function') {
-			factory = dependencies;
-			dependencies = [];
-		}
+	if (typeof dependencies == 'function') {
+		factory = dependencies;
+		dependencies = [];
+	}
 
-		// 若为相对路径，则放在temp上
-		var id = pathjoin('/temp', name2id(name));
-		self.defineModule(ObjectPackage, id, dependencies, factory);
-	};
+	// 若为相对路径，则放在temp上
+	var id = pathjoin('/temp', name2id(name));
+	this.defineModule(ObjectPackage, id, dependencies, factory);
+};
 
-	/**
-	 * 移除模块的定义
-	 * @param id 需要移除模块的id
-	 * @param all 是否移除其所有子模块
-	 */
-	this.remove = function(self, id, all) {
-		if (typeof id == 'string') {
-			id = pathjoin('/temp', id);
-		}
-		delete self.lib[id];
-		if (all) {
-			Object.keys(self.lib).forEach(function(key) {
-				if (key.indexOf(id + '/') == 0) delete self.lib[key];
-			});
-		}
-	};
+/**
+ * 移除模块的定义
+ * @param name 需要移除模块的name
+ * @param all 是否移除其所有子模块
+ */
+Loader.prototype.remove = function(name, all) {
+	var id = pathjoin('/temp', name2id(name));
+	delete this.lib[id];
+	if (all) {
+		Object.keys(this.lib).forEach(function(key) {
+			if (key.indexOf(id + '/') == 0) delete this.lib[key];
+		}, this);
+	}
+};
 
-	/**
-	 * execute
-	 * @param name 执行的入口模块名称
-	 */ 
-	this.execute = function(self, name) {
-		if (!name || typeof name != 'string') {
-			return;
-		}
-		self.buildFileLib();
+/**
+ * execute
+ * @param name 执行的入口模块名称
+ */ 
+Loader.prototype.execute = function(name) {
+	if (!name || typeof name != 'string') {
+		return;
+	}
+	this.buildFileLib();
 
-		var id = pathjoin('/temp', name2id(name));
+	var id = pathjoin('/temp', name2id(name));
 
-		var runtime = self.createRuntime(id);
-		runtime.loadModule(id, '__main__');
-	};
+	var runtime = this.createRuntime(id);
+	runtime.loadModule(id, '__main__');
+};
 
-	/**
-	 * use
-	 * @param dependencies 用逗号分隔开的模块名称列表
-	 * @param factory dependencies加载后调用，将module通过参数传入factory，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
-	 */
-	this.use = function(self, dependencies, factory) {
-		if (!factory || typeof factory != 'function') {
-			return;
-		}
-		self.buildFileLib();
+/**
+ * use
+ * @param dependencies 用逗号分隔开的模块名称列表
+ * @param factory dependencies加载后调用，将module通过参数传入factory，第一个参数为exports，后面的参数为每个module的不重复引用，顺序排列
+ */
+Loader.prototype.use = function(dependencies, factory) {
+	if (!factory || typeof factory != 'function') {
+		return;
+	}
+	this.buildFileLib();
 
-		var id = '__anonymous_' + self.anonymousModuleCount + '__';
-		self.anonymousModuleCount++;
+	var id = '__anonymous_' + this.anonymousModuleCount + '__';
+	this.anonymousModuleCount++;
 
-		self.defineModule(CommonJSPackage, id, dependencies, function(require, exports, module) {
-			var args = [];
-			module.dependencies.forEach(function(dep) {
-				dep = require(dep);
-				if (args.indexOf(dep) == -1) {
-					args.push(dep);
-				}
-			});
-
-			if (factory.length == args.length + 1) {
-				if (typeof console != 'undefined') {
-					console.warn('object.use即将不再支持第一个exports参数，请尽快删除。');
-				}
-				args.unshift(exports);
+	this.defineModule(CommonJSPackage, id, dependencies, function(require, exports, module) {
+		var args = [];
+		module.dependencies.forEach(function(dep) {
+			dep = require(dep);
+			if (args.indexOf(dep) == -1) {
+				args.push(dep);
 			}
-			factory.apply(null, args);
 		});
 
-		var runtime = self.createRuntime(id);
-		runtime.loadModule(id, '__main__', function() {});
-	};
+		if (factory.length == args.length + 1) {
+			if (typeof console != 'undefined') {
+				console.warn('object.use即将不再支持第一个exports参数，请尽快删除。');
+			}
+			args.unshift(exports);
+		}
+		factory.apply(null, args);
+	});
 
-});
+	var runtime = this.createRuntime(id);
+	runtime.loadModule(id, '__main__', function() {});
+};
 
 object.Loader = Loader;
 object.NoModuleError = NoModuleError;

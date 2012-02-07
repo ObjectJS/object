@@ -82,10 +82,10 @@ if (isJsTestDriverRunning) {
 			addModuleScriptToHead('module1', module1JS_seperate);
 			addModuleScriptToHead('module2', module2JS_seperate);
 			loader.buildFileLib();
-			ok(loader.fileLib['module1'] != null, 'module1 is in loader.lib');
-			ok(loader.fileLib['module2'] != null, 'module2 is in loader.lib');
-			equal(loader.fileLib['module1'].file, module1JS_seperate, 'module1 js file is ' + module1JS_seperate);
-			equal(loader.fileLib['module2'].file, module2JS_seperate, 'module2 js file is ' + module2JS_seperate);
+			ok(loader.fileLib['/temp/module1'] != null, 'module1 is in loader.lib');
+			ok(loader.fileLib['/temp/module2'] != null, 'module2 is in loader.lib');
+			equal(loader.fileLib['/temp/module1'].file, module1JS_seperate, 'module1 js file is ' + module1JS_seperate);
+			equal(loader.fileLib['/temp/module2'].file, module2JS_seperate, 'module2 js file is ' + module2JS_seperate);
 		});
 		queue.call('Step3 : use module1', function(callbacks) {
 			var callback = callbacks.add(function(value) {
@@ -405,10 +405,10 @@ if (isJsTestDriverRunning) {
 		addModuleScriptToHead('module2', module2JS_seperate);
 		var loader = object._loader;
 		loader.buildFileLib();
-		ok(loader.fileLib['module1'] != null, 'module1 is in loader.lib');
-		ok(loader.fileLib['module2'] != null, 'module2 is in loader.lib');
-		equal(loader.fileLib['module1'].file, module1JS_seperate, 'module1 js file is ' + module1JS_seperate);
-		equal(loader.fileLib['module2'].file, module2JS_seperate, 'module2 js file is ' + module2JS_seperate);
+		ok(loader.fileLib['/temp/module1'] != null, 'module1 is in loader.lib');
+		ok(loader.fileLib['/temp/module2'] != null, 'module2 is in loader.lib');
+		equal(loader.fileLib['/temp/module1'].file, module1JS_seperate, 'module1 js file is ' + module1JS_seperate);
+		equal(loader.fileLib['/temp/module2'].file, module2JS_seperate, 'module2 js file is ' + module2JS_seperate);
 
 		stop();
 		loader.use('module1', function(module1) {
