@@ -1241,12 +1241,7 @@ this.FormItemElement = new Class(exports.Element, function() {
 					return -1;
 				}
 			}
-			var elementRange = self.createTextRange();
-			var duplicated = elementRange.duplicate();
-			elementRange.moveToBookmark(range.getBookmark());
-			//将选中区域的起始点作为整个元素区域的终点
-			duplicated.setEndPoint('EndToStart', elementRange);
-			return duplicated.text.length; 
+			return calculateSelectionPos(self).start;
 		} else {
 			return -1;
 		}
@@ -1280,11 +1275,7 @@ this.FormItemElement = new Class(exports.Element, function() {
 					return -1;
 				}
 			}
-			var elementRange = self.createTextRange();
-			var duplicated = elementRange.duplicate();
-			elementRange.moveToBookmark(range.getBookmark());
-			duplicated.setEndPoint('EndToStart', elementRange);
-			return duplicated.text.length + range.text.length; 
+			return calculateSelectionPos(self).end;
 		} else {
 			return -1;
 		}
@@ -1447,29 +1438,6 @@ this.FormItemElement = new Class(exports.Element, function() {
  * input / textarea 元素的包装类的基类
  */
 this.TextBaseElement = new Class(exports.FormItemElement, function() {
-
-	/**
-	 * IE下，在焦点即将离开此元素时，计算一下selectionStart和selectionEnd备用
-	 *
-	 * @param {HTMLElement} field 焦点即将离开的元素，input/textarea
-	 * @return {Object} 位置信息对象，包含{start:起始位置, end:终止位置}
-	 */
-	function calculateSelectionPos(field) {
-		// 参考JQuery插件：fieldSelection
-		var range = document.selection.createRange();
-		if (range == null || range.parentElement() != field) {
-			return {start:-1, end:-1};
-		}
-		var elementRange = field.createTextRange();
-		var duplicated = elementRange.duplicate();
-		elementRange.moveToBookmark(range.getBookmark());
-		//将选中区域的起始点作为整个元素区域的终点
-		duplicated.setEndPoint('EndToStart', elementRange);
-		return {
-			start: duplicated.text.length, 
-			end  : duplicated.text.length + range.text.length
-		};
-	}
 
 	this.initialize = function(self) {
 		this.parent(self);
@@ -1731,4 +1699,26 @@ function getCommon(arr1, arr2) {
 	return arr1.slice(0, i);
 }
 
+/**
+ * IE下，在焦点即将离开此元素时，计算一下selectionStart和selectionEnd备用
+ *
+ * @param {HTMLElement} field 焦点即将离开的元素，input/textarea
+ * @return {Object} 位置信息对象，包含{start:起始位置, end:终止位置}
+ */
+function calculateSelectionPos(field) {
+	// 参考JQuery插件：fieldSelection
+	var range = document.selection.createRange();
+	if (range == null || range.parentElement() != field) {
+		return {start:-1, end:-1};
+	}
+	var elementRange = field.createTextRange();
+	var duplicated = elementRange.duplicate();
+	elementRange.moveToBookmark(range.getBookmark());
+	//将选中区域的起始点作为整个元素区域的终点
+	duplicated.setEndPoint('EndToStart', elementRange);
+	return {
+		start: duplicated.text.length, 
+		end  : duplicated.text.length + range.text.length
+	};
+}
 });
