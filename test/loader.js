@@ -1,3 +1,6 @@
-object.use('/temp/xn/flashUploader', function(flashUploader) {
-	console.log(arguments)
+object.define('/temp/fuck', '/temp/xn/flashUploader', function(require) {
+	alert(require('/temp/xn/flashUploader'))
+});
+
+object.use('/temp/fuck', function() {
 });

@@ -182,6 +182,7 @@ CommonJSPackage.prototype.load = function(name, runtime, callback) {
 		} else {
 			dep = pkg.getDependency(pkg.dependencies[currentUse], runtime);
 			var depPkg = runtime.loader.getModule(dep.id);
+			//dep.load(runtime, nextDep);
 			if (depPkg.file) {
 				runtime.loader.loadScript(depPkg.file, nextDep);
 			} else {
