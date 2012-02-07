@@ -4,6 +4,7 @@
  * 将name中的“.”换成id形式的“/”
  */
 function name2id(name) {
+	name = String(name);
 	var id = name.replace(/\./g, '/');
 	return id;
 }
@@ -1006,7 +1007,9 @@ Loader.prototype.remove = function(name, all) {
 	delete this.lib[id];
 	if (all) {
 		Object.keys(this.lib).forEach(function(key) {
-			if (key.indexOf(id + '/') == 0) delete this.lib[key];
+			if (key.indexOf(id + '/') == 0) {
+				delete this.lib[key];
+			}
 		}, this);
 	}
 };
@@ -1043,8 +1046,8 @@ Loader.prototype.use = function(dependencies, factory) {
 
 	this.defineModule(CommonJSPackage, id, dependencies, function(require, exports, module) {
 		var args = [];
-		module.dependencies.forEach(function(dep) {
-			dep = require(dep);
+		module.dependencies.forEach(function(dependency) {
+			dep = require(dependency);
 			if (args.indexOf(dep) == -1) {
 				args.push(dep);
 			}

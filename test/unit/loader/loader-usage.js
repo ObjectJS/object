@@ -1,5 +1,7 @@
 module('loader-usage-loadScript');
 
+var loader = object._loader;
+
 function recoverEnv() {
 	var scripts = Sizzle('script');
 	var head = document.getElementsByTagName('head')[0];
@@ -7,7 +9,7 @@ function recoverEnv() {
 		if (scripts[i].callbacks || scripts[i].getAttribute('data-module') 
 				|| /(module[\dsA-Z])|empty/.test(scripts[i].src)) {
 			if (scripts[i].src) {
-				Loader.removeScript(scripts[i].src);
+				loader.removeScript(scripts[i].src);
 			} else {
 				if(scripts[i].parentNode) {
 					scripts[i].parentNode.removeChild(scripts[i]);
@@ -71,7 +73,6 @@ object.use('ua', function(exports, ua) {
 });
 // if is executed by jsTestDriver
 if (isJsTestDriverRunning) {
-	var loader = object._loader;
 	var AsyncTestCase_loaderUsageLoadScript = AsyncTestCase('loaderUsageLoadScript');
 
 	AsyncTestCase_loaderUsageLoadScript.prototype.testAddScriptAsModule = function(queue) {
@@ -403,7 +404,6 @@ if (isJsTestDriverRunning) {
 		recoverEnv();
 		addModuleScriptToHead('module1', module1JS_seperate);
 		addModuleScriptToHead('module2', module2JS_seperate);
-		var loader = object._loader;
 		loader.buildFileLib();
 		ok(loader.fileLib['/temp/module1'] != null, 'module1 is in loader.lib');
 		ok(loader.fileLib['/temp/module2'] != null, 'module2 is in loader.lib');
@@ -423,7 +423,6 @@ if (isJsTestDriverRunning) {
 	test('add script as module, but is another module', function() {
 		recoverEnv();
 		addModuleScriptToHead('module1', module2JS_seperate);
-		var loader = object._loader;
 		loader.buildFileLib();
 		stop();
 		// for global error throwed in callback of executeModule
@@ -441,7 +440,6 @@ if (isJsTestDriverRunning) {
 		recoverEnv();
 		addModuleScriptToHead('module1', module1JS_depends);
 		addModuleScriptToHead('module2', module2JS_depends);
-		var loader = object._loader;
 		loader.buildFileLib();
 		stop();
 		loader.use('module1', function(module1) {
@@ -456,7 +454,6 @@ if (isJsTestDriverRunning) {
 		addModuleScriptToHead('module1', module_manyModules);
 		addModuleScriptToHead('module2', module_manyModules);
 		addModuleScriptToHead('module3', module_manyModules);
-		var loader = object._loader;
 		loader.buildFileLib();
 		window.oneFileManyModules_load_times = 0;
 		stop();
@@ -482,7 +479,6 @@ if (isJsTestDriverRunning) {
 	test('one module file, many modules in one script tag definition', function() {
 		recoverEnv();
 		addModuleScriptToHead('module1 module2 module3', module_manyModules);
-		var loader = object._loader;
 		loader.buildFileLib();
 		window.oneFileManyModules_load_times = 0;
 		stop();
@@ -508,7 +504,6 @@ if (isJsTestDriverRunning) {
 		recoverEnv();
 		addModuleScriptToHead('module1', module1JS_parent);
 		addModuleScriptToHead('module1.module2', module2JS_parent);
-		var loader = object._loader;
 		stop();
 		loader.buildFileLib();
 		loader.use('module1.module2', function(module1) {
@@ -525,7 +520,6 @@ if (isJsTestDriverRunning) {
 		recoverEnv();
 		addModuleScriptToHead('module1', module1JS_parent_2);
 		addModuleScriptToHead('module1.module2.module3', module2JS_parent_2);
-		var loader = object._loader;
 		stop();
 		loader.buildFileLib();
 		loader.use('module1.module2.module3', function(module1) {
@@ -543,7 +537,6 @@ if (isJsTestDriverRunning) {
 		addModuleScriptToHead('module1', module1JS_same_name);
 		addModuleScriptToHead('module1', module2JS_same_name);
 		stop();
-		var loader = object._loader;
 		loader.buildFileLib();
 		loader.use('module1', function(module1) {
 			start();
@@ -554,7 +547,6 @@ if (isJsTestDriverRunning) {
 	test('request module file only once', function() {
 		recoverEnv();
 		addModuleScriptToHead('module1', module1JS_request_file_once);
-		var loader = object._loader;
 		loader.buildFileLib();
 		stop();
 		window.moduleFileRequestTimeCounter = 0;
@@ -576,7 +568,6 @@ if (isJsTestDriverRunning) {
 		recoverEnv();
 		addModuleScriptToHead('module1', module1JS_request_file_once);
 		stop();
-		var loader = object._loader;
 		object.add('use_module1', 'module1', function(exports, module1) {
 			exports.a = 1;
 			equal(module1.test, 1, 'use module1 in object.add');
@@ -591,7 +582,6 @@ if (isJsTestDriverRunning) {
 		recoverEnv();
 		addModuleScriptToHead('module1.module2', module2JS_parent);
 		addModuleScriptToHead('module1', module1JS_parent);
-		var loader = object._loader;
 		stop();
 		loader.buildFileLib();
 		loader.use('module1.module2', function(module1) {
@@ -609,7 +599,6 @@ if (isJsTestDriverRunning) {
 		addModuleScriptToHead('moduleA', moduleAJS_abc);
 		addModuleScriptToHead('moduleB', moduleBJS_abc);
 		addModuleScriptToHead('moduleC', moduleCJS_abc);
-		var loader = object._loader;
 		stop();
 		loader.use('moduleA,moduleB,moduleC', function(moduleA, moduleB, moduleC) {
 			start();
