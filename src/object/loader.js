@@ -191,7 +191,9 @@ CommonJSPackage.prototype.load = function(name, runtime, callback) {
 	}
 
 	function doneDep() {
-		if (callback) callback();
+		var exports = pkg.execute(name, deps, runtime);
+		runtime.addModule(name, exports);
+		if (callback) callback(exports);
 	}
 
 	nextDep();
