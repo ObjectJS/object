@@ -295,7 +295,7 @@ ObjectPackage.prototype.load = function(name, runtime, callback) {
 	var queue = new Queue(this.dependencies);
 
 	queue.done = function() {
-		var exports = this.execute(name, deps, runtime);
+		var exports = pkg.execute(name, deps, runtime);
 		runtime.addModule(name, exports);
 		if (callback) callback(exports);
 	};
@@ -342,7 +342,7 @@ ObjectPackage.prototype.exports = function(name, exports, runtime) {
 /**
  * 执行factory，返回模块实例
  */
-ObjectPackage.prototype.execute = function(name, exports, runtime) {
+ObjectPackage.prototype.execute = function(name, deps, runtime) {
 	var exports = runtime.modules[name] || new Module(name);
 	var returnExports;
 	var args = [];
@@ -353,8 +353,8 @@ ObjectPackage.prototype.execute = function(name, exports, runtime) {
 	});
 	// 最后再放入exports，否则当错误的自己依赖自己时，会导致少传一个参数
 	args.unshift(exports);
-	if (pkg.factory) {
-		returnExports = pkg.factory.apply(exports, args);
+	if (this.factory) {
+		returnExports = this.factory.apply(exports, args);
 	}
 
 	// 当有returnExports时，之前建立的空模块（即exports变量）则没有用武之地了，给出警告。
@@ -588,11 +588,17 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 		var id = pathjoin(context, this.source.slice(0, this.index + 1).join('/'));
 		var part = this.source[this.index];
 		var name = (pName? pName + '.' : '') + part;
-		runtime.loadModule(id, name, function(exports) {
-			runtime.setMemberTo(pName, part, exports);
-			pName = name;
-			next();
-		});
+		var exports = runtime.modules[name];
+		// 使用缓存中的
+		if (exports) {
+			next(exports);
+		} else {
+			runtime.loadModule(id, name, function(exports) {
+				runtime.setMemberTo(pName, part, exports);
+				pName = name;
+				next();
+			});
+		}
 	};
 
 	queue.done = function() {
@@ -646,7 +652,7 @@ LoaderRuntime.prototype.addModule = function(name, exports) {
 	var members = this.members[name];
 	if (members) {
 		members.forEach(function(member) {
-		  this.modules[name][member.id] = member.value;
+			this.modules[name][member.id] = member.value;
 		}, this);
 	}
 
@@ -662,23 +668,16 @@ LoaderRuntime.prototype.loadModule = function(id, name, callback) {
 	var loader = this.loader;
 	var stack = this.stack;
 
-	var exports = this.modules[name];
-	// 使用缓存中的
-	if (exports) {
-		if (callback) callback(exports);
-		return
-	}
-
 	var pkg = loader.getModule(id);
 	// No module
 	if (!pkg) {
 		throw new NoModuleError(id);
 	}
 
-	function done(exports) {
-		// 模块获取完毕，去除循环依赖检测
+	function done(result) {
+		// 模块load完毕，去除循环依赖检测
 		stack.pop();
-		if (callback) callback(exports);
+		if (callback) callback(result);
 	}
 
 	function fileDone() {
