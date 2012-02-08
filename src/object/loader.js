@@ -177,52 +177,6 @@ CommonJSPackage.prototype.getDependency = function(name, runtime) {
 	}
 };
 
-CommonJSPackage.prototype.load = function(name, runtime, callback) {
-	var deps = [];
-	var pkg = this;
-
-	var queue = new Queue(this.dependencies);
-
-	queue.done = function() {
-		var exports = pkg.execute(name, deps, runtime);
-		runtime.addModule(name, exports);
-		if (callback) callback(exports);
-	};
-
-	queue.next = function(next) {
-		var dep = pkg.getDependency(pkg.dependencies[this.index], runtime);
-		var depPkg = runtime.loader.getModule(dep.id);
-		deps.push(dep);
-		if (depPkg.file) {
-			runtime.loader.loadScript(depPkg.file, next);
-		} else {
-			next();
-		}
-	};
-
-	queue.start();
-};
-
-/**
- * 执行一个package，返回其exports
- */
-CommonJSPackage.prototype.execute = function(name, deps, runtime) {
-	var exports = runtime.modules[name] || new Module(name);
-	var returnExports = this.factory.call(exports, this.createRequire(name, deps, runtime), exports, this);
-	if (returnExports) {
-		returnExports.__name__ = exports.__name__;
-		exports = returnExports;
-	}
-	return exports;
-};
-
-/**
- * 出现循环依赖但并不立刻报错，而是当作此模块没有获取到，继续获取下一个
- */
-CommonJSPackage.prototype.cyclicLoad = function(depName, runtime, next) {
-	next();
-};
-
 CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 	var loader = runtime.loader;
 	var pkg = this;
@@ -232,20 +186,21 @@ CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 			throw new ModuleRequiredError(name, pkg);
 		}
 		var dep = deps[index];
-		var result;
-		dep.load(runtime, function(exports) {
-			if (!exports) {
+		var exports;
+		dep.load(runtime, function(result) {
+			if (!result) {
 				// 有依赖却没有获取到，说明是由于循环依赖
 				if (pkg.dependencies.indexOf(name) != -1) {
 					throw new CyclicDependencyError(runtime, dep.module);
 				} else {
-					console.warn('Unknown Error.');
 					// 出错
+					console.warn('Unknown Error.');
+					return;
 				}
 			}
-			result = exports;
+			exports = dep.module.exports(name, result, runtime);
 		});
-		return result;
+		return exports;
 	}
 
 	require.async = function(dependencies, callback) {
@@ -261,6 +216,43 @@ CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 	};
 
 	return require;
+};
+
+CommonJSPackage.prototype.exports = function(name, deps, runtime) {
+	var exports = runtime.modules[name] || new Module(name);
+	var returnExports = this.factory.call(exports, this.createRequire(name, deps, runtime), exports, this);
+	if (returnExports) {
+		returnExports.__name__ = exports.__name__;
+		exports = returnExports;
+	}
+	runtime.addModule(name, exports);
+	return exports;
+};
+
+CommonJSPackage.prototype.load = function(name, runtime, callback) {
+	var deps = [];
+	var pkg = this;
+
+	var queue = new Queue(this.dependencies);
+
+	queue.done = function() {
+		if (callback) callback(deps);
+	};
+
+	queue.next = function(next) {
+		var dep = pkg.getDependency(pkg.dependencies[this.index], runtime);
+		deps.push(dep);
+		dep.load(runtime, next);
+	};
+
+	queue.start();
+};
+
+/**
+ * 出现循环依赖但并不立刻报错，而是当作此模块没有获取到，继续获取下一个
+ */
+CommonJSPackage.prototype.cyclicLoad = function(depName, runtime, next) {
+	next();
 };
 
 /**
@@ -284,40 +276,7 @@ ObjectPackage.prototype.getDependency = function(index, runtime) {
 	}
 };
 
-/**
- * 执行一个package，返回其exports
- */
-ObjectPackage.prototype.execute = function(name, deps, runtime) {
-	var exports = runtime.modules[name] || new Module(name);
-	var returnExports;
-	var args = [];
-	deps.forEach(function(dep) {
-		if (args.indexOf(dep.exports) == -1) {
-			args.push(dep.exports);
-		}
-	}, this);
-	// 最后再放入exports，否则当错误的自己依赖自己时，会导致少传一个参数
-	args.unshift(exports);
-	if (this.factory) {
-		returnExports = this.factory.apply(exports, args);
-	}
-
-	// 当有returnExports时，之前建立的空模块（即exports变量）则没有用武之地了，给出警告。
-	if (returnExports) {
-		// 检测是否有子模块引用了本模块
-		if (exports.__empty_refs__) {
-			exports.__empty_refs__.forEach(function(ref) {
-				if (typeof console != 'undefined') {
-					console.warn(ref + '无法正确获得' + name + '模块的引用。因为该模块是通过return返回模块实例的。');
-				}
-			});
-		}
-
-		returnExports.__name__ = exports.__name__;
-		exports = returnExports;
-	} else {
-		delete exports.__empty_refs__;
-	}
+ObjectPackage.prototype.exports = function(name, exports, runtime) {
 	return exports;
 };
 
@@ -328,7 +287,37 @@ ObjectPackage.prototype.load = function(name, runtime, callback) {
 	var queue = new Queue(this.dependencies);
 
 	queue.done = function() {
-		var exports = pkg.execute(name, deps, runtime);
+		var exports = runtime.modules[name] || new Module(name);
+		var returnExports;
+		var args = [];
+		deps.forEach(function(dep) {
+			if (args.indexOf(dep.exports) == -1) {
+				args.push(dep.exports);
+			}
+		});
+		// 最后再放入exports，否则当错误的自己依赖自己时，会导致少传一个参数
+		args.unshift(exports);
+		if (pkg.factory) {
+			returnExports = pkg.factory.apply(exports, args);
+		}
+
+		// 当有returnExports时，之前建立的空模块（即exports变量）则没有用武之地了，给出警告。
+		if (returnExports) {
+			// 检测是否有子模块引用了本模块
+			if (exports.__empty_refs__) {
+				exports.__empty_refs__.forEach(function(ref) {
+					if (typeof console != 'undefined') {
+						console.warn(ref + '无法正确获得' + name + '模块的引用。因为该模块是通过return返回模块实例的。');
+					}
+				});
+			}
+
+			returnExports.__name__ = exports.__name__;
+			exports = returnExports;
+		} else {
+			delete exports.__empty_refs__;
+		}
+
 		runtime.addModule(name, exports);
 		if (callback) callback(exports);
 	};
@@ -375,18 +364,15 @@ function Package(id, dependencies, factory) {
 	this.dependencies = this.parseDependencies(dependencies);
 }
 
-/**
- * 执行package
- */
-Package.prototype.execute = function(name, depExports, runtime) {
-	return new Module(name);
+Package.prototype.exports = function(name, exports, runtime) {
+	return exports;
 };
 
 /**
  * 加载package，通过callback返回
  */
 Package.prototype.load = function(name, runtime, callback) {
-	var exports = this.execute(name, null, runtime);
+	var exports = new Module(name);
 	runtime.addModule(name, exports);
 	// sys.modules
 	if (this.id === '/root/sys') {
@@ -489,7 +475,7 @@ function ObjectDependency(name, runtime) {
 	/**
 	 * 检测此id的模块是否存在，若存在，则返回true
 	 * @param tempContext 在此路径中寻找
-	 * @param path sys.path中当前在寻找的路径
+	 * @param path 相对于调用者，正在哪个路径中寻找
 	 */
 	function find(tempContext, path) {
 		var tempId = pathjoin(tempContext, partId);
@@ -497,10 +483,10 @@ function ObjectDependency(name, runtime) {
 		if (runtime.loader.getModule(tempId)) {
 			id = tempId;
 			context = tempContext;
-			if (path.indexOf('/') != -1 || parent.name == '__main__') {
-				prefix = '';
-			} else {
+			if (path == '') { // 在当前目录中找到的子模块
 				prefix = parent.name;
+			} else {
+				prefix = '';
 			}
 			return true;
 		}
@@ -523,7 +509,7 @@ function ObjectDependency(name, runtime) {
 
 		// 再找同级模块
 		findpath = dirname(findpath)
-		if (find(findpath, path)) {
+		if (find(findpath, pathjoin(path, '../'))) {
 			break;
 		}
 	}
@@ -730,7 +716,7 @@ LoaderRuntime.prototype.setMemberTo = function(host, member, value) {
 function Loader() {
 	this.useCache = true;
 	this.lib = {
-		'/root/sys': new Package('/root/sys', [], function() {})
+		'/root/sys': new Package('/root/sys')
 	};
 	this.fileLib = {};
 	this.prefixLib = {};
@@ -915,7 +901,7 @@ Loader.prototype.definePrefix = function(id) {
 	if (!id || typeof id != 'string') return;
 
 	if (id in this.lib || id in this.prefixLib) return;
-	this.prefixLib[id] = new Package(id, [], function(){});
+	this.prefixLib[id] = new Package(id);
 };
 
 /**
@@ -935,10 +921,9 @@ Loader.prototype.defineFile = function(id, src) {
 		this.definePrefixFor(id);
 	}
 
-	this.fileLib[id] = {
-		id: id,
-		file: src
-	};
+	var pkg = new Package(id);
+	pkg.file = src;
+	this.fileLib[id] = pkg;
 };
 
 /**
@@ -965,6 +950,8 @@ Loader.prototype.defineModule = function(constructor, id, dependencies, factory)
 
 	var pkg = new constructor(id, dependencies, factory);
 	this.lib[id] = pkg;
+
+	return pkg;
 };
 
 /**
@@ -1055,7 +1042,7 @@ Loader.prototype.use = function(dependencies, factory) {
 	var id = '__anonymous_' + this.anonymousModuleCount + '__';
 	this.anonymousModuleCount++;
 
-	this.defineModule(CommonJSPackage, id, dependencies, function(require, exports, module) {
+	var pkg = this.defineModule(CommonJSPackage, id, dependencies, function(require, exports, module) {
 		var args = [];
 		module.dependencies.forEach(function(dependency) {
 			dep = require(dependency);
@@ -1074,7 +1061,11 @@ Loader.prototype.use = function(dependencies, factory) {
 	});
 
 	var runtime = this.createRuntime(id);
-	runtime.loadModule(id, '__main__', function() {});
+	var name = '__main__';
+
+	pkg.load(name, runtime, function(deps) {
+		pkg.exports(name, deps, runtime);
+	});
 };
 
 object.Loader = Loader;

@@ -1,3 +1,9 @@
-object.use('xn/flashUploader', function(flashUploader) {
-	console.log(flashUploader)
+object.use('module1', function(module1) {
+	console.log(module1)
 });
+//object.define('test', 'module3', function(require) {
+	//console.log(require('module3'))
+//});
+
+//object.use('test', function() {
+//});
