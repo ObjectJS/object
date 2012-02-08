@@ -489,6 +489,8 @@ CommonJSDependency.prototype = new Dependency();
 CommonJSDependency.prototype.constructor = CommonJSDependency;
 
 CommonJSDependency.prototype.load = function(runtime, callback) {
+	// 无需检查runtime.modules是否已存在
+	// 此load仅仅确保依赖加载完毕，并不生成exports在runtime.modules
 	runtime.loadModule(this.id, this.runtimeName, callback);
 };
 
