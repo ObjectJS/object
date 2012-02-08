@@ -89,6 +89,28 @@ function cleanPath(path) {
 }
 
 /**
+ * 异步队列
+ * @class
+ */
+function Queue(arr, opt) {
+	this.source = arr;
+	this.index = -1;
+}
+
+Queue.prototype.start = function() {
+	this._next();
+};
+
+Queue.prototype._next = function() {
+	this.index++;
+	if (this.index == this.source.length) {
+		this.done();
+	} else {
+		this.next(this._next.bind(this));
+	}
+};
+
+/**
  * 模块
  * @class
  */
@@ -156,48 +178,29 @@ CommonJSPackage.prototype.getDependency = function(name, runtime) {
 };
 
 CommonJSPackage.prototype.load = function(name, runtime, callback) {
-	var currentUse = -1; 
-	var deps = [], dep;
+	var deps = [];
 	var pkg = this;
 
-	/**
-	 * 顺序执行pkg中的dependencies
-	 * @param pExports 上一个nextDep返回的模块实例
-	 */
-	function nextDep(pExports) {
+	var queue = new Queue(this.dependencies);
 
-		if (currentUse >= 0) {
-			// 上一个依赖的exports
-			dep.exports = pExports;
-			deps.push(dep);
-		}
-
-		currentUse++;
-
-		// 模块获取完毕，执行factory，将exports通过callback传回去。
-		// 已经处理到最后一个
-		if (currentUse == pkg.dependencies.length) {
-			doneDep();
-
-		} else {
-			dep = pkg.getDependency(pkg.dependencies[currentUse], runtime);
-			var depPkg = runtime.loader.getModule(dep.id);
-			//dep.load(runtime, nextDep);
-			if (depPkg.file) {
-				runtime.loader.loadScript(depPkg.file, nextDep);
-			} else {
-				nextDep();
-			}
-		}
-	}
-
-	function doneDep() {
+	queue.done = function() {
 		var exports = pkg.execute(name, deps, runtime);
 		runtime.addModule(name, exports);
 		if (callback) callback(exports);
-	}
+	};
 
-	nextDep();
+	queue.next = function(next) {
+		var dep = pkg.getDependency(pkg.dependencies[this.index], runtime);
+		var depPkg = runtime.loader.getModule(dep.id);
+		deps.push(dep);
+		if (depPkg.file) {
+			runtime.loader.loadScript(depPkg.file, next);
+		} else {
+			next();
+		}
+	};
+
+	queue.start();
 };
 
 /**
@@ -319,42 +322,28 @@ ObjectPackage.prototype.execute = function(name, deps, runtime) {
 };
 
 ObjectPackage.prototype.load = function(name, runtime, callback) {
-	var currentUse = -1; 
-	var deps = [], dep;
+	var deps = [];
 	var pkg = this;
 
-	/**
-	 * 顺序执行pkg中的dependencies
-	 * @param pExports 上一个nextDep返回的模块实例
-	 */
-	function nextDep(pExports) {
+	var queue = new Queue(this.dependencies);
 
-		if (currentUse >= 0) {
-			// 上一个依赖的exports
-			dep.exports = pExports;
-			deps.push(dep);
-		}
-
-		currentUse++;
-
-		// 模块获取完毕，执行factory，将exports通过callback传回去。
-		// 已经处理到最后一个
-		if (currentUse == pkg.dependencies.length) {
-			doneDep();
-
-		} else {
-			dep = pkg.getDependency(currentUse, runtime);
-			dep.load(runtime, nextDep);
-		}
-	}
-
-	function doneDep() {
+	queue.done = function() {
 		var exports = pkg.execute(name, deps, runtime);
 		runtime.addModule(name, exports);
 		if (callback) callback(exports);
-	}
+	};
 
-	nextDep();
+	queue.next = function(next) {
+		var dep = pkg.getDependency(this.index, runtime);
+		deps.push(dep);
+		dep.load(runtime, function(exports) {
+			dep.exports = exports;
+			next();
+		});
+	};
+
+	queue.start();
+
 };
 
 /**
@@ -461,7 +450,13 @@ function CommonJSDependency(name, runtime) {
 		});
 		this.id = pParts.join('/');
 	} else { // top level
-		this.id = pathjoin('/root', name2id(name));
+		['/temp', '/root'].some(function(m) {
+			var id = pathjoin(m, name2id(name));
+			if (runtime.loader.getModule(id)) {
+				this.id = id;
+				return true;
+			}
+		}, this);
 	}
 	this.runtimeName = this.id.slice(1);
 	this.module = runtime.loader.getModule(this.id);
@@ -560,45 +555,32 @@ ObjectDependency.prototype = new Dependency();
 ObjectDependency.prototype.constructor = ObjectDependency;
 
 ObjectDependency.prototype.load = function(runtime, callback) {
-
-	var parts = this.nameParts;
 	var context = this.context || '';
 	var prefix = this.prefix;
-	var currentPart = -1;
-	var pName;
-	var name = prefix;
+	var pName = prefix;
 
 	/**
 	 * 依次获取当前模块的每个部分
 	 * 如a.b.c，依次获取a、a.b、a.b.c
-	 * @param pExprorts 上一部分的模块实例，如果是初次调用，为空
 	 */
-	function nextPart(pExports) {
+	var queue = new Queue(this.nameParts);
 
-		var id;
-
-		currentPart++;
-
-		if (currentPart > 0) {
-			// 生成对象链
-			runtime.setMemberTo(pName, parts[currentPart - 1], pExports);
-		}
-
-		// 循环完毕
-		if (currentPart == parts.length) {
-			callback(runtime.modules[(prefix? prefix + '.' : '') + parts[0]]);
-
-		}
-		// load part
-		else {
-			id = pathjoin(context, parts.slice(0, currentPart + 1).join('/'));
+	queue.next = function(next) {
+		var id = pathjoin(context, this.source.slice(0, this.index + 1).join('/'));
+		var part = this.source[this.index];
+		var name = (pName? pName + '.' : '') + part;
+		runtime.loadModule(id, name, function(exports) {
+			runtime.setMemberTo(pName, part, exports);
 			pName = name;
-			name = (pName? pName + '.' : '') + parts[currentPart];
-			runtime.loadModule(id, name, nextPart);
-		};
-	}
+			next();
+		});
+	};
 
-	nextPart();
+	queue.done = function() {
+		callback(runtime.modules[(prefix? prefix + '.' : '') + this.source[0]]);
+	};
+
+	queue.start();
 };
 
 /**
