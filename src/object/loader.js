@@ -244,17 +244,17 @@ CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 		var exports;
 		dep.load(runtime, function(result) {
 			var depPkg = loader.getModule(dep.id);
-			if (!result) {
+			if (result) {
+				exports = depPkg.exports(name, result, runtime);
+			} else {
 				// 有依赖却没有获取到，说明是由于循环依赖
 				if (pkg.dependencies.indexOf(name) != -1) {
 					throw new CyclicDependencyError(runtime, depPkg);
 				} else {
 					// 出错
 					console.warn('Unknown Error.');
-					return;
 				}
 			}
-			exports = depPkg.exports(name, result, runtime);
 		});
 		return exports;
 	}
