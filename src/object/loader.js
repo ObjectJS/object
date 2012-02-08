@@ -168,67 +168,9 @@ CommonJSPackage.prototype = new Package();
 
 CommonJSPackage.prototype.constructor = CommonJSPackage;
 
-CommonJSPackage.prototype.getDependency = function(name, runtime) {
-	// object.define中，“.”作为分隔符的被认为是ObjectDependency，其他都是CommenJSDependency
-	if (name.indexOf('/') == -1 && name.indexOf('.') != -1) {
-		return new ObjectDependency(name, runtime);
-	} else {
-		return new CommonJSDependency(name, runtime);
-	}
-};
-
-CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
-	var loader = runtime.loader;
-	var pkg = this;
-	function require(name) {
-		var index = pkg.dependencies.indexOf(name);
-		if (index == -1) {
-			throw new ModuleRequiredError(name, pkg);
-		}
-		var dep = deps[index];
-		var exports;
-		dep.load(runtime, function(result) {
-			if (!result) {
-				// 有依赖却没有获取到，说明是由于循环依赖
-				if (pkg.dependencies.indexOf(name) != -1) {
-					throw new CyclicDependencyError(runtime, dep.module);
-				} else {
-					// 出错
-					console.warn('Unknown Error.');
-					return;
-				}
-			}
-			exports = dep.module.exports(name, result, runtime);
-		});
-		return exports;
-	}
-
-	require.async = function(dependencies, callback) {
-		dependencies = pkg.parseDependencies(dependencies);
-		var pkg = new CommonJSPackage(pkg.id, dependencies, function(require) {
-			var args = [];
-			dependencies.forEach(function(dep) {
-				args.push(require(dep));
-			});
-			callback.apply(null, args);
-		});
-		pkg.load(name, runtime);
-	};
-
-	return require;
-};
-
-CommonJSPackage.prototype.exports = function(name, deps, runtime) {
-	var exports = runtime.modules[name] || new Module(name);
-	var returnExports = this.factory.call(exports, this.createRequire(name, deps, runtime), exports, this);
-	if (returnExports) {
-		returnExports.__name__ = exports.__name__;
-		exports = returnExports;
-	}
-	runtime.addModule(name, exports);
-	return exports;
-};
-
+/**
+ * @overwrite
+ */
 CommonJSPackage.prototype.load = function(name, runtime, callback) {
 	var deps = [];
 	var pkg = this;
@@ -250,9 +192,86 @@ CommonJSPackage.prototype.load = function(name, runtime, callback) {
 
 /**
  * 出现循环依赖但并不立刻报错，而是当作此模块没有获取到，继续获取下一个
+ * @overwrite
  */
 CommonJSPackage.prototype.cyclicLoad = function(depName, runtime, next) {
 	next();
+};
+
+/**
+ * @overwrite
+ */
+CommonJSPackage.prototype.exports = function(name, deps, runtime) {
+	var exports = this.execute(name, deps, runtime);
+	runtime.addModule(name, exports);
+	return exports;
+};
+
+/**
+ * 执行factory，返回模块实例
+ */
+CommonJSPackage.prototype.execute = function(name, deps, runtime) {
+	var exports = runtime.modules[name] || new Module(name);
+	var returnExports = this.factory.call(exports, this.createRequire(name, deps, runtime), exports, this);
+	if (returnExports) {
+		returnExports.__name__ = exports.__name__;
+		exports = returnExports;
+	}
+	return exports;
+};
+
+CommonJSPackage.prototype.getDependency = function(name, runtime) {
+	// object.define中，“.”作为分隔符的被认为是ObjectDependency，其他都是CommenJSDependency
+	if (name.indexOf('/') == -1 && name.indexOf('.') != -1) {
+		return new ObjectDependency(name, runtime);
+	} else {
+		return new CommonJSDependency(name, runtime);
+	}
+};
+
+/**
+ * 生成require
+ */
+CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
+	var loader = runtime.loader;
+	var pkg = this;
+	function require(name) {
+		var index = pkg.dependencies.indexOf(name);
+		if (index == -1) {
+			throw new ModuleRequiredError(name, pkg);
+		}
+		var dep = deps[index];
+		var exports;
+		dep.load(runtime, function(result) {
+			var depPkg = loader.getModule(dep.id);
+			if (!result) {
+				// 有依赖却没有获取到，说明是由于循环依赖
+				if (pkg.dependencies.indexOf(name) != -1) {
+					throw new CyclicDependencyError(runtime, depPkg);
+				} else {
+					// 出错
+					console.warn('Unknown Error.');
+					return;
+				}
+			}
+			exports = depPkg.exports(name, result, runtime);
+		});
+		return exports;
+	}
+
+	require.async = function(dependencies, callback) {
+		dependencies = pkg.parseDependencies(dependencies);
+		var pkg = new CommonJSPackage(pkg.id, dependencies, function(require) {
+			var args = [];
+			dependencies.forEach(function(dep) {
+				args.push(require(dep));
+			});
+			callback.apply(null, args);
+		});
+		pkg.load(name, runtime);
+	};
+
+	return require;
 };
 
 /**
@@ -266,20 +285,9 @@ ObjectPackage.prototype = new Package();
 
 ObjectPackage.prototype.constructor = ObjectPackage;
 
-ObjectPackage.prototype.getDependency = function(index, runtime) {
-	var name = this.dependencies[index];
-	// object.add中，“/”作为分隔符的被认为是CommonJSDependency，其他都是ObjectDependency
-	if (name.indexOf('/') != -1) {
-		return new CommonJSDependency(name, runtime);
-	} else {
-		return new ObjectDependency(name, runtime);
-	}
-};
-
-ObjectPackage.prototype.exports = function(name, exports, runtime) {
-	return exports;
-};
-
+/**
+ * @overwrite
+ */
 ObjectPackage.prototype.load = function(name, runtime, callback) {
 	var deps = [];
 	var pkg = this;
@@ -287,37 +295,7 @@ ObjectPackage.prototype.load = function(name, runtime, callback) {
 	var queue = new Queue(this.dependencies);
 
 	queue.done = function() {
-		var exports = runtime.modules[name] || new Module(name);
-		var returnExports;
-		var args = [];
-		deps.forEach(function(dep) {
-			if (args.indexOf(dep.exports) == -1) {
-				args.push(dep.exports);
-			}
-		});
-		// 最后再放入exports，否则当错误的自己依赖自己时，会导致少传一个参数
-		args.unshift(exports);
-		if (pkg.factory) {
-			returnExports = pkg.factory.apply(exports, args);
-		}
-
-		// 当有returnExports时，之前建立的空模块（即exports变量）则没有用武之地了，给出警告。
-		if (returnExports) {
-			// 检测是否有子模块引用了本模块
-			if (exports.__empty_refs__) {
-				exports.__empty_refs__.forEach(function(ref) {
-					if (typeof console != 'undefined') {
-						console.warn(ref + '无法正确获得' + name + '模块的引用。因为该模块是通过return返回模块实例的。');
-					}
-				});
-			}
-
-			returnExports.__name__ = exports.__name__;
-			exports = returnExports;
-		} else {
-			delete exports.__empty_refs__;
-		}
-
+		var exports = this.execute(name, deps, runtime);
 		runtime.addModule(name, exports);
 		if (callback) callback(exports);
 	};
@@ -337,6 +315,7 @@ ObjectPackage.prototype.load = function(name, runtime, callback) {
 
 /**
  * 出现循环依赖时建立一个空的exports返回，待所有流程走完后会将此模块填充完整。
+ * @overwrite
  */
 ObjectPackage.prototype.cyclicLoad = function(depName, runtime, next) {
 	if (!(depName in runtime.modules)) {
@@ -354,6 +333,60 @@ ObjectPackage.prototype.cyclicLoad = function(depName, runtime, next) {
 };
 
 /**
+ * @overwrite
+ */
+ObjectPackage.prototype.exports = function(name, exports, runtime) {
+	return exports;
+};
+
+/**
+ * 执行factory，返回模块实例
+ */
+ObjectPackage.prototype.execute = function(name, exports, runtime) {
+	var exports = runtime.modules[name] || new Module(name);
+	var returnExports;
+	var args = [];
+	deps.forEach(function(dep) {
+		if (args.indexOf(dep.exports) == -1) {
+			args.push(dep.exports);
+		}
+	});
+	// 最后再放入exports，否则当错误的自己依赖自己时，会导致少传一个参数
+	args.unshift(exports);
+	if (pkg.factory) {
+		returnExports = pkg.factory.apply(exports, args);
+	}
+
+	// 当有returnExports时，之前建立的空模块（即exports变量）则没有用武之地了，给出警告。
+	if (returnExports) {
+		// 检测是否有子模块引用了本模块
+		if (exports.__empty_refs__) {
+			exports.__empty_refs__.forEach(function(ref) {
+				if (typeof console != 'undefined') {
+					console.warn(ref + '无法正确获得' + name + '模块的引用。因为该模块是通过return返回模块实例的。');
+				}
+			});
+		}
+
+		returnExports.__name__ = exports.__name__;
+		exports = returnExports;
+	} else {
+		delete exports.__empty_refs__;
+	}
+	return exports;
+};
+
+ObjectPackage.prototype.getDependency = function(index, runtime) {
+	var name = this.dependencies[index];
+	// object.add中，“/”作为分隔符的被认为是CommonJSDependency，其他都是ObjectDependency
+	if (name.indexOf('/') != -1) {
+		return new CommonJSDependency(name, runtime);
+	} else {
+		return new ObjectDependency(name, runtime);
+	}
+};
+
+/**
  * XX Package
  */
 function Package(id, dependencies, factory) {
@@ -363,10 +396,6 @@ function Package(id, dependencies, factory) {
 	this.factory = factory;
 	this.dependencies = this.parseDependencies(dependencies);
 }
-
-Package.prototype.exports = function(name, exports, runtime) {
-	return exports;
-};
 
 /**
  * 加载package，通过callback返回
@@ -389,6 +418,13 @@ Package.prototype.load = function(name, runtime, callback) {
  */
 Package.prototype.cyclicLoad = function(depName, runtime, next) {
 	throw new CyclicDependencyError(runtime);
+};
+
+/**
+ * 获取此package产生的模块的实例
+ */
+Package.prototype.exports = function(name, exports, runtime) {
+	return exports;
 };
 
 /**
@@ -445,7 +481,6 @@ function CommonJSDependency(name, runtime) {
 		}, this);
 	}
 	this.runtimeName = this.id.slice(1);
-	this.module = runtime.loader.getModule(this.id);
 	Dependency.call(this, name);
 };
 
@@ -532,8 +567,6 @@ function ObjectDependency(name, runtime) {
 	this.context = context;
 	// 运行名字的前缀
 	this.prefix = prefix;
-	// 模块
-	this.module = runtime.loader.getModule(this.id);
 };
 
 ObjectDependency.prototype = new Dependency();
