@@ -482,3 +482,45 @@ test('name/constructor/prototype as member of class', function() {
 	// name is controlled by browser, can not be set;
 	//equal(A.get('name'), 'A', 'name should be ok..');
 });
+
+
+test('new Class, parent is Array/String', function() {
+	var SubArray = new Class(Array, function() {
+		this.a = 1;
+		this.initialize = function(self) {
+			self.b = 1;
+		};
+		this.method = function(self) {
+			return 1;
+		};
+	});
+	var SubString = new Class(String, function() {
+		this.a = 1;
+		this.initialize = function(self) {
+			self.b = 1;
+		};
+		this.method = function(self) {
+			return 1;
+		};
+	});
+
+	var array = new SubArray();
+	equal(array.a, 1, 'property in SubArray is ok');
+	equal(array.b, 1, 'property in SubArray instance is ok');
+	array.push(1);
+	array.push(2);
+	equal(array.indexOf(2), 1, 'SubArray.indexOf is ok');
+	equal(array.length, 2, 'SubArray.length is ok');
+	equal(array.method(), 1, 'SubArray.method is ok');
+	var string = new SubString();
+	equal(string.a, 1, 'property in SubString is ok');
+	equal(string.b, 1, 'property in SubString instance is ok');
+	equal(string.method(), 1, 'SubString.method is ok');
+	notEqual(string.charAt, undefined, 'SubString.charAt is not undefined');
+	equal(string.charAt.call('1235', 1), 2, 'charAt is usable');
+	try {
+		// error in Firefox...
+		equal(string.length, 0, 'string.length is ok');
+	} catch (e) {
+	}
+});

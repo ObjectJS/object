@@ -37,8 +37,8 @@
 		'\'string\'' : 'string',
 		'Array' : Array,
 		'[1,2]' : [1,2],
-		'Date' : Date,
-		'date' : new Date(),
+		//'Date' : Date,
+		//'date' : new Date(),
 		'RegExp' : RegExp,
 		'regexp': /test/g,
 		'{a:1}' : {a:1},
@@ -94,13 +94,27 @@
 
 window.Loader = object.Loader;
 
+$UNIT_TEST_CONFIG.pageTestDir = '';
 window.isJsTestDriverRunning = typeof jstestdriver != 'undefined';
 if (isJsTestDriverRunning) {
-	console = console || {};
-	console.log = function() { jstestdriver.console.log.apply(jstestdriver.console, arguments); };
-	//console.debug = function() { jstestdriver.console.debug.apply(jstestdriver.console, arguments); };
-	//console.info = function() { jstestdriver.console.info.apply(jstestdriver.console, arguments); };
-	//console.warn = function() { jstestdriver.console.warn.apply(jstestdriver.console, arguments); };
-	//console.error = function() { jstestdriver.console.error.apply(jstestdriver.console, arguments); };
+	try {
+		console = console || {};
+		console.log = function() { jstestdriver.console.log.apply(jstestdriver.console, arguments); };
+		//console.debug = function() { jstestdriver.console.debug.apply(jstestdriver.console, arguments); };
+		//console.info = function() { jstestdriver.console.info.apply(jstestdriver.console, arguments); };
+		//console.warn = function() { jstestdriver.console.warn.apply(jstestdriver.console, arguments); };
+		//console.error = function() { jstestdriver.console.error.apply(jstestdriver.console, arguments); };
+	} catch (e) {}
 	$UNIT_TEST_CONFIG.needPath = true;
-}
+
+	try {
+		var loc = window['location'];
+		var pageUrl = loc.protocol + '//' + loc.host;
+		$UNIT_TEST_CONFIG.pageTestDir = pageUrl + '/test/test/unit/';
+	} catch (e){}
+};
+
+window.transTestDir = function transTestDir(dir) {
+	dir = dir || '';
+	return $UNIT_TEST_CONFIG.pageTestDir + ($UNIT_TEST_CONFIG.needPath ? dir : '');
+};

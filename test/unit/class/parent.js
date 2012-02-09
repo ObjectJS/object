@@ -1,6 +1,6 @@
 module('parent');
 
-test('common useage of parent method', function() {
+test('common usage of parent method', function() {
 	expect(2);
 	var A = new Class(function() {
 		this.a = function(self) {
@@ -17,27 +17,8 @@ test('common useage of parent method', function() {
 	b.a();
 });
 
-test('caller of parent should be self, not this', function() {
-	return;
-	var A = new Class(function() {
-		this.a = function(self) {
-		}
-	});
-	var B = new Class(A, function() {
-		this.a = function(self) {
-			self.parent();
-		}
-	});
-	var b = new B();
-	try {
-		b.a();
-		ok(true, 'caller of parent should be self, not this');
-	} catch (e) {
-		ok(false, 'caller of parent should be self, not this : ' + e);
-	}
-});
-
 test('has no parent method', function(){
+	// parent不存在此方法的情况
 	var A = new Class(function() {});
 	var B = new Class(A, function() {
 		this.a = function(self) {
@@ -52,6 +33,7 @@ test('has no parent method', function(){
 		ok(true, 'has no parent method, should be considerd : ' + e);
 	}
 
+	// parent不是function的情况
 	var A = new Class(function() {
 		this.a = null;
 	});
@@ -68,6 +50,7 @@ test('has no parent method', function(){
 		ok(true, 'parent is null, should be considerd : ' + e);
 	} 
 
+	// parent不是function的情况
 	var A = new Class(function() {
 		this.a = 1;//true/false/''/other value
 	});
@@ -169,6 +152,7 @@ test('parent method is instancemethod/staticmethod/classmethod/property - 1', fu
 		ok(true, 'property in parent can not be called by sub.parent : ' + e);
 	}
 });
+
 // sub method is instancemethod/staticmethod/classmethod/property
 test('parent method is instancemethod/staticmethod/classmethod/property - 2', function() {
 	var A = new Class(function() {
@@ -303,4 +287,30 @@ test('order of parent', function() {
 	});
 	var c = new C();
 	c.a();
+});
+
+// parent的调用顺序为先找base，再顺序找mixins
+test('parent with mixin', function() {
+	var A = new Class({
+		m: function(self) {
+			return 'A'
+		}
+	});
+
+	var B = new Class({
+		m: function(self) {
+			return 'B'
+		}
+	});
+
+	var C = new Class({
+		__mixins__: [A, B],
+		m: function(self) {
+			var result = this.parent(self);
+			equal(result, 'A', 'called the first method in mixins.')
+		}
+	});
+
+	var c = new C();
+	c.m();
 });

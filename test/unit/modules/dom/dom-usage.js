@@ -200,17 +200,27 @@ test('dom.eval_inner_JS', function() {
 		dom.eval_inner_JS(div3);
 		equal(window.a, 3, 'window.a = 3, assigned by script string, after dom.eval_inner_JS(div3)');
 
-		var div4 = document.createElement('div');
-		div4.innerHTML = '<div class="tpl-blank2">&nbsp;</div><script>document.write(\'<div id="by-write" class="by-write"></div>\');</sc' + 'ript>';
-		document.body.appendChild(div4);
-
-		try {
-			dom.eval_inner_JS(div4);
-			equal(document.getElementById('by-write').className, 'by-write', 'an div tag is written to document by script string document.write(<div id=by-write class=by-write></div>)');
-		} catch (e) {
-			ok(false, 'dom.eval_inner_JS(div4), with document.write, should not raise error ' + e);
+		var div = document.createElement('div');
+		div.innerHTML = '<script type="text/javascript">window.__testEval += 1;</script>';
+		document.body.appendChild(div);
+		if (window.__testEval != 0) {
+			var _needEval = false;
+		} else {
+			var _needEval = true;
 		}
-		document.body.removeChild(div4);
+		if (_needEval) {
+			var div4 = document.createElement('div');
+			div4.innerHTML = '<div class="tpl-blank2">&nbsp;</div><script>document.write(\'<div id="by-write" class="by-write"></div>\');</sc' + 'ript>';
+			document.body.appendChild(div4);
+
+			try {
+				dom.eval_inner_JS(div4);
+				equal(document.getElementById('by-write').className, 'by-write', 'an div tag is written to document by script string document.write(<div id=by-write class=by-write></div>)');
+			} catch (e) {
+				ok(false, 'dom.eval_inner_JS(div4), with document.write, should not raise error ' + e);
+			}
+			document.body.removeChild(div4);
+		}
 
 		//eval_inner_JS can handle string
 		dom.eval_inner_JS('<script>window.value = 2;</sc' + 'ript>');
@@ -260,11 +270,13 @@ test('dom.getDom', function() {
 		} catch (e) {
 			ok(true, 'fragment.getElementById is null for DocumentFragment ' + e);
 		}
-		try {
-			fragment.querySelector('test1');
-			ok(true, 'fragment.querySelector is ok');
-		} catch (e) {
-			ok(false, 'fragment.querySelector causes error : ' + e);
+		if (fragment.querySelector) {
+			try {
+				fragment.querySelector('test1');
+				ok(true, 'fragment.querySelector is ok');
+			} catch (e) {
+				ok(false, 'fragment.querySelector causes error : ' + e);
+			}
 		}
 	});
 });
@@ -535,6 +547,87 @@ test('only dom.Element', function() {
 	});
 });
 
+var ie = false;
+object.use('ua', function(exports, ua) {
+	ie = ua.ua.ie;
+});
+function fireMouseEventOnElement(element) {
+	if (ie) {
+		try {
+			element.click();
+		} catch (e){
+			ok(false, 'element.click() throw error in IE : ' + e);
+		}
+	} else {
+		var evt = document.createEvent("MouseEvents");
+		evt.initMouseEvent("click", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+		element.dispatchEvent(evt);	
+	}
+}
+
+test('events in dom.Element : delegate', function() {
+	expect(4);
+	object.use('dom, ua', function(exports, dom, ua) {
+		// one parent
+		var element = dom.Element.fromString('<div id="outerDIV"><span id="outerSPAN"><span id="innerSPAN"></span></span></div>');
+		document.body.appendChild(element);
+		element.delegate('span#outerSPAN', 'click', function() {
+			equal(this.tagName, 'SPAN', 'should delegate by span elements');
+		});
+		var innerSPAN = dom.wrap(element.firstChild.firstChild);	//innerSPAN
+		fireMouseEventOnElement(innerSPAN);
+		document.body.removeChild(element);
+
+		// two parents
+		var element = dom.Element.fromString('<div id="outerDIV"><span id="outerSPAN"><span id="innerSPAN"></span></span></div>');
+		document.body.appendChild(element);
+		element.delegate('span', 'click', function() {
+			equal(this.tagName, 'SPAN', 'should delegate by span elements');
+		});
+		var innerSPAN = dom.wrap(element.firstChild.firstChild);	//innerSPAN
+		fireMouseEventOnElement(innerSPAN);
+		document.body.removeChild(element);
+
+		// outer parent
+		var element = dom.Element.fromString('<div id="outerDIV"><span id="outerSPAN"><span id="innerSPAN"></span></span></div>');
+		document.body.appendChild(element);
+		element.delegate('div', 'click', function() {
+			equal(this.tagName, 'DIV', 'should delegate by div');
+		});
+		var innerSPAN = dom.wrap(element.firstChild);	//outerSPAN
+		fireMouseEventOnElement(innerSPAN);
+		document.body.removeChild(element);
+	});
+});
+
+
+test('events in dom.Element : undelegate', function() {
+	expect(1);
+	object.use('dom, ua', function(exports, dom, ua) {
+		// add delegate for div#outerDIV
+		var element = dom.Element.fromString('<div id="outerDIV"><span id="outerSPAN"><span id="innerSPAN"></span></span></div>');
+		// add node to DOM
+		document.body.appendChild(element);
+		var fn;
+		element.delegate('span#outerSPAN', 'click', fn = function() {
+			equal(this.tagName, 'SPAN', 'should delegate by span elements');
+		});
+		var innerSPAN = dom.wrap(element.firstChild.firstChild);	//innerSPAN
+		// fireEvent
+		fireMouseEventOnElement(innerSPAN);
+		// undelegate
+		element.undelegate('span#outerSPAN', 'click', fn);
+		fireMouseEventOnElement(innerSPAN);
+
+		// re delegate
+		element.delegate('span#outerSPAN', 'click', fn);
+		element.undelegate('span#outerSPAN', 'click', fn);
+		fireMouseEventOnElement(innerSPAN);
+		// remove from DOM
+		document.body.removeChild(element);
+	});
+});
+
 //ImageElement
 test('dom.ImageElement', function() {
 	object.use('dom', function(exports, dom) {
@@ -570,8 +663,10 @@ test('dom.FormElement', function() {
 		input2.type = 'radio';
 		input2.name = 'test-form2';
 		input2.value = 'value2';
-		input2.checked = true;
 		form.appendChild(input2);
+		// set checked after appendChild, for IE6
+		// http://www.mularien.com/blog/2008/08/06/stupid-ie-6-bug-182478-check-boxes-added-through-javascript-arent-checked/
+		input2.checked = true;
 		equal(form.toQueryString(), 'test-form=value&test-form2=value2', 'got test-form=value&test-form2=value2');
 		form.removeChild(input);
 		form.removeChild(input2);
@@ -593,10 +688,11 @@ test('dom.FormElement', function() {
 		var newOpt = document.createElement('option');
 		newOpt.value = "2";
 		newOpt.text = "2";
-		newOpt.selected = true;
 		select.options.add(newOpt);
 
 		form.appendChild(select);
+		// for IE6
+		newOpt.selected = true;
 		equal(form.toQueryString(), 'test-name=test-value&test-select=2', 'got test-name=test-value&test-select=2');
 		form.removeChild(textarea);
 		form.removeChild(select);
@@ -618,18 +714,123 @@ test('dom.FormElement', function() {
 		equal(form.toQueryString(), '', 'disabled input element is ignored');
 		form.removeChild(disabledInput);
 
-		// checkValidity, form must be appended to document.body
-		document.body.appendChild(form);
 		ok(form.checkValidity(), 'checkValidity is ok when no element in form');
-		var requiredInput = document.createElement('input');
+		var requiredInput = dom.wrap(document.createElement('input'));
 		requiredInput.type = 'text';
 		requiredInput.name = 'name';
-		requiredInput.required = true;
+		requiredInput.set('required', true);
 		requiredInput.value = '';
 		form.appendChild(requiredInput);
+
+		// checkValidity, form must be appended to document.body
+		document.body.appendChild(form);
 		equal(form.checkValidity(), false, 'value of required input is empty, checkValidity must be false');
+		ok(requiredInput.get('validationMessage').length != 0, 'validation message appears');
 		requiredInput.value = 'value';
 		equal(form.checkValidity(), true, 'value of required input is not empty now, checkValidity should be true');
+		equal(requiredInput.get('validationMessage'), '', 'validation message is empty');
+		form.removeChild(requiredInput);
+		document.body.removeChild(form);
+		
+		var urlInput = dom.wrap(document.createElement('input'));
+		urlInput.type = 'text';
+		urlInput.name = 'urlInput';
+		urlInput.set('type', 'url');
+		urlInput.value = 'not-url';
+		form.appendChild(urlInput);
+
+		document.body.appendChild(form);
+		equal(form.checkValidity(), false, 'value of url input is not-url, checkValidity must be false');
+		ok(urlInput.get('validationMessage').length != 0, 'validation message appears');
+		urlInput.value = 'http://www.renren.com';
+		equal(form.checkValidity(), true, 'value of url input is http://www.renren.com now, checkValidity should be true');
+		equal(urlInput.get('validationMessage'), '', 'validation message is empty');
+		form.removeChild(urlInput);
+		document.body.removeChild(form);
+
+		var emailInput = dom.wrap(document.createElement('input'));
+		emailInput.type = 'text';
+		emailInput.name = 'emailInput';
+		emailInput.set('type', 'email');
+		emailInput.value = 'not-email';
+		form.appendChild(emailInput);
+
+		document.body.appendChild(form);
+		equal(form.checkValidity(), false, 'value of email input is not-email, checkValidity must be false');
+		ok(emailInput.get('validationMessage').length != 0, 'validation message appears');
+		emailInput.value = 'abc@renren-inc.com';
+		equal(form.checkValidity(), true, 'value of email input is abc@renren-inc.com now, checkValidity should be true');
+		equal(emailInput.get('validationMessage'), '', 'validation message is empty');
+		form.removeChild(emailInput);
+		document.body.removeChild(form);
+
+		var telInput = dom.wrap(document.createElement('input'));
+		telInput.type = 'text';
+		telInput.name = 'telInput';
+		telInput.set('type', 'tel');
+		telInput.value = 'not-tel';
+		form.appendChild(telInput);
+
+		document.body.appendChild(form);
+
+		// 电话号码的校验只是判断了\r\n，标准浏览器貌似也没判断...
+		equal(form.checkValidity(), true, 'value of tel input is not-tel, checkValidity must be false');
+		equal(telInput.get('validationMessage'), '', 'validation message is empty');
+		telInput.value = '010-15424515';
+		equal(form.checkValidity(), true, 'value of tel input is 010-15424515 now, checkValidity should be true');
+		equal(telInput.get('validationMessage'), '', 'validation message is empty');
+		form.removeChild(telInput);
+		document.body.removeChild(form);
+
+		var patternInput = dom.wrap(document.createElement('input'));
+		patternInput.type = 'text';
+		patternInput.name = 'patternInput';
+		patternInput.set('pattern', 'matched');
+		patternInput.value = 'not-matched';
+		form.appendChild(patternInput);
+
+		document.body.appendChild(form);
+		equal(form.checkValidity(), false, 'value of pattern input is not matched, checkValidity must be false');
+		ok(patternInput.get('validationMessage').length != 0, 'validation message appears');
+		patternInput.value = 'matched';
+		equal(form.checkValidity(), true, 'value of pattern input is matched now, checkValidity should be true');
+		equal(patternInput.get('validationMessage'), '', 'validation message is empty');
+		form.removeChild(patternInput);
+		document.body.removeChild(form);
+
+		// 很多新版浏览器现在都并没有实现too long的判断....
+		/*
+		var tooLongInput = dom.wrap(document.createElement('input'));
+		tooLongInput.type = 'text';
+		tooLongInput.name = 'tooLongInput';
+		tooLongInput.set('maxlength', 2);
+		tooLongInput.value = '123421132132';
+		form.appendChild(tooLongInput);
+
+		document.body.appendChild(form);
+		equal(form.checkValidity(), false, 'value of too long input is too long(123421132132), checkValidity must be false');
+		ok(tooLongInput.get('validationMessage').length != 0, 'validation message appears');
+		tooLongInput.value = 'ex';
+		equal(form.checkValidity(), true, 'value of too long input is not too long(ex) now, checkValidity should be true');
+		equal(tooLongInput.get('validationMessage'), '', 'validation message is empty');
+		form.removeChild(tooLongInput);
+		document.body.removeChild(form);
+		*/
+
+		var customErrorInput = dom.wrap(document.createElement('input'));
+		customErrorInput.type = 'text';
+		customErrorInput.name = 'customErrorInput';
+		customErrorInput.value = '1';
+		customErrorInput.setCustomValidity('customError');
+		form.appendChild(customErrorInput);
+
+		document.body.appendChild(form);
+		equal(form.checkValidity(), false, 'customErrorInput.setCustomValidity(customError), checkValidity must be false');
+		ok(customErrorInput.get('validationMessage').length != 0, 'validation message appears');
+		customErrorInput.setCustomValidity('');
+		equal(form.checkValidity(), true, 'customErrorInput.setCustomValidity(), checkValidity should be true');
+		equal(customErrorInput.get('validationMessage'), '', 'validation message is empty');
+		form.removeChild(customErrorInput);
 		document.body.removeChild(form);
 	});
 });
@@ -663,9 +864,10 @@ test('dom.FormItemElement - selectionStart/selectionEnd', function() {
 		try {
 			formItem.select();
 			equal(formItem.get('selectionStart'), 0, 'selectionStart is 0 after formItem.select()');
+			formItem.select();
 			equal(formItem.get('selectionEnd'), 4, 'selectionEnd is 4 after formItem.select()');
 		} catch (e) {
-			ok(false, 'formItem.get(selectionStart) after formItem.select(), should not raise error : ' + e);
+			ok(false, 'formItem.get(selectionStart) after formItem.select(), should not raise error : ' + e.message);
 		}
 		formItem.focusToPosition(2);
 		window.scrollTo(0, 0);
@@ -698,8 +900,8 @@ test('dom.FormItemElement', function() {
 		newOpt = document.createElement('option');
 		newOpt.value = "2";
 		newOpt.text = "2";
-		newOpt.selected = true;
 		selectItem.options.add(newOpt);
+		newOpt.selected = true;
 		
 		equal(selectItem.getSelected().length, 1, 'getSelected in selectItem is ok');
 		equal(selectItem.value, '2', 'selectItem.value = 2, ok');

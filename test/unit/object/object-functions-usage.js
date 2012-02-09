@@ -34,11 +34,12 @@ test('bind', function() {
 });
 
 test('add and use, basic', function() {
+	object.remove('1');
 	object.add('1', function(exports){
 		//equal(exports, this, 'exports is equals to this, in module');
 		this.a = 1;
 	});
-	ok(object._loader.lib['1'] != null, 'module is added');
+	//ok(object._loader.lib['1'] != null, 'module is added');
 	object.use('1', function(exports, a) {
 		//equal(exports, this, 'exports is equals to this, in module');
 		equal(a.a, 1, 'module add and use successfully');
@@ -76,7 +77,7 @@ test('add and use, with seperator', function() {
 		exports.value = 1;
 	});
 	object.use('test.a.b.c.d, sys', function(exports, test, sys) {
-		equal(test.a.b.c, 1, 'c set in test.a.b is overwrited by module test.a.b.c.d');
+		notEqual(test.a.b.c, 1, 'c set in test.a.b is overwrited by module test.a.b.c.d');
 		equal(test.a.b.value, 1, 'test.a.b.value is not overwrited');
 		equal(test.a.b.c.d.value, 2, 'test.a.b.c.d.value is ok');
 	});

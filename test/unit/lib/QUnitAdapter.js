@@ -13,94 +13,248 @@ http://googletesting.blogspot.com/2007/03/javascript-simulating-time-in-jsunit.h
 The qunit #main DOM element is not included. If you need to do any DOM manipulation
 you need to set it up and tear it down in each test.
 
+# MODIFY : 
+	2011-12-27  - add stop/start support by wangjeaf(zhifu.wang@renren-inc.com)
 */
-(function() {
+//(function() {
 
-	window.equiv = QUnit.equiv;
+	if (typeof QUnit != 'undefined') {
+		window.equiv = QUnit.equiv;
+	}
 
     var QUnitTestCase;
+	var AsyncQUnitTestCase;
 
-    window.module = function(name, lifecycle) {
+    window.module = function module(name, lifecycle) {
         QUnitTestCase = TestCase(name);
+		AsyncQUnitTestCase = AsyncTestCase(name + '_async');
         QUnitTestCase.prototype.lifecycle = lifecycle || {};
+        AsyncQUnitTestCase.prototype.lifecycle = lifecycle || {};
     };
-    
-    window.test = function(name, expected, test) {
 
+	function translateSrc(src) {
+		src = removeComments(src);
+		src = src.replace(/\n/g,'').replace(/\t/g, ' ')
+			.replace(/stop\(\);/g,'')				// remove stop();
+			.replace(/function\s*\(\) \{/,'')		// replace the first function() {
+			.replace(/function\s*\(/g, 'function(');// replace function   ()  to function()
+		src = src.slice(0, -1);						// remove the last }
+
+		// convert from callback function to jsTestDriver callback
+		// stop(); setTimeout(function(a,b) {start();ok(true, 'ok')}, 10);
+		//  --->
+		// var callback1 = callbacks.add(function(a,b) {ok(true, 'ok')}; setTimeout(function() {callback1(a,b);}, 10);
+		var callbackCounter = 0;
+		var startIndex = src.indexOf('start();');
+		while( startIndex != -1) {
+			var length = src.length;
+			var subSrc = src.substring(0, startIndex)
+			var funcIndex = endIndex = subSrc.lastIndexOf('function(');
+			var findNextEnd = endIndex;
+			var args = '';
+			var startRecord = false;
+			// find next end brance, args is between the start and end
+			while(findNextEnd < length) {
+				var current = src.charAt(findNextEnd);
+				if (current == '(') {
+					startRecord = true;
+				} else if (current == ')') {
+					break;
+				} else {
+					if (startRecord) {
+						args += current;
+					}
+				}
+				findNextEnd++;
+			}
+			var counter = 0;
+			var added = false;
+			// find the end of function
+			while(endIndex < length) {
+				if (src.charAt(endIndex) == '{') {
+					added = true;
+					counter ++;	
+				} else if (src.charAt(endIndex) == '}') {
+					counter --;
+				}
+				if (counter == 0 && added) {
+					break;
+				}
+				endIndex ++;
+			}
+			// replace function with callback
+			newSrc = '; var callback' + callbackCounter + ' = callbacks.add(' + src.substring(funcIndex, startIndex) + src.substring(startIndex + 'start();'.length, endIndex + 1) + ');';
+			newSrc += src.substring(0, funcIndex) + ' function (' + args + ') {';
+			newSrc += 'callback' + callbackCounter + '(' + args + ');';
+			newSrc += src.substring(endIndex, length);
+			src = newSrc;
+			callbackCounter ++;
+			startIndex = src.indexOf('start();');
+		}
+
+		// add Clock.tick() at the end of setTimeout
+		// setTimeout(function(){}, 10); ---> setTimeout(function(){}, 10); Clock.tick(11);
+		var matched = src.match(/setTimeout/g);
+		if (matched) {
+			var startIndex = 0;
+			var timeoutCounter = matched.length;
+			var length = src.length;
+			for(var i=0; i<timeoutCounter; i++) {
+				var currentMatch = matched[i];
+				var part = src.substring(startIndex);
+				var endIndex = timeoutIndex = startIndex + part.indexOf('setTimeout');
+				var counter = 1;
+				endIndex += 'setTimeout'.length + 1;
+				startIndex = endIndex;
+				// find the end of setTimeout
+				while(endIndex < length) {
+					if (src.charAt(endIndex) == '(') {
+						counter ++;
+					} else if (src.charAt(endIndex) == ')') {
+						counter --;
+					}
+					if (counter == 0) {
+						break;
+					}
+					endIndex++;
+				}
+				// get timeout
+				var findTimeoutIndex = endIndex - 1;
+				var timeout = '';
+				while(findTimeoutIndex > 0) {
+					var currentChar = src.charAt(findTimeoutIndex);
+					if (currentChar == ',') {
+						break;
+					}
+					timeout = currentChar + timeout;
+					findTimeoutIndex --;	
+				}
+				timeout = parseInt(timeout) + 1;
+			}
+			// add Clock.tick(timeout)
+			src = src.substring(0, endIndex + 1) + ';Clock.tick(' + timeout*2 + ');' + src.substring(endIndex + 1);
+		}
+		return src;
+	}
+
+	function removeComments(code) {
+		return code
+			.replace(/(?:^|\n|\r)\s*\/\*[\s\S]*?\*\/\s*(?:\r|\n|$)/g, '\n')
+			.replace(/(?:^|\n|\r)\s*\/\/.*(?:\r|\n|$)/g, '\n');
+	}
+	
+	// add a test to AsyncTestCase
+	function addToAsyncTestCase(name, expected, src) {
+		AsyncQUnitTestCase.prototype[name] = function(queue) {
+			var This = this;
+			if(expected.constructor === Number) {
+				expectAsserts(expected);        
+			}
+			// setup
+			queue.call('setup', function() {
+				if(This.lifecycle.setup) {
+					This.lifecycle.setup();
+				}
+			});
+			
+			// add to queue, callbacks is used for async
+			queue.call('do async test', new Function("callbacks", translateSrc(src)));
+			console.log(translateSrc(src));
+
+			// teardown
+			queue.call('teardown', function() {
+				if(This.lifecycle.teardown) {
+					This.lifecycle.teardown();
+				}
+			});
+		}
+	}
+	
+    window.test = function test(name, expected, func, async) {
 		// generate test name
 		name = ('test ' + name).replace(/^\s+|\s$/g, '').replace(/\s+\w/g, function(e) {
 			return e.replace(/\s+/g, '').toUpperCase();
 		});
 
-		// generate a test according to rule of jsTestDriver
-        QUnitTestCase.prototype[name] = function() {
-			if(this.lifecycle.setup) {
-				this.lifecycle.setup();
-			}
-			if(expected.constructor === Number) {
-				expectAsserts(expected);        
-			} else {
-				test = expected;
-			}
-			test.call(this.lifecycle);
-			if(this.lifecycle.teardown) {
-				this.lifecycle.teardown();
-			}
-		};
+		if(expected.constructor != Number) {
+			func = expected;
+		}
+		var src = func.toString();
+		if (/(start|stop)\s*\(\s*\)/.test(src)) {
+			// if contains start/stop, add to AsyncTestCase
+			addToAsyncTestCase(name, expected, src);
+		} else {
+			// generate a test according to rule of jsTestDriver
+			QUnitTestCase.prototype[name] = function() {
+				if(this.lifecycle.setup) {
+					this.lifecycle.setup();
+				}
+				if(expected.constructor === Number) {
+					expectAsserts(expected);        
+				} else {
+					func = expected;
+				}
+				func.call(this.lifecycle);
+				if(this.lifecycle.teardown) {
+					this.lifecycle.teardown();
+				}
+			};
+		}
     };
 
-	// equals to test temporary
-	window.asyncTest = window.test;
+	window.asyncTest = function asyncTest(name, expect, func) {
+		window.test(name, expect, func, true);
+	};
     
-    window.expect = function(count) {
+    window.expect = function expect(count) {
         expectAsserts(count);
     };
     
-    window.ok = function(actual, msg) {
+    window.ok = function ok(actual, msg) {
         assertTrue(msg ? msg : '', !!actual);
     };
     
-	window.equal = function(a, b, msg) {
+	window.equal = function equal(a, b, msg) {
 		assertEquals(msg ? msg : '', b, a);
 	}
 
-	window.notEqual = function(a, b, msg) {
+	window.notEqual = function notEqual(a, b, msg) {
 		assertNotEquals(msg ? msg : '', b, a);
 	}
 
-	window.deepEqual = function(a, b, msg) {
+	window.deepEqual = function deepEqual(a, b, msg) {
 		assertSame(msg ? msg : '', b, a);
 	};
 
-	window.notDeepEqual = function(a, b, msg) {
+	window.notDeepEqual = function notDeepEqual(a, b, msg) {
 		assertNotSame(msg ? msg : '', b, a);
 	};
 
-    window.equals = function(a, b, msg) {
+    window.equals = function equals(a, b, msg) {
         assertEquals(msg ? msg : '', b, a);
     };
     
-	window.start = function() {
+	window.start = function start() {
 		fail('start is not supported, should use AsyncTestCase instead');
 	}
 
-    window.stop = function() {
+    window.stop = function stop() {
 		fail('stop is not supported, should use AsyncTestCase instead');
 	};
     
-    window.same = function(a, b, msg) {
+    window.same = function same(a, b, msg) {
         assertTrue(msg ? msg : '', window.equiv(b, a));
     };
     
-    window.reset = function() {
+    window.reset = function reset() {
         fail('reset method is not available when using JS Test Driver');
     };
 
-    window.isLocal = function() {
+    window.isLocal = function isLocal() {
         return false;
     };
     
-	window.raises = function(stmt, msg) {
+	window.raises = function raises(stmt, msg) {
 		var flag = false;
 		try {
 			stmt();
@@ -113,8 +267,7 @@ you need to set it up and tear it down in each test.
     window.QUnit = {
         equiv: window.equiv,
         ok: window.ok,
-		reset : function(){}
+		reset : function reset(){}
     };
 
-})();
-
+//});

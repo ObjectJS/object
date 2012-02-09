@@ -3,7 +3,8 @@ var Loader = object.Loader;
 // surround with closure
 (function() {
 function emptyCallback() {};
-var emptyJS = ($UNIT_TEST_CONFIG.needPath ? 'loader/': '') + 'empty.js';
+var path = transTestDir('loader/');
+var emptyJS = path + 'empty.js';
 var head = document.getElementsByTagName('head')[0];
 // the only loader instance
 var loader = new Loader();
@@ -112,6 +113,10 @@ test('removeScript', function() {
 	Loader.removeScript(emptyJS);
 	Loader.loadScript(emptyJS, function() {}, true);
 	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, 'cache is true, so will add to _urlNodeMap');
+	// if jsTestDriver is running, emptyJS contains url, so do not need to add pageDir
+	if (isJsTestDriverRunning) {
+		pageDir = '';
+	}
 	notEqual(Loader.get('_urlNodeMap')[pageDir + emptyJS], undefined, pageDir + emptyJS + ' is cached in _urlNodeMap');
 	Loader.removeScript('_' + emptyJS);
 	notEqual(Loader.get('_urlNodeMap')[pageDir + emptyJS], undefined, 'remove failed, but should not raise error');
@@ -126,6 +131,7 @@ test('add-basic', function() {
 		try {
 			loader.add(edges[prop], ['a']);
 			ok(true, 'loader.add(' + prop + ', [\'a\']) should be ok');
+			loader.remove(edges[prop]);
 		} catch(e) {
 			ok(false, 'loader.add(' + prop + ', [\'a\']) should be ok : ' + e);
 		}
@@ -144,12 +150,23 @@ test('add-usage', function() {
 
 	loader.add('d.dd', 'a,b,c', function() {});
 	equal(Object.keys(loader.lib).length, 5, 'd.dd are added to loader.lib');
-	equal(loader.lib['d.dd'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
+	equal(loader.lib['d/dd'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
 
 	loader.add('error1', 'a,b');
-	equal(loader.lib['error1'], undefined, 'add module without context, should not be added');
+	ok(loader.lib['error1'], 'add module without context, should be added');
 	loader.add('error2', 'a', 'a');
-	equal(loader.lib['error2'], undefined, 'add module with not-function context, should not be added');
+	ok(loader.lib['error2'], 'add module with not-function context, should be added');
+});
+
+module('loader-basic-remove');
+test('remove-usage', function() {
+	loader.add('a', function() {});
+	loader.add('a/b', function() {});
+	loader.remove('a');
+	ok(!('a' in loader.lib), 'remove ok.');
+	ok('a/b' in loader.lib, 'sub not removed, ok');
+	loader.remove('a', true);
+	ok(!('a/b' in loader.lib), 'sub removed, ok');
 });
 
 module("loader-basic-use");
@@ -181,7 +198,7 @@ test('use-usage', function() {
 	loader.add('b', function(exports) {
 		exports.b = 1;
 	});
-	loader.use('a,b', function(a, b) {
+	loader.use('a,b', function(exports, a, b) {
 		equal(a.a, 1, 'module a used successfully');
 		equal(b.b, 1, 'module b used successfully');
 	});
@@ -239,47 +256,8 @@ test('loadScript basic test', function() {
 });
 
 // if is executed by jsTestDriver
-if (isJsTestDriverRunning) {
-	// jsTestDriver testcases start
-	var AsynchronousTest_loadScriptWithUrl = AsyncTestCase('loadScriptBasicTest');
-
-	AsynchronousTest_loadScriptWithUrl.prototype.tearDown = function() {
-		var scripts = Sizzle('script');
-		for (var i = 0; i < scripts.length; i++) {
-			if (scripts[i].callbacks) {
-				head.removeChild(scripts[i]);
-			}
-		}	
-	}
-
-	AsynchronousTest_loadScriptWithUrl.prototype.testLoadScriptWithUrl = function(queue) {
-		var counter = 0;
-		queue.call('Step 1: loadScript.', function(callbacks) {
-			var onScriptLoaded = callbacks.add(function() {
-				counter = 1;
-			});
-			Loader.loadScript(emptyJS, function() {
-				onScriptLoaded();
-			});
-		});
-
-	  	queue.call('Step 2: assert counter', function() {
-			assertEquals('callback is called, script is loaded', 1, counter);
-	  	});
-	};
-	// jsTestDriver testcases end 
-} else {
 // normal qunit testcases
 test('loadScript with url', function() {
-	// null/''
-	// Loader.loadScript('',emptyCallback); will case error;
-	//ok(false, 'can not loadScript with null url, which will cause empty script tag');
-	//ok(false, 'can not loadScript with empty url, which will cause empty script tag');
-	//ok(false, 'can not loadScript with an non-javascript url');
-	//ok(false, 'can not loadScript with html/jsp/asp...');
-	//raises(function() {
-	//	Loader.loadScript('not-exists-url', emptyCallback);
-	//}, 'can not loadScript with not exists url');
 	var oldOnError = window.onerror;
 	window.onerror = function() {
 		ok(true, 'not-exists-url.js is not exist');
@@ -287,26 +265,20 @@ test('loadScript with url', function() {
 		return true;
 	};
 	Loader.loadScript('not-exists-url.js', emptyCallback);
-	//equal(Sizzle('script[src=not-exists-url.js]').length, 0, 'not exists url, script tag should be deleted');
 	stop();
-	// is js, and exists
 	Loader.loadScript(emptyJS, function() {
 		start();
 		ok(true, 'callback is called');
 	});
 });
 
-asyncTest('loadScript with/without callback', function() {
-	//ok(false, 'callback can not be null');
+test('loadScript with/without callback', function() {
+	stop();
 	Loader.loadScript(emptyJS, function() {
 		start();
 		ok(true, 'callback is called');
 	});
-	//Loader.loadScript('not-exists-url', function() {
-	//		ok(false, 'callback is called when not-exists-url loaded');
-	//});
-})
-}
+});
 
 test('loadScript with/without cache', function() {
 	var cacheIsOk = false;
