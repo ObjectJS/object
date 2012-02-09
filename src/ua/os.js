@@ -2,7 +2,9 @@ object.add('ua.os', 'sys', function(exports, sys) {
 
 var uamodule = sys.modules['ua'];
 
-//由于需要先替换下划线，与ua模块中的numberify不同，因此这里再定义此方法
+/**
+ * 由于需要先替换下划线，与ua模块中的numberify不同，因此这里再定义此方法
+ */
 var numberify = function(s) {
 	var c = 0;
 	// convert '1.2.3.4' to 1.234
@@ -15,7 +17,7 @@ if (uamodule) {
 	//将detectOS方法导出，便于单元测试
 	this._detectOS = detectOS;
 	var o = detectOS(navigator.userAgent.toLowerCase());
-	object.extend(uamodule.ua, o);
+	object.extend(exports, o);
 }
 
 //判断对象obj是否是type类型
@@ -40,12 +42,11 @@ function assertNotNull(obj, msg) {
 	}
 }
 
-//传入ua，便于模拟ua字符串进行单元测试
-//
-//http://forums.precentral.net/palm-pre-pre-plus/277613-webos-2-1-user-agent.html
-//what is the relationship between webos and palmos????
-//http://www.developer.nokia.com/Community/Wiki/User-Agent_headers_for_Nokia_devices
-//how to handle the NokiaXXXX?
+/**
+ * 传入ua，便于模拟ua字符串进行单元测试
+ * @see http://forums.precentral.net/palm-pre-pre-plus/277613-webos-2-1-user-agent.html
+ * @see http://www.developer.nokia.com/Community/Wiki/User-Agent_headers_for_Nokia_devices
+ */
 function detectOS(ua) {
 	ua = ua || navigator.userAgent;
 	ua = ua.toLowerCase();

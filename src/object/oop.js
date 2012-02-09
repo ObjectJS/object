@@ -304,7 +304,10 @@ type.__new__ = function(metaclass, name, base, dict) {
 type.initialize = function() {
 };
 
-// 类
+/**
+ * 类的定义
+ * @namespace Class
+ */
 var Class = this.Class = function() {
 	var length = arguments.length;
 	if (length < 1) throw new Error('bad arguments');

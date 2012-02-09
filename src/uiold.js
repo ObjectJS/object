@@ -1,7 +1,3 @@
-/**
- * @namespace
- * @name uiold
- */
 object.add('uiold', 'dom', function(exports, dom) {
 
 /**
@@ -96,9 +92,6 @@ this.Component = new Class(dom.Element, function() {
 		self.fireEvent(name, arguments[0], self);
 	};
 
-	/**
-	 * makeOption
-	 */
 	this.makeOption = function(self, name, type) {
 		name = name.toLowerCase();
 		var value = self.getData(name);

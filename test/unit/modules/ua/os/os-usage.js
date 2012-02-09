@@ -3,13 +3,13 @@ test('basic info in module ua.os', function() {
 	expect(9);
 	object.use('ua.os', function(exports, ua) {
 		ok(ua.os != null, 'ua.os loaded successfully');
-		ok(ua.ua.oscore != null, 'ua.ua.oscore : ' + ua.ua.oscore);
-		ok(ua.ua[ua.ua.oscore] != null, 'ua.ua.windowsnt : ' + ua.ua[ua.ua.oscore]);
-		ok(ua.ua.resolution != null, 'ua.ua.resolution is not null');
-		ok(ua.ua.resolution.width > 0, 'ua.ua.resolution.width : ' + ua.ua.resolution.width);
-		ok(ua.ua.resolution.height > 0, 'ua.ua.resolution.height : ' + ua.ua.resolution.height);
-		ok(ua.ua.hasOwnProperty('orientation'), 'ua.ua hasOwnProperty : orientation');
-		ok(ua.ua.orientation == 'unknown', 'ua.ua.orientation : ' + ua.ua.orientation);
+		ok(ua.os.oscore != null, 'ua.os.oscore : ' + ua.os.oscore);
+		ok(ua.os[ua.os.oscore] != null, 'ua.os.windowsnt : ' + ua.os[ua.os.oscore]);
+		ok(ua.os.resolution != null, 'ua.os.resolution is not null');
+		ok(ua.os.resolution.width > 0, 'ua.os.resolution.width : ' + ua.os.resolution.width);
+		ok(ua.os.resolution.height > 0, 'ua.os.resolution.height : ' + ua.os.resolution.height);
+		ok(ua.os.hasOwnProperty('orientation'), 'ua.os hasOwnProperty : orientation');
+		ok(ua.os.orientation == 'unknown', 'ua.os.orientation : ' + ua.os.orientation);
 		ok(ua.os._detectOS != null, 'detectOS method is defined');
 	});
 });

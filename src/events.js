@@ -174,8 +174,12 @@ function isNativeEventForNode(node, type) {
  */
 this.Events = new Class(function() {
 	
-	// 在标准浏览器中使用的是系统事件系统，无法保证nativeEvents在事件最后执行。
-	// 需在每次addEvent时，都将nativeEvents的事件删除再添加，保证在事件队列最后，最后才执行。
+	/**
+	 * 在标准浏览器中使用的是系统事件系统，无法保证nativeEvents在事件最后执行。
+     * 需在每次addEvent时，都将nativeEvents的事件删除再添加，保证在事件队列最后，最后才执行。
+	 *
+	 * @param type 事件类型
+	 */
 	function moveNativeEventsToTail(self, type) {
 		var boss = self.__boss || self;
 		if (self.__nativeEvents && self.__nativeEvents[type]) {
@@ -186,6 +190,9 @@ this.Events = new Class(function() {
 		}
 	};
 
+	/**
+	 * IE下处理事件执行顺序
+	 */
 	function handle(self, type) {
 		var boss = self.__boss || self;
 		boss.attachEvent('on' + type, function(eventData) {
@@ -212,14 +219,18 @@ this.Events = new Class(function() {
 		});
 	}
 
-	// 不同浏览器对onhandler的执行顺序不一样
-	// 	  IE：最先执行onhandler，其次再执行其他监听函数
-	// 	  Firefox：如果添加多个onhandler，则第一次添加的位置为执行的位置
-	// 	  Chrome ：如果添加多个onhandler，最后一次添加的位置为执行的位置
-	// 
-	// Chrome的做法是符合标准的，因此在模拟事件执行时按照Chrome的顺序来进行
-	//
-	// 保证onxxx监听函数的正常执行，并维持onxxx类型的事件监听函数的执行顺序
+	/**
+	 * 不同浏览器对onhandler的执行顺序不一样
+	 * 	  IE：最先执行onhandler，其次再执行其他监听函数
+	 * 	  Firefox：如果添加多个onhandler，则第一次添加的位置为执行的位置
+	 * 	  Chrome ：如果添加多个onhandler，最后一次添加的位置为执行的位置
+	 * 
+	 * Chrome的做法是符合标准的，因此在模拟事件执行时按照Chrome的顺序来进行
+	 *
+	 * 保证onxxx监听函数的正常执行，并维持onxxx类型的事件监听函数的执行顺序
+	 *
+	 * @param type 事件类型
+	 */
 	function addOnHandlerAsEventListener(self, type) {
 		// 只有DOM节点的标准事件，才会由浏览器来执行标准方法
 		if (type in NATIVE_EVENTS && self.nodeType == 1) return;
@@ -242,7 +253,10 @@ this.Events = new Class(function() {
 		}
 	}
 	
-	// IE下保证onxxx事件处理函数正常执行
+	/**
+	 * IE下保证onxxx事件处理函数正常执行
+	 * @param type 事件类型
+	 */
 	function attachOnHandlerAsEventListener(self, type) {
 		// 只有DOM节点的标准事件，并且此标准事件能够在节点上触发，才会由浏览器来执行标准方法
 		if (self.nodeType == 1 && isNativeEventForNode(self, type) && isNodeInDOMTree(self)) return;
@@ -332,10 +346,16 @@ this.Events = new Class(function() {
 		}
 	}
 
+	/**
+	 * 初始化方法，主要是初始化__eventListener和__nativeEvents以及__boss等属性
+	 */
 	this.initialize = function(self) {
 		if (!self.addEventListener) {
 			// 在一些情况下，你不知道传进来的self对象的情况，不要轻易的将其身上的__eventListeners清除掉
-			if (!self.__eventListeners) self.__eventListeners = {};
+			if (!self.__eventListeners) {
+				/** 用于存储事件处理函数的对象 */
+				self.__eventListeners = {};
+			}
 			if (!self.__nativeEvents) self.__nativeEvents = {};
 		}
 		// 自定义事件，用一个隐含div用来触发事件
