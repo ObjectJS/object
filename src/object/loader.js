@@ -458,6 +458,7 @@ function CommonJSDependency(name, runtime) {
 	var parent = runtime.stack[runtime.stack.length - 1];
 	if (name.indexOf('/') == 0) { // root
 		this.id = name;
+		this.runtimeName = this.id;
 	} else if (name.indexOf('./') == 0 || name.indexOf('../') == 0) { // relative
 		pParts = parent.module.id.split('/');
 		pParts.pop();
@@ -471,16 +472,17 @@ function CommonJSDependency(name, runtime) {
 			}
 		});
 		this.id = pParts.join('/');
+		this.runtimeName = this.id;
 	} else { // top level
 		['/temp', '/root'].some(function(m) {
 			var id = pathjoin(m, name2id(name));
 			if (runtime.loader.getModule(id)) {
 				this.id = id;
+				this.runtimeName = name;
 				return true;
 			}
 		}, this);
 	}
-	this.runtimeName = this.id.slice(1);
 	Dependency.call(this, name);
 };
 
@@ -489,9 +491,12 @@ CommonJSDependency.prototype = new Dependency();
 CommonJSDependency.prototype.constructor = CommonJSDependency;
 
 CommonJSDependency.prototype.load = function(runtime, callback) {
-	// 无需检查runtime.modules是否已存在
-	// 此load仅仅确保依赖加载完毕，并不生成exports在runtime.modules
-	runtime.loadModule(this.id, this.runtimeName, callback);
+	var exports = runtime.modules[this.runtimeName];
+	if (exports) {
+		callback(exports);
+	} else {
+		runtime.loadModule(this.id, this.runtimeName, callback);
+	}
 };
 
 /**
