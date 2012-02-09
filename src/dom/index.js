@@ -315,6 +315,8 @@ var _supportNaturalWH = 'naturalWidth' in document.createElement('img');
 var _supportHTML5Forms = 'checkValidity' in document.createElement('input');
 var _supportHidden = 'hidden' in document.createElement('div');
 var _supportMultipleSubmit = 'formAction' in document.createElement('input');
+// 检测一下是否支持利用selectionStart获取所选区域的光标位置
+var _supportSelectionStart = 'selectionStart' in document.createElement('input');
 
 var nativeproperty = function() {
 	var prop = property(function(self) {
@@ -1233,14 +1235,13 @@ this.FormItemElement = new Class(exports.Element, function() {
 			var range = document.selection.createRange();
 			// IE下要求元素在获取selectionStart时必须先focus，如果focus的元素不是自己，则返回-1
 			if (range == null || range.parentElement() != self) {
-				return -1;
+				if (self.__selectionPos) {
+					return self.__selectionPos.start;
+				} else {
+					return -1;
+				}
 			}
-			var elementRange = self.createTextRange();
-			var duplicated = elementRange.duplicate();
-			elementRange.moveToBookmark(range.getBookmark());
-			//将选中区域的起始点作为整个元素区域的终点
-			duplicated.setEndPoint('EndToStart', elementRange);
-			return duplicated.text.length; 
+			return calculateSelectionPos(self).start;
 		} else {
 			return -1;
 		}
@@ -1268,13 +1269,13 @@ this.FormItemElement = new Class(exports.Element, function() {
 			var range = document.selection.createRange();
 			// IE下要求元素在获取selectionEnd时必须先focus，如果focus的元素不是自己，则返回0
 			if (range == null || range.parentElement() != self) {
-				return -1;
+				if (self.__selectionPos) {
+					return self.__selectionPos.end;
+				} else {
+					return -1;
+				}
 			}
-			var elementRange = self.createTextRange();
-			var duplicated = elementRange.duplicate();
-			elementRange.moveToBookmark(range.getBookmark());
-			duplicated.setEndPoint('EndToStart', elementRange);
-			return duplicated.text.length + range.text.length; 
+			return calculateSelectionPos(self).end;
 		} else {
 			return -1;
 		}
@@ -1443,6 +1444,13 @@ this.TextBaseElement = new Class(exports.FormItemElement, function() {
 
 		if (!_supportPlaceholder) {
 			self.bindPlaceholder();
+		}
+		if (!_supportSelectionStart) {
+			// 在每一次即将失去焦点之前，保存一下当前的selectionStart和selectionEnd的值
+			self.addEvent('beforedeactivate', function() {
+				/** 在失去焦点时保存selectionStart和selectionEnd的值，只在IE下用 */
+				self.__selectionPos = calculateSelectionPos(self);
+			});
 		}
 	};
 
@@ -1691,4 +1699,26 @@ function getCommon(arr1, arr2) {
 	return arr1.slice(0, i);
 }
 
+/**
+ * IE下，在焦点即将离开此元素时，计算一下selectionStart和selectionEnd备用
+ *
+ * @param {HTMLElement} field 焦点即将离开的元素，input/textarea
+ * @return {Object} 位置信息对象，包含{start:起始位置, end:终止位置}
+ */
+function calculateSelectionPos(field) {
+	// 参考JQuery插件：fieldSelection
+	var range = document.selection.createRange();
+	if (range == null || range.parentElement() != field) {
+		return {start:-1, end:-1};
+	}
+	var elementRange = field.createTextRange();
+	var duplicated = elementRange.duplicate();
+	elementRange.moveToBookmark(range.getBookmark());
+	//将选中区域的起始点作为整个元素区域的终点
+	duplicated.setEndPoint('EndToStart', elementRange);
+	return {
+		start: duplicated.text.length, 
+		end  : duplicated.text.length + range.text.length
+	};
+}
 });

@@ -17,7 +17,7 @@ if (uamodule) {
 	//将detectOS方法导出，便于单元测试
 	this._detectOS = detectOS;
 	var o = detectOS(navigator.userAgent.toLowerCase());
-	object.extend(uamodule.ua, o);
+	object.extend(exports, o);
 }
 
 //判断对象obj是否是type类型
