@@ -143,6 +143,7 @@ test('relative module - use', function() {
 	object.execute('foo');
 });
 
+if (!isJsTestDriverRunning) {
 test('circular dependency - extra : a->b->a', function() {
 	expect(5);
 	object.add('a', 'b', function(exports, b) {
@@ -196,6 +197,7 @@ test('circular dependency - extra : c1->c2->c3->c1', function() {
 	delete object._loader.lib['c2'];
 	delete object._loader.lib['c3'];	
 });
+);
 
 test('circular dependency', function() {
 	expect(3);
