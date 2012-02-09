@@ -1,5 +1,10 @@
 object.add('ua', function(exports) {
 
+	/**
+	 * 将字符串转化为数字的方法
+	 *
+	 * @param s 带转化的字符串
+	 */
 	var numberify = this.numberify = function(s) {
 		if(!s || typeof s != 'string') {
 		
@@ -18,7 +23,9 @@ object.add('ua', function(exports) {
 	var o = detectUA(navigator.userAgent);
 	object.extend(this.ua, o);
 
-	//检测浏览器内核和版本的主方法
+	/**
+	 * 检测浏览器内核和版本的主方法
+	 */
 	function detectUA(ua) {
 		if(!ua && typeof ua != 'string') {
 			ua = navigator.userAgent;

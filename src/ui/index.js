@@ -1,5 +1,8 @@
 object.add('ui', 'string, options, dom, events', function(exports, string, options, dom, events) {
 
+/**
+ * Element
+ */
 var Element = new Class(function() {
 
 	Class.keys(dom.Element).forEach(function(name) {

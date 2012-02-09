@@ -1,4 +1,4 @@
-object.add('dom', 'ua, events, string, ./dd, sys', function(exports, ua, events, string, dd, sys) {
+object.add('dom', 'ua, events, string, dom/dd, sys', function(exports, ua, events, string, dd, sys) {
 
 window.UID = 1;
 var storage = {};
@@ -114,6 +114,9 @@ var wrap = this.wrap = function(node) {
 	} else {
 		// 已经wrap过了
 		if (node._wrapped) return node;
+		if (ua.ua.ie && node.fireEvent) {
+			node._oldFireEventInIE = node.fireEvent;
+		}
 
 		var wrapper;
 		if (node === window) {
@@ -133,21 +136,18 @@ var wrap = this.wrap = function(node) {
 
 		// 为了解决子类property覆盖父类instancemethod/classmethod等的问题，需要将property同名的prototype上的属性改为undefined
 		// Class.inject对node赋值时，会将undefined的值也进行赋值，而innerHTML、value等值，不能设置为undefined
-		// 因此这里不直接调用Class.inject，而是单独对wrapper的实例中的属性进行判断
-
-		node.__class__ = wrapper;
-		node.__properties__ = wrapper.prototype.__properties__;
-		var wrapperInstance = Class.getInstance(wrapper);
-		for (var prop in wrapperInstance) {
-			if ((prop != 'fireEvent' && prop in node) || wrapperInstance[prop] === undefined) {
-				continue;
+		Class.inject(wrapper, node, function(dest, src, prop) {
+			// dest原有的属性中，function全部覆盖，属性不覆盖已有的
+			if (typeof src[prop] != 'function') {
+				if (!(prop in dest)) {
+					return true;
+				} else {
+					return false;
+				}
+			} else {
+				return true;
 			}
-			node[prop] = wrapperInstance[prop];
-		}
-		Class.initMixins(wrapper, node);
-		if (typeof wrapper.prototype.initialize == 'function') {
-			wrapper.prototype.initialize.apply(node, []);
-		}
+		});
 
 		return node;
 	}
@@ -315,6 +315,8 @@ var _supportNaturalWH = 'naturalWidth' in document.createElement('img');
 var _supportHTML5Forms = 'checkValidity' in document.createElement('input');
 var _supportHidden = 'hidden' in document.createElement('div');
 var _supportMultipleSubmit = 'formAction' in document.createElement('input');
+// 检测一下是否支持利用selectionStart获取所选区域的光标位置
+var _supportSelectionStart = 'selectionStart' in document.createElement('input');
 
 var nativeproperty = function() {
 	var prop = property(function(self) {
@@ -434,6 +436,11 @@ this.ElementClassList = new Class(Array, function() {
 });
 
 /**
+ * 每一个待封装DOM元素都包含的事件
+ */
+var basicNativeEventNames = ['click', 'dblclick', 'mouseup', 'mousedown', 'contextmenu',
+		'mouseover', 'mouseout', 'mousemove', 'selectstart', 'selectend', 'keydown', 'keypress', 'keyup']
+/**
  * 普通元素的包装
  */
 this.Element = new Class(function() {
@@ -441,8 +448,7 @@ this.Element = new Class(function() {
 	Class.mixin(this, events.Events);
 	Class.mixin(this, dd.DragDrop);
 
-	this.nativeEventNames = ['click', 'dblclick', 'mouseup', 'mousedown', 'contextmenu',
-		'mouseover', 'mouseout', 'mousemove', 'selectstart', 'selectend', 'keydown', 'keypress', 'keyup'];
+	this.nativeEventNames = basicNativeEventNames;
 
 	this.initialize = function(self, tagName) {
 		// 直接new Element，用来生成一个新元素
@@ -459,6 +465,7 @@ this.Element = new Class(function() {
 		if (self.classList === undefined && self !== document && self !== window) {
 			self.classList = new exports.ElementClassList(self);
 		}
+		self.delegates = {};
 	};
 
 	/**
@@ -503,12 +510,50 @@ this.Element = new Class(function() {
 	 * @param type 事件名称
 	 * @param callback 事件回调
 	 */
-	this.delegate = function(self, selector, type, callback) {
-		self.addEvent(type, function(e) {
+	this.delegate = function(self, selector, type, fn) {
+
+		function wrapper(e) {
 			var ele = e.srcElement || e.target;
 			do {
-				if (ele && exports.Element.get('matchesSelector')(ele, selector)) callback.call(wrap(ele), e);
+				if (ele && exports.Element.get('matchesSelector')(ele, selector)) fn.call(wrap(ele), e);
 			} while((ele = ele.parentNode));
+		}
+
+		var key = selector + '_' + type;
+		if (!self.delegates) {
+			self.delegates = {};
+		}
+		if (!(key in self.delegates)) {
+			self.delegates[key] = [];
+		}
+		self.delegates[key].push({
+			wrapper: wrapper,
+			fn: fn
+		});
+
+		self.addEvent(type, wrapper);
+	};
+
+	/**
+	 * 事件代理
+	 * @param selector 需要被代理的子元素selector
+	 * @param type 事件名称
+	 * @param callback 事件回调
+	 */
+	this.undelegate = function(self, selector, type, fn) {
+
+		var key = selector + '_' + type;
+		if (!self.delegates) {
+			self.delegates = {};
+		}
+		// 没有这个代理
+		if (!(key in self.delegates)) return;
+
+		self.delegates[key].forEach(function(item) {
+			if (item.fn === fn) {
+				self.removeEvent(type, item.wrapper);
+				return;
+			}
 		});
 	};
 
@@ -953,7 +998,7 @@ this.Element = new Class(function() {
  */
 this.ImageElement = new Class(exports.Element, function() {
 
-	this.nativeEventNames = exports.Element.get('nativeEventNames').slice(0).concat(['error', 'abort']);
+	this.nativeEventNames = basicNativeEventNames.concat(['error', 'abort']);
 
 	// 获取naturalWidth和naturalHeight的方法
 	// http://jacklmoore.com/notes/naturalwidth-and-naturalheight-in-ie/
@@ -1008,7 +1053,7 @@ this.ImageElement = new Class(exports.Element, function() {
  */
 this.FormElement = new Class(exports.Element, function() {
 
-	this.nativeEventNames = exports.Element.get('nativeEventNames').slice(0).concat(['reset', 'submit']);
+	this.nativeEventNames = basicNativeEventNames.concat(['reset', 'submit']);
 
 	this.initialize = function(self) {
 		this.parent(self);
@@ -1058,12 +1103,26 @@ this.FormElement = new Class(exports.Element, function() {
 					self.submit();
 				}
 
-				// 提交之后再恢复回来
-				self.action = oldAction;
-				self.method = oldMethod;
-				self.enctype = self.encoding = oldEnctype;
-				self.formNoValidate = oldNoValidate;
-				self.target = oldTarget;
+				// 傲游3的webkit内核在执行submit时是异步的，导致submit真正执行前，下面这段代码已经执行，action和target都被恢复回去了。
+				// 做一个兼容，maxthon3中用setTimeout进行恢复。
+				if (ua.ua.webkit <= 534.12) {
+					setTimeout(function() {
+						// 提交之后再恢复回来
+						self.action = oldAction;
+						self.method = oldMethod;
+						self.enctype = self.encoding = oldEnctype;
+						self.formNoValidate = oldNoValidate;
+						self.target = oldTarget;
+					}, 0);
+				} else {
+					// 提交之后再恢复回来
+					self.action = oldAction;
+					self.method = oldMethod;
+					self.enctype = self.encoding = oldEnctype;
+					self.formNoValidate = oldNoValidate;
+					self.target = oldTarget;
+				}
+
 			});
 		}
 	};
@@ -1145,11 +1204,20 @@ this.FormElement = new Class(exports.Element, function() {
  */
 this.FormItemElement = new Class(exports.Element, function() {
 
-	this.nativeEventNames = exports.Element.get('nativeEventNames').slice(0).concat(
-		['focus', 'blur', 'change', 'select', 'paste']);
+	this.nativeEventNames = basicNativeEventNames.concat(['focus', 'blur', 'change', 'select', 'paste']);
+
+	this.required = _supportHTML5Forms ? nativeproperty() : attributeproperty(false);
+	this.pattern  = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
+	this.maxlength = nativeproperty();
+	this.type = _supportHTML5Forms ? nativeproperty() : attributeproperty('text');
+	this.min = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
+	this.max = _supportHTML5Forms ? nativeproperty() : attributeproperty('');
 
 	/**
 	 * selectionStart
+	 * IE下获取selectionStart时，必须先在业务代码中focus该元素，否则返回-1
+	 *
+	 * @return 获取过程中发生任何问题，返回-1，否则返回正常的selectionStart
 	 */
 	this.selectionStart = property(function(self) {
 		try {
@@ -1158,34 +1226,32 @@ this.FormItemElement = new Class(exports.Element, function() {
 				return self.selectionStart;
 			}
 		} catch (e) {
-			return 0;
+			return -1;
 		}
 
 		// IE
 		if (document.selection) {
-			// 如果当前元素没有焦点，则selectionEnd为0（保持与XN.form中的返回值一致）
-			// 在没有焦点的情况下，无法获取selectionEnd的准确值，目前jquery及其插件也没有解决这个问题
-			if (document.activeElement != self) {
-				return 0;
-			}
 			// 参考JQuery插件：fieldSelection
 			var range = document.selection.createRange();
-			if (range == null) {
-				return 0;
+			// IE下要求元素在获取selectionStart时必须先focus，如果focus的元素不是自己，则返回-1
+			if (range == null || range.parentElement() != self) {
+				if (self.__selectionPos) {
+					return self.__selectionPos.start;
+				} else {
+					return -1;
+				}
 			}
-			var elementRange = self.createTextRange();
-			var duplicated = elementRange.duplicate();
-			elementRange.moveToBookmark(range.getBookmark());
-			//将选中区域的起始点作为整个元素区域的终点
-			duplicated.setEndPoint('EndToStart', elementRange);
-			return duplicated.text.length; 
+			return calculateSelectionPos(self).start;
 		} else {
-			return 0;
+			return -1;
 		}
 	});
         
 	/**
 	 * selectionEnd
+	 * IE下获取selectionEnd时，必须先在业务代码中focus该元素，否则返回-1
+	 *
+	 * @return 获取过程中发生任何问题，返回-1，否则返回正常的selectionEnd
 	 */
 	this.selectionEnd = property(function(self) {
 		try {
@@ -1194,27 +1260,24 @@ this.FormItemElement = new Class(exports.Element, function() {
 				return self.selectionEnd;
 			}
 		} catch (e) {
-			return 0;
+			return -1;
 		}
 
 		// IE
 		if (document.selection) {
-			// 如果当前元素没有焦点，则selectionEnd为内容末尾
-			if (document.activeElement != self) {
-				return 0;
-			}
 			// 参考JQuery插件：fieldSelection
 			var range = document.selection.createRange();
-			if (range == null) {
-				return 0;
+			// IE下要求元素在获取selectionEnd时必须先focus，如果focus的元素不是自己，则返回0
+			if (range == null || range.parentElement() != self) {
+				if (self.__selectionPos) {
+					return self.__selectionPos.end;
+				} else {
+					return -1;
+				}
 			}
-			var elementRange = self.createTextRange();
-			var duplicated = elementRange.duplicate();
-			elementRange.moveToBookmark(range.getBookmark());
-			duplicated.setEndPoint('EndToStart', elementRange);
-			return duplicated.text.length + range.text.length; 
+			return calculateSelectionPos(self).end;
 		} else {
-			return 0;
+			return -1;
 		}
 	});
 
@@ -1264,6 +1327,8 @@ this.FormItemElement = new Class(exports.Element, function() {
 		var value = self.get('value');
 		
 		var validity = {
+			// 在firefox3.6.25中，self.getAttribute('required')只能获取到self.setAttribute('required', true)的值
+			// self.required = true设置的值无法获取
 			valueMissing: self.getAttribute('required') && !value? true : false,
 			typeMismatch: (function(type) {
 				if (type == 'url') return !(/^\s*(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i).test(value);
@@ -1277,7 +1342,7 @@ this.FormItemElement = new Class(exports.Element, function() {
 				else return false;
 			})(),
 			tooLong: (function() {
-				var maxlength = self.getAttribute('maxlength');
+				var maxlength = self.get('maxlength');
 				var n = Number(maxlength);
 				if (n != maxlength) return false;
 				return value.length > n;
@@ -1301,7 +1366,7 @@ this.FormItemElement = new Class(exports.Element, function() {
 			if (validity.valueMissing) return '请填写此字段。';
 			if (validity.typeMismatch) return '请输入一个' + self.getAttribute('type') + '。';
 			if (validity.patternMismatch) return '请匹配要求的格式。';
-			if (validity.tooLong) return '请将该文本减少为 ' + self.getAttribute('maxlength') + ' 个字符或更少（您当前使用了' + self.get('value').length + '个字符）。';
+			if (validity.tooLong) return '请将该文本减少为 ' + self.get('maxlength') + ' 个字符或更少（您当前使用了' + self.get('value').length + '个字符）。';
 			if (validity.rangeUnderflow) return '值必须大于或等于' + self.getAttribute('min') + '。';
 			if (validity.rangeOverflow) return '值必须小于或等于' + self.getAttribute('max') + '。';
 			if (validity.stepMismatch) return '值无效。';
@@ -1379,6 +1444,13 @@ this.TextBaseElement = new Class(exports.FormItemElement, function() {
 
 		if (!_supportPlaceholder) {
 			self.bindPlaceholder();
+		}
+		if (!_supportSelectionStart) {
+			// 在每一次即将失去焦点之前，保存一下当前的selectionStart和selectionEnd的值
+			self.addEvent('beforedeactivate', function() {
+				/** 在失去焦点时保存selectionStart和selectionEnd的值，只在IE下用 */
+				self.__selectionPos = calculateSelectionPos(self);
+			});
 		}
 	};
 
@@ -1537,7 +1609,7 @@ this.TextAreaElement = new Class(exports.TextBaseElement, function() {
  * window元素的包装类
  */
 this.Window = new Class(exports.Element, function() {
-	this.nativeEventNames = exports.Element.get('nativeEventNames').slice(0).concat(
+	this.nativeEventNames = basicNativeEventNames.concat(
 		['load', 'unload', 'beforeunload', 'resize', 'move', 'DomContentLoaded', 'readystatechange', 'scroll', 'mousewheel', 'DOMMouseScroll']);
 });
 
@@ -1545,7 +1617,7 @@ this.Window = new Class(exports.Element, function() {
  * document元素的包装类
  */
 this.Document = new Class(exports.Element, function() {
-	this.nativeEventNames = exports.Element.get('nativeEventNames').slice(0).concat(
+	this.nativeEventNames = basicNativeEventNames.concat(
 		['load', 'unload', 'beforeunload', 'resize', 'move', 'DomContentLoaded', 'readystatechange', 'scroll', 'mousewheel', 'DOMMouseScroll']);
 });
 
@@ -1627,4 +1699,26 @@ function getCommon(arr1, arr2) {
 	return arr1.slice(0, i);
 }
 
+/**
+ * IE下，在焦点即将离开此元素时，计算一下selectionStart和selectionEnd备用
+ *
+ * @param {HTMLElement} field 焦点即将离开的元素，input/textarea
+ * @return {Object} 位置信息对象，包含{start:起始位置, end:终止位置}
+ */
+function calculateSelectionPos(field) {
+	// 参考JQuery插件：fieldSelection
+	var range = document.selection.createRange();
+	if (range == null || range.parentElement() != field) {
+		return {start:-1, end:-1};
+	}
+	var elementRange = field.createTextRange();
+	var duplicated = elementRange.duplicate();
+	elementRange.moveToBookmark(range.getBookmark());
+	//将选中区域的起始点作为整个元素区域的终点
+	duplicated.setEndPoint('EndToStart', elementRange);
+	return {
+		start: duplicated.text.length, 
+		end  : duplicated.text.length + range.text.length
+	};
+}
 });

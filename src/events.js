@@ -1,5 +1,28 @@
 object.add('events', 'ua', function(exports, ua) {
 
+/**
+ * 在Safari3.0(Webkit 523)下，preventDefault()无法获取事件是否被preventDefault的信息
+ * 这里通过一个事件的preventDefault来判断类似情况
+ * _needWrapPreventDefault用于在wrapPreventDefault中进行判断
+ */
+var _needWrapPreventDefault = (function() {
+	if (document.createEvent) {
+		var event = document.createEvent('Event');
+		event.initEvent(type, false, true);
+
+		if (event.preventDefault) {
+			event.preventDefault();
+			// preventDefault以后返回不了正确的结果
+			return !(event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented);
+		} 
+		// 没有preventDefault方法，则必然要wrap
+		else {
+			return true;
+		}
+	}
+	return false;
+})();
+
 function IEEvent() {
 
 }
@@ -104,6 +127,19 @@ this.wrapEvent = function(e) {
 	return e;
 };
 
+/**
+ * safari 3.0在preventDefault执行以后，defaultPrevented为undefined，此处包装一下
+ */
+this.wrapPreventDefault = function(e) {
+	if (_needWrapPreventDefault) {
+		var oldPreventDefault = e.preventDefault;
+		e.preventDefault = function() {
+			this.defaultPrevented = true;
+			oldPreventDefault.apply(this, arguments);
+		}
+	}
+}
+
 // native events from Mootools
 var NATIVE_EVENTS = {
 	click: 2, dblclick: 2, mouseup: 2, mousedown: 2, contextmenu: 2, //mouse buttons
@@ -138,8 +174,12 @@ function isNativeEventForNode(node, type) {
  */
 this.Events = new Class(function() {
 	
-	// 在标准浏览器中使用的是系统事件系统，无法保证nativeEvents在事件最后执行。
-	// 需在每次addEvent时，都将nativeEvents的事件删除再添加，保证在事件队列最后，最后才执行。
+	/**
+	 * 在标准浏览器中使用的是系统事件系统，无法保证nativeEvents在事件最后执行。
+     * 需在每次addEvent时，都将nativeEvents的事件删除再添加，保证在事件队列最后，最后才执行。
+	 *
+	 * @param type 事件类型
+	 */
 	function moveNativeEventsToTail(self, type) {
 		var boss = self.__boss || self;
 		if (self.__nativeEvents && self.__nativeEvents[type]) {
@@ -150,6 +190,9 @@ this.Events = new Class(function() {
 		}
 	};
 
+	/**
+	 * IE下处理事件执行顺序
+	 */
 	function handle(self, type) {
 		var boss = self.__boss || self;
 		boss.attachEvent('on' + type, function(eventData) {
@@ -176,14 +219,18 @@ this.Events = new Class(function() {
 		});
 	}
 
-	// 不同浏览器对onhandler的执行顺序不一样
-	// 	  IE：最先执行onhandler，其次再执行其他监听函数
-	// 	  Firefox：如果添加多个onhandler，则第一次添加的位置为执行的位置
-	// 	  Chrome ：如果添加多个onhandler，最后一次添加的位置为执行的位置
-	// 
-	// Chrome的做法是符合标准的，因此在模拟事件执行时按照Chrome的顺序来进行
-	//
-	// 保证onxxx监听函数的正常执行，并维持onxxx类型的事件监听函数的执行顺序
+	/**
+	 * 不同浏览器对onhandler的执行顺序不一样
+	 * 	  IE：最先执行onhandler，其次再执行其他监听函数
+	 * 	  Firefox：如果添加多个onhandler，则第一次添加的位置为执行的位置
+	 * 	  Chrome ：如果添加多个onhandler，最后一次添加的位置为执行的位置
+	 * 
+	 * Chrome的做法是符合标准的，因此在模拟事件执行时按照Chrome的顺序来进行
+	 *
+	 * 保证onxxx监听函数的正常执行，并维持onxxx类型的事件监听函数的执行顺序
+	 *
+	 * @param type 事件类型
+	 */
 	function addOnHandlerAsEventListener(self, type) {
 		// 只有DOM节点的标准事件，才会由浏览器来执行标准方法
 		if (type in NATIVE_EVENTS && self.nodeType == 1) return;
@@ -206,7 +253,10 @@ this.Events = new Class(function() {
 		}
 	}
 	
-	// IE下保证onxxx事件处理函数正常执行
+	/**
+	 * IE下保证onxxx事件处理函数正常执行
+	 * @param type 事件类型
+	 */
 	function attachOnHandlerAsEventListener(self, type) {
 		// 只有DOM节点的标准事件，并且此标准事件能够在节点上触发，才会由浏览器来执行标准方法
 		if (self.nodeType == 1 && isNativeEventForNode(self, type) && isNodeInDOMTree(self)) return;
@@ -267,10 +317,45 @@ this.Events = new Class(function() {
 		return false;
 	}
 
+	/**
+	 * 在preventDefault方法不靠谱的情况下，如果事件由浏览器自动触发，则需要在第一个事件处理函数中将preventDefault覆盖
+	 *
+	 * 此方法在事件列表最前面（在onxxx之前）添加一个专门处理preventDefault的事件监听函数
+	 */
+	function insertWrapPreventDefaultHandler(boss, type, cap) {
+		if (!boss['__preEventAdded_' + type]) {
+			// 标识该事件类型的preventDefault已经包装过了
+			boss['__preEventAdded_' + type] = true;
+			// 如果有onxxx类型的处理函数，则也暂时去除，待包装函数添加完以后，再添加回去
+			if (boss['on' + type]) {
+				boss['__on' + type] = boss['on' + type];
+				boss['on' + type] = null;
+			}
+			// 添加事件监听
+			boss.addEventListener(type, function(event) {
+				exports.wrapPreventDefault(event);
+			}, cap);
+			// 把onxxx监听函数添加回去
+			if (boss['__on' + type]) {
+				boss['on' + type] = boss['__on' + type];
+				boss['__on' + type] = null;
+				try {
+					delete boss['__on' + type];
+				} catch (e) {}
+			}
+		}
+	}
+
+	/**
+	 * 初始化方法，主要是初始化__eventListener和__nativeEvents以及__boss等属性
+	 */
 	this.initialize = function(self) {
 		if (!self.addEventListener) {
 			// 在一些情况下，你不知道传进来的self对象的情况，不要轻易的将其身上的__eventListeners清除掉
-			if (!self.__eventListeners) self.__eventListeners = {};
+			if (!self.__eventListeners) {
+				/** 用于存储事件处理函数的对象 */
+				self.__eventListeners = {};
+			}
 			if (!self.__nativeEvents) self.__nativeEvents = {};
 		}
 		// 自定义事件，用一个隐含div用来触发事件
@@ -311,6 +396,21 @@ this.Events = new Class(function() {
 			};
 			func.innerFunc = innerFunc;
 			type = 'mouseout';
+
+			// 备份func，以便能够通过innerFunc来删除func
+			if (!self.__eventListeners) {
+				self.__eventListeners = {};
+			}
+			if (!self.__eventListeners[type]) {
+				self.__eventListeners[type] = [];
+			}
+			self.__eventListeners[type].push(func);
+		}
+
+		// 如果需要包装preventDefault方法，则在事件处理函数最前面添加一个简单的事件监听
+		// 该事件监听只负责包装event，使其preventDefault正确执行
+		if (_needWrapPreventDefault) {
+			insertWrapPreventDefaultHandler(boss, type, cap);
 		}
 
 		//处理onxxx类型的事件处理函数
@@ -353,6 +453,9 @@ this.Events = new Class(function() {
 	*/
 	this.addNativeEvent = document.addEventListener? function(self, type, func) {
 		var boss = self.__boss || self;
+		if (_needWrapPreventDefault) {
+			insertWrapPreventDefaultHandler(boss, type, false);
+		}
 		var natives;
 		if (!self.__nativeEvents) self.__nativeEvents = {};
 		if (!self.__nativeEvents[type]) {
@@ -401,7 +504,22 @@ this.Events = new Class(function() {
 	this.removeEvent = document.removeEventListener? function(self, type, func, cap) {
 		var boss = self.__boss || self;
 
-		boss.removeEventListener(type, func, cap);
+		if (!ua.ua.ie && type == 'mouseleave') {
+			type = 'mouseout';
+			if (self.__eventListeners && self.__eventListeners[type]) {
+				var funcs = self.__eventListeners[type];
+				for (var i = 0, current, l = funcs.length; i < l; i++) {
+					current = funcs[i];
+					if (current.innerFunc === func) {
+						boss.removeEventListener(type, current, cap);
+						funcs.splice(i, 1);
+						break;
+					}
+				}
+			}
+		} else {
+			boss.removeEventListener(type, func, cap);
+		}
 	} : function(self, type, func, cap) {
 		var boss = self.__boss || self;
 
@@ -417,8 +535,6 @@ this.Events = new Class(function() {
 		}
 	};
 
-	var nativeFireEvent = document.dispatchEvent ? null : document.createElement('div').fireEvent;
-
 	/**
 	* 触发事件
 	* obj.fireEvent('name', {
@@ -429,6 +545,9 @@ this.Events = new Class(function() {
 	* @param eventData 扩展到event对象上的数据
 	*/
 	this.fireEvent = document.dispatchEvent? function(self, type, eventData) {
+		if (!ua.ua.ie && type == 'mouseleave') {
+			type = 'mouseout';
+		}
 		//fireEvent之前仍然需要检查onxxx类型的事件处理函数
 		addOnHandlerAsEventListener(self, type);
 		var boss = self.__boss || self;
@@ -436,6 +555,8 @@ this.Events = new Class(function() {
 		var event = document.createEvent('Event');
 		event.initEvent(type, false, true);
 		object.extend(event, eventData);
+
+		exports.wrapPreventDefault(event);
 
 		// 火狐下通过dispatchEvent触发事件，在事件监听函数中抛出的异常都不会在控制台给出
 		// see https://bugzilla.mozilla.org/show_bug.cgi?id=503244
@@ -467,9 +588,14 @@ this.Events = new Class(function() {
 					self['__on' + type] = null;
 				}
 
-				// 触发IE标准事件
-				nativeFireEvent.call(self, 'on' + type, event);
-				return event;
+				if (self._oldFireEventInIE) {
+					self._oldFireEventInIE('on' + type, event);
+					return event;
+				} else {
+					if (typeof console != 'undefined') {
+						console.warn('请使用dom.wrap方法包装对象以添加事件处理函数');
+					}
+				}
 			}
 		}
 

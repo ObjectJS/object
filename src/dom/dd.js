@@ -1,8 +1,4 @@
-/**
- * @namespace
- * @name dom
- */
-object.add('dom.dd', 'ua, events, sys', /**@lends dom*/ function(exports, ua, events, sys) {
+object.add('dom.dd', 'ua, events, sys', function(exports, ua, events, sys) {
 
 	//如何判断浏览器支持HTML5的拖拽：
 	//Detecting "draggable' in document.createElement('span') seems like a good idea, but in practice it doesn't work.
@@ -519,17 +515,6 @@ object.add('dom.dd', 'ua, events, sys', /**@lends dom*/ function(exports, ua, ev
 		 * @param ev 事件对象
 		 */ 
 		function getMousePos(ev) {
-		   /** 
-			* mootools:
-			*  this.page = {
-				x: (event.pageX != null) ? event.pageX : event.clientX + doc.scrollLeft,
-				y: (event.pageY != null) ? event.pageY : event.clientY + doc.scrollTop
-			   };
-			   this.client = {
-				x: (event.pageX != null) ? event.pageX - win.pageXOffset : event.clientX,
-				y: (event.pageY != null) ? event.pageY - win.pageYOffset : event.clientY
-			   };
-			*/
 			return {
 				x : (ev.pageX != null) ? ev.pageX : ev.clientX + document.body.scrollLeft - document.body.clientLeft,
 				y : (ev.pageY != null) ? ev.pageY : ev.clientY + document.body.scrollTop  - document.body.clientTop

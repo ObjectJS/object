@@ -1,8 +1,4 @@
-/**
- * @namespace
- * @name uiold
- */
-object.add('uiold', 'dom', /**@lends uiold*/ function(exports, dom) {
+object.add('uiold', 'dom', function(exports, dom) {
 
 /**
  * UI模块基类
@@ -96,9 +92,6 @@ this.Component = new Class(dom.Element, function() {
 		self.fireEvent(name, arguments[0], self);
 	};
 
-	/**
-	 * makeOption
-	 */
 	this.makeOption = function(self, name, type) {
 		name = name.toLowerCase();
 		var value = self.getData(name);
@@ -134,22 +127,20 @@ this.Component = new Class(dom.Element, function() {
 			}
 		}
 
-		// 将ele注射进cls，不能使用Class.inject，需要判断：
 		// 1、待注入的属性值是否是undefined
 		// 2、属性是否已经在对象中存在（避免对innerHTML之类DOM节点属性进行设置）
-		ele.__class__ = cls;
-		ele.__properties__ = cls.prototype.__properties__;
-		var clsInstance = Class.getInstance(cls);
-		for (var prop in clsInstance) {
-			if ((prop != 'fireEvent' && prop in ele) || clsInstance[prop] === undefined) {
-				continue;
+		Class.inject(cls, ele, function(dest, src, prop) {
+			// dest原有的属性中，function全部覆盖，属性不覆盖已有的
+			if (typeof src[prop] != 'function') {
+				if (!(prop in dest)) {
+					return true;
+				} else {
+					return false;
+				}
+			} else {
+				return true;
 			}
-			ele[prop] = clsInstance[prop];
-		}
-		Class.initMixins(cls, ele);
-		if (typeof cls.prototype.initialize == 'function') {
-			cls.prototype.initialize.apply(ele, []);
-		}
+		});
 
 		ele._wrapper = cls;
 		return ele;
