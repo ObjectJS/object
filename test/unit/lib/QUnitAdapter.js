@@ -159,7 +159,6 @@ you need to set it up and tear it down in each test.
 			
 			// add to queue, callbacks is used for async
 			queue.call('do async test', new Function("callbacks", translateSrc(src)));
-			console.log(translateSrc(src));
 
 			// teardown
 			queue.call('teardown', function() {

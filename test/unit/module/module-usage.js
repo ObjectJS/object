@@ -197,7 +197,7 @@ test('circular dependency - extra : c1->c2->c3->c1', function() {
 	delete object._loader.lib['c2'];
 	delete object._loader.lib['c3'];	
 });
-);
+}
 
 test('circular dependency', function() {
 	expect(3);
