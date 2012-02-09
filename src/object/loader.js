@@ -260,15 +260,15 @@ CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 	}
 
 	require.async = function(dependencies, callback) {
-		dependencies = pkg.parseDependencies(dependencies);
-		var pkg = new CommonJSPackage(pkg.id, dependencies, function(require) {
+		// 创建一个同名package
+		var newPkg = new CommonJSPackage(pkg.id, dependencies, function(require) {
 			var args = [];
 			dependencies.forEach(function(dep) {
 				args.push(require(dep));
 			});
 			callback.apply(null, args);
 		});
-		pkg.load(name, runtime);
+		newPkg.load(name, runtime);
 	};
 
 	return require;
@@ -593,6 +593,7 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 		var exports = runtime.modules[name];
 		// 使用缓存中的
 		if (exports) {
+			pName = name;
 			next(exports);
 		} else {
 			runtime.loadModule(id, name, function(exports) {

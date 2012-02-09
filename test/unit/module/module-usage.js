@@ -5,9 +5,9 @@ test('modules in object._loader.lib', function() {
 		object.use('not_defined_module', function(exports){});
 	}, 'use not defined module, should raise error');
 	object.add('test_object_add', function(exports){});
-	ok(object._loader.lib.sys != null, 'sys module exists after object.add is called');
+	ok(object._loader.lib['/root/sys'] != null, 'sys module exists after object.add is called');
 	object.use('test_object_add', function(exports, test) {});
-	ok(object._loader.lib.test_object_add != null, 'test_object_add module exists');
+	ok(object._loader.lib['/temp/test_object_add'] != null, 'test_object_add module exists');
 	ok(object._loader.lib.__anonymous_0__ != null, 'anonymous module exists');
 });
 
@@ -75,8 +75,8 @@ test('simple use of module', function() {
 		equal(module2.a, 2, 'a in module2 is correct');
 		module2.method();
 	});
-	delete object._loader.lib['module1'];
-	delete object._loader.lib['module2'];
+	object.remove('module1');
+	object.remove('module2');
 });
 
 test('return value of module', function() {
@@ -150,8 +150,8 @@ if (window.isJsTestDriverRunning) {
 		expect(11);
 		queue.call('a->b->a', function(callbacks) {
 			var callback = callbacks.add(function() {
-				delete object._loader.lib['a'];
-				delete object._loader.lib['b'];
+				object.remove('a');
+				object.remove('b');
 			});
 			object.add('a', 'b', function(exports, b) {
 				exports.a = 1;
@@ -171,9 +171,9 @@ if (window.isJsTestDriverRunning) {
 		});
 		queue.call('c1->c2->c3->c2', function(callbacks) {
 			var callback = callbacks.add(function() {
-				delete object._loader.lib['c1'];
-				delete object._loader.lib['c2'];
-				delete object._loader.lib['c3'];
+				object.remove('c1');
+				object.remove('c2');
+				object.remove('c3');
 			});
 			object.add('c1', 'c2', function(exports, c2) {
 				exports.c1 = 1;
@@ -216,8 +216,8 @@ if (window.isJsTestDriverRunning) {
 			equal(a.__name__, 'a', 'module a is ok in circular dependency');
 			equal(a.a, 1, 'a.a is ok in circular dependency');
 		});
-		delete object._loader.lib['a'];
-		delete object._loader.lib['b'];
+		object.remove('a');
+		object.remove('b');
 
 		object.add('c1', 'c2', function(exports, c2) {
 			exports.c1 = 1;
@@ -240,9 +240,9 @@ if (window.isJsTestDriverRunning) {
 			equal(c2.c2, 1, 'c2.c2 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
 			equal(c3.c3, 1, 'c3.c3 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
 		});
-		delete object._loader.lib['c1'];
-		delete object._loader.lib['c2'];
-		delete object._loader.lib['c3'];	
+		object.remove('c1');
+		object.remove('c2');
+		object.remove('c3');
 	});
 }
 
@@ -256,7 +256,7 @@ test('circular dependency', function() {
 		equal(c.__name__, 'c', 'c.__name__ is ok in circular dependency : c -> c');
 		equal(c.c, 1, 'c.c is ok when circular dependency : c -> c');
 	});
-	delete object._loader.lib['c'];
+	object.remove('c');
 
 	object.add('ooos', function(exports) {});
 	object.add('uuua', './ooos', function(exports) {});
@@ -266,8 +266,7 @@ test('circular dependency', function() {
 	} catch (e) {
 		ok(false, 'uuua use ./ooos will cause an circular dependency error');
 	}
-	delete object._loader.lib['uuua.ooos'];
-	delete object._loader.lib['uuua'];
+	object.remove('uuua', true);
 });
 
 test('string starts/ends with .', function() {
@@ -278,7 +277,7 @@ test('string starts/ends with .', function() {
 	} catch (e) {
 		ok(true, 'object.add(\'cause_error\', \'.used\') cause an error : ' + e);
 	}
-	delete object._loader.lib['cause_error'];
+	object.remove('cause_error');
 	try {
 		object.add('cause_error', './used', function(exports) {});
 		object.add('cause_error.used', function(exports) {});
@@ -287,14 +286,14 @@ test('string starts/ends with .', function() {
 	} catch (e) {
 		ok(true, 'object.add(\'cause_error\', \'.used\') cause an error : ' + e);
 	}
-	delete object._loader.lib['cause_error'];
+	object.remove('cause_error');
 	try {
 		object.add('cause_error', 'used.', function(exports) {});
 		object.use('cause_error', function(exports, a) {});
 	} catch (e) {
 		ok(true, 'object.add(\'cause_error\', \'used.\') cause an error : ' + e);
 	}
-	delete object._loader.lib['cause_error'];
+	object.remove('cause_error');
 	try {
 		object.add('.cause_error', 'used', function(exports) {});
 		object.use('.cause_error', function(exports, a) {});
@@ -302,8 +301,8 @@ test('string starts/ends with .', function() {
 	} catch (e) {
 		ok(true, 'add .cause_error causes error : ' + e); 
 	}
-	delete object._loader.lib['.cause_error'];
-	delete object._loader.lib[''];
+	object.remove('cause_error');
+	object.remove('');
 
 	try {
 		object.add('.cause_error.', 'used', function(exports) {});
@@ -313,9 +312,9 @@ test('string starts/ends with .', function() {
 	} catch (e) {
 		ok(true, 'add .cause_error. causes error : ' + e);
 	}
-	delete object._loader.lib[''];
-	delete object._loader.lib['.cause_error'];
-	delete object._loader.lib['.cause_error.'];
+	object.remove('');
+	object.remove('.cause_error');
+	object.remove('.cause_error.');
 });
 
 test('parent module and sub module', function() {
@@ -339,8 +338,8 @@ test('parent module and sub module', function() {
 			'parent.sub2 is not null, but it is an empty module');
 		equal(parent.sub2.sub3.b, 3, 'parent.sub2.sub3 module is loaded');
 	});
-	delete object._loader.lib['parent.sub2.sub3'];
-	delete object._loader.lib['parent.sub'];
+	object.remove('parent.sub2.sub3');
+	object.remove('parent.sub');
 
 	object.add('parent.sub.sub2.sub', function(exports) {
 		exports.a = 1;
@@ -350,8 +349,6 @@ test('parent module and sub module', function() {
 		equal(parent.sub.fn, undefined, 'parent.sub.fn is undefined');
 		equal(parent.sub.sub2.fn, undefined, 'parent.sub.sub2.fn is undefined');
 	});
-	delete object._loader.lib['parent.sub.sub2.sub'];
-	delete object._loader.lib['parent.sub.sub2'];
-	delete object._loader.lib['parent.sub'];
+	object.remove('parent.sub', true);
 });
 
