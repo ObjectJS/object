@@ -1097,7 +1097,7 @@ Loader.prototype.use = function(dependencies, factory) {
 	var runtime = this.createRuntime(id);
 	var name = '__main__';
 
-	pkg.load(name, runtime, function(deps) {
+	runtime.loadModule(id, name, function(deps) {
 		pkg.exports(name, deps, runtime);
 	});
 };
