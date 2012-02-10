@@ -11,3 +11,4 @@ object.use('module1', function(module1) {
 //object.use('module3', function(a) {
 	//console.log(a);
 //})
+//

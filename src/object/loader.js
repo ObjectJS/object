@@ -169,7 +169,7 @@ CommonJSPackage.prototype = new Package();
 CommonJSPackage.prototype.constructor = CommonJSPackage;
 
 /**
- * @overwrite
+ * @override
  */
 CommonJSPackage.prototype.load = function(name, runtime, callback) {
 	var deps = [];
@@ -192,14 +192,14 @@ CommonJSPackage.prototype.load = function(name, runtime, callback) {
 
 /**
  * 出现循环依赖但并不立刻报错，而是当作此模块没有获取到，继续获取下一个
- * @overwrite
+ * @override
  */
 CommonJSPackage.prototype.cyclicLoad = function(depName, runtime, next) {
 	next();
 };
 
 /**
- * @overwrite
+ * @override
  */
 CommonJSPackage.prototype.exports = function(name, deps, runtime) {
 	var exports = this.execute(name, deps, runtime);
@@ -286,7 +286,7 @@ ObjectPackage.prototype = new Package();
 ObjectPackage.prototype.constructor = ObjectPackage;
 
 /**
- * @overwrite
+ * @override
  */
 ObjectPackage.prototype.load = function(name, runtime, callback) {
 	var deps = [];
@@ -315,7 +315,7 @@ ObjectPackage.prototype.load = function(name, runtime, callback) {
 
 /**
  * 出现循环依赖时建立一个空的exports返回，待所有流程走完后会将此模块填充完整。
- * @overwrite
+ * @override
  */
 ObjectPackage.prototype.cyclicLoad = function(depName, runtime, next) {
 	if (!(depName in runtime.modules)) {
@@ -333,7 +333,7 @@ ObjectPackage.prototype.cyclicLoad = function(depName, runtime, next) {
 };
 
 /**
- * @overwrite
+ * @override
  */
 ObjectPackage.prototype.exports = function(name, exports, runtime) {
 	return exports;
