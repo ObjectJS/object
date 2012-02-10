@@ -98,6 +98,7 @@ function Queue(arr, opt) {
 }
 
 Queue.prototype.start = function() {
+	this.index = -1;
 	this._next();
 };
 
@@ -175,6 +176,11 @@ CommonJSPackage.prototype.load = function(name, runtime, callback) {
 	var deps = [];
 	var pkg = this;
 
+	this.dependencies.forEach(function(dependency, i) {
+		var dep = this.getDependency(this.dependencies[i], runtime);
+		deps.push(dep);
+	}, this);
+
 	var queue = new Queue(this.dependencies);
 
 	queue.done = function() {
@@ -182,8 +188,7 @@ CommonJSPackage.prototype.load = function(name, runtime, callback) {
 	};
 
 	queue.next = function(next) {
-		var dep = pkg.getDependency(pkg.dependencies[this.index], runtime);
-		deps.push(dep);
+		var dep = deps[this.index];
 		dep.load(runtime, next);
 	};
 
@@ -292,6 +297,11 @@ ObjectPackage.prototype.load = function(name, runtime, callback) {
 	var deps = [];
 	var pkg = this;
 
+	this.dependencies.forEach(function(dependency, i) {
+		var dep = this.getDependency(i, runtime);
+		deps.push(dep);
+	}, this);
+
 	var queue = new Queue(this.dependencies);
 
 	queue.done = function() {
@@ -301,8 +311,7 @@ ObjectPackage.prototype.load = function(name, runtime, callback) {
 	};
 
 	queue.next = function(next) {
-		var dep = pkg.getDependency(this.index, runtime);
-		deps.push(dep);
+		var dep = deps[this.index];
 		dep.load(runtime, function(exports) {
 			dep.exports = exports;
 			next();
@@ -595,11 +604,10 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 		var id = pathjoin(context, this.source.slice(0, this.index + 1).join('/'));
 		var part = this.source[this.index];
 		var name = (pName? pName + '.' : '') + part;
-		var exports = runtime.modules[name];
 		// 使用缓存中的
-		if (exports) {
+		if (runtime.modules[name]) {
 			pName = name;
-			next(exports);
+			next();
 		} else {
 			runtime.loadModule(id, name, function(exports) {
 				runtime.setMemberTo(pName, part, exports);
