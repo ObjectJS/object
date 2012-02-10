@@ -1,4 +1,4 @@
-object.add('events', 'ua', function(exports, ua) {
+object.define('/root/events.js', 'ua', function(exports, ua) {
 
 /**
  * 在Safari3.0(Webkit 523)下，preventDefault()无法获取事件是否被preventDefault的信息

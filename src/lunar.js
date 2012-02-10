@@ -2,7 +2,7 @@
  * 公历农历的互相转换
  * copyright @ http://ctc.qzs.qq.com/qzone/newprofile/scripts/solarlunar.js
  */
-object.add('lunar', function(exports) {
+object.add('/root/lunar.js', function(exports) {
 var MIN_YEAR = 1891,
 	MAX_YEAR = 2100,
 	SKY = ['庚','辛','壬','癸','甲','乙','丙','丁','戊','己'],

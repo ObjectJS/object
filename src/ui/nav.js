@@ -1,4 +1,4 @@
-object.add('ui.nav', 'ui, ui.decorators', function(exports, ui) {
+object.add('/root/ui/nav.js', 'ui, ui.decorators', function(exports, ui) {
 
 var fireevent = ui.decorators.fireevent;
 

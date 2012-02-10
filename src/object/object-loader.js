@@ -16,14 +16,14 @@ object.execute = loader.execute.bind(loader);
 /**
  * 增加window模块，如果其他模块中需要使用或修改window的相关内容，必须显式的依赖window模块
  */
-object.define('/root/window', 'sys', function(require) {
+object.define('/root/window.js', 'sys', function(require) {
 	var sys = require('sys');
 	var dom = sys.modules['dom'];
 	if (dom) dom.wrap(window);
 	return window;
 });
 
-object.define('/root/loader', function(require, exports) {
+object.define('/root/loader.js', function(require, exports) {
 	exports.Loader = object.Loader;
 });
 

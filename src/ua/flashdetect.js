@@ -1,4 +1,4 @@
-object.add('ua.flashdetect', function(exports) {
+object.add('/root/ua/flashdetect.js', function(exports) {
 
 /**
 * getFlashVersionv Flash Player version detection http://stauren.net

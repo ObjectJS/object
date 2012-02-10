@@ -89,29 +89,6 @@ function cleanPath(path) {
 }
 
 /**
- * 异步队列
- * @class
- */
-function Queue(arr, opt) {
-	this.source = arr;
-	this.index = -1;
-}
-
-Queue.prototype.start = function() {
-	this.index = -1;
-	this._next();
-};
-
-Queue.prototype._next = function() {
-	this.index++;
-	if (this.index == this.source.length) {
-		this.done();
-	} else {
-		this.next(this._next.bind(this));
-	}
-};
-
-/**
  * 模块
  * @class
  */
@@ -181,18 +158,18 @@ CommonJSPackage.prototype.load = function(name, runtime, callback) {
 		deps.push(dep);
 	}, this);
 
-	var queue = new Queue(this.dependencies);
+	var index = -1;
 
-	queue.done = function() {
-		if (callback) callback(deps);
-	};
+	function next() {
+		index++;
+		if (index == pkg.dependencies.length) {
+			if (callback) callback(deps);
+		} else {
+			deps[index].load(runtime, next);
+		}
+	}
 
-	queue.next = function(next) {
-		var dep = deps[this.index];
-		dep.load(runtime, next);
-	};
-
-	queue.start();
+	next();
 };
 
 /**
@@ -302,23 +279,24 @@ ObjectPackage.prototype.load = function(name, runtime, callback) {
 		deps.push(dep);
 	}, this);
 
-	var queue = new Queue(this.dependencies);
+	var index = -1;
 
-	queue.done = function() {
-		var exports = pkg.execute(name, deps, runtime);
-		runtime.addModule(name, exports);
-		if (callback) callback(exports);
-	};
+	function next() {
+		index++;
+		if (index == pkg.dependencies.length) {
+			var exports = pkg.execute(name, deps, runtime);
+			runtime.addModule(name, exports);
+			if (callback) callback(exports);
+		} else {
+			var dep = deps[index];
+			dep.load(runtime, function(exports) {
+				dep.exports = exports;
+				next();
+			});
+		}
+	}
 
-	queue.next = function(next) {
-		var dep = deps[this.index];
-		dep.load(runtime, function(exports) {
-			dep.exports = exports;
-			next();
-		});
-	};
-
-	queue.start();
+	next();
 
 };
 
@@ -593,35 +571,37 @@ ObjectDependency.prototype.load = function(runtime, callback) {
 	var context = this.context || '';
 	var prefix = this.prefix;
 	var pName = prefix;
+	var parts = this.nameParts;
+
+	var index = -1;
 
 	/**
 	 * 依次获取当前模块的每个部分
 	 * 如a.b.c，依次获取a、a.b、a.b.c
 	 */
-	var queue = new Queue(this.nameParts);
-
-	queue.next = function(next) {
-		var id = pathjoin(context, this.source.slice(0, this.index + 1).join('/'));
-		var part = this.source[this.index];
-		var name = (pName? pName + '.' : '') + part;
-		// 使用缓存中的
-		if (runtime.modules[name]) {
-			pName = name;
-			next();
+	function next() {
+		index++;
+		if (index == parts.length) {
+			callback(runtime.modules[(prefix? prefix + '.' : '') + parts[0]]);
 		} else {
-			runtime.loadModule(id, name, function(exports) {
-				runtime.setMemberTo(pName, part, exports);
+			var id = pathjoin(context, parts.slice(0, index + 1).join('/'));
+			var part = parts[index];
+			var name = (pName? pName + '.' : '') + part;
+			// 使用缓存中的
+			if (runtime.modules[name]) {
 				pName = name;
 				next();
-			});
+			} else {
+				runtime.loadModule(id, name, function(exports) {
+					runtime.setMemberTo(pName, part, exports);
+					pName = name;
+					next();
+				});
+			}
 		}
-	};
+	}
 
-	queue.done = function() {
-		callback(runtime.modules[(prefix? prefix + '.' : '') + this.source[0]]);
-	};
-
-	queue.start();
+	next();
 };
 
 /**
@@ -1003,19 +983,19 @@ Loader.prototype.defineModule = function(constructor, id, dependencies, factory)
 };
 
 /**
- * @param name
+ * @param id
  * @param dependencies
  * @param factory
  */
-Loader.prototype.define = function(name, dependencies, factory) {
-	if (typeof name != 'string') return;
+Loader.prototype.define = function(id, dependencies, factory) {
+	if (typeof id != 'string') return;
 
 	if (typeof dependencies == 'function') {
 		factory = dependencies;
 		dependencies = [];
 	}
 
-	this.defineModule(CommonJSPackage, pathjoin('/temp', name2id(name)), dependencies, factory);
+	this.defineModule(CommonJSPackage, pathjoin('/temp', id), dependencies, factory);
 };
 
 /**
@@ -1026,12 +1006,12 @@ Loader.prototype.getModule = function(id) {
 };
 
 /**
- * @param name
+ * @param id
  * @param dependencies
  * @param factory
  */
-Loader.prototype.add = function(name, dependencies, factory) {
-	if (typeof name != 'string') return;
+Loader.prototype.add = function(id, dependencies, factory) {
+	if (typeof id != 'string') return;
 
 	if (typeof dependencies == 'function') {
 		factory = dependencies;
@@ -1039,17 +1019,17 @@ Loader.prototype.add = function(name, dependencies, factory) {
 	}
 
 	// 若为相对路径，则放在temp上
-	var id = pathjoin('/temp', name2id(name));
+	var id = pathjoin('/temp', id);
 	this.defineModule(ObjectPackage, id, dependencies, factory);
 };
 
 /**
  * 移除模块的定义
- * @param name 需要移除模块的name
+ * @param id 需要移除模块的id
  * @param all 是否移除其所有子模块
  */
-Loader.prototype.remove = function(name, all) {
-	var id = pathjoin('/temp', name2id(name));
+Loader.prototype.remove = function(id, all) {
+	var id = pathjoin('/temp', id);
 	delete this.lib[id];
 	if (all) {
 		Object.keys(this.lib).forEach(function(key) {

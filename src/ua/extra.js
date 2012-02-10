@@ -1,4 +1,4 @@
-object.add('ua.extra', 'sys', function(exports, sys) {
+object.add('/root/ua/extra.js', 'sys', function(exports, sys) {
 
 	var uamodule = sys.modules['ua'];
 
