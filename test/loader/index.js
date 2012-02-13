@@ -1,3 +1,7 @@
+object.use('ua', function(exports, ua) {
+	console.log(ua)
+});
+
 //object.use('module1', function(module1) {
 	//console.log(module1)
 //});

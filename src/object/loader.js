@@ -969,12 +969,12 @@ Loader.prototype.createRuntime = function(id) {
 
 /**
  * 建立前缀模块
- * 比如 a/b/c/d ，会建立 a a/b a/b/c 三个空模块，最后一个模块为目标模块
+ * 比如 a/b/c/d.js ，会建立 a a/b a/b/c 三个空模块，最后一个模块为目标模块
  */
 Loader.prototype.definePrefixFor = function(id) {
 	if (!id || typeof id != 'string') return;
 
-	var idParts = id.split('/');
+	var idParts = dirname(id).split('/');
 	for (var i = 0, prefix, pkg, l = idParts.length - 1; i < l; i++) {
 		prefix = idParts.slice(0, i + 1).join('/');
 		this.definePrefix(prefix);
@@ -1078,7 +1078,7 @@ Loader.prototype.add = function(id, dependencies, factory) {
 	}
 
 	// 若为相对路径，则放在temp上
-	var id = pathjoin('/temp', id);
+	id = pathjoin('/temp', id);
 	this.defineModule(ObjectPackage, id, dependencies, factory);
 };
 
@@ -1088,7 +1088,7 @@ Loader.prototype.add = function(id, dependencies, factory) {
  * @param all 是否移除其所有子模块
  */
 Loader.prototype.remove = function(id, all) {
-	var id = pathjoin('/temp', id);
+	id = pathjoin('/temp', id || '');
 	delete this.lib[id];
 	if (all) {
 		Object.keys(this.lib).forEach(function(key) {

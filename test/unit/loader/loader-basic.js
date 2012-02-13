@@ -136,10 +136,10 @@ test('add-basic', function() {
 		try {
 			loader.add(edges[prop], ['a']);
 			ok(true, 'loader.add(' + prop + ', [\'a\']) should be ok');
-			loader.remove(edges[prop]);
 		} catch(e) {
 			ok(false, 'loader.add(' + prop + ', [\'a\']) should be ok : ' + e);
 		}
+		loader.remove(edges[prop]);
 	}
 });
 
