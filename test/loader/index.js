@@ -1,9 +1,3 @@
-object.add('/root/abc/index.js', function() {
-});
-object.use('abc', function(abc) {
-	console.log(abc)
-});
-
 //object.use('module1', function(module1) {
 	//console.log(module1)
 //});

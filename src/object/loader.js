@@ -19,6 +19,13 @@ function dirname(path) {
 }
 
 /**
+ * 只保留路径中的最后文件部分
+ */
+function basename(path) {
+	return path.slice(dirname(path).length + 1);
+}
+
+/**
  * 格式化path
  */
 function realpath(path) {
@@ -483,15 +490,43 @@ function Dependency(name, runtime) {
 }
 
 /**
+ * 找到此id的模块
+ */
+Dependency.prototype.find = function(id) {
+
+	var loader = this.runtime.loader;
+	var path;
+
+	var ext = basename(id).slice(id.lastIndexOf('.'));
+
+	if (ext == '.css') {
+		// TODO
+	}
+
+	function find(id) {
+		if (loader.getModule(id)) {
+			return id;
+		} else {
+			return false;
+		}
+	}
+
+	if (path = find(id)) return path;
+	if (path = find(id + '.js')) return path;
+	if (path = find(id + '/index.js')) return path;
+	return false;
+};
+
+/**
  * @param name
  * @param module
  */
 function CommonJSDependency(name, runtime) {
 	Dependency.apply(this, arguments);
 
-	var dep = this;
 	var parent = runtime.stack[runtime.stack.length - 1];
-    var id;
+    var id, runtimeName;
+	var paths = ['/temp', '/root'];
 
 	// absolute id
 	if (isAbsolute(name)) {
@@ -507,25 +542,15 @@ function CommonJSDependency(name, runtime) {
 	}
 	// top-level id
 	else {
-		function find(tempId) {
-			if (runtime.loader.getModule(tempId)) {
-				id = tempId;
-				dep.runtimeName = dep.name;
-				return true;
-			}
-		}
-		['/temp', '/root'].some(function(m) {
-			if (name.slice(-3) == '.js') {
-				if (find(pathjoin(m, name))) return true;
-			} else {
-				if (find(pathjoin(m, name + '.js'))) return true;
-				if (find(pathjoin(m, name + '/index.js'))) return true;
-			}
+		paths.some(function(m) {
+			id = this.find(pathjoin(m, name));
+			if (id) return true;
 		}, this);
+		runtimeName = this.name;
 	}
 
 	this.id = realpath(id);
-	this.runtimeName = this.runtimeName || id;
+	this.runtimeName = runtimeName || id;
 };
 
 CommonJSDependency.prototype = new Dependency();
@@ -557,47 +582,24 @@ function ObjectDependency(name, runtime) {
 	// context为id的前缀部分，prefix为name的前缀部分
 	var id, context, prefix;
 
-	/**
-	 * 检测此id的模块是否存在，若存在，则返回true
-	 * @param tempContext 在此路径中寻找
-	 * @param path 相对于调用者，正在哪个路径中寻找
-	 */
-	function find(tempContext, path) {
-		var tempId = pathjoin(tempContext, partId);
-		// 检测此tempId是否存在
-		if (runtime.loader.getModule(tempId)) {
-			id = tempId;
-			context = tempContext;
-			if (path == '') { // 在当前目录中找到的子模块
+	// 分别在以下空间中找：
+	// 当前模块(sys.path中通过'.'定义)；
+	// 全局模块(sys.path中通过'/root'定义)；
+	// 用户模块(sys.path中通过'/temp'定义)；
+	// 运行时路径上的模块(默认的)。
+	paths.some(function(m) {
+		var path = pathjoin(parent.module.id, m);
+		id = this.find(pathjoin(path, name));
+		if (id) {
+			context = path;
+			if (m == '') { // 在当前目录中找到的子模块
 				prefix = parent.name;
 			} else {
 				prefix = '';
 			}
 			return true;
 		}
-		return false;
-	}
-
-	// 分别在以下空间中找：
-	// 当前模块(sys.path中通过'.'定义)；
-	// 全局模块(sys.path中通过'/root'定义)；
-	// 用户模块(sys.path中通过'/temp'定义)；
-	// 运行时路径上的模块(默认的)。
-	for (var i = 0, l = paths.length, path, findpath; i < l; i++) {
-		path = paths[i];
-
-		// 先找子模块
-		findpath = pathjoin(parent.module.id, path);
-		if (find(findpath, path)) {
-			break;
-		}
-
-		// 再找同级模块
-		findpath = dirname(findpath)
-		if (find(findpath, pathjoin(path, '../'))) {
-			break;
-		}
-	}
+	}, this);
 
 	// 当一个名为 a/b/c/d/e/f/g 的模块被 a/b/c/d/e/ 在 a/b/c 运行空间下通过 f.g 依赖时：
 	// runtime.context: a/b/c

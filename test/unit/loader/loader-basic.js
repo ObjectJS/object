@@ -144,7 +144,6 @@ test('add-basic', function() {
 });
 
 test('add-usage', function() {
-	console.dir(loader.lib);
 	equal(Object.keys(loader.lib).length, 1, 'only sys in loader.lib');
 	loader.add('a', function() {});
 	equal(Object.keys(loader.lib).length, 2, 'a is added to loader.lib');
