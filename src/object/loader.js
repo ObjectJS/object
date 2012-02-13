@@ -25,6 +25,20 @@ function realpath(path) {
 	// 去掉末尾的“/”
 	if (path.lastIndexOf('/') == path.length - 1) path = path.slice(0, -1);
 	if (!path) path = '/';
+
+	var result = [];
+
+	parts = path.split(/\//ig);
+	parts.forEach(function(part, i) {
+		if (part == '.') {
+		} else if (part == '..') {
+			result.pop();
+		} else {
+			result.push(part);
+		}
+	});
+	path = result.join('/');
+
 	return path;
 }
 
@@ -37,6 +51,37 @@ function pathjoin(path1, path2) {
 	if (path2.indexOf('/') == 0) path = path2; // absolute path
 	else path = path1 + path2; // join
 	return realpath(path);
+}
+
+/**
+ * http://sample.com/a.js
+ */
+function isAbsolute(id) {
+	return ~id.indexOf('://') || id.indexOf('//') === 0;
+}
+
+/**
+ * ./a.js
+ * ../a.js
+ * ../../a.js
+ */
+function isRelative(id) {
+	return id.indexOf('./') === 0 || id.indexOf('../') === 0;
+}
+
+/**
+ * /a.js
+ */
+function isRoot(id) {
+	return id.charAt(0) === '/' && id.charAt(1) !== '/';
+}
+
+/**
+ * a.js
+ */
+function isTopLevel(id) {
+	var c = id.charAt(0);
+	return id.indexOf('://') === -1 && c !== '.' && c !== '/';
 }
 
 /**
@@ -165,7 +210,7 @@ CommonJSPackage.prototype.load = function(name, runtime, callback) {
 		if (index == pkg.dependencies.length) {
 			if (callback) callback(deps);
 		} else {
-			deps[index].load(runtime, next);
+			deps[index].load(next);
 		}
 	}
 
@@ -224,7 +269,7 @@ CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 		}
 		var dep = deps[index];
 		var exports;
-		dep.load(runtime, function(result) {
+		dep.load(function(result) {
 			var depPkg = loader.getModule(dep.id);
 			if (result) {
 				exports = depPkg.exports(name, result, runtime);
@@ -289,7 +334,7 @@ ObjectPackage.prototype.load = function(name, runtime, callback) {
 			if (callback) callback(exports);
 		} else {
 			var dep = deps[index];
-			dep.load(runtime, function(exports) {
+			dep.load(function(exports) {
 				dep.exports = exports;
 				next();
 			});
@@ -431,8 +476,9 @@ Package.prototype.parseDependencies = function(dependencies) {
 	return dependencies;
 };
 
-function Dependency(name) {
+function Dependency(name, runtime) {
 	if (!name) return;
+	this.runtime = runtime;
 	this.name = name;
 }
 
@@ -441,43 +487,53 @@ function Dependency(name) {
  * @param module
  */
 function CommonJSDependency(name, runtime) {
-	var pParts, parts;
+	Dependency.apply(this, arguments);
+
+	var dep = this;
 	var parent = runtime.stack[runtime.stack.length - 1];
-	if (name.indexOf('/') == 0) { // root
-		this.id = name;
-		this.runtimeName = this.id;
-	} else if (name.indexOf('./') == 0 || name.indexOf('../') == 0) { // relative
-		pParts = parent.module.id.split('/');
-		pParts.pop();
-		parts = name.split(/\//ig);
-		parts.forEach(function(part) {
-			if (part == '.') {
-			} else if (part == '..') {
-				pParts.pop();
-			} else {
-				pParts.push(part);
-			}
-		});
-		this.id = pParts.join('/');
-		this.runtimeName = this.id;
-	} else { // top level
-		['/temp', '/root'].some(function(m) {
-			var id = pathjoin(m, name2id(name));
-			if (runtime.loader.getModule(id)) {
-				this.id = id;
-				this.runtimeName = name;
+    var id;
+
+	// absolute id
+	if (isAbsolute(name)) {
+		id = name;
+	}
+	// relative id
+	else if (isRelative(name)) {
+		id = pathjoin(dirname(parent.module.id), name);
+	}
+	// root id
+	else if (isRoot(name)) {
+		id = pathjoin(Loader._pageDir, name);
+	}
+	// top-level id
+	else {
+		function find(tempId) {
+			if (runtime.loader.getModule(tempId)) {
+				id = tempId;
+				dep.runtimeName = dep.name;
 				return true;
+			}
+		}
+		['/temp', '/root'].some(function(m) {
+			if (name.slice(-3) == '.js') {
+				if (find(pathjoin(m, name))) return true;
+			} else {
+				if (find(pathjoin(m, name + '.js'))) return true;
+				if (find(pathjoin(m, name + '/index.js'))) return true;
 			}
 		}, this);
 	}
-	Dependency.call(this, name);
+
+	this.id = realpath(id);
+	this.runtimeName = this.runtimeName || id;
 };
 
 CommonJSDependency.prototype = new Dependency();
 
 CommonJSDependency.prototype.constructor = CommonJSDependency;
 
-CommonJSDependency.prototype.load = function(runtime, callback) {
+CommonJSDependency.prototype.load = function(callback) {
+	var runtime = this.runtime;
 	var exports = runtime.modules[this.runtimeName];
 	if (exports) {
 		callback(exports);
@@ -490,7 +546,7 @@ CommonJSDependency.prototype.load = function(runtime, callback) {
  * @param name
  */
 function ObjectDependency(name, runtime) {
-	Dependency.call(this, name);
+	Dependency.apply(this, arguments);
 
 	// 依赖自己的模块
 	var parent = runtime.stack[runtime.stack.length - 1];
@@ -567,7 +623,8 @@ ObjectDependency.prototype = new Dependency();
 
 ObjectDependency.prototype.constructor = ObjectDependency;
 
-ObjectDependency.prototype.load = function(runtime, callback) {
+ObjectDependency.prototype.load = function(callback) {
+	var runtime = this.runtime;
 	var context = this.context || '';
 	var prefix = this.prefix;
 	var pName = prefix;
