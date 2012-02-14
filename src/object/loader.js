@@ -643,7 +643,8 @@ ObjectDependency.prototype.load = function(callback) {
 		if (index == parts.length) {
 			callback(runtime.modules[(prefix? prefix + '.' : '') + parts[0]]);
 		} else {
-			var id = pathjoin(context, parts.slice(0, index + 1).join('/'));
+			// TODO 加入id生成逻辑
+			var id = pathjoin(context, parts.slice(0, index + 1).join('/')) + '.js';
 			var part = parts[index];
 			var name = (pName? pName + '.' : '') + part;
 			// 使用缓存中的
@@ -977,6 +978,7 @@ Loader.prototype.definePrefixFor = function(id) {
 	var idParts = dirname(id).split('/');
 	for (var i = 0, prefix, pkg, l = idParts.length - 1; i < l; i++) {
 		prefix = idParts.slice(0, i + 1).join('/');
+		prefix += '/index.js';
 		this.definePrefix(prefix);
 	}
 };
@@ -1078,7 +1080,7 @@ Loader.prototype.add = function(id, dependencies, factory) {
 	}
 
 	// 若为相对路径，则放在temp上
-	id = pathjoin('/temp', id);
+	id = pathjoin('/temp', String(id));
 	this.defineModule(ObjectPackage, id, dependencies, factory);
 };
 
@@ -1088,7 +1090,7 @@ Loader.prototype.add = function(id, dependencies, factory) {
  * @param all 是否移除其所有子模块
  */
 Loader.prototype.remove = function(id, all) {
-	id = pathjoin('/temp', id || '');
+	id = pathjoin('/temp', String(id));
 	delete this.lib[id];
 	if (all) {
 		Object.keys(this.lib).forEach(function(key) {

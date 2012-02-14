@@ -1,4 +1,6 @@
-object.use('ua', function(exports, ua) {
+object.add('module1', 'ua', function() {
+});
+object.use('module1', function(exports, ua) {
 	console.log(ua)
 });
 

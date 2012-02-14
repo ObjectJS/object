@@ -153,7 +153,7 @@ test('add-usage', function() {
 	equal(Object.keys(loader.lib).length, 4, 'c is added to loader.lib');
 	equal(loader.lib['/temp/c'].dependencies.length, 2, 'c dependencies a and b, so lib[c].dependencies.length = 2');
 
-	loader.add('d.dd', 'a,b,c', function() {});
+	loader.add('d/dd', 'a,b,c', function() {});
 	equal(Object.keys(loader.lib).length, 5, 'd.dd are added to loader.lib');
 	equal(loader.lib['/temp/d/dd'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
 
