@@ -1,7 +1,6 @@
-object.add('module1', 'ua', function() {
+object.add('module1.module2', function() {
 });
-object.use('module1', function(exports, ua) {
-	console.log(ua)
+object.use('module1.module2', function() {
 });
 
 //object.use('module1', function(module1) {
