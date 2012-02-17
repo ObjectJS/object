@@ -3,7 +3,7 @@
 <meta charset="utf-8" />
 <title>继承</title>
 <script type="text/javascript" src="../pub/object.js"></script>
-<script>
+<scriptxx>
 var B = new Class({
 	value: 1,
 	m: function(self) {
@@ -27,6 +27,49 @@ var A = new Class({
 
 var a = new A();
 a.m();
+</script>
+<script>
+var E = new Class(function() {
+	this.ffffff = function() {
+	}
+});
+var A = new Class(function(){
+	this.initialize= function(self){
+		var ret = self.extendMessage({content: 'lala'});
+		console.log('result', ret);
+	};
+	this.extendMessage= function(self, msg){
+		msg.A = !msg.A;
+		console.log('A processed');
+		return msg;
+	}
+});
+A.xxx = 'A';
+
+var B = new Class(A, function(){
+	this.extendMessage= function(self, msg){
+		msg.B = !msg.B;
+		console.log('B processed');
+		return this.parent(self, msg);
+	}
+});
+B.xxx = 'B'
+
+var C = new Class(B, function(){});
+C.xxx = 'C'
+
+
+
+var D = new Class(C, function(){
+	this.extendMessage= function(self, msg){
+		console.log('D processed');
+		return this.parent(self, msg);
+	}
+});
+D.xxx = 'D'
+
+
+new D();  //B类的extendMessage方法会执行两次G
 </script>
 </head>
 <body>
