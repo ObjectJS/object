@@ -1032,7 +1032,9 @@ Loader.prototype.definePrefixFor = function(id) {
 Loader.prototype.definePrefix = function(id) {
 	if (!id || typeof id != 'string') return;
 
+	// 只要存在就返回
 	if (id in this.lib) return;
+
 	this.lib[id] = new Package(id);
 };
 
@@ -1042,7 +1044,8 @@ Loader.prototype.definePrefix = function(id) {
 Loader.prototype.defineFile = function(id, src) {
 	if (!id || typeof id != 'string') return;
 
-	if (this.lib[id]) return;
+	// 存在factory或file则返回
+	if (id in this.lib && (this.lib[id].factory || this.lib[id].file)) return;
 
 	this.definePrefixFor(id);
 
