@@ -1,14 +1,15 @@
+var loader = object._loader;
+
 module("module-usage");
 test('modules in object._loader.lib', function() {
-	expect(4);
+	expect(3);
 	raises(function() {
 		object.use('not_defined_module', function(exports){});
 	}, 'use not defined module, should raise error');
 	object.add('test_object_add', function(exports){});
-	ok(object._loader.lib['/root/sys'] != null, 'sys module exists after object.add is called');
+	ok(loader.lib['/root/sys'] != null, 'sys module exists after object.add is called');
 	object.use('test_object_add', function(exports, test) {});
-	ok(object._loader.lib['/temp/test_object_add'] != null, 'test_object_add module exists');
-	ok(object._loader.lib.__anonymous_0__ != null, 'anonymous module exists');
+	ok(loader.getModule('test_object_add') != null, 'test_object_add module exists');
 });
 
 test('sys.modules - exists', function() {
@@ -30,13 +31,13 @@ test('sys.modules - exists', function() {
 test('sys.molules - submodule by use', function() {
 	object.add('test3.c', function() {});
 
-	object.add('test3', './test3/c', function(exports, c) {});
+	object.add('test3', './c', function(exports, c) {});
 
 	object.add('test4.a.b.c', function(exports) {
-		equal(this.__name__, '/temp/test4/a/b/c');
+		equal(this.__name__, '/temp/test4/a/b/c/index.js');
 	});
     
-	object.add('test4.a', './a/b/c, sys', function(exports, c, sys) {
+	object.add('test4.a', './b/c, sys', function(exports, c, sys) {
 		this.name = 'test4/a';
 		equal(this.__name__, 'test4/a');
 	});
@@ -46,11 +47,10 @@ test('sys.molules - submodule by use', function() {
 	});
 
 	object.use('test4, sys', function(exports, test, sys) {
-		console.dir(sys.modules)
 		ok(sys.modules['test4/a'] != null, 'test4.a is used by ./a, so a is in sys.modules');
 		ok(sys.modules['test4/a/b'] == null, 'a.b is not in sys.modules');
 		ok(sys.modules['test3'] != null, 'test3 is in sys.modules');
-		ok(sys.modules['/temp/test3/c'] != null, 'test3.c is in sys.modules');
+		ok(sys.modules['/temp/test3/c/index.js'] != null, 'test3.c is in sys.modules');
 	});
 	object.remove('test3', true);
 	object.remove('test4', true);
@@ -113,139 +113,82 @@ test('return value of module', function() {
 test('relative module - use', function() {
 
 	object.add('foo2.c', function() {});
-	object.add('foo2', './foo2/c', function(exports, c) {
-		equal(c.__name__, '/temp/foo2/c', 'module name with same prefix.');
+	object.add('foo2', './c', function(exports, c) {
+		equal(c.__name__, '/temp/foo2/c/index.js', 'module name with same prefix.');
 	});
 	object.add('foo.a.b.c', function(exports) { });
-	object.add('foo.a', './a/b/c, sys', function(exports, c, sys) {
-		equal(c.__name__, '/temp/foo/a/b/c', 'relative submodule name.');
+	object.add('foo.a', './b/c, sys', function(exports, c, sys) {
+		equal(c.__name__, '/temp/foo/a/b/c/index.js', 'relative submodule name.');
 	});
 	object.add('foo.b', function(exports) {
 	});
 	object.add('foo.c', function(exports) {
 	});
-	object.add('foo', './foo/a, ./foo/b, ./foo/c, foo2, sys', function(exports, a, b, c, foo2, sys) {
-		ok(a.__name__ == '/temp/foo/a' && b.__name__ == '/temp/foo/b' && c.__name__ == '/temp/foo/c', 'arguments pass.');
+	object.add('foo', './a, ./b, ./c, foo2, sys', function(exports, a, b, c, foo2, sys) {
+		ok(a.__name__ == '/temp/foo/a/index.js' && b.__name__ == '/temp/foo/b/index.js' && c.__name__ == '/temp/foo/c/index.js', 'arguments pass.');
 	});
 	object.use('foo', function() {
 	});
-	object._loader.remove('foo', true);
-	object._loader.remove('foo2', true);
+	object.remove('foo', true);
+	object.remove('foo2', true);
 
 	object.add('foo.a.b.c', function(exports) {
 	});
-	object.add('foo.a', './a/b/c, sys', function(exports, c, sys) {
+	object.add('foo.a', './b/c, sys', function(exports, c, sys) {
 		equal(c.__name__, '/temp/foo/a/b/c', 'relative submodule name.');
 	});
-	object.add('foo', './foo/a', function(exports, a) {
+	object.add('foo', './a', function(exports, a) {
 	});
 
 	object.execute('foo');
 });
 
-
-if (window.isJsTestDriverRunning) {
-	var circularDependencyTestCase = AsyncTestCase('circular dependency - extra');
-
-	circularDependencyTestCase.prototype.testWaitForCircularDependencyModule = function(queue) {
-		expect(11);
-		queue.call('a->b->a', function(callbacks) {
-			var callback = callbacks.add(function() {
-				object.remove('a');
-				object.remove('b');
-			});
-			object.add('a', 'b', function(exports, b) {
-				exports.a = 1;
-			});
-			object.add('b', 'a', function(exports, a) {
-				equal(a.__name__, 'a', 'module a is ok in circular dependency');
-				equal(a.a, undefined, 'a.a is undefined in b, not prepared yet');
-				setTimeout(function() {
-					equal(a.a, 1, 'a.a is ok in b, after 100 ms');
-					callback();
-				}, 100);
-			});
-			object.use('a', function(exports, a) {
-				equal(a.__name__, 'a', 'module a is ok in circular dependency');
-				equal(a.a, 1, 'a.a is ok in circular dependency');
-			});
-		});
-		queue.call('c1->c2->c3->c2', function(callbacks) {
-			var callback = callbacks.add(function() {
-				object.remove('c1');
-				object.remove('c2');
-				object.remove('c3');
-			});
-			object.add('c1', 'c2', function(exports, c2) {
-				exports.c1 = 1;
-			});
-			object.add('c2', 'c3', function(exports, c3) {
-				equal(c3.c3, 1, 'c3.c3 is prepared when use in c2');
-				exports.c2 = 1;
-			});
-			object.add('c3', 'c2', function(exports, c2) {
-				equal(c2.c2, undefined, 'c2.c2 is not prepared when use in c3');
-				setTimeout(function() {
-					equal(c2.c2, 1, 'c2.c2 is prepared, after 100ms');
-					callback();
-				}, 100);
-				exports.c3 = 1;
-			});
-			object.use('c1, c2, c3', function(exports, c1, c2, c3) {
-				equal(c1.c1, 1, 'c1.c1 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
-				equal(c2.c2, 1, 'c2.c2 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
-				equal(c3.c3, 1, 'c3.c3 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
-			});
-		});
-	}
-} else {
-	test('circular dependency - extra', function() {
-		expect(11);
-		object.add('a', 'b', function(exports, b) {
-			exports.a = 1;
-		});
-		object.add('b', 'a', function(exports, a) {
-			equal(a.__name__, 'a', 'module a is ok in circular dependency');
-			equal(a.a, undefined, 'a.a is undefined in b, not prepared yet');
-			stop();
-			setTimeout(function() {
-				start();
-				equal(a.a, 1, 'a.a is ok in b, after 100 ms');
-			}, 100);
-		});
-		object.use('a', function(exports, a) {
-			equal(a.__name__, 'a', 'module a is ok in circular dependency');
-			equal(a.a, 1, 'a.a is ok in circular dependency');
-		});
-		object.remove('a');
-		object.remove('b');
-
-		object.add('c1', 'c2', function(exports, c2) {
-			exports.c1 = 1;
-		});
-		object.add('c2', 'c3', function(exports, c3) {
-			equal(c3.c3, 1, 'c3.c3 is prepared when use in c2');
-			exports.c2 = 1;
-		});
-		object.add('c3', 'c2', function(exports, c2) {
-			equal(c2.c2, undefined, 'c2.c2 is not prepared when use in c3');
-			stop();
-			setTimeout(function() {
-				start();
-				equal(c2.c2, 1, 'c2.c2 is prepared, after 100ms');
-			}, 100);
-			exports.c3 = 1;
-		});
-		object.use('c1, c2, c3', function(exports, c1, c2, c3) {
-			equal(c1.c1, 1, 'c1.c1 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
-			equal(c2.c2, 1, 'c2.c2 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
-			equal(c3.c3, 1, 'c3.c3 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
-		});
-		object.remove('c1');
-		object.remove('c2');
-		object.remove('c3');
+test('circular dependency - extra', function() {
+	expect(11);
+	object.add('a', 'b', function(exports, b) {
+		exports.a = 1;
 	});
-}
+	object.add('b', 'a', function(exports, a) {
+		equal(a.__name__, 'a', 'module a is ok in circular dependency');
+		equal(a.a, undefined, 'a.a is undefined in b, not prepared yet');
+		stop();
+		setTimeout(function() {
+			start();
+			equal(a.a, 1, 'a.a is ok in b, after 100 ms');
+		}, 100);
+	});
+	object.use('a', function(exports, a) {
+		equal(a.__name__, 'a', 'module a is ok in circular dependency');
+		equal(a.a, 1, 'a.a is ok in circular dependency');
+	});
+	object.remove('a');
+	object.remove('b');
+
+	object.add('c1', 'c2', function(exports, c2) {
+		exports.c1 = 1;
+	});
+	object.add('c2', 'c3', function(exports, c3) {
+		equal(c3.c3, 1, 'c3.c3 is prepared when use in c2');
+		exports.c2 = 1;
+	});
+	object.add('c3', 'c2', function(exports, c2) {
+		equal(c2.c2, undefined, 'c2.c2 is not prepared when use in c3');
+		stop();
+		setTimeout(function() {
+			start();
+			equal(c2.c2, 1, 'c2.c2 is prepared, after 100ms');
+		}, 100);
+		exports.c3 = 1;
+	});
+	object.use('c1, c2, c3', function(exports, c1, c2, c3) {
+		equal(c1.c1, 1, 'c1.c1 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
+		equal(c2.c2, 1, 'c2.c2 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
+		equal(c3.c3, 1, 'c3.c3 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
+	});
+	object.remove('c1');
+	object.remove('c2');
+	object.remove('c3');
+});
 
 test('circular dependency', function() {
 	expect(3);
@@ -259,64 +202,16 @@ test('circular dependency', function() {
 	});
 	object.remove('c');
 
-	object.add('ooos', function(exports) {});
-	object.add('uuua', './ooos', function(exports) {});
+	object.add('ooos', 'uuua', function(exports) {});
+	object.add('uuua', 'ooos', function(exports) {});
 	try {
 		object.use('uuua', function(exports, uuua) {});
-		ok(true, 'uuua use ./ooos will not cause an circular dependency error');
+		ok(true, 'uuua use ooos will not cause an circular dependency error');
 	} catch (e) {
-		ok(false, 'uuua use ./ooos will cause an circular dependency error');
+		ok(false, 'uuua use ooos will cause an circular dependency error');
 	}
 	object.remove('uuua', true);
 });
-
-//test('string starts/ends with .', function() {
-	//object.add('used', function(exports) {});
-	//try {
-		//object.add('cause_error', '.used', function(exports) {});
-		//object.use('cause_error', function(exports, a) {});
-	//} catch (e) {
-		//ok(true, 'object.add(\'cause_error\', \'.used\') cause an error : ' + e);
-	//}
-	//object.remove('cause_error');
-	//try {
-		//object.add('cause_error', './used', function(exports) {});
-		//object.add('cause_error.used', function(exports) {});
-		//object.use('cause_error', function(exports, a) {});
-		//ok(true, 'start with ./ is ok in uses');
-	//} catch (e) {
-		//ok(true, 'object.add(\'cause_error\', \'.used\') cause an error : ' + e);
-	//}
-	//object.remove('cause_error');
-	//try {
-		//object.add('cause_error', 'used.', function(exports) {});
-		//object.use('cause_error', function(exports, a) {});
-	//} catch (e) {
-		//ok(true, 'object.add(\'cause_error\', \'used.\') cause an error : ' + e);
-	//}
-	//object.remove('cause_error');
-	//try {
-		//object.add('.cause_error', 'used', function(exports) {});
-		//object.use('.cause_error', function(exports, a) {});
-		//ok(object._loader.lib[''] == undefined, 'object._loader.lib[\'\'] should be undefined');
-	//} catch (e) {
-		//ok(true, 'add .cause_error causes error : ' + e); 
-	//}
-	//object.remove('cause_error');
-	//object.remove('');
-
-	//try {
-		//object.add('.cause_error.', 'used', function(exports) {});
-		//object.use('.cause_error.', function(exports, a) {});
-		//ok(object._loader.lib[''] == undefined, 'object._loader.lib[\'\'] should be undefined');
-		//ok(object._loader.lib['.cause_error.'] == undefined,'object._loader.lib[\'.cause_error.\'] should be undefined');
-	//} catch (e) {
-		//ok(true, 'add .cause_error. causes error : ' + e);
-	//}
-	//object.remove('');
-	//object.remove('.cause_error');
-	//object.remove('.cause_error.');
-//});
 
 test('parent module and sub module', function() {
 	object.add('parent', function(exports) {

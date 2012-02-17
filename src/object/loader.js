@@ -208,7 +208,7 @@ NoModuleError.prototype = new Error();
  * @class
  */
 function ModuleRequiredError(name, parent) {
-	this.message = parent.module.id + ': module ' + name + ' required';
+	this.message = parent.id + ': module ' + name + ' required';
 };
 ModuleRequiredError.prototype = new Error();
 
@@ -557,7 +557,7 @@ function CommonJSDependency(name, runtime) {
 	Dependency.apply(this, arguments);
 
 	var parent = runtime.stack[runtime.stack.length - 1];
-    var id, runtimeName;
+    var tempId, id, runtimeName;
 	var paths = ['/temp', '/root'];
 
 	// absolute id
@@ -566,7 +566,9 @@ function CommonJSDependency(name, runtime) {
 	}
 	// relative id
 	else if (isRelative(name)) {
-		id = pathutil.join(pathutil.dirname(parent.module.id), name);
+		tempId = pathutil.join(pathutil.dirname(parent.module.id), name);
+		id = this.find(tempId);
+		if (!id) id = tempId;
 	}
 	// root id
 	else if (isRoot(name)) {
@@ -575,14 +577,13 @@ function CommonJSDependency(name, runtime) {
 	// top-level id
 	else {
 		paths.some(function(m) {
-			id = pathutil.join(m, name);
-			var tid = this.find(id);
-			if (tid) {
-				id = tid;
-				return true;
-			}
+			tempId = pathutil.join(m, name);
+			id = this.find(tempId);
+			if (id) return true;
 		}, this);
 		runtimeName = this.name;
+
+		if (!id) id = tempId;
 	}
 
 	this.id = pathutil.realpath(id);
@@ -1073,19 +1074,21 @@ Loader.prototype.defineModule = function(constructor, id, dependencies, factory)
 };
 
 /**
- * @param id
+ * @param name
  * @param dependencies
  * @param factory
  */
-Loader.prototype.define = function(id, dependencies, factory) {
-	if (typeof id != 'string') return;
+Loader.prototype.define = function(name, dependencies, factory) {
+	if (typeof name != 'string') return;
 
 	if (typeof dependencies == 'function') {
 		factory = dependencies;
 		dependencies = [];
 	}
 
-	this.defineModule(CommonJSPackage, pathutil.join('/temp', id), dependencies, factory);
+	var id = pathutil.join('/temp', name2id(name));
+
+	this.defineModule(CommonJSPackage, id, dependencies, factory);
 };
 
 /**
