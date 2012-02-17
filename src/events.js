@@ -110,6 +110,16 @@ this.fireevent = function(arg1) {
 
 };
 
+/** 
+ * addEvent和removeEvent的第三个参数有特殊意义：
+ * 第0位：捕获阶段与冒泡阶段的标志，1为捕获阶段，0为冒泡阶段
+ * 第1位：事件是否锁定的标志，1为锁定不允许清除，0为可以清除
+ */
+/** 是否不允许移除事件的标志位 */
+this.HOLD = 2;
+/** 事件处理函数是否是捕获阶段的标志位 */
+this.CAPTURE = 1;
+
 /**
  * 将IE中的window.event包装一下
  */
@@ -355,6 +365,8 @@ this.Events = new Class(function() {
 		var boss = self.__boss || self;
 
 		if (cap === null) cap = false;
+		// 取二进制的第0位
+		cap = !!(cap & exports.CAPTURE);
 
 		// 非IE不支持mouseleave/mouseenter事件
 		// 在老base中大量使用了这个事件，支持一下
@@ -483,6 +495,8 @@ this.Events = new Class(function() {
 	*/
 	this.removeEvent = document.removeEventListener? function(self, type, func, cap) {
 		var boss = self.__boss || self;
+		// 取二进制的第0位
+		cap = !!(cap & exports.CAPTURE);
 
 		if (!ua.ua.ie && type == 'mouseleave') {
 			type = 'mouseout';
