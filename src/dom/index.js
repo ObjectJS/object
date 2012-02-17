@@ -509,6 +509,7 @@ this.Element = new Class(function() {
 	 * @param selector 需要被代理的子元素selector
 	 * @param type 事件名称
 	 * @param callback 事件回调
+	 * @param option 事件的冒泡/捕获阶段，是否lock的组合标识
 	 */
 	this.delegate = function(self, selector, type, fn, option) {
 
@@ -539,6 +540,7 @@ this.Element = new Class(function() {
 	 * @param selector 需要被代理的子元素selector
 	 * @param type 事件名称
 	 * @param callback 事件回调
+	 * @param option 事件的冒泡/捕获阶段，是否lock的组合标识
 	 */
 	this.undelegate = function(self, selector, type, fn, option) {
 
