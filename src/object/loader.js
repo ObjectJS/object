@@ -294,6 +294,9 @@ CommonJSPackage.prototype.execute = function(name, deps, runtime) {
 		returnExports.__name__ = exports.__name__;
 		exports = returnExports;
 	}
+	//if (name == '__main__' && typeof exports.main == 'function') {
+		//exports.main();
+	//}
 	return exports;
 };
 
@@ -454,6 +457,9 @@ ObjectPackage.prototype.execute = function(name, deps, runtime) {
 		exports = returnExports;
 	} else {
 		delete exports.__empty_refs__;
+	}
+	if (name == '__main__' && typeof exports.main == 'function') {
+		exports.main();
 	}
 	return exports;
 };
@@ -1157,9 +1163,13 @@ Loader.prototype.execute = function(name) {
 	this.buildFileLib();
 
 	var id = pathutil.join('/temp', name2id(name));
+	var pkg = this.lib[id];
+	var name = '__main__';
 
 	var runtime = this.createRuntime(id);
-	runtime.loadModule(id, '__main__');
+	runtime.loadModule(id, name, function(deps) {
+		//pkg.exports(name, deps, runtime);
+	});
 };
 
 /**
