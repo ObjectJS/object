@@ -509,8 +509,9 @@ this.Element = new Class(function() {
 	 * @param selector 需要被代理的子元素selector
 	 * @param type 事件名称
 	 * @param callback 事件回调
+	 * @param option 事件的冒泡/捕获阶段，是否lock的组合标识
 	 */
-	this.delegate = function(self, selector, type, fn) {
+	this.delegate = function(self, selector, type, fn, option) {
 
 		function wrapper(e) {
 			var ele = e.srcElement || e.target;
@@ -531,7 +532,7 @@ this.Element = new Class(function() {
 			fn: fn
 		});
 
-		self.addEvent(type, wrapper);
+		self.addEvent(type, wrapper, option);
 	};
 
 	/**
@@ -539,8 +540,9 @@ this.Element = new Class(function() {
 	 * @param selector 需要被代理的子元素selector
 	 * @param type 事件名称
 	 * @param callback 事件回调
+	 * @param option 事件的冒泡/捕获阶段，是否lock的组合标识
 	 */
-	this.undelegate = function(self, selector, type, fn) {
+	this.undelegate = function(self, selector, type, fn, option) {
 
 		var key = selector + '_' + type;
 		if (!self.delegates) {
@@ -551,7 +553,7 @@ this.Element = new Class(function() {
 
 		self.delegates[key].forEach(function(item) {
 			if (item.fn === fn) {
-				self.removeEvent(type, item.wrapper);
+				self.removeEvent(type, item.wrapper, option);
 				return;
 			}
 		});
