@@ -1,6 +1,12 @@
-object.add('module1.module2', function() {
+object.add('module1.module2', function(exports) {
+	exports.a = 1;
 });
-object.use('module1.module2', function() {
+object.add('module1', function(exports) {
+	exports.a = 1;
+});
+
+object.use('sys, module1.module2', function(sys, module1) {
+	console.log(module1.a)
 });
 
 //object.use('module1', function(module1) {

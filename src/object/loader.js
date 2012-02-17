@@ -97,7 +97,7 @@ function name2id(name) {
 	var ext = filename.slice(filename.lastIndexOf('.'));
 
 	if (ext != '.js') {
-		id += '.js';
+		id += '/index.js';
 	}
 
 	return id;
@@ -788,7 +788,7 @@ LoaderRuntime.prototype.loadModule = function(id, name, callback) {
 		pkg = loader.lib[id];
 
 		// 加载进来的脚本没有替换掉相应的模块，文件有问题。
-		if (!pkg) {
+		if (!pkg || !pkg.factory) {
 			throw new Error(file + ' do not add ' + id);
 		}
 		pkg.load(name, runtime, done);
