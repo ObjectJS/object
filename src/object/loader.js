@@ -248,13 +248,6 @@ CommonJSPackage.prototype.load = function(name, runtime, callback) {
 	var deps = [];
 	var pkg = this;
 
-	runtime.pushStack(name, this);
-
-	this.dependencies.forEach(function(dependency, i) {
-		var dep = this.getDependency(this.dependencies[i], runtime);
-		deps.push(dep);
-	}, this);
-
 	var index = -1;
 
 	function next() {
@@ -266,6 +259,13 @@ CommonJSPackage.prototype.load = function(name, runtime, callback) {
 			deps[index].load(next);
 		}
 	}
+
+	runtime.pushStack(name, this);
+
+	this.dependencies.forEach(function(dependency, i) {
+		var dep = this.getDependency(this.dependencies[i], runtime);
+		deps.push(dep);
+	}, this);
 
 	next();
 };
@@ -378,13 +378,6 @@ ObjectPackage.prototype.load = function(name, runtime, callback) {
 	var deps = [];
 	var pkg = this;
 
-	runtime.pushStack(name, this);
-
-	this.dependencies.forEach(function(dependency, i) {
-		var dep = this.getDependency(i, runtime);
-		deps.push(dep);
-	}, this);
-
 	var index = -1;
 
 	function next() {
@@ -402,6 +395,13 @@ ObjectPackage.prototype.load = function(name, runtime, callback) {
 			});
 		}
 	}
+
+	runtime.pushStack(name, this);
+
+	this.dependencies.forEach(function(dependency, i) {
+		var dep = this.getDependency(i, runtime);
+		deps.push(dep);
+	}, this);
 
 	next();
 
