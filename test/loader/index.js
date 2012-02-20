@@ -1,7 +1,7 @@
-object.add('a', '../b');
-object.add('b');
-object.use('a', function(a) {
-	console.log(a)
+object.add('abc/aaaa.js', 'events', function(exports, events) {
+	console.log(events)
+});
+object.use('abc/aaaa.js', function() {
 });
 //object.use('module1', function(module1) {
 	//console.log(module1)
