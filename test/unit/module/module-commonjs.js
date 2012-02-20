@@ -96,3 +96,15 @@ test('require.async - relative', function() {
 	object.execute('a/b');
 	object.remove('a', true);
 });
+
+test('object.execute auto call exports.main', function() {
+	expect(1);
+	object.define('test', function(require, exports) {
+		exports.main = function() {
+			ok(true, 'main called with object.define.');
+		}
+	});
+
+	object.execute('test');
+	object.remove('test');
+});

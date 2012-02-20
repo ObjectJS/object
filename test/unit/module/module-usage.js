@@ -249,7 +249,7 @@ test('parent module and sub module', function() {
 });
 
 test('object.execute auto call exports.main', function() {
-	expect(2);
+	expect(1);
 	object.add('test', function(exports) {
 		exports.main = function() {
 			ok(true, 'main called with object.add.');
@@ -257,15 +257,5 @@ test('object.execute auto call exports.main', function() {
 	});
 
 	object.execute('test');
-
-	object.define('test2', function(require, exports) {
-		exports.main = function() {
-			ok(true, 'main called with object.define');
-		}
-	})
-
-	object.execute('test2');
-
 	object.remove('test');
-	object.remove('test2');
 });
