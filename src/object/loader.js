@@ -248,6 +248,8 @@ CommonJSPackage.prototype.load = function(name, runtime, callback) {
 	var deps = [];
 	var pkg = this;
 
+	runtime.pushStack(name, this);
+
 	this.dependencies.forEach(function(dependency, i) {
 		var dep = this.getDependency(this.dependencies[i], runtime);
 		deps.push(dep);
@@ -258,6 +260,7 @@ CommonJSPackage.prototype.load = function(name, runtime, callback) {
 	function next() {
 		index++;
 		if (index == pkg.dependencies.length) {
+			runtime.popStack();
 			if (callback) callback(deps);
 		} else {
 			deps[index].load(next);
@@ -315,15 +318,16 @@ CommonJSPackage.prototype.getDependency = function(name, runtime) {
 CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 	var loader = runtime.loader;
 	var pkg = this;
+
 	function require(name) {
 		var index = pkg.dependencies.indexOf(name);
 		if (index == -1) {
 			throw new ModuleRequiredError(name, pkg);
 		}
 		var dep = deps[index];
+		var depPkg = loader.lib[dep.id];
 		var exports;
 		dep.load(function(result) {
-			var depPkg = loader.lib[dep.id];
 			if (result) {
 				exports = depPkg.exports(dep.runtimeName, result, runtime);
 			} else {
@@ -347,10 +351,6 @@ CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 				args.push(require(dep));
 			});
 			callback.apply(null, args);
-		});
-		runtime.stack.push({
-			name: name,
-			module: newPkg
 		});
 		newPkg.load(name, runtime, function(deps) {
 			newPkg.exports(name, deps, runtime);
@@ -378,6 +378,8 @@ ObjectPackage.prototype.load = function(name, runtime, callback) {
 	var deps = [];
 	var pkg = this;
 
+	runtime.pushStack(name, this);
+
 	this.dependencies.forEach(function(dependency, i) {
 		var dep = this.getDependency(i, runtime);
 		deps.push(dep);
@@ -390,6 +392,7 @@ ObjectPackage.prototype.load = function(name, runtime, callback) {
 		if (index == pkg.dependencies.length) {
 			var exports = pkg.execute(name, deps, runtime);
 			runtime.addModule(name, exports);
+			runtime.popStack();
 			if (callback) callback(exports);
 		} else {
 			var dep = deps[index];
@@ -413,7 +416,6 @@ ObjectPackage.prototype.cyclicLoad = function(depName, runtime, next) {
 		runtime.addModule(depName, new Module(depName));
 	}
 	var exports = runtime.modules[depName];
-	// stack中，最后一个是自己，倒数第二个是parent
 	var parent = runtime.stack[runtime.stack.length - 2];
 	// 在空的exports上建立一个数组，用来存储依赖了此模块的所有模块
 	if (!exports.__empty_refs__) {
@@ -788,12 +790,6 @@ LoaderRuntime.prototype.loadModule = function(id, name, callback) {
 		throw new NoModuleError(id);
 	}
 
-	function done(result) {
-		// 模块load完毕，去除循环依赖检测
-		stack.pop();
-		if (callback) callback(result);
-	}
-
 	function fileDone() {
 		var id = pkg.id;
 		var file = pkg.file;
@@ -804,23 +800,14 @@ LoaderRuntime.prototype.loadModule = function(id, name, callback) {
 		if (!pkg || !pkg.factory) {
 			throw new Error(file + ' do not add ' + id);
 		}
-		pkg.load(name, runtime, done);
+		pkg.load(name, runtime, callback);
 	}
 
-	var info = {
-		name: name,
-		module: pkg
-	};
-
-	// 记录开始获取当前模块
-	stack.push(info);
-
-	// 刚刚push过，应该在最后一个，如果不在，说明循环依赖了
+	// 已经存在此name了，说明循环依赖了
 	if (stack.some(function(m, i) {
-		// 非最后一个，且名字相等。
-		return (i != stack.length - 1) && (m.name === info.name);
+		return m.name === name;
 	}, this)) {
-		pkg.cyclicLoad(name, this, done);
+		pkg.cyclicLoad(name, this, callback);
 	}
 
 	// file
@@ -830,8 +817,19 @@ LoaderRuntime.prototype.loadModule = function(id, name, callback) {
 
 	// Already define
 	} else {
-		pkg.load(name, this, done);
+		pkg.load(name, this, callback);
 	}
+};
+
+LoaderRuntime.prototype.pushStack = function(name, pkg) {
+	this.stack.push({
+		name: name,
+		module: pkg
+	});
+};
+
+LoaderRuntime.prototype.popStack = function() {
+	this.stack.pop();
 };
 
 /**
