@@ -1,10 +1,19 @@
-object.define('test2', function(require, exports) {
-	exports.main = function() {
-		ok(true, 'main called with object.define');
-	}
-})
+	object.define('a/a', function() {
+	});
+	object.define('a/b', function(require) {
+		require.async('../a', function(a) {
+			console.log(a.__name__);
+		})
+	});
+	object.execute('a/b');
 
-object.execute('test2');
+//object.define('test2', function(require, exports) {
+	//exports.main = function() {
+		//alert('main called with object.define');
+	//}
+//});
+
+//object.execute('test2');
 
 //object.use('module1', function(module1) {
 	//console.log(module1)

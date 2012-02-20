@@ -294,9 +294,9 @@ CommonJSPackage.prototype.execute = function(name, deps, runtime) {
 		returnExports.__name__ = exports.__name__;
 		exports = returnExports;
 	}
-	//if (name == '__main__' && typeof exports.main == 'function') {
-		//exports.main();
-	//}
+	if (name == '__main__' && typeof exports.main == 'function') {
+		exports.main();
+	}
 	return exports;
 };
 
@@ -325,7 +325,7 @@ CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 		dep.load(function(result) {
 			var depPkg = loader.lib[dep.id];
 			if (result) {
-				exports = depPkg.exports(name, result, runtime);
+				exports = depPkg.exports(dep.runtimeName, result, runtime);
 			} else {
 				// 有依赖却没有获取到，说明是由于循环依赖
 				if (pkg.dependencies.indexOf(name) != -1) {
@@ -343,12 +343,18 @@ CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 		// 创建一个同名package
 		var newPkg = new CommonJSPackage(pkg.id, dependencies, function(require) {
 			var args = [];
-			dependencies.forEach(function(dep) {
+			newPkg.dependencies.forEach(function(dep) {
 				args.push(require(dep));
 			});
 			callback.apply(null, args);
 		});
-		newPkg.load(name, runtime);
+		runtime.stack.push({
+			name: name,
+			module: newPkg
+		});
+		newPkg.load(name, runtime, function(deps) {
+			newPkg.exports(name, deps, runtime);
+		});
 	};
 
 	return require;
@@ -1168,7 +1174,7 @@ Loader.prototype.execute = function(name) {
 
 	var runtime = this.createRuntime(id);
 	runtime.loadModule(id, name, function(deps) {
-		//pkg.exports(name, deps, runtime);
+		pkg.exports(name, deps, runtime);
 	});
 };
 

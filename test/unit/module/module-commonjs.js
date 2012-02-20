@@ -85,11 +85,12 @@ test('require.async', function() {
 });
 
 test('require.async - relative', function() {
+	expect(1);
 	object.define('a/a', function() {
 	});
 	object.define('a/b', function(require) {
-		require.async('./a', function(a) {
-			equal(a.__name__, 'a/a', 'require.async ok.')
+		require.async('../a', function(a) {
+			equal(a.__name__, '/temp/a/a/index.js', 'require.async ok.')
 		})
 	});
 	object.execute('a/b');
