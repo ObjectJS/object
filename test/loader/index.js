@@ -1,8 +1,15 @@
-object.add('abc/aaaa.js', 'events', function(exports, events) {
-	console.log(events)
+object.define('ttt', function(require, exports) {
+	exports.a = 1;
 });
-object.use('abc/aaaa.js', function() {
+
+object.define('xn/mention', 'ttt', function(require, exports, module) {
+	var ttt = require('ttt');
 });
+
+object.use('xn.mention', function(xn) {
+	console.log(xn)
+});
+
 //object.use('module1', function(module1) {
 	//console.log(module1)
 //});
