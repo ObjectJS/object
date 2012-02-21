@@ -812,10 +812,10 @@ LoaderRuntime.prototype.loadModule = function(id, callback) {
 	}
 };
 
-LoaderRuntime.prototype.getStackItem = function(name) {
+LoaderRuntime.prototype.getStackItem = function(id) {
 	var result;
 	this.stack.some(function(m) {
-		if (m.name == name) {
+		if (m.id == id) {
 			result = m;
 			return true;
 		}
@@ -823,9 +823,9 @@ LoaderRuntime.prototype.getStackItem = function(name) {
 	return result;
 };
 
-LoaderRuntime.prototype.pushStack = function(name, pkg, deps) {
+LoaderRuntime.prototype.pushStack = function(id, pkg, deps) {
 	this.stack.push({
-		name: name,
+		id: id,
 		module: pkg,
 		deps: deps
 	});
