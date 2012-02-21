@@ -662,8 +662,7 @@ ObjectDependency.prototype.load = function(callback) {
 	var dep = this;
 	var runtime = this.runtime;
 	var context = this.context || '';
-	var prefix = this.prefix;
-	var pName = prefix;
+	var pName = this.prefix;
 	var parts = this.nameParts;
 
 	var index = -1;
@@ -705,6 +704,7 @@ ObjectDependency.prototype.execute = function() {
 	var prefix = this.prefix;
 	var pName = prefix;
 	var parts = this.nameParts;
+	var name;
 
 	var exports = runtime.modules[this.runtimeName];
 	if (exports) {
