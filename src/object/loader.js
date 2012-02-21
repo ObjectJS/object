@@ -263,7 +263,7 @@ CommonJSPackage.prototype.load = function(name, runtime, callback) {
 	runtime.pushStack(name, this);
 
 	this.dependencies.forEach(function(dependency, i) {
-		var dep = this.parseDep(this.dependencies[i], runtime);
+		var dep = this.initDependency(this.dependencies[i], runtime);
 		deps.push(dep);
 	}, this);
 
@@ -305,7 +305,7 @@ CommonJSPackage.prototype.make = function(name, deps, runtime) {
 	return exports;
 };
 
-CommonJSPackage.prototype.parseDep = function(name, runtime) {
+CommonJSPackage.prototype.initDependency = function(name, runtime) {
 	// object.define中，“.”作为分隔符的被认为是ObjectDependency，其他都是CommenJSDependency
 	if (name.indexOf('/') == -1 && name.indexOf('.') != -1) {
 		return new ObjectDependency(name, runtime);
@@ -401,7 +401,7 @@ ObjectPackage.prototype.load = function(name, runtime, callback) {
 	runtime.pushStack(name, this);
 
 	this.dependencies.forEach(function(dependency, i) {
-		var dep = this.parseDep(i, runtime);
+		var dep = this.initDependency(i, runtime);
 		deps.push(dep);
 	}, this);
 
@@ -474,7 +474,7 @@ ObjectPackage.prototype.make = function(name, deps, runtime) {
 	return exports;
 };
 
-ObjectPackage.prototype.parseDep = function(index, runtime) {
+ObjectPackage.prototype.initDependency = function(index, runtime) {
 	var name = this.dependencies[index];
 	// object.add中，“/”作为分隔符的被认为是CommonJSDependency，其他都是ObjectDependency
 	if (name.indexOf('/') != -1) {
