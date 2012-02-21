@@ -1,8 +1,24 @@
-object.add('abc/aaaa.js', 'events', function(exports, events) {
-	console.log(events)
+//object.define('test2', 'test', function(require, exports) {
+	//console.log('b');
+//});
+//object.define('test', 'test2', function(require, exports) {
+	//var test2 = require('test2');
+	//console.log('a');
+//});
+//object.use('test', function(test) {
+	//console.log(test)
+//});
+
+object.add('test2', 'test', function(exports) {
+	console.log(this.__name__)
 });
-object.use('abc/aaaa.js', function() {
+object.add('test', 'test2', function(exports, test2) {
+	console.log(this.__name__)
+	console.log(test2)
 });
+object.execute('test');
+
+
 //object.use('module1', function(module1) {
 	//console.log(module1)
 //});
