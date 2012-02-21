@@ -221,7 +221,7 @@ ModuleRequiredError.prototype = new Error();
 function CyclicDependencyError(runtime, pkg) {
 	this.runStack = runtime.stack;
 	var msg = '';
-	runtime.stack.forEach(function(m, i) {
+	stack.forEach(function(m, i) {
 		msg += m.module.id + '-->';
 	});
 	msg += pkg.id;
@@ -263,7 +263,7 @@ CommonJSPackage.prototype.load = function(name, runtime, callback) {
 	runtime.pushStack(name, this);
 
 	this.dependencies.forEach(function(dependency, i) {
-		var dep = this.initDep(this.dependencies[i], runtime);
+		var dep = this.getDependency(this.dependencies[i], runtime);
 		deps.push(dep);
 	}, this);
 
@@ -279,13 +279,21 @@ CommonJSPackage.prototype.cyclicLoad = function(depName, runtime, next) {
 };
 
 /**
- * 执行factory，返回模块实例
  * @override
  */
 CommonJSPackage.prototype.execute = function(name, deps, runtime) {
-	if (name in runtime.modules) return runtime.modules[name];
+	if (this.exports) return this.exeports;
 
-	var exports = new Module(name);
+	var exports = this.make(name, deps, runtime);
+	runtime.addModule(name, exports);
+	return exports;
+};
+
+/**
+ * 执行factory，返回模块实例
+ */
+CommonJSPackage.prototype.make = function(name, deps, runtime) {
+	var exports = runtime.modules[name] || new Module(name);
 	var returnExports = this.factory.call(exports, this.createRequire(name, deps, runtime), exports, this);
 	if (returnExports) {
 		returnExports.__name__ = exports.__name__;
@@ -294,15 +302,10 @@ CommonJSPackage.prototype.execute = function(name, deps, runtime) {
 	if (name == '__main__' && typeof exports.main == 'function') {
 		exports.main();
 	}
-
-	runtime.addModule(name, exports);
 	return exports;
 };
 
-/**
- * @override
- */
-CommonJSPackage.prototype.initDep = function(name, runtime) {
+CommonJSPackage.prototype.getDependency = function(name, runtime) {
 	// object.define中，“.”作为分隔符的被认为是ObjectDependency，其他都是CommenJSDependency
 	if (name.indexOf('/') == -1 && name.indexOf('.') != -1) {
 		return new ObjectDependency(name, runtime);
@@ -326,9 +329,9 @@ CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 		var dep = deps[index];
 		var depPkg = loader.lib[dep.id];
 		var exports;
-		dep.load(function(deps) {
-			if (deps) {
-				exports = depPkg.execute(dep.runtimeName, deps, runtime);
+		dep.load(function(result) {
+			if (result) {
+				exports = depPkg.execute(dep.runtimeName, result, runtime);
 			} else {
 				// 有依赖却没有获取到，说明是由于循环依赖
 				if (pkg.dependencies.indexOf(name) != -1) {
@@ -382,17 +385,23 @@ ObjectPackage.prototype.load = function(name, runtime, callback) {
 	function next() {
 		index++;
 		if (index == pkg.dependencies.length) {
+			var exports = pkg.make(name, deps, runtime);
+			runtime.addModule(name, exports);
 			runtime.popStack();
-			if (callback) callback(deps);
+			if (callback) callback(exports);
 		} else {
-			deps[index].load(next);
+			var dep = deps[index];
+			dep.load(function(exports) {
+				dep.exports = exports;
+				next();
+			});
 		}
 	}
 
 	runtime.pushStack(name, this);
 
 	this.dependencies.forEach(function(dependency, i) {
-		var dep = this.initDep(i, runtime);
+		var dep = this.getDependency(i, runtime);
 		deps.push(dep);
 	}, this);
 
@@ -419,14 +428,17 @@ ObjectPackage.prototype.cyclicLoad = function(depName, runtime, next) {
 };
 
 /**
- * 执行factory，返回模块实例
  * @override
  */
-ObjectPackage.prototype.execute = function(name, deps, runtime) {
-	var modules = runtime.modules;
-	if (name in modules && !('__empty_refs__' in modules[name])) return modules[name];
+ObjectPackage.prototype.exports = function(name, exports, runtime) {
+	return exports;
+};
 
-	var exports = new Module(name);
+/**
+ * 执行factory，返回模块实例
+ */
+ObjectPackage.prototype.make = function(name, deps, runtime) {
+	var exports = runtime.modules[name] || new Module(name);
 	var returnExports;
 	var args = [];
 	deps.forEach(function(dep) {
@@ -459,15 +471,10 @@ ObjectPackage.prototype.execute = function(name, deps, runtime) {
 	if (name == '__main__' && typeof exports.main == 'function') {
 		exports.main();
 	}
-
-	runtime.addModule(name, exports);
 	return exports;
 };
 
-/**
- * @override
- */
-ObjectPackage.prototype.initDep = function(index, runtime) {
+ObjectPackage.prototype.getDependency = function(index, runtime) {
 	var name = this.dependencies[index];
 	// object.add中，“/”作为分隔符的被认为是CommonJSDependency，其他都是ObjectDependency
 	if (name.indexOf('/') != -1) {
@@ -489,23 +496,16 @@ function Package(id, dependencies, factory) {
 }
 
 /**
- * 加载package，确保所有依赖都被load
+ * 加载package，通过callback返回
  */
 Package.prototype.load = function(name, runtime, callback) {
-	if (callback) callback(null);
-};
-
-/**
- * 执行package，返回exports
- */
-Package.prototype.execute = function(name, deps, runtime) {
 	var exports = new Module(name);
+	runtime.addModule(name, exports);
 	// sys.modules
 	if (this.id === '/root/sys') {
 		exports.modules = runtime.modules;
 	}
-	runtime.addModule(name, exports);
-	return exports;
+	if (callback) callback(exports);
 };
 
 /**
@@ -563,7 +563,7 @@ Dependency.prototype.find = function(id) {
 		return pkg.id;
 	}
 	return null;
-};
+}
 
 /**
  * @param name
@@ -611,7 +611,13 @@ CommonJSDependency.prototype = new Dependency();
 CommonJSDependency.prototype.constructor = CommonJSDependency;
 
 CommonJSDependency.prototype.load = function(callback) {
-	this.runtime.loadModule(this.id, this.runtimeName, callback);
+	var runtime = this.runtime;
+	var exports = runtime.modules[this.runtimeName];
+	if (exports) {
+		callback(exports);
+	} else {
+		runtime.loadModule(this.id, this.runtimeName, callback);
+	}
 };
 
 /**
@@ -693,19 +699,28 @@ ObjectDependency.prototype.load = function(callback) {
 
 		index++;
 
-		part = parts[index];
-		name = (pName? pName + '.' : '') + part;
-		if (index == parts.length - 1) {
-			id = dep.id;
-			runtime.loadModule(id, name, function(deps) {
-				callback(deps);
-			});
+		if (index == parts.length) {
+			callback(runtime.modules[(prefix? prefix + '.' : '') + parts[0]]);
 		} else {
-			id = pathutil.join(context, parts.slice(0, index + 1).join('/')) + '/index.js';
-			runtime.loadModule(id, name, function(deps) {
+			part = parts[index];
+			name = (pName? pName + '.' : '') + part;
+			// 使用缓存中的
+			if (runtime.modules[name]) {
 				pName = name;
 				next();
-			});
+			} else {
+				if (index == parts.length - 1) {
+					id = dep.id;
+				} else {
+					id = pathutil.join(context, parts.slice(0, index + 1).join('/')) + '/index.js';
+				}
+				runtime.loadModule(id, name, function(result) {
+					var exports = runtime.loader.lib[id].execute(name, result, runtime);
+					runtime.setMemberTo(pName, part, exports);
+					pName = name;
+					next();
+				});
+			}
 		}
 	}
 
@@ -812,8 +827,8 @@ LoaderRuntime.prototype.loadModule = function(id, name, callback) {
 LoaderRuntime.prototype.executeModule = function(id, name, callback) {
 	var runtime = this;
 	var loader = this.loader;
-	this.loadModule(id, name, function(deps) {
-		loader.lib[id].execute(name, deps, runtime);
+	this.loadModule(id, name, function(result) {
+		loader.lib[id].execute(name, result, runtime);
 	});
 };
 
@@ -1075,6 +1090,8 @@ Loader.prototype.defineModule = function(constructor, id, dependencies, factory)
 
 	var pkg = new constructor(id, dependencies, factory);
 	this.lib[id] = pkg;
+
+	return pkg;
 };
 
 /**
@@ -1162,9 +1179,10 @@ Loader.prototype.execute = function(name) {
 
 	var id = pathutil.join('/temp', name2id(name));
 	var pkg = this.lib[id];
+	var name = '__main__';
 
 	var runtime = this.createRuntime(id);
-	runtime.executeModule(id, '__main__');
+	runtime.executeModule(id, name);
 };
 
 /**
@@ -1181,7 +1199,7 @@ Loader.prototype.use = function(dependencies, factory) {
 	var id = '/runtime/__anonymous_' + this.anonymousModuleCount + '__';
 	this.anonymousModuleCount++;
 
-	this.defineModule(CommonJSPackage, id, dependencies, function(require, exports, module) {
+	var pkg = this.defineModule(CommonJSPackage, id, dependencies, function(require, exports, module) {
 		var args = [];
 		module.dependencies.forEach(function(dependency) {
 			dep = require(dependency);
