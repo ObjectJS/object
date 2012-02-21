@@ -221,7 +221,7 @@ ModuleRequiredError.prototype = new Error();
 function CyclicDependencyError(runtime, pkg) {
 	this.runStack = runtime.stack;
 	var msg = '';
-	stack.forEach(function(m, i) {
+	runtime.stack.forEach(function(m, i) {
 		msg += m.module.id + '-->';
 	});
 	msg += pkg.id;
