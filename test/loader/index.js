@@ -9,15 +9,17 @@
 	//console.log(test)
 //});
 
-object.add('test2.dd', 'test', function(exports) {
-	console.log(this.__name__)
+object.add('test2.dd', 'test2', function(exports, test2) {
+	this.b = 1;
+	setTimeout(function() {
+	console.log(test2.a)
+	});
 });
-object.add('test', 'test2.dd', function(exports, test2) {
-	console.log(this.__name__)
-	console.log(test2.dd)
+object.add('test2', 'test2.dd', function(exports, test2) {
+	this.a = 1;
 });
-object.use('test2.dd', function(test2) {
-	console.log(test2.dd);
+object.use('test2', function(test2) {
+	console.log(test2.a);
 });
 
 
