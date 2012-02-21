@@ -917,12 +917,6 @@ Loader.prototype.buildFileLib = function() {
 };
 
 /**
- * TODO
- */
-Loader.prototype.useScript = function(src, callback) {
-};
-
-/**
  * 加载一个script, 执行callback
  * 有冲突检测，如果连续调用两次loadScript同一src的话，则第二个调用会等第一个完毕后直接执行callback，不会加载两次。
  *
