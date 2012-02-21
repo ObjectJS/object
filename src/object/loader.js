@@ -6,6 +6,7 @@ var pathutil = {};
 
 	/**
 	 * 拆分dirname和basename
+	 * 算法来自于python的os.path模块(ntpath.py)
 	 */
 	exports.split = function(path) {
 		var i = path.length;
@@ -215,13 +216,13 @@ ModuleRequiredError.prototype = new Error();
 /**
  * 循环依赖Error
  * @class
- * @param runtime 出现循环依赖时的堆栈
+ * @param stack 出现循环依赖时的堆栈
  * @param pkg 触发了循环依赖的模块
  */
-function CyclicDependencyError(runtime, pkg) {
-	this.runStack = runtime.stack;
+function CyclicDependencyError(stack, pkg) {
+	this.runStack = stack;
 	var msg = '';
-	runtime.stack.forEach(function(m, i) {
+	stack.forEach(function(m, i) {
 		msg += m.module.id + '-->';
 	});
 	msg += pkg.id;
@@ -241,6 +242,17 @@ CommonJSPackage.prototype = new Package();
 
 CommonJSPackage.prototype.constructor = CommonJSPackage;
 
+CommonJSPackage.prototype.make = function(name, deps, runtime) {
+	var exports = new Module(name);
+	var require = this.createRequire(name, deps, runtime);
+	var returnExports = this.factory.call(exports, require, exports, this);
+	if (returnExports) {
+		returnExports.__name__ = exports.__name__;
+		exports = returnExports;
+	}
+	return exports;
+};
+
 /**
  * 执行factory，返回模块实例
  * @override
@@ -249,19 +261,15 @@ CommonJSPackage.prototype.execute = function(name, deps, runtime) {
 
 	// 循环引用
 	// 出现循环引用但并不立刻报错，而是当作此模块没有获取到，继续获取下一个
-	if (runtime.getStackItem(name)) return;
+	if (runtime.getStackItem(name)) return null;
 
 	runtime.pushStack(name, this, deps);
-	var exports = new Module(name);
-	var returnExports = this.factory.call(exports, this.createRequire(name, deps, runtime), exports, this);
-	if (returnExports) {
-		returnExports.__name__ = exports.__name__;
-		exports = returnExports;
-	}
+
+	var exports = this.make(name, deps, runtime);
+
 	if (name == '__main__' && typeof exports.main == 'function') {
 		exports.main();
 	}
-
 	runtime.addModule(name, exports);
 	runtime.popStack();
 
@@ -297,7 +305,7 @@ CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 		if (!exports) {
 			// 有依赖却没有获取到，说明是由于循环依赖
 			if (pkg.dependencies.indexOf(name) != -1) {
-				throw new CyclicDependencyError(runtime, loader.lib[dep.id]);
+				throw new CyclicDependencyError(runtime.stack, loader.lib[dep.id]);
 			} else {
 				// 出错
 				console.warn('Unknown Error.');
@@ -316,8 +324,8 @@ CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 			});
 			callback.apply(null, args);
 		});
-		newPkg.load(runtime, function(deps, pkg) {
-			pkg.execute(name, deps, runtime);
+		newPkg.load(runtime, function(deps) {
+			newPkg.make(name, deps, runtime);
 		});
 	};
 
@@ -335,6 +343,49 @@ ObjectPackage.prototype = new Package();
 
 ObjectPackage.prototype.constructor = ObjectPackage;
 
+ObjectPackage.prototype.make = function(name, deps, runtime) {
+	var returnExports;
+	var args = [];
+	var exports;
+
+	// 将所有依赖都执行了，放到参数数组中
+	deps.forEach(function(dep) {
+		var depExports = dep.execute();
+		if (args.indexOf(depExports) == -1) {
+			args.push(depExports);
+		}
+	}, this); 
+
+	// 自己
+	exports = runtime.modules[name] || new Module(name);
+
+	// 最后再放入exports，否则当错误的自己依赖自己时，会导致少传一个参数
+	args.unshift(exports);
+
+	if (this.factory) {
+		returnExports = this.factory.apply(exports, args);
+	}
+
+	// 当有returnExports时，之前建立的空模块（即exports变量）则没有用武之地了，给出警告。
+	if (returnExports) {
+		// 检测是否有子模块引用了本模块
+		if (exports.__empty_refs__) {
+			exports.__empty_refs__.forEach(function(ref) {
+				if (typeof console != 'undefined') {
+					console.warn(ref + '无法正确获得' + name + '模块的引用。因为该模块是通过return返回模块实例的。');
+				}
+			});
+		}
+
+		returnExports.__name__ = exports.__name__;
+		exports = returnExports;
+	} else {
+		delete exports.__empty_refs__;
+	}
+
+	return exports;
+};
+
 /**
  * 执行factory，返回模块实例
  * @override
@@ -343,8 +394,6 @@ ObjectPackage.prototype.execute = function(name, deps, runtime) {
 
 	var exports;
 	var parent;
-	var returnExports;
-	var args = [];
 
 	// 循环引用
  	// 出现循环依赖时建立一个空的exports返回，待所有流程走完后会将此模块填充完整。
@@ -363,38 +412,9 @@ ObjectPackage.prototype.execute = function(name, deps, runtime) {
 	} else {
 
 		runtime.pushStack(name, this, deps);
-		deps.forEach(function(dep) {
-			dep.exports = dep.execute();
-		}, this); 
 
-		exports = runtime.modules[name] || new Module(name);
-		deps.forEach(function(dep) {
-			if (args.indexOf(dep.exports) == -1) {
-				args.push(dep.exports);
-			}
-		});
-		// 最后再放入exports，否则当错误的自己依赖自己时，会导致少传一个参数
-		args.unshift(exports);
-		if (this.factory) {
-			returnExports = this.factory.apply(exports, args);
-		}
+		exports = this.make(name, deps, runtime);
 
-		// 当有returnExports时，之前建立的空模块（即exports变量）则没有用武之地了，给出警告。
-		if (returnExports) {
-			// 检测是否有子模块引用了本模块
-			if (exports.__empty_refs__) {
-				exports.__empty_refs__.forEach(function(ref) {
-					if (typeof console != 'undefined') {
-						console.warn(ref + '无法正确获得' + name + '模块的引用。因为该模块是通过return返回模块实例的。');
-					}
-				});
-			}
-
-			returnExports.__name__ = exports.__name__;
-			exports = returnExports;
-		} else {
-			delete exports.__empty_refs__;
-		}
 		if (name == '__main__' && typeof exports.main == 'function') {
 			exports.main();
 		}
@@ -466,7 +486,7 @@ Package.prototype.load = function(runtime, callback) {
 Package.prototype.execute = function(name, deps, runtime) {
 
 	if (runtime.getStackItem(name)) {
-		throw new CyclicDependencyError(runtime);
+		throw new CyclicDependencyError(runtime.stack);
 	}
 
 	var exports = new Module(name);
