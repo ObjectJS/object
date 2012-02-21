@@ -662,35 +662,23 @@ ObjectDependency.prototype.load = function(callback) {
 	var dep = this;
 	var runtime = this.runtime;
 	var context = this.context || '';
-	var pName = this.prefix;
 	var parts = this.nameParts;
 
 	var index = -1;
 
-	/**
-	 * 依次获取当前模块的每个部分
-	 * 如a.b.c，依次获取a、a.b、a.b.c
-	 */
-	function next(pDeps, pPkg) {
-		var id, part, name;
+	function next() {
+		var id, part;
 
 		index++;
 
-		if (index == parts.length) {
-			callback(pDeps, pPkg);
-		} else {
-			part = parts[index];
-			name = (pName? pName + '.' : '') + part;
+		part = parts[index];
 
-			if (index == parts.length - 1) {
-				id = dep.id;
-			} else {
-				id = pathutil.join(context, parts.slice(0, index + 1).join('/')) + '/index.js';
-			}
-			runtime.loadModule(id, function(deps, pkg) {
-				pName = name;
-				next(deps, pkg);
-			});
+		if (index == parts.length - 1) {
+			id = dep.id;
+			runtime.loadModule(id, callback);
+		} else {
+			id = pathutil.join(context, parts.slice(0, index + 1).join('/')) + '/index.js';
+			runtime.loadModule(id, next);
 		}
 	}
 
@@ -719,10 +707,8 @@ ObjectDependency.prototype.execute = function() {
 		part = parts[i];
 
 		name = (pName? pName + '.' : '') + part;
-		// 使用缓存中的
-		if (runtime.modules[name]) {
-			pName = name;
-		} else {
+
+		if (!(name in runtime.modules)) {
 			if (i == parts.length - 1) {
 				id = dep.id;
 			} else {
@@ -730,8 +716,8 @@ ObjectDependency.prototype.execute = function() {
 			}
 			exports = runtime.loader.lib[id].execute(name, this.deps, runtime);
 			runtime.setMemberTo(pName, part, exports);
-			pName = name;
 		}
+		pName = name;
 	}
 
 	return runtime.modules[(prefix? prefix + '.' : '') + parts[0]];

@@ -171,12 +171,12 @@ test('file module1 is parent, file module1.module2 is sub', function() {
 	loader.buildFileLib();
 	loader.use('module1.module2', function(module1) {
 		start();
-		//equal(module1.a, 1, 'use module1.module2, module1.a is ok : 1');
+		equal(module1.a, 1, 'use module1.module2, module1.a is ok : 1');
 		equal(module1.module2.a, 2, 'use module1.module2, module1.module2.a is ok : 2');
 	});
-	//loader.use('module1', function(module1) {
-		//equal(module1.a, 1, 'only use module1, module1.a is ok : 1');
-	//});
+	loader.use('module1', function(module1) {
+		equal(module1.a, 1, 'only use module1, module1.a is ok : 1');
+	});
 });
 
 test('file module1 is parent, file module1.module2.module3 is sub', function() {
