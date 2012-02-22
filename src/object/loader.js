@@ -694,7 +694,9 @@ ObjectDependency.prototype.execute = function() {
 	var parts = this.nameParts;
 	var name;
 
-	var exports = runtime.modules[this.runtimeName];
+	var rootName = (prefix? prefix + '.' : '') + parts[0];
+
+	var exports = runtime.modules[rootName];
 	if (exports) {
 		return exports;
 	}
@@ -720,7 +722,7 @@ ObjectDependency.prototype.execute = function() {
 		pName = name;
 	}
 
-	return runtime.modules[(prefix? prefix + '.' : '') + parts[0]];
+	return runtime.modules[rootName];
 
 };
 
