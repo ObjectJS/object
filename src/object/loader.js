@@ -448,19 +448,13 @@ function Package(id, dependencies, factory) {
 }
 
 Package.prototype.load = function(runtime, callback) {
-	console.log(this.id)
 	var deps = [];
 	var dep;
 	var pkg = this;
 	var index = -1;
 
-	function next(pDeps) {
+	function next() {
 		index++;
-
-		// 将上一个dep获取的deps赋值
-		if (index > 0) {
-			dep.deps = pDeps;
-		}
 
 		if (index == pkg.dependencies.length) {
 			runtime.popStack();
@@ -477,6 +471,8 @@ Package.prototype.load = function(runtime, callback) {
 		var dep = this.toDep(i, runtime);
 		deps.push(dep);
 	}, this);
+
+	runtime.packages[this.id] = deps;
 
 	next();
 };
@@ -588,10 +584,11 @@ CommonJSDependency.prototype.constructor = CommonJSDependency;
 CommonJSDependency.prototype.execute = function() {
 	var runtime = this.runtime;
 	var exports = runtime.modules[this.runtimeName];
+	var deps = runtime.packages[this.id];
 	if (exports) {
 		return exports;
 	} else {
-		return runtime.loader.lib[this.id].execute(this.runtimeName, this.deps, runtime);
+		return runtime.loader.lib[this.id].execute(this.runtimeName, deps, runtime);
 	}
 };
 
@@ -665,6 +662,7 @@ ObjectDependency.prototype.execute = function() {
 	var name;
 
 	var rootName = (prefix? prefix + '.' : '') + parts[0];
+	var deps = runtime.packages[this.id];
 
 	var exports = runtime.modules[rootName];
 	if (exports) {
@@ -686,7 +684,7 @@ ObjectDependency.prototype.execute = function() {
 			} else {
 				id = pathutil.join(context, parts.slice(0, i + 1).join('/')) + '/index.js';
 			}
-			exports = runtime.loader.lib[id].execute(name, this.deps, runtime);
+			exports = runtime.loader.lib[id].execute(name, deps, runtime);
 			runtime.setMemberTo(pName, part, exports);
 		}
 		pName = name;
@@ -706,7 +704,7 @@ function LoaderRuntime(context) {
 	 */
 	this.modules = {};
 
-	this.lib = {};
+	this.packages = {};
 
 	/**
 	 * 模块的依赖路径的栈，检测循环依赖
@@ -754,10 +752,12 @@ LoaderRuntime.prototype.loadModule = function(id, callback) {
 	var loader = this.loader;
 	var stack = this.stack;
 
-	if (id in this.lib) {
-		callback(this.lib[id], loader.lib[id]);
+	if (id in this.packages) {
+		callback();
 		return;
 	}
+
+	this.packages[id] = null;
 
 	var pkg = loader.lib[id];
 
@@ -777,14 +777,6 @@ LoaderRuntime.prototype.loadModule = function(id, callback) {
 		}
 		pkg.load(runtime, callback);
 	}
-
-	var item = this.getStackItem(id);
-
-	// 已经存在此name了，说明已经load过了，直接返回
-	if (item) {
-		callback(item.deps, item.module);
-		return;
-	};
 
 	// file
 	if (pkg.file) {
@@ -1148,7 +1140,9 @@ Loader.prototype.execute = function(name) {
 	var id = pathutil.join('/temp', name2id(name));
 
 	var runtime = this.createRuntime(id);
-	runtime.loadModule(id, function(deps, pkg) {
+	runtime.loadModule(id, function() {
+		var pkg = runtime.loader.lib[id];
+		var deps = runtime.packages[id];
 		pkg.execute('__main__', deps, runtime);
 	});
 };
@@ -1187,7 +1181,9 @@ Loader.prototype.use = function(dependencies, factory) {
 
 	var runtime = this.createRuntime(id);
 
-	runtime.loadModule(id, function(deps, pkg) {
+	runtime.loadModule(id, function() {
+		var pkg = runtime.loader.lib[id];
+		var deps = runtime.packages[id];
 		pkg.execute('__main__', deps, runtime);
 	});
 };

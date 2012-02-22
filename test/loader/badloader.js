@@ -64,6 +64,6 @@ function(XN) {
 	console.log(XN)
 });
 }catch(e) {
-	alert(e.message)
+	console.log(e)
 }
 alert(new Date().getTime() - now);
