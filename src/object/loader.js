@@ -448,6 +448,7 @@ function Package(id, dependencies, factory) {
 }
 
 Package.prototype.load = function(runtime, callback) {
+	console.log(this.id)
 	var deps = [];
 	var dep;
 	var pkg = this;
@@ -466,7 +467,7 @@ Package.prototype.load = function(runtime, callback) {
 			if (callback) callback(deps, pkg);
 		} else {
 			dep = deps[index];
-			dep.load(next);
+			runtime.loadModule(dep.id, next);
 		}
 	}
 
@@ -584,10 +585,6 @@ CommonJSDependency.prototype = new Dependency();
 
 CommonJSDependency.prototype.constructor = CommonJSDependency;
 
-CommonJSDependency.prototype.load = function(callback) {
-	this.runtime.loadModule(this.id, callback);
-};
-
 CommonJSDependency.prototype.execute = function() {
 	var runtime = this.runtime;
 	var exports = runtime.modules[this.runtimeName];
@@ -658,33 +655,6 @@ ObjectDependency.prototype = new Dependency();
 
 ObjectDependency.prototype.constructor = ObjectDependency;
 
-ObjectDependency.prototype.load = function(callback) {
-	var dep = this;
-	var runtime = this.runtime;
-	var context = this.context || '';
-	var parts = this.nameParts;
-
-	var index = -1;
-
-	function next() {
-		var id, part;
-
-		index++;
-
-		part = parts[index];
-
-		if (index == parts.length - 1) {
-			id = dep.id;
-			runtime.loadModule(id, callback);
-		} else {
-			id = pathutil.join(context, parts.slice(0, index + 1).join('/')) + '/index.js';
-			runtime.loadModule(id, next);
-		}
-	}
-
-	next();
-};
-
 ObjectDependency.prototype.execute = function() {
 	var dep = this;
 	var runtime = this.runtime;
@@ -736,6 +706,8 @@ function LoaderRuntime(context) {
 	 */
 	this.modules = {};
 
+	this.lib = {};
+
 	/**
 	 * 模块的依赖路径的栈，检测循环依赖
 	 */
@@ -778,10 +750,14 @@ LoaderRuntime.prototype.addModule = function(name, exports) {
 };
 
 LoaderRuntime.prototype.loadModule = function(id, callback) {
-
 	var runtime = this;
 	var loader = this.loader;
 	var stack = this.stack;
+
+	if (id in this.lib) {
+		callback(this.lib[id], loader.lib[id]);
+		return;
+	}
 
 	var pkg = loader.lib[id];
 
