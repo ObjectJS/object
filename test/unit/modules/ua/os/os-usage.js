@@ -342,7 +342,7 @@ test('test orientation', function() {
 		ok(o.orientation == 'unknown', 'orientation is not null');
 		window.orientation = 'ok';
 		o2 = detectOS();
-		ok(o2.orientation == 'profile', 'window.orientation != null, o.orientation will not be unknown');
+		ok(o2.orientation == 'landscape', 'window.orientation != null, o.orientation will not be unknown');
 	});
 });
 function testUserAgentArray(userAgents) {
