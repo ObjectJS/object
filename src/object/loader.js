@@ -324,7 +324,9 @@ CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 			});
 			callback.apply(null, args);
 		});
-		newPkg.load(runtime, function(deps) {
+		newPkg.load(runtime, function() {
+			// 由于newPkg的id与之前的相同，load方法会覆盖掉runtime.packages上保存的成员
+			var deps = runtime.packages[newPkg.id];
 			newPkg.make(name, deps, runtime);
 		});
 	};
@@ -449,19 +451,14 @@ function Package(id, dependencies, factory) {
 
 Package.prototype.load = function(runtime, callback) {
 	var deps = [];
-	var dep;
 	var pkg = this;
-	var index = -1;
 
+	var loaded = -1;
 	function next() {
-		index++;
-
-		if (index == pkg.dependencies.length) {
+		loaded++;
+		if (loaded == pkg.dependencies.length) {
 			runtime.popStack();
-			if (callback) callback(deps, pkg);
-		} else {
-			dep = deps[index];
-			dep.load(next);
+			if (callback) callback();
 		}
 	}
 
@@ -470,6 +467,7 @@ Package.prototype.load = function(runtime, callback) {
 	this.dependencies.forEach(function(dependency, i) {
 		var dep = this.toDep(i, runtime);
 		deps.push(dep);
+		dep.load(next);
 	}, this);
 
 	runtime.packages[this.id] = deps;
@@ -670,13 +668,13 @@ ObjectDependency.prototype.load = function(callback) {
 	 * 依次获取当前模块的每个部分
 	 * 如a.b.c，依次获取a、a.b、a.b.c
 	 */
-	function next(pDeps, pPkg) {
+	function next() {
 		var id, part, name;
 
 		index++;
 
 		if (index == parts.length) {
-			callback(pDeps, pPkg);
+			callback();
 		} else {
 			part = parts[index];
 			name = (pName? pName + '.' : '') + part;
