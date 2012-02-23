@@ -1,3 +1,15 @@
+object.add('ttt.a', 'sys', function(exports, sys){
+});
+object.add('ttt.b', function(exports) {
+	exports.a = 'a'
+});
+object.add('c', function(exports) {
+	exports.a = 'a'
+});
+object.use('ttt.a, ttt.b, c, sys', function(exports, ttt, c, sys){
+	console.log(ttt.b);
+});
+
 //object.define('test2', 'test', function(require, exports) {
 	//console.log('b');
 //});
@@ -8,20 +20,6 @@
 //object.use('test', function(test) {
 	//console.log(test)
 //});
-
-object.add('test2.dd', 'test2', function(exports, test2) {
-	this.b = 1;
-	setTimeout(function() {
-	console.log(test2.a)
-	});
-});
-object.add('test2', 'test2.dd', function(exports, test2) {
-	this.a = 1;
-});
-object.use('test2', function(test2) {
-	console.log(test2.a);
-});
-
 
 //object.use('module1', function(module1) {
 	//console.log(module1)

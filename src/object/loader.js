@@ -461,7 +461,7 @@ Package.prototype.load = function(runtime, callback) {
 			if (callback) callback(deps, pkg);
 		} else {
 			dep = deps[index];
-			runtime.loadModule(dep.id, next);
+			dep.load(next);
 		}
 	}
 
@@ -581,6 +581,10 @@ CommonJSDependency.prototype = new Dependency();
 
 CommonJSDependency.prototype.constructor = CommonJSDependency;
 
+CommonJSDependency.prototype.load = function(callback) {
+	this.runtime.loadModule(this.id, callback);
+};
+
 CommonJSDependency.prototype.execute = function() {
 	var runtime = this.runtime;
 	var exports = runtime.modules[this.runtimeName];
@@ -652,6 +656,46 @@ ObjectDependency.prototype = new Dependency();
 
 ObjectDependency.prototype.constructor = ObjectDependency;
 
+ObjectDependency.prototype.load = function(callback) {
+	var dep = this;
+	var runtime = this.runtime;
+	var context = this.context || '';
+	var prefix = this.prefix;
+	var pName = prefix;
+	var parts = this.nameParts;
+
+	var index = -1;
+
+	/**
+	 * 依次获取当前模块的每个部分
+	 * 如a.b.c，依次获取a、a.b、a.b.c
+	 */
+	function next(pDeps, pPkg) {
+		var id, part, name;
+
+		index++;
+
+		if (index == parts.length) {
+			callback(pDeps, pPkg);
+		} else {
+			part = parts[index];
+			name = (pName? pName + '.' : '') + part;
+
+			if (index == parts.length - 1) {
+				id = dep.id;
+			} else {
+				id = pathutil.join(context, parts.slice(0, index + 1).join('/')) + '/index.js';
+			}
+			runtime.loadModule(id, function(deps, pkg) {
+				pName = name;
+				next(deps, pkg);
+			});
+		}
+	}
+
+	next();
+};
+
 ObjectDependency.prototype.execute = function() {
 	var dep = this;
 	var runtime = this.runtime;
@@ -663,11 +707,6 @@ ObjectDependency.prototype.execute = function() {
 
 	var rootName = (prefix? prefix + '.' : '') + parts[0];
 	var deps = runtime.packages[this.id];
-
-	var exports = runtime.modules[rootName];
-	if (exports) {
-		return exports;
-	}
 
 	/**
 	 * 依次获取当前模块的每个部分
@@ -684,7 +723,7 @@ ObjectDependency.prototype.execute = function() {
 			} else {
 				id = pathutil.join(context, parts.slice(0, i + 1).join('/')) + '/index.js';
 			}
-			exports = runtime.loader.lib[id].execute(name, deps, runtime);
+			exports = runtime.modules[name] || runtime.loader.lib[id].execute(name, deps, runtime);
 			runtime.setMemberTo(pName, part, exports);
 		}
 		pName = name;
