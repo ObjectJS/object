@@ -1,25 +1,13 @@
-object.add('ttt.a', 'sys', function(exports, sys){
+object.define('test2', 'test', function(require, exports) {
+	console.log('b');
 });
-object.add('ttt.b', function(exports) {
-	exports.a = 'a'
+object.define('test', 'test2', function(require, exports) {
+	var test2 = require('test2');
+	console.log('a');
 });
-object.add('c', function(exports) {
-	exports.a = 'a'
+object.use('test', function(test) {
+	console.log(test)
 });
-object.use('ttt.a, ttt.b, c, sys', function(exports, ttt, c, sys){
-	console.log(ttt.b);
-});
-
-//object.define('test2', 'test', function(require, exports) {
-	//console.log('b');
-//});
-//object.define('test', 'test2', function(require, exports) {
-	//var test2 = require('test2');
-	//console.log('a');
-//});
-//object.use('test', function(test) {
-	//console.log(test)
-//});
 
 //object.use('module1', function(module1) {
 	//console.log(module1)
