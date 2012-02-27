@@ -1,4 +1,4 @@
-object.add('/root/uiold.js', 'dom', function(exports, dom) {
+object.add('./uiold.js', 'dom', function(exports, dom) {
 
 /**
  * UI模块基类

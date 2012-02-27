@@ -1,4 +1,4 @@
-object.add('/root/net.js', 'dom, events', function(exports, dom, events) {
+object.add('./net.js', 'dom, events', function(exports, dom, events) {
 
 var ajaxProxies = this.ajaxProxies = {};
 

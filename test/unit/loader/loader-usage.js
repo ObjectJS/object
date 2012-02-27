@@ -67,10 +67,10 @@ test('add script as module', function() {
 	addModuleScriptToHead('module1', module1JS_seperate);
 	addModuleScriptToHead('module2', module2JS_seperate);
 	loader.buildFileLib();
-	ok(loader.getModule('/temp/module1') != null, 'module1 is in loader.lib');
-	ok(loader.getModule('/temp/module2') != null, 'module2 is in loader.lib');
-	equal(loader.getModule('/temp/module1').file, module1JS_seperate, 'module1 js file is ' + module1JS_seperate);
-	equal(loader.getModule('/temp/module2').file, module2JS_seperate, 'module2 js file is ' + module2JS_seperate);
+	ok(loader.getModule('module1') != null, 'module1 is in loader.lib');
+	ok(loader.getModule('module2') != null, 'module2 is in loader.lib');
+	equal(loader.getModule('module1').file, module1JS_seperate, 'module1 js file is ' + module1JS_seperate);
+	equal(loader.getModule('module2').file, module2JS_seperate, 'module2 js file is ' + module2JS_seperate);
 
 	stop();
 	loader.use('module1', function(module1) {

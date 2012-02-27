@@ -14,7 +14,7 @@ test('use object.define - basic', function() {
 		equal(c.c, 1, 'c in module define_c is loaded');
 		exports.a = 1;
 		equal(exports.__name__, isUse ? 'define_a' : '__main__', '__name__ is define_a when use this module, is __main__ when execute');
-		equal(module.id, '/temp/define_a/index.js', 'module.id is ok');
+		equal(module.id, 'define_a/index.js', 'module.id is ok');
 		equal(module.dependencies.length, 2, 'module.dependencies has two elements');
 	});
 	var isUse = true;
@@ -90,7 +90,7 @@ test('require.async - relative', function() {
 	});
 	object.define('a/b', function(require) {
 		require.async('../a', function(a) {
-			equal(a.__name__, '/temp/a/a/index.js', 'require.async ok.')
+			equal(a.__name__, 'a/a/index.js', 'require.async ok.')
 		})
 	});
 	object.execute('a/b');

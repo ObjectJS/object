@@ -73,36 +73,12 @@ var pathutil = {};
 	exports.join = function(path1, path2) {
 		var path;
 		if (path1.lastIndexOf('/') != path1.length - 1) path1 += '/'; // 确保path1是个目录
-		if (path2.indexOf('/') == 0) path = path2; // absolute path
+		if (path2.indexOf('/') == 0 || path2.indexOf('://') != -1) path = path2; // absolute path
 		else path = path1 + path2; // join
 		return exports.realpath(path);
 	};
 
 })(pathutil);
-
-/**
- * 将name中的“.”换成id形式的“/”
- */
-function name2id(name) {
-	if (typeof name != 'string') return '';
-
-	var id;
-
-	if (name.indexOf('/') == -1) {
-		id = name.replace(/\./g, '/');
-	} else {
-		id = name;
-	}
-
-	var filename = pathutil.basename(id);
-	var ext = filename.slice(filename.lastIndexOf('.'));
-
-	if (ext != '.js') {
-		id += '/index.js';
-	}
-
-	return id;
-}
 
 /**
  * http://sample.com/a.js
@@ -486,7 +462,7 @@ Package.prototype.execute = function(name, deps, runtime) {
 
 	var exports = new Module(name);
 	// sys.modules
-	if (this.id === '/root/sys') {
+	if (this.id === 'sys') {
 		exports.modules = runtime.modules;
 	}
 
@@ -527,6 +503,11 @@ Dependency.prototype.find = function(id) {
 		// TODO
 	}
 
+	// 如果是查找base库中的模块，由于lib中存储是没有带有base前缀，在这里去掉前缀再进行查找
+	if (id.indexOf(loader.base) == 0) {
+		id = id.slice(loader.base.length);
+	}
+
 	var pkg;
 	if (pkg = loader.lib[id] || loader.lib[id + '.js'] || loader.lib[id + '/index.js']) {
 		return pkg.id;
@@ -543,7 +524,7 @@ function CommonJSDependency(name, runtime) {
 
 	var parent = runtime.stack[runtime.stack.length - 1];
     var tempId, id, runtimeName;
-	var paths = ['/temp', '/root'];
+	var paths = [runtime.loader.base];
 
 	// absolute id
 	if (isAbsolute(name)) {
@@ -611,8 +592,7 @@ function ObjectDependency(name, runtime) {
 
 	// 分别在以下空间中找：
 	// 当前模块(sys.path中通过'.'定义)；
-	// 全局模块(sys.path中通过'/root'定义)；
-	// 用户模块(sys.path中通过'/temp'定义)；
+	// 全局模块(sys.path中通过'/'定义)；
 	// 运行时路径上的模块(默认的)。
 	paths.some(function(m) {
 		var path = pathutil.join(parent.module.id, m);
@@ -682,7 +662,7 @@ ObjectDependency.prototype.load = function(callback) {
 			if (index == parts.length - 1) {
 				id = dep.id;
 			} else {
-				id = pathutil.join(context, parts.slice(0, index + 1).join('/')) + '/index.js';
+				id = dep.find(pathutil.join(context, parts.slice(0, index + 1).join('/')) + '/index.js');
 			}
 			runtime.loadModule(id, function(deps, pkg) {
 				pName = name;
@@ -719,7 +699,7 @@ ObjectDependency.prototype.execute = function() {
 			if (i == parts.length - 1) {
 				id = dep.id;
 			} else {
-				id = pathutil.join(context, parts.slice(0, i + 1).join('/')) + '/index.js';
+				id = dep.find(pathutil.join(context, parts.slice(0, i + 1).join('/')) + '/index.js');
 			}
 			exports = runtime.modules[name] || runtime.loader.lib[id].execute(name, deps, runtime);
 			runtime.setMemberTo(pName, part, exports);
@@ -763,7 +743,7 @@ function LoaderRuntime(context) {
 	/**
 	 * sys.path
 	 */
-	this.path = ['', '/temp', '/root'];
+	this.path = [''];
 }
 
 /**
@@ -817,7 +797,7 @@ LoaderRuntime.prototype.loadModule = function(id, callback) {
 
 	// file
 	if (pkg.file) {
-		loader.loadScript(pkg.file, fileDone, true);
+		Loader.loadScript(pkg.file, fileDone, true);
 
 	// Already define
 	} else {
@@ -876,9 +856,10 @@ LoaderRuntime.prototype.setMemberTo = function(host, member, value) {
 function Loader() {
 	this.useCache = true;
 	this.lib = {
-		'/root/sys': new Package('/root/sys')
+		'sys': new Package('sys')
 	};
 	this.anonymousModuleCount = 0;
+	this.base = '/';
 
 	this.scripts = document.getElementsByTagName('script');
 }
@@ -912,6 +893,32 @@ Loader.getAbsolutePath = function(src) {
 };
 
 /**
+ * 将name中的“.”换成id形式的“/”
+ */
+Loader.prototype.name2id = function(name) {
+	if (typeof name != 'string') return '';
+
+	var id;
+
+	if (name.indexOf('/') == -1) {
+		id = name.replace(/\./g, '/');
+	} else {
+		id = name;
+	}
+
+	id = pathutil.join(this.base, id).slice(this.base.length);
+
+	var filename = pathutil.basename(id);
+	var ext = filename.slice(filename.lastIndexOf('.'));
+
+	if (ext != '.js') {
+		id += '/index.js';
+	}
+
+	return id;
+};
+
+/**
  * 查找页面中的标记script标签，更新lib
  */
 Loader.prototype.buildFileLib = function() {
@@ -924,7 +931,7 @@ Loader.prototype.buildFileLib = function() {
 		names = script.getAttribute('data-module');
 		if (!names || !src) continue;
 		names.split(/\s+/ig).forEach(function(name) {
-			this.defineFile(pathutil.join('/temp', name2id(name)), src);
+			this.defineFile(this.name2id(name), src);
 		}, this);
 	}
 };
@@ -936,7 +943,7 @@ Loader.prototype.buildFileLib = function() {
  * @param src 地址
  * @param callback callback函数
  */
-Loader.prototype.loadScript = function(src, callback, useCache) {
+Loader.loadScript = function(src, callback, useCache) {
 	if (!src || typeof src != 'string') {
 		throw new Error('bad arguments.');
 	}
@@ -1029,6 +1036,7 @@ Loader.prototype.removeScript = function(src) {
 Loader.prototype.createRuntime = function(id) {
 	var runtime = new LoaderRuntime(id);
 	runtime.loader = this;
+	runtime.path.push(this.base);
 	return runtime;
 };
 
@@ -1042,7 +1050,7 @@ Loader.prototype.definePrefixFor = function(id) {
 	var idParts = pathutil.dirname(id).split('/');
 	for (var i = 0, prefix, pkg, l = idParts.length; i < l; i++) {
 		prefix = idParts.slice(0, i + 1).join('/');
-		prefix += '/index.js';
+		prefix = pathutil.join(prefix, 'index.js');
 		this.definePrefix(prefix);
 	}
 };
@@ -1104,7 +1112,7 @@ Loader.prototype.define = function(name, dependencies, factory) {
 		dependencies = [];
 	}
 
-	var id = pathutil.join('/temp', name2id(name));
+	var id = this.name2id(name);
 
 	this.defineModule(CommonJSPackage, id, dependencies, factory);
 };
@@ -1113,7 +1121,7 @@ Loader.prototype.define = function(name, dependencies, factory) {
  * @param name
  */
 Loader.prototype.getModule = function(name) {
-	var id = pathutil.join('/temp', name2id(name));
+	var id = this.name2id(name);
 	return this.lib[id];
 };
 
@@ -1130,8 +1138,7 @@ Loader.prototype.add = function(name, dependencies, factory) {
 		dependencies = [];
 	}
 
-	// 若为相对路径，则放在temp上
-	var id = pathutil.join('/temp', name2id(name));
+	var id = this.name2id(name);
 
 	this.defineModule(ObjectPackage, id, dependencies, factory);
 };
@@ -1142,7 +1149,7 @@ Loader.prototype.add = function(name, dependencies, factory) {
  * @param all 是否移除其所有子模块
  */
 Loader.prototype.remove = function(name, all) {
-	var id = pathutil.join('/temp', name2id(name));
+	var id = this.name2id(name);
 	delete this.lib[id];
 	if (all) {
 		Object.keys(this.lib).forEach(function(key) {
@@ -1158,7 +1165,7 @@ Loader.prototype.remove = function(name, all) {
  */
 Loader.prototype.clear = function() {
 	for (var prop in this.lib) {
-		if (prop != '/root/sys') {
+		if (prop != 'sys') {
 			this.remove(prop);
 		}
 	}
@@ -1174,7 +1181,7 @@ Loader.prototype.execute = function(name) {
 	}
 	this.buildFileLib();
 
-	var id = pathutil.join('/temp', name2id(name));
+	var id = this.name2id(name);
 
 	var runtime = this.createRuntime(id);
 	runtime.loadModule(id, function() {
@@ -1195,7 +1202,7 @@ Loader.prototype.use = function(dependencies, factory) {
 	}
 	this.buildFileLib();
 
-	var id = '/runtime/__anonymous_' + this.anonymousModuleCount + '__';
+	var id = '__anonymous_' + this.anonymousModuleCount + '__';
 	this.anonymousModuleCount++;
 
 	this.defineModule(CommonJSPackage, id, dependencies, function(require, exports, module) {

@@ -1,4 +1,4 @@
-object.add('/root/urlparse.js', function() {
+object.add('./urlparse.js', function() {
 
 /**
 * 合并两段url

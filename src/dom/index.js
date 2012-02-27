@@ -1,4 +1,4 @@
-object.add('/root/dom/index.js', 'ua, events, string, dom/dd, sys', function(exports, ua, events, string, dd, sys) {
+object.add('dom/index.js', 'ua, events, string, dom/dd, sys', function(exports, ua, events, string, dd, sys) {
 
 window.UID = 1;
 var storage = {};

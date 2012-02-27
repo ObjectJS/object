@@ -7,7 +7,7 @@ test('modules in object._loader.lib', function() {
 		object.use('not_defined_module', function(exports){});
 	}, 'use not defined module, should raise error');
 	object.add('test_object_add', function(exports){});
-	ok(loader.lib['/root/sys'] != null, 'sys module exists after object.add is called');
+	ok(loader.lib['sys'] != null, 'sys module exists after object.add is called');
 	object.use('test_object_add', function(exports, test) {});
 	ok(loader.getModule('test_object_add') != null, 'test_object_add module exists');
 });
@@ -34,7 +34,7 @@ test('sys.molules - submodule by use', function() {
 	object.add('test3', './c', function(exports, c) {});
 
 	object.add('test4.a.b.c', function(exports) {
-		equal(this.__name__, '/temp/test4/a/b/c/index.js');
+		equal(this.__name__, 'test4/a/b/c/index.js');
 	});
     
 	object.add('test4.a', './b/c, sys', function(exports, c, sys) {
@@ -50,7 +50,7 @@ test('sys.molules - submodule by use', function() {
 		ok(sys.modules['test4/a'] != null, 'test4.a is used by ./a, so a is in sys.modules');
 		ok(sys.modules['test4/a/b'] == null, 'a.b is not in sys.modules');
 		ok(sys.modules['test3'] != null, 'test3 is in sys.modules');
-		ok(sys.modules['/temp/test3/c/index.js'] != null, 'test3.c is in sys.modules');
+		ok(sys.modules['test3/c/index.js'] != null, 'test3.c is in sys.modules');
 	});
 	object.remove('test3', true);
 	object.remove('test4', true);
@@ -114,18 +114,18 @@ test('relative module - use', function() {
 
 	object.add('foo2.c', function() {});
 	object.add('foo2', './c', function(exports, c) {
-		equal(c.__name__, '/temp/foo2/c/index.js', 'module name with same prefix.');
+		equal(c.__name__, 'foo2/c/index.js', 'module name with same prefix.');
 	});
 	object.add('foo.a.b.c', function(exports) { });
 	object.add('foo.a', './b/c, sys', function(exports, c, sys) {
-		equal(c.__name__, '/temp/foo/a/b/c/index.js', 'relative submodule name.');
+		equal(c.__name__, 'foo/a/b/c/index.js', 'relative submodule name.');
 	});
 	object.add('foo.b', function(exports) {
 	});
 	object.add('foo.c', function(exports) {
 	});
 	object.add('foo', './a, ./b, ./c, foo2, sys', function(exports, a, b, c, foo2, sys) {
-		ok(a.__name__ == '/temp/foo/a/index.js' && b.__name__ == '/temp/foo/b/index.js' && c.__name__ == '/temp/foo/c/index.js', 'arguments pass.');
+		ok(a.__name__ == 'foo/a/index.js' && b.__name__ == 'foo/b/index.js' && c.__name__ == 'foo/c/index.js', 'arguments pass.');
 	});
 	object.use('foo', function() {
 	});
@@ -135,7 +135,7 @@ test('relative module - use', function() {
 	object.add('foo.a.b.c', function(exports) {
 	});
 	object.add('foo.a', './b/c, sys', function(exports, c, sys) {
-		equal(c.__name__, '/temp/foo/a/b/c', 'relative submodule name.');
+		equal(c.__name__, 'foo/a/b/c', 'relative submodule name.');
 	});
 	object.add('foo', './a', function(exports, a) {
 	});

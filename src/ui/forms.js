@@ -1,4 +1,4 @@
-object.add('/root/ui/forms.js', 'dom, ui, ui.decorators, ua', function(exports, dom, ui, ua) {
+object.add('ui/forms.js', 'dom, ui, ui.decorators, ua', function(exports, dom, ui, ua) {
 
 var fireevent = ui.decorators.fireevent;
 

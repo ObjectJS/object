@@ -1,4 +1,4 @@
-object.add('/root/validator.js', function(exports) {
+object.add('./validator.js', function(exports) {
 
 this.isUrl = function(text) {
 	return /^(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i.test(text);

@@ -1,4 +1,4 @@
-object.define('/root/events.js', 'ua', function(require, exports) {
+object.define('./events.js', 'ua', function(require, exports) {
 
 var ua = require('ua');
 

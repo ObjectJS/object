@@ -50,7 +50,7 @@ test('buildFileLib', function() {
 	loader.buildFileLib();
 	var pkg = loader.getModule('test_module');
 	ok(pkg, 'new script tag inserted, new module loaded');
-	ok(pkg.id == '/temp/test_module/index.js', 'module test_module is added, id is ok');
+	ok(pkg.id == 'test_module/index.js', 'module test_module is added, id is ok');
 	ok(pkg.file == emptyJS, 'module test_module is added, file is ok');
 
 	var script = document.createElement('script');
@@ -148,11 +148,11 @@ test('add-usage', function() {
 	ok(loader.getModule('b'), 'b is added to loader.lib');
 	loader.add('c', 'a,b', function() {});
 	ok(loader.getModule('c'), 'c is added to loader.lib');
-	equal(loader.lib['/temp/c/index.js'].dependencies.length, 2, 'c dependencies a and b, so lib[c].dependencies.length = 2');
+	equal(loader.lib['c/index.js'].dependencies.length, 2, 'c dependencies a and b, so lib[c].dependencies.length = 2');
 
 	loader.add('d/dd', 'a,b,c', function() {});
 	ok(loader.getModule('d/dd'), 'd.dd are added to loader.lib');
-	equal(loader.lib['/temp/d/dd/index.js'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
+	equal(loader.lib['d/dd/index.js'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
 
 	loader.add('error1', 'a,b');
 	ok(loader.getModule('error1'), 'add module without context, should be added');

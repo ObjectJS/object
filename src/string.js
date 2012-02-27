@@ -1,4 +1,4 @@
-object.add('/root/string.js', function(exports) {
+object.add('./string.js', function(exports) {
 
 /**
  * 模板
