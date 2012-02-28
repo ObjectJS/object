@@ -238,6 +238,8 @@ type.__new__ = function(metaclass, name, base, dict) {
 	cls.set('__this__', {
 		base: base,
 		parent: function() {
+			// 这里必须取一个cls的别名，否则在while循环中赋值的cls会影响所有的parent方法调用
+			var clsAlias = cls;
 			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
 			var name = arguments.callee.caller.__name__;
 			if (!name) {
@@ -248,12 +250,12 @@ type.__new__ = function(metaclass, name, base, dict) {
 			// 而不是方法调用者实例的类的父同名方法
 			// 比如C继承于B继承于A，当C的实例调用从B继承来的某方法时，其中调用了this.parent，应该直接调用到A上的同名方法，而不是B的。
 			// 因此，这里通过hasOwnProperty，从当前类开始，向上找到同名方法的原始定义类
-			while (cls && !cls.prototype.hasOwnProperty(name)) {
-				cls = cls.__base__;
+			while (clsAlias && !clsAlias.prototype.hasOwnProperty(name)) {
+				clsAlias = clsAlias.__base__;
 			}
 
-			var base = cls.__base__;
-			var mixins = cls.__mixins__;
+			var base = clsAlias.__base__;
+			var mixins = clsAlias.__mixins__;
 			var member, owner;
 
 			// 先从base中找同名func
