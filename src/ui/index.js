@@ -1,38 +1,33 @@
-/**
- * @namespace
- * @name ui
- */
-object.add('ui', 'string, options, dom, events', /**@lends ui*/ function(exports, string, options, dom, events) {
+object.add('ui', 'string, options, dom, events', function(exports, string, options, dom, events) {
 
 /**
- * @class
+ * Element
  */
 var Element = new Class(function() {
 
-	Object.keys(dom.Element).forEach(function(name) {
-		if (typeof dom.Element[name] === 'function') {
-			if (['initialize'].indexOf(name) != -1) return;
+	Class.keys(dom.Element).forEach(function(name) {
+		var member = dom.Element.get(name);
+		if (['initialize'].indexOf(name) != -1) return;
+		if (typeof member != 'function') return;
 
-			this[name] = function(self) {
-				var args = [self._node];
-				var arg;
-				// 代理方法支持Component参数
-				for (var i = 1; i < arguments.length; i++) {
-					arg = arguments[i];
-					args.push((arg && arg._node)? arg._node : arg);
-				}
-				return dom.Element[name].apply(dom.Element, args);
-			};
-		}
+		this[name] = function(self) {
+			var args = [];
+			var arg;
+			// 代理方法支持Component参数
+			for (var i = 1; i < arguments.length; i++) {
+				arg = arguments[i];
+				args.push((arg && arg._node)? arg._node : arg);
+			}
+			return dom.Element.prototype[name].apply(self._node, args);
+		};
 	}, this);
 
 });
 
 /**
- * @class
- * @name ui.Components
+ * 一组Component的包装
  */
-this.Components = new Class(Array, /**@lends ui.Components*/ function() {
+this.Components = new Class(Array, function() {
 
 	/**
 	 * @param elements wrapped dom elements
@@ -45,14 +40,16 @@ this.Components = new Class(Array, /**@lends ui.Components*/ function() {
 			self.push(new type(elements[i], options));
 		}
 
-		Object.keys(type).forEach(function(name) {
+		Class.keys(type).forEach(function(name) {
+			if (typeof type.prototype[name] != 'function') return;
+
 			self[name] = function() {
 				var element;
 				//var i, arg, args = [];
 				// 代理方法支持Component参数
 				//for (i = 0; i < arguments.length; i++) {
-					//arg = arguments[i];
-					//args.push((arg && arg._node)? arg._node : arg);
+				//arg = arguments[i];
+				//args.push((arg && arg._node)? arg._node : arg);
 				//}
 				for (i = 0; i < self.length; i++) {
 					element = self[i];
@@ -109,6 +106,12 @@ this.define1 = function(selector, type) {
 	return exports.define(selector, type, 1);
 };
 
+var getConstructor = function(type) {
+	if (type === 'number') return Number;
+	else if (type === 'string') return String;
+	else if (type === 'boolean') return Boolean;
+};
+
 /**
  * 声明一个option
  * 用法：
@@ -117,7 +120,7 @@ this.define1 = function(selector, type) {
  * });
  * 这样MyComponent实例的myConfig属性值即为默认值1，可通过 set 方法修改
  */
-this.option = function(defaultValue) {
+this.option = function(defaultValue, getter, setter) {
 	var prop;
 	function fget(self) {
 		return self.getOption(prop.__name__);
@@ -126,12 +129,18 @@ this.option = function(defaultValue) {
 		return self.setOption(prop.__name__, value);
 	}
 	prop = property(fget, fset);
+	prop.isOption = true;
 	prop.defaultValue = defaultValue;
+	prop.getter = getter || function(self, name, defaultValue) {
+		var value = self._node.getData(name.toLowerCase());
+		if (value) return getConstructor(typeof defaultValue)(value);
+	};
+	prop.setter = setter;
 	return prop;
 };
 
 // metaclass
-this.__component = new Class(function() {
+this.component = new Class(function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 
@@ -140,7 +149,7 @@ this.__component = new Class(function() {
 			dict.__subs = [];
 			dict.__subEvents = {}; // 通过subName_eventType进行注册的事件
 			dict.__onEvents = []; // 通过oneventtype对宿主component注册的事件 // 通过oneventtype对宿主component注册的事件 // 通过oneventtype对宿主component注册的事件 // 通过oneventtype对宿主component注册的事件
-			dict.__handles = ['init', 'reset', 'invalid', 'error']; // 定义的会触发事件的方法集合
+			dict.__handles = ['init', 'destory', 'invalid', 'error', 'revert', 'reset']; // 定义的会触发事件的方法集合, revert, reset为兼容处理 Compatible
 			dict.__methods = [];
 		} else {
 			dict.__defaultOptions = [];
@@ -158,7 +167,7 @@ this.__component = new Class(function() {
 				if (member != null && member.__class__ === property) {
 					if (member.isComponent) {
 						dict.__subs.push(name);
-					} else {
+					} else if (member.isOption) {
 						dict.__defaultOptions.push(name);
 					}
 				} else if (typeof member == 'function') {
@@ -183,83 +192,89 @@ this.__component = new Class(function() {
 
 	this.initialize = function(cls, name, base, dict) {
 
-		cls.__handles.forEach(function(eventType) {
-			cls.__mixin__(eventType, events.fireevent(function() {
-				cls['_' + eventType].apply(cls, arguments);
+		var proto = cls.prototype;
+		var baseProto = base.prototype;
+
+		proto.__handles.forEach(function(eventType) {
+			cls.set(eventType, events.fireevent(function(self) {
+				return cls.get('_' + eventType).apply(cls, arguments);
 			}));
 		});
 
-		if (base && base.addons) {
-			cls.addons.push.apply(cls.addons, base.addons);
+		if (base && baseProto.addons) {
+			proto.addons.push.apply(proto.addons, baseProto.addons);
 		}
 
-		if (cls.addons) {
-			cls.addons.forEach(function(comp) {
-				comp.__defaultOptions.forEach(function(name) {
-					var defaultOptions = cls.__defaultOptions;
+		if (proto.addons) {
+			proto.addons.forEach(function(comp) {
+				if (!comp) throw new Error('bad addon');
+
+				var compProto = comp.prototype;
+				compProto.__defaultOptions.forEach(function(name) {
+					var defaultOptions = proto.__defaultOptions;
 					if (defaultOptions.indexOf(name) != -1) return;
 					defaultOptions.push(name);
-					cls.__mixin__(name, comp[name]);
+					cls.set(name, comp.get(name));
 				});
 
-				comp.__subs.forEach(function(name) {
-					var subs = cls.__subs;
+				compProto.__subs.forEach(function(name) {
+					var subs = proto.__subs;
 					if (subs.indexOf(name) != -1) return;
 					subs.push(name);
-					cls.__mixin__(name, comp[name]);
+					cls.set(name, comp.get(name));
 				});
 
-				comp.__handles.forEach(function(eventType) {
-					var handles = cls.__handles;
+				compProto.__handles.forEach(function(eventType) {
+					var handles = proto.__handles;
 					var methodName = '_' + eventType;
 					if (handles.indexOf(eventType) != -1) return;
 					handles.push(eventType);
-					cls.__mixin__(eventType, comp.prototype[eventType].im_func);
-					cls.__mixin__(methodName, comp.prototype[methodName].im_func);
+					cls.set(eventType, compProto[eventType].im_func);
+					cls.set(methodName, compProto[methodName].im_func);
 				});
 
-				comp.__methods.forEach(function(name) {
-					var methods = cls.__methods;
+				compProto.__methods.forEach(function(name) {
+					var methods = proto.__methods;
 					if (methods.indexOf(name) != -1) return;
 					methods.push(name);
-					cls.__mixin__(name, comp.prototype[name].im_func);
+					cls.set(name, compProto[name].im_func);
 				});
 				// onEvents和subEvents在宿主中处理，方法不添加到宿主类上
 			});
 		}
 
 		if (base && base !== type) {
-			base.__defaultOptions.forEach(function(name) {
-				var defaultOptions = cls.__defaultOptions;
+			baseProto.__defaultOptions.forEach(function(name) {
+				var defaultOptions = proto.__defaultOptions;
 				if (defaultOptions.indexOf(name) == -1) defaultOptions.push(name);
 			});
 
-			base.__subs.forEach(function(name) {
-				var subs = cls.__subs;
+			baseProto.__subs.forEach(function(name) {
+				var subs = proto.__subs;
 				if (subs.indexOf(name) == -1) subs.push(name);
 			});
 
-			base.__handles.forEach(function(eventType) {
-				var handles = cls.__handles;
-				if (handles.indexOf(eventType) == -1) cls.__handles.push(eventType);
+			baseProto.__handles.forEach(function(eventType) {
+				var handles = proto.__handles;
+				if (handles.indexOf(eventType) == -1) proto.__handles.push(eventType);
 			});
 
-			base.__methods.forEach(function(name) {
-				var methods = cls.__methods;
+			baseProto.__methods.forEach(function(name) {
+				var methods = proto.__methods;
 				if (methods.indexOf(name) == -1) methods.push(name);
 			});
 
-			Object.keys(base.__subEvents).forEach(function(subName) {
-				var subEvents = cls.__subEvents;
-				base.__subEvents[subName].forEach(function(eventType) {
+			Object.keys(baseProto.__subEvents).forEach(function(subName) {
+				var subEvents = proto.__subEvents;
+				baseProto.__subEvents[subName].forEach(function(eventType) {
 					var subEvent = subEvents[subName];
 					if (subEvent && subEvent.indexOf(eventType) != -1) return;
 					(subEvents[subName] = subEvents[subName] || []).push(eventType);
 				});
 			});
 
-			base.__onEvents.forEach(function(eventType) {
-				var onEvents = cls.__onEvents;
+			baseProto.__onEvents.forEach(function(eventType) {
+				var onEvents = proto.__onEvents;
 				if (onEvents.indexOf(eventType) == -1) onEvents.push(eventType);
 			});
 		}
@@ -268,25 +283,14 @@ this.__component = new Class(function() {
 
 /**
  * UI模块基类，所有UI组件的基本类
- * @class
- * @name ui.Component
  */
-this.Component = new Class(/**@lends ui.Component*/ function() {
+this.Component = new Class(function() {
 
-	this.__metaclass__ = exports.__component;
+	this.__metaclass__ = exports.component;
 
-	var getConstructor = function(type) {
-		if (type === 'number') return Number;
-		else if (type === 'string') return String;
-		else if (type === 'boolean') return Boolean;
-	};
-
-	Class.mixin(this, Element);
+	this.__mixins__ = [Element];
 
 	this.initialize = function(self, node, options) {
-		// 如果是在mixin中，代表自己正在被当作一个addon
-		if (this.mixining) return;
-
 		if (!node.nodeType) {
 			if (typeof node == 'string') {
 				node = {
@@ -297,7 +301,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			self.__defaultOptions.forEach(function(key) {
 				if (options[key] === undefined) data[key] = self.get(key);
 			});
-			extend(data, options);
+			object.extend(data, options);
 
 			var tdata;
 			if (node.section) {
@@ -318,7 +322,15 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		self.__initOptions(options);
 		self.__initEvents();
 		self.__initSubs();
+		self.__initAddons();
 		self.init();
+	};
+
+	this.__initAddons = function(self) {
+		if (!self.addons) return;
+		self.addons.forEach(function(addon) {
+			addon.get('init')(self);
+		});
 	};
 
 	/**
@@ -327,7 +339,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	this.__initEvents = function(self) {
 		if (!self.addons) return;
 		self.addons.forEach(function(addon) {
-			addon.__onEvents.forEach(function(eventType) {
+			addon.prototype.__onEvents.forEach(function(eventType) {
 				var trueEventType; // 正常大小写的名称
 				if (self.__handles.some(function(handle) {
 					if (handle.toLowerCase() == eventType) {
@@ -339,7 +351,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 					self.addEvent(trueEventType, function(event) {
 						// 将event._args pass 到函数后面
 						var args = [self, event].concat(event._args);
-						addon['on' + eventType].apply(addon, args);
+						addon.get('on' + eventType).apply(addon, args);
 					});
 				}
 			});
@@ -356,19 +368,20 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		});
 
 		self.__defaultOptions.forEach(function(name) {
+			var sub = self.__properties__[name];
 			// 从dom获取配置
-			var data = self._node.getData(name.toLowerCase()),
-			defaultValue = self.__properties__[name].defaultValue,
-			value;
+			var defaultValue = sub.defaultValue;
+			var value = sub.getter(self, name, defaultValue);
 
-			if (data) {
-				value = getConstructor(typeof defaultValue)(data);
+			if (value) {
 				self.__setOption(name, value);
+			}
 			// 从options参数获取配置
-			} else if (options[name]) {
+			else if (options[name]) {
 				self.__setOption(name, options[name]);
+			}
 			// 默认配置
-			} else {
+			else {
 				self.__setOption(name, defaultValue);
 			}
 
@@ -379,7 +392,13 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 						var fakeEventType = '__option_' + eventType + '_' + name;
 						var methodName = name + '_' + eventType;
 						self.addEvent(fakeEventType, function(event) {
-							if (cls) cls[methodName](self, event.value);
+							// 注意这个self是调用了此addon的类的实例，而不是addon的实例，其__this__并不是addon的；
+							// 必须通过cls调用addon上的方法，在相应方法中才能获取到正确的__this__；
+							// if (cls) cls.prototype[methodName].call(self, event.value);
+							// 上面这种调用方法由于获取的self.__this__，不正确。
+							// 改成下面这种
+							if (cls) cls.get(methodName).call(cls, self, event.value);
+							// 调用自己的
 							else self[methodName](event.value);
 						});
 					});
@@ -389,7 +408,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			bindEvents(self.__subEvents[name]);
 			if (self.addons) {
 				self.addons.forEach(function(addon) {
-					bindEvents(addon.__subEvents[name], addon);
+					bindEvents(addon.prototype.__subEvents[name], addon);
 				});
 			}
 
@@ -397,16 +416,11 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	};
 
 	this.__initSubs = function(self) {
+		// TODO 这里修改了__properties__中的成员，导致如果某一个组件实例修改了类，后面的组件就都变化了。
 		self.__subs.forEach(function(name) {
 			var sub = self.__properties__[name];
 
-			// 此时的option还是prototype上的，在sub初始化时会被浅拷贝
-			// 从options获取子元素的模板信息
 			var options = self._options[name];
-			if (options && !sub.template) {
-				sub.template = options.template;
-				sub.section = options.templateSection;
-			}
 			// 从options获取子元素的扩展信息
 			if (options && options.addons) {
 				sub.type = new Class(sub.type, function() {
@@ -415,7 +429,6 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 					}, this);
 				});
 			}
-			var node;
 
 			self.__initSub(name, self.__querySub(name));
 		});
@@ -461,7 +474,7 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		var sub = self.__properties__[name];
 		var node = comp._node;
 		self.__addNodeMap(name, String(node.uid), comp);
-		var comp = self.__nodeMap[name][String(node.uid)];
+		comp = self.__nodeMap[name][String(node.uid)];
 
 		// 注册 option_change 等事件
 		var bindEvents = function(events, cls) {
@@ -469,7 +482,14 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 				events.forEach(function(eventType) {
 					var methodName = name + '_' + eventType;
 					node.addEvent(eventType, function(event) {
-						if (cls) cls[methodName].apply(cls, [self, event, comp].concat(event._args));
+						// 调用addon上的
+						// 注意这个self是调用了此addon的类的实例，而不是addon的实例，其__this__并不是addon的；
+						// 必须通过cls调用addon上的方法，在相应方法中才能获取到正确的__this__；
+						// if (cls) cls.prototype[methodName].apply(self, [event, comp].concat(event._args));
+						// 上面这种调用方法由于获取的self.__this__，不正确。
+						// 改成下面这种
+						if (cls) cls.get(methodName).apply(cls, [self, event, comp].concat(event._args));
+						// 调用自己的
 						else self[methodName].apply(self, [event, comp].concat(event._args));
 					});
 				});
@@ -479,17 +499,21 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		bindEvents(self.__subEvents[name]);
 		if (self.addons) {
 			self.addons.forEach(function(addon) {
-				bindEvents(addon.__subEvents[name], addon);
+				bindEvents(addon.prototype.__subEvents[name], addon);
 			});
 		}
 	};
 
 	/**
-	* 获取sub的节点
-	*/
+	 * 获取sub的节点
+	 */
 	this.__querySub = function(self, name) {
 		var sub = self.__properties__[name];
-		return sub.single? self._node.getElement(sub.selector) : self._node.getElements(sub.selector);
+		if (typeof sub.selector == 'function') {
+			return sub.selector(self);
+		} else {
+			return sub.single? self._node.getElement(sub.selector) : self._node.getElements(sub.selector);
+		}
 	};
 
 	this.__setOption = function(self, name, value) {
@@ -532,7 +556,9 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	/**
 	 * 重置一个component，回到初始状态，删除所有render的元素。
 	 */
-	this._reset = function(self) {
+	this._destory = function(self, methodName) {
+		if (!methodName) methodName = 'destory'; // 兼容revert, reset方法名
+
 		// 清空所有render进来的新元素
 		self.__subs.forEach(function(name) {
 			var sub = self.__properties__[name];
@@ -552,14 +578,35 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 			}
 			if (!sub.single) {
 				self[name].forEach(function(comp) {
-					comp.reset();
+					comp[methodName]();
 				});
 			} else if (self[name]) {
-				self[name].reset();
+				self[name][methodName]();
 			}
 		});
 	};
 
+	/**
+	 * @deprecated
+	 * 用destory代替
+	 */
+	this._revert = function(self) {
+		self._destory('revert');
+	};
+
+	/**
+	 * @deprecated
+	 * 用destory代替
+	 * 由于form有reset方法，在reset调用时，会fire reset事件，导致意外的表单重置
+	 */
+	this._reset = function(self) {
+		self._destory('reset');
+	};
+
+	/**
+	 * 获取option的值
+	 * @param name name
+	 */
 	this.getOption = function(self, name) {
 		var pname = '_' + name;
 		if (self[pname] === undefined) {
@@ -569,6 +616,10 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	};
 
 	/**
+	 * 设置option的值
+	 * @method
+	 * @param name name
+	 * @param value value
 	 */
 	this.setOption = options.overloadsetter(function(self, name, value) {
 		// 由于overloadsetter是通过name是否为string来判断传递形式是name-value还是{name:value}的
@@ -632,16 +683,16 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	};
 
 	/**
-	* 根据subs的type创建一个component，并加入到引用中，这一般是在renderXXX方法中进行调用
-	* @param name
-	* @param data 模板数据
-	*/
+	 * 根据subs的type创建一个component，并加入到引用中，这一般是在renderXXX方法中进行调用
+	 * @param name
+	 * @param data 模板数据
+	 */
 	this.make = function(self, name, data) {
 		var sub = self.__properties__[name];
 		var pname = '_' + name;
 		var options = {};
 		var extendOptions = self._options[name];
-		extend(options, extendOptions);
+		object.extend(options, extendOptions);
 
 		if (data) {
 			Object.keys(data).forEach(function(key) {
@@ -650,8 +701,8 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 		}
 
 		var comp = new sub.type({
-			template: sub.template,
-			section: sub.section
+			template: options.template || sub.template,
+			section: options.templateSection || sub.section
 		}, options);
 		var node = comp._node;
 
@@ -672,8 +723,10 @@ this.Component = new Class(/**@lends ui.Component*/ function() {
 	 * 设置subcomponent的template
 	 */
 	this.setTemplate = function(self, name, template, section) {
-		self.__properties__[name].template = template;
-		self.__properties__[name].section = section;
+		if (!self._options[name]) self._options[name] = {};
+		var options = self._options[name];
+		options.template = template;
+		options.templateSection = section;
 	};
 
 	/**

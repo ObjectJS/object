@@ -2,8 +2,14 @@ object.add('ui.forms', 'dom, ui, ui.decorators, ua', function(exports, dom, ui, 
 
 var fireevent = ui.decorators.fireevent;
 
+/**
+ * SelectionInputValues
+ */
 this.SelectionInputValues = new Class(Array, function() {
 
+	/**
+	 * initialize
+	 */
 	this.initialize = function(self, input) {
 		self._input = input;
 	};
@@ -30,6 +36,9 @@ this.SelectionInputValues = new Class(Array, function() {
 
 });
 
+/**
+ * SelectionInput
+ */
 this.SelectionInput = new Class(ui.Component, function() {
 
 	this.maxCount = ui.option(-1);

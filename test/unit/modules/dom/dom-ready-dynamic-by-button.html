@@ -1,0 +1,47 @@
+<!doctype>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<script>
+			function handle() {
+				var el = document.createElement('script');
+				el.type="text/javascript";
+				el.src = "http://xnimg.cn/n/core/object-all.js";
+				el.async = true;
+				if(!!(window.attachEvent && !window.opera)) {
+					el.onreadystatechange = function() {
+						if ( ( this.readyState == 'loaded' || this.readyState == 'complete' )){
+							object.use('dom', function(exports, dom){
+								dom.ready(function() {
+									//alert('ready is called');
+									document.getElementById('test').value = 'true';
+									if(parent) parent.readyCallbackValue_dom_ready_dynamic_by_button = 1;
+								});
+							});
+						}
+					}
+				} else {
+					el.onload = el.onerror = function() {
+						object.use('dom, ua', function(exports, dom, ua){
+							dom.ready(function() {
+								//alert('ready is called');
+								document.getElementById('test').value = 'true';
+								// can not access window.parent in iframe in Chrome
+								// so if your browser is chrome, open xxxx.html with your browser to test dom.ready
+								if(parent) parent.readyCallbackValue_dom_ready_dynamic_by_button = 1;
+							});
+						});
+					}
+				}
+				document.getElementsByTagName('head')[0].appendChild(el);
+			};
+		</script>
+	</head>
+	<body>
+		<input id='importObjectjs' type='button' value='click' onclick='handle()'/><br/>
+		<input id='test' type='text' value='none'/>
+		在button.onclick事件中动态插入objectjs的代码，并在回调函数中调用dom.ready<br/>
+		此时doScroll检查已经结束，__domLoaded为true，直接执行ready的参数，没有问题
+	</body>
+</html>
+
