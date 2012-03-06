@@ -735,10 +735,6 @@ this.Component = new Class(function() {
 	this.setTemplate = function(self, name, template, section) {
 		self.setOption(name + '.template', template);
 		self.setOption(name + '.templateSection', section);
-		//if (!self._options[name]) self._options[name] = {};
-		//var options = self._options[name];
-		//options.template = template;
-		//options.templateSection = section;
 	};
 
 	/**
