@@ -1,4 +1,6 @@
-object.add('events', 'ua', function(exports, ua) {
+object.define('./events.js', 'ua', function(require, exports) {
+
+var ua = require('ua');
 
 /**
  * 在Safari3.0(Webkit 523)下，preventDefault()无法获取事件是否被preventDefault的信息

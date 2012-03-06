@@ -1,4 +1,4 @@
-object.add('ui', 'string, options, dom, events', function(exports, string, options, dom, events) {
+object.add('ui/index.js', 'string, options, dom, events', function(exports, string, options, dom, events) {
 
 /**
  * Element

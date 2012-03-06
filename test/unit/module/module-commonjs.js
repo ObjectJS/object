@@ -14,9 +14,8 @@ test('use object.define - basic', function() {
 		equal(c.c, 1, 'c in module define_c is loaded');
 		exports.a = 1;
 		equal(exports.__name__, isUse ? 'define_a' : '__main__', '__name__ is define_a when use this module, is __main__ when execute');
-		equal(module.id, 'define_a', 'module.id is ok');
+		equal(module.id, 'define_a/index.js', 'module.id is ok');
 		equal(module.dependencies.length, 2, 'module.dependencies has two elements');
-		equal(Object.keys(module.deps).length, 2, 'module.deps has two elements');
 	});
 	var isUse = true;
 	// use module
@@ -45,14 +44,14 @@ test('use object.define - submodule', function() {
 	object.define('subdefine.c', function(require, exports) {
 		exports.c = 1;
 	});
-	object.define('subdefine/root', 'subdefinex, ./a, subdefine/b, ./c', function(require, exports) {
+	object.define('subdefine/root', 'subdefinex, ../a, subdefine/b, ../c', function(require, exports) {
 		var x = require('subdefinex');
 		equal(x.x, 1, 'value from subdefinex is ok');
-		var a = require('./a');
+		var a = require('../a');
 		equal(a.a, 1, 'value from subdefine/a is ok');
 		var b = require('subdefine/b');
 		equal(b.b, 1, 'value from subdefine/b is ok');
-		var c = require('./c');
+		var c = require('../c');
 		equal(c.c, 1, 'value from subdefine.c is ok');
 
 		exports.value = 1;
@@ -86,13 +85,26 @@ test('require.async', function() {
 });
 
 test('require.async - relative', function() {
+	expect(1);
 	object.define('a/a', function() {
 	});
 	object.define('a/b', function(require) {
-		require.async('./a', function(a) {
-			equal(a.__name__, 'a.a', 'require.async ok.')
+		require.async('../a', function(a) {
+			equal(a.__name__, 'a/a/index.js', 'require.async ok.')
 		})
 	});
 	object.execute('a/b');
 	object.remove('a', true);
+});
+
+test('object.execute auto call exports.main', function() {
+	expect(1);
+	object.define('test', function(require, exports) {
+		exports.main = function() {
+			ok(true, 'main called with object.define.');
+		}
+	});
+
+	object.execute('test');
+	object.remove('test');
 });

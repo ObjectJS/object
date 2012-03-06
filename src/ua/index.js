@@ -1,4 +1,4 @@
-object.add('ua', function(exports) {
+object.add('ua/index.js', function(exports) {
 
 	/**
 	 * 将字符串转化为数字的方法
