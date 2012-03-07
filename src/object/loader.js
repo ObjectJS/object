@@ -504,28 +504,6 @@ function Dependency(name, owner, runtime) {
 	this.name = name;
 }
 
-Dependency.prototype.find = function(id) {
-	var loader = this.runtime.loader;
-
-	var filename = pathutil.basename(id);
-	var ext = filename.slice(filename.lastIndexOf('.'));
-
-	if (ext == '.css') {
-		// TODO
-	}
-
-	// 如果是查找base库中的模块，由于lib中存储是没有带有base前缀，在这里去掉前缀再进行查找
-	if (id.indexOf(loader.base) == 0) {
-		id = id.slice(loader.base.length);
-	}
-
-	var pkg;
-	if (pkg = loader.lib[id] || loader.lib[id + '.js'] || loader.lib[id + '/index.js']) {
-		return pkg.id;
-	}
-	return null;
-};
-
 /**
  * @param name
  * @param module
@@ -533,6 +511,7 @@ Dependency.prototype.find = function(id) {
 function CommonJSDependency(name, owner, runtime) {
 	Dependency.apply(this, arguments);
 
+	var loader = runtime.loader;
     var tempId, id, runtimeName;
 	var paths = runtime.loader.paths;
 
@@ -543,7 +522,7 @@ function CommonJSDependency(name, owner, runtime) {
 	// relative id
 	else if (isRelative(name)) {
 		tempId = pathutil.join(pathutil.dirname(owner.id), name);
-		id = this.find(tempId);
+		id = loader.find(tempId);
 		if (!id) id = tempId;
 	}
 	// root id
@@ -554,7 +533,7 @@ function CommonJSDependency(name, owner, runtime) {
 	else {
 		paths.some(function(m) {
 			tempId = pathutil.join(m, name);
-			id = this.find(tempId);
+			id = loader.find(tempId);
 			if (id) return true;
 		}, this);
 		runtimeName = this.name;
@@ -593,6 +572,7 @@ CommonJSDependency.prototype.execute = function() {
 function ObjectDependency(name, owner, runtime) {
 	Dependency.apply(this, arguments);
 
+	var loader = runtime.loader;
 	// 需要搜索的所有路径，runtime.context是内置默认的
 	var paths = runtime.path.concat([runtime.context]);
 	// 此依赖是否是在父模块当前目录中找到的，用于声称其name
@@ -609,7 +589,7 @@ function ObjectDependency(name, owner, runtime) {
 	paths.some(function(m) {
 		var path = pathutil.join(pathutil.dirname(owner.id), m);
 		id = pathutil.join(path, partId);
-		var tid = this.find(id);
+		var tid = loader.find(id);
 		if (tid) {
 			id = tid;
 			context = path;
@@ -647,6 +627,7 @@ ObjectDependency.prototype.constructor = ObjectDependency;
 ObjectDependency.prototype.load = function(callback) {
 	var dep = this;
 	var runtime = this.runtime;
+	var loader = runtime.loader;
 	var context = this.context || '';
 	var parts = this.nameParts;
 	var index = -1;
@@ -668,7 +649,7 @@ ObjectDependency.prototype.load = function(callback) {
 			if (index == parts.length - 1) {
 				id = dep.id;
 			} else {
-				id = dep.find(pathutil.join(context, parts.slice(0, index + 1).join('/')));
+				id = loader.find(pathutil.join(context, parts.slice(0, index + 1).join('/')));
 			}
 			runtime.loadModule(id, function(deps, pkg) {
 				next(deps, pkg);
@@ -682,6 +663,7 @@ ObjectDependency.prototype.load = function(callback) {
 ObjectDependency.prototype.execute = function() {
 	var dep = this;
 	var runtime = this.runtime;
+	var loader = runtime.loader;
 	var context = this.context || '';
 	var parts = this.nameParts;
 	var parentName = runtime.stack[runtime.stack.length - 1].id;
@@ -706,7 +688,7 @@ ObjectDependency.prototype.execute = function() {
 			if (i == parts.length - 1) {
 				id = dep.id;
 			} else {
-				id = dep.find(pathutil.join(context, parts.slice(0, i + 1).join('/')));
+				id = loader.find(pathutil.join(context, parts.slice(0, i + 1).join('/')));
 			}
 			exports = runtime.modules[name] || runtime.loader.lib[id].execute(name, deps, runtime);
 			runtime.setMemberTo(pName, part, exports);
@@ -913,6 +895,7 @@ Loader.prototype.name2id = function(name) {
 		id = name;
 	}
 
+	// 去掉base前缀
 	id = pathutil.join(this.base, id).slice(this.base.length);
 
 	var filename = pathutil.basename(id);
@@ -923,6 +906,26 @@ Loader.prototype.name2id = function(name) {
 	}
 
 	return id;
+};
+
+Loader.prototype.find = function(id) {
+	var filename = pathutil.basename(id);
+	var ext = filename.slice(filename.lastIndexOf('.'));
+
+	if (ext == '.css') {
+		// TODO
+	}
+
+	// 如果是查找base库中的模块，由于lib中存储是没有带有base前缀，在这里去掉前缀再进行查找
+	if (id.indexOf(this.base) == 0) {
+		id = id.slice(this.base.length);
+	}
+
+	var pkg;
+	if (pkg = this.lib[id] || this.lib[id + '.js'] || this.lib[id + '/index.js']) {
+		return pkg.id;
+	}
+	return null;
 };
 
 /**
