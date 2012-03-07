@@ -1,3 +1,13 @@
+/**
+ * 变量说明：
+ * 	pkg - 未实例化的模块
+ * 	module - 实例化的模块
+ * 	dep - 通过toDep方法处理过的依赖信息
+ * 	dependency - 字符串形式保存依赖信息
+ * 	parent - 在execute阶段当前模块的调用者
+ * 	owner - 在load阶段当前依赖的拥有者
+ */
+
 ;(function(object) {
 
 var pathutil = {};
@@ -256,9 +266,9 @@ CommonJSPackage.prototype.toDep = function(i, runtime) {
 	var name = this.dependencies[i];
 	// object.define中，“.”作为分隔符的被认为是ObjectDependency，其他都是CommenJSDependency
 	if (name.indexOf('/') == -1 && name.indexOf('.') != -1) {
-		return new ObjectDependency(name, runtime);
+		return new ObjectDependency(name, this, runtime);
 	} else {
-		return new CommonJSDependency(name, runtime);
+		return new CommonJSDependency(name, this, runtime);
 	}
 };
 
@@ -408,9 +418,9 @@ ObjectPackage.prototype.toDep = function(index, runtime) {
 	var name = this.dependencies[index];
 	// object.add中，“/”作为分隔符的被认为是CommonJSDependency，其他都是ObjectDependency
 	if (name.indexOf('/') != -1) {
-		return new CommonJSDependency(name, runtime);
+		return new CommonJSDependency(name, this, runtime);
 	} else {
-		return new ObjectDependency(name, runtime);
+		return new ObjectDependency(name, this, runtime);
 	}
 };
 
@@ -487,8 +497,9 @@ Package.prototype.parseDependencies = function(dependencies) {
 	return dependencies;
 };
 
-function Dependency(name, runtime) {
+function Dependency(name, owner, runtime) {
 	if (!name) return;
+	this.owner = owner;
 	this.runtime = runtime;
 	this.name = name;
 }
@@ -519,12 +530,11 @@ Dependency.prototype.find = function(id) {
  * @param name
  * @param module
  */
-function CommonJSDependency(name, runtime) {
+function CommonJSDependency(name, owner, runtime) {
 	Dependency.apply(this, arguments);
 
-	var parent = runtime.stack[runtime.stack.length - 1];
     var tempId, id, runtimeName;
-	var paths = [runtime.loader.base];
+	var paths = runtime.loader.paths;
 
 	// absolute id
 	if (isAbsolute(name)) {
@@ -532,7 +542,7 @@ function CommonJSDependency(name, runtime) {
 	}
 	// relative id
 	else if (isRelative(name)) {
-		tempId = pathutil.join(pathutil.dirname(parent.module.id), name);
+		tempId = pathutil.join(pathutil.dirname(owner.id), name);
 		id = this.find(tempId);
 		if (!id) id = tempId;
 	}
@@ -577,16 +587,18 @@ CommonJSDependency.prototype.execute = function() {
 
 /**
  * @param name
+ * @param owner
+ * @param runtime
  */
-function ObjectDependency(name, runtime) {
+function ObjectDependency(name, owner, runtime) {
 	Dependency.apply(this, arguments);
 
-	// 依赖自己的模块
-	var parent = runtime.stack[runtime.stack.length - 1];
 	// 需要搜索的所有路径，runtime.context是内置默认的
 	var paths = runtime.path.concat([runtime.context]);
-	// context为id的前缀部分，prefix为name的前缀部分
-	var id, context, prefix;
+	// 此依赖是否是在父模块当前目录中找到的，用于声称其name
+	var isRelative = false;
+	// context为id的前缀部分
+	var id, context;
 	// 用于查找路径
 	var partId = name.replace(/\./g, '/');
 
@@ -595,16 +607,14 @@ function ObjectDependency(name, runtime) {
 	// 全局模块(sys.path中通过'/'定义)；
 	// 运行时路径上的模块(默认的)。
 	paths.some(function(m) {
-		var path = pathutil.join(parent.module.id, m);
+		var path = pathutil.join(pathutil.dirname(owner.id), m);
 		id = pathutil.join(path, partId);
 		var tid = this.find(id);
 		if (tid) {
 			id = tid;
 			context = path;
 			if (m == '') { // 在当前目录中找到的子模块
-				prefix = parent.name;
-			} else {
-				prefix = '';
+				isRelative = true;
 			}
 			return true;
 		}
@@ -626,8 +636,8 @@ function ObjectDependency(name, runtime) {
 	this.id = id;
 	// id的前缀
 	this.context = context;
-	// 运行名字的前缀
-	this.prefix = prefix;
+	// 是否是相对依赖模块
+	this.isRelative = isRelative;
 };
 
 ObjectDependency.prototype = new Dependency();
@@ -638,10 +648,7 @@ ObjectDependency.prototype.load = function(callback) {
 	var dep = this;
 	var runtime = this.runtime;
 	var context = this.context || '';
-	var prefix = this.prefix;
-	var pName = prefix;
 	var parts = this.nameParts;
-
 	var index = -1;
 
 	/**
@@ -649,7 +656,7 @@ ObjectDependency.prototype.load = function(callback) {
 	 * 如a.b.c，依次获取a、a.b、a.b.c
 	 */
 	function next() {
-		var id, part, name;
+		var id, part;
 
 		index++;
 
@@ -657,15 +664,13 @@ ObjectDependency.prototype.load = function(callback) {
 			callback();
 		} else {
 			part = parts[index];
-			name = (pName? pName + '.' : '') + part;
 
 			if (index == parts.length - 1) {
 				id = dep.id;
 			} else {
-				id = dep.find(pathutil.join(context, parts.slice(0, index + 1).join('/')) + '/index.js');
+				id = dep.find(pathutil.join(context, parts.slice(0, index + 1).join('/')));
 			}
 			runtime.loadModule(id, function(deps, pkg) {
-				pName = name;
 				next(deps, pkg);
 			});
 		}
@@ -678,9 +683,11 @@ ObjectDependency.prototype.execute = function() {
 	var dep = this;
 	var runtime = this.runtime;
 	var context = this.context || '';
-	var prefix = this.prefix;
-	var pName = prefix;
 	var parts = this.nameParts;
+	var parentName = runtime.stack[runtime.stack.length - 1].id;
+	// prefix 为name的前缀，通过父name获得
+	var prefix = this.isRelative? parentName.slice(0, parentName.lastIndexOf('.')) : '';
+	var pName = prefix;
 	var name;
 
 	var rootName = (prefix? prefix + '.' : '') + parts[0];
@@ -699,7 +706,7 @@ ObjectDependency.prototype.execute = function() {
 			if (i == parts.length - 1) {
 				id = dep.id;
 			} else {
-				id = dep.find(pathutil.join(context, parts.slice(0, i + 1).join('/')) + '/index.js');
+				id = dep.find(pathutil.join(context, parts.slice(0, i + 1).join('/')));
 			}
 			exports = runtime.modules[name] || runtime.loader.lib[id].execute(name, deps, runtime);
 			runtime.setMemberTo(pName, part, exports);
@@ -741,7 +748,7 @@ function LoaderRuntime(context) {
 	this.context = context;
 
 	/**
-	 * sys.path
+	 * sys.path，在创建实例时应该同loader.paths合并
 	 */
 	this.path = [''];
 }
@@ -767,7 +774,6 @@ LoaderRuntime.prototype.addModule = function(name, exports) {
 LoaderRuntime.prototype.loadModule = function(id, callback) {
 	var runtime = this;
 	var loader = this.loader;
-	var stack = this.stack;
 
 	if (id in this.packages) {
 		callback();
@@ -853,13 +859,14 @@ LoaderRuntime.prototype.setMemberTo = function(host, member, value) {
 /**
  * object的包管理器
  */
-function Loader() {
+function Loader(base) {
 	this.useCache = true;
 	this.lib = {
 		'sys': new Package('sys')
 	};
 	this.anonymousModuleCount = 0;
-	this.base = '/';
+	this.base = base || '/'; // base必须只读
+	this.paths = [this.base]; // CommonJSDependency从这里获取paths
 
 	this.scripts = document.getElementsByTagName('script');
 }
@@ -912,7 +919,7 @@ Loader.prototype.name2id = function(name) {
 	var ext = filename.slice(filename.lastIndexOf('.'));
 
 	if (ext != '.js') {
-		id += '/index.js';
+		id += '.js';
 	}
 
 	return id;
@@ -1036,7 +1043,7 @@ Loader.prototype.removeScript = function(src) {
 Loader.prototype.createRuntime = function(id) {
 	var runtime = new LoaderRuntime(id);
 	runtime.loader = this;
-	runtime.path.push(this.base);
+	runtime.path = runtime.path.concat(this.paths);
 	return runtime;
 };
 

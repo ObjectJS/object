@@ -31,13 +31,13 @@ test('sys.modules - exists', function() {
 test('sys.molules - submodule by use', function() {
 	object.add('test3.c', function() {});
 
-	object.add('test3', './c', function(exports, c) {});
+	object.add('test3', './test3/c', function(exports, c) {});
 
 	object.add('test4.a.b.c', function(exports) {
-		equal(this.__name__, 'test4/a/b/c/index.js');
+		equal(this.__name__, 'test4/a/b/c.js');
 	});
     
-	object.add('test4.a', './b/c, sys', function(exports, c, sys) {
+	object.add('test4.a', './a/b/c, sys', function(exports, c, sys) {
 		this.name = 'test4/a';
 		equal(this.__name__, 'test4/a');
 	});
@@ -50,7 +50,7 @@ test('sys.molules - submodule by use', function() {
 		ok(sys.modules['test4/a'] != null, 'test4.a is used by ./a, so a is in sys.modules');
 		ok(sys.modules['test4/a/b'] == null, 'a.b is not in sys.modules');
 		ok(sys.modules['test3'] != null, 'test3 is in sys.modules');
-		ok(sys.modules['test3/c/index.js'] != null, 'test3.c is in sys.modules');
+		ok(sys.modules['test3/c.js'] != null, 'test3.c is in sys.modules');
 	});
 	object.remove('test3', true);
 	object.remove('test4', true);
@@ -113,19 +113,19 @@ test('return value of module', function() {
 test('relative module - use', function() {
 
 	object.add('foo2.c', function() {});
-	object.add('foo2', './c', function(exports, c) {
-		equal(c.__name__, 'foo2/c/index.js', 'module name with same prefix.');
+	object.add('foo2', './foo2/c', function(exports, c) {
+		equal(c.__name__, 'foo2/c.js', 'module name with same prefix.');
 	});
 	object.add('foo.a.b.c', function(exports) { });
-	object.add('foo.a', './b/c, sys', function(exports, c, sys) {
-		equal(c.__name__, 'foo/a/b/c/index.js', 'relative submodule name.');
+	object.add('foo.a', './a/b/c, sys', function(exports, c, sys) {
+		equal(c.__name__, 'foo/a/b/c.js', 'relative submodule name.');
 	});
 	object.add('foo.b', function(exports) {
 	});
 	object.add('foo.c', function(exports) {
 	});
-	object.add('foo', './a, ./b, ./c, foo2, sys', function(exports, a, b, c, foo2, sys) {
-		ok(a.__name__ == 'foo/a/index.js' && b.__name__ == 'foo/b/index.js' && c.__name__ == 'foo/c/index.js', 'arguments pass.');
+	object.add('foo', './foo/a, ./foo/b, ./foo/c, foo2, sys', function(exports, a, b, c, foo2, sys) {
+		ok(a.__name__ == 'foo/a.js' && b.__name__ == 'foo/b.js' && c.__name__ == 'foo/c.js', 'arguments pass.');
 	});
 	object.use('foo', function() {
 	});
@@ -134,10 +134,10 @@ test('relative module - use', function() {
 
 	object.add('foo.a.b.c', function(exports) {
 	});
-	object.add('foo.a', './b/c, sys', function(exports, c, sys) {
+	object.add('foo.a', './a/b/c, sys', function(exports, c, sys) {
 		equal(c.__name__, 'foo/a/b/c', 'relative submodule name.');
 	});
-	object.add('foo', './a', function(exports, a) {
+	object.add('foo', './foo/a', function(exports, a) {
 	});
 
 	object.execute('foo');
@@ -246,6 +246,16 @@ test('parent module and sub module', function() {
 		equal(parent.sub.sub2.fn, undefined, 'parent.sub.sub2.fn is undefined');
 	});
 	object.remove('parent.sub', true);
+});
+
+// 当依赖模块是从当前模块目录找到时，其名字应该带有父模块运行时的名字前缀。
+test('object.add relative __name__', function() {
+	object.add('test/a');
+	object.add('test/b', 'a', function(exports, a) {
+		equal(a.__name__, 'test.a', 'relative module name is parent name add self name.');
+	});
+	object.use('test.b', function(test) {
+	});
 });
 
 test('object.execute auto call exports.main', function() {
