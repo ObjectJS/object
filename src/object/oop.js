@@ -324,7 +324,6 @@ var Class = this.Class = function() {
 	// 父类
 	var base = length > 1? arguments[0] : type;
 	if (typeof base != 'function' && typeof base != 'object') {
-		alert(arguments.callee.caller)
 		throw new Error('base is not function or object');
 	}
 	if (base) {
