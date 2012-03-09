@@ -26,6 +26,7 @@
 			<include path="options.js" />
 			<include path="dom/index.js" />
 			<include path="dom/dd.js" />
+			<include path="dom/datalist.js" />
 			<include path="net.js" />
 			<include path="mvc.js" />
 			<include path="ui/index.js" />
