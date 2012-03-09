@@ -587,7 +587,8 @@ function CommonJSDependency(name, owner, runtime) {
 	// relative id
 	else if (isRelative(name)) {
 		tempId = urljoin(urljoin(owner.id, '.'), name);
-		id = loader.find(tempId, paths).id;
+		found = loader.find(tempId, paths);
+		id = found.id;
 		if (!id) id = tempId;
 		idType = 'relative';
 	}
@@ -598,7 +599,8 @@ function CommonJSDependency(name, owner, runtime) {
 	}
 	// top-level id
 	else {
-		id = loader.find(name, paths).id;
+		found = loader.find(name, paths);
+		id = found.id;
 		if (!id) id = name;
 		idType = 'top-level';
 	}
@@ -624,12 +626,8 @@ CommonJSDependency.prototype.execute = function() {
 		runtimeName = this.name;
 
 	} else if (this.idType == 'relative') {
-		parentName = runtime.stack[runtime.stack.length - 1].id;
-		if (parentName == '__main__') {
-			runtimeName = this.id.slice(runtime.context.length);
-		} else {
-			runtimeName = urljoin(urljoin(parentName, '.'), this.name);
-		}
+		parent = runtime.stack[runtime.stack.length - 1];
+		runtimeName = this.id.slice(parent.module.context.length);
 
 	} else {
 		runtimeName = id;
@@ -667,6 +665,7 @@ function ObjectDependency(name, owner, runtime) {
 	var context = found.context;
 	if (context == '') {
 		isRelative = true;
+		context = urljoin(urljoin(owner.id, '.'), context);
 	}
 
 	// 当一个名为 a/b/c/d/e/f/g 的模块被 a/b/c/d/e/ 在 a/b/c 运行空间下通过 f.g 依赖时：
@@ -737,13 +736,14 @@ ObjectDependency.prototype.execute = function() {
 	var context = this.context || '';
 	var parts = this.nameParts;
 	// prefix 为name的前缀，通过父name获得
-	var prefix, parentName;
+	var prefix, parentName, point;
 	if (this.isRelative) {
 		parentName = runtime.stack[runtime.stack.length - 1].id;
-		if (parentName == '__main__') {
+		point = parentName.lastIndexOf('.');
+		if (parentName == '__main__' || point == -1) {
 			prefix = '';
 		} else {
-			prefix = parentName.slice(0, parentName.lastIndexOf('.'));
+			prefix = parentName.slice(0, point);
 		}
 	} else {
 		prefix = '';
@@ -782,7 +782,7 @@ ObjectDependency.prototype.execute = function() {
 /**
  * Loader运行时，每一个use、execute产生一个
  */
-function LoaderRuntime(moduleId, context) {
+function LoaderRuntime(moduleId) {
 
 	/**
 	 * 此次use运行过程中用到的所有module
@@ -807,11 +807,6 @@ function LoaderRuntime(moduleId, context) {
 	 * 运行入口模块的路径
 	 */
 	this.moduleId = moduleId;
-
-	/**
-	 * 运行入口模块的context
-	 */
-	this.context = context;
 
 	/**
 	 * sys.path，在创建实例时应该同loader.paths合并
@@ -989,6 +984,29 @@ Loader.prototype.name2id = function(name) {
 	return id;
 };
 
+Loader.prototype.parse = function(id) {
+	var context = '';
+	if (isAbsolute(id)) {
+		// 按照路径的长度倒序排列，确保当多个path处于同一路径时，模块能被分配到正确的context中
+		var paths = this.paths.sort(function(a, b) {
+			return a.length > b.length;
+		});
+		paths.some(function(path) {
+			if (id.indexOf(path) == 0) {
+				context = path;
+				return true;
+			}
+		}, this);
+	} else {
+		id = urljoin(this.base, id);
+		context = this.base;
+	}
+	return {
+		id: id,
+		context: context
+	};
+};
+
 /**
  * 从paths中寻找符合此id的模块
  * @param id
@@ -1030,7 +1048,7 @@ Loader.prototype.find = function(id, paths, base) {
 		return; // TODO
 	}
 
-	console.log(id, foundId, paths)
+	//console.log(id, foundId, paths)
 	return {
 		id: foundId,
 		context: foundContext
@@ -1152,8 +1170,8 @@ Loader.prototype.removeScript = function(src) {
 /**
  * 建立一个runtime
  */
-Loader.prototype.createRuntime = function(id, context) {
-	var runtime = new LoaderRuntime(id, context);
+Loader.prototype.createRuntime = function(id) {
+	var runtime = new LoaderRuntime(id);
 	runtime.loader = this;
 	runtime.path = runtime.path.concat(this.paths);
 	return runtime;
@@ -1163,14 +1181,14 @@ Loader.prototype.createRuntime = function(id, context) {
  * 建立前缀模块
  * 比如 a/b/c/d.js ，会建立 a a/b a/b/c 三个空模块，最后一个模块为目标模块
  */
-Loader.prototype.definePrefixFor = function(id) {
+Loader.prototype.definePrefixFor = function(id, context) {
 	if (!id || typeof id != 'string') return;
 
-	var idParts = urljoin(id, '.').split('/');
+	var idParts = urljoin(id, '.').slice(context.length).split('/');
 	for (var i = 0, prefix, pkg, l = idParts.length; i < l; i++) {
 		prefix = idParts.slice(0, i + 1).join('/');
 		prefix = urljoin(prefix, 'index.js');
-		this.definePrefix(prefix);
+		this.definePrefix(urljoin(context, prefix));
 	}
 };
 
@@ -1205,35 +1223,18 @@ Loader.prototype.defineFile = function(id, src) {
 /**
  * 定义一个普通module
  */
-Loader.prototype.defineModule = function(constructor, id, dependencies, factory) {
+Loader.prototype.defineModule = function(constructor, id, context, dependencies, factory) {
 	if (arguments.length < 4) return;
 
 	// 不允许重复添加
 	if (id in this.lib && this.lib[id].factory) return;
 
 	// 添加前缀package
-	this.definePrefixFor(id);
+	this.definePrefixFor(id, context);
 
 	var pkg = new constructor(id, dependencies, factory);
+	pkg.context = context;
 	this.lib[id] = pkg;
-};
-
-/**
- * @param name
- * @param dependencies
- * @param factory
- */
-Loader.prototype.define = function(name, dependencies, factory) {
-	if (typeof name != 'string') return;
-
-	if (typeof dependencies == 'function') {
-		factory = dependencies;
-		dependencies = [];
-	}
-
-	var id = urljoin(this.base, this.name2id(name));
-
-	this.defineModule(CommonJSPackage, id, dependencies, factory);
 };
 
 /**
@@ -1249,6 +1250,24 @@ Loader.prototype.getModule = function(name) {
  * @param dependencies
  * @param factory
  */
+Loader.prototype.define = function(name, dependencies, factory) {
+	if (typeof name != 'string') return;
+
+	if (typeof dependencies == 'function') {
+		factory = dependencies;
+		dependencies = [];
+	}
+
+	var info = this.parse(this.name2id(name));
+
+	this.defineModule(CommonJSPackage, info.id, info.context, dependencies, factory);
+};
+
+/**
+ * @param name
+ * @param dependencies
+ * @param factory
+ */
 Loader.prototype.add = function(name, dependencies, factory) {
 	if (typeof name != 'string') return;
 
@@ -1257,9 +1276,8 @@ Loader.prototype.add = function(name, dependencies, factory) {
 		dependencies = [];
 	}
 
-	var id = urljoin(this.base, this.name2id(name));
-
-	this.defineModule(ObjectPackage, id, dependencies, factory);
+	var info = this.parse(this.name2id(name));
+	this.defineModule(ObjectPackage, info.id, info.context, dependencies, factory);
 };
 
 /**
@@ -1326,7 +1344,7 @@ Loader.prototype.use = function(dependencies, factory) {
 	var id = '__anonymous_' + this.anonymousModuleCount + '__';
 	this.anonymousModuleCount++;
 
-	this.defineModule(CommonJSPackage, id, dependencies, function(require, exports, module) {
+	this.defineModule(CommonJSPackage, id, '', dependencies, function(require, exports, module) {
 		var args = [];
 		module.dependencies.forEach(function(dependency) {
 			dep = require(dependency);
