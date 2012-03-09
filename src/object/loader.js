@@ -16,7 +16,7 @@
  */
 function urlparse(url, scheme) {
 	var reg, parts;
-	if (!url || typeof url != 'string') {
+	if (typeof url != 'string') {
 		return null;
 	}
 	url = url.trim();
@@ -31,9 +31,13 @@ function urlparse(url, scheme) {
 	if (reg.test(url)) {
 		parts = url.match(reg).slice(1);
 		if (!parts[0] && scheme) parts[0] = scheme;
+		for (var i = 0; i < parts.length; i++) {
+			if (!parts[i]) parts[i] = '';
+		}
 		return parts;
+	} else {
+		return ['', '', '', '', '', ''];
 	}
-	
 };
 
 /**
@@ -45,6 +49,7 @@ function urlunparse(parts) {
 	}
 	var url = '';
 	if (parts[0]) url += parts[0] + '://' + parts[1];
+	if (parts[1] && parts[2] && parts[2].indexOf('/') != 0) url += '/';
 	url += parts[2];
 	if (parts[3]) url += ';' + parts[3];
 	if (parts[4]) url += '?' + parts[4];
@@ -57,6 +62,7 @@ function urlunparse(parts) {
 * 合并两段url
 */
 function urljoin(base, url) {
+	// 逻辑完全照抄python的urlparse.py
 
 	if (!base) {
 		return url;
