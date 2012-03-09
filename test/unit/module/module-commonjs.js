@@ -14,7 +14,7 @@ test('use object.define - basic', function() {
 		equal(c.c, 1, 'c in module define_c is loaded');
 		exports.a = 1;
 		equal(exports.__name__, isUse ? 'define_a' : '__main__', '__name__ is define_a when use this module, is __main__ when execute');
-		equal(module.id, 'define_a.js', 'module.id is ok');
+		equal(module.id, loader.base + 'define_a.js', 'module.id is ok');
 		equal(module.dependencies.length, 2, 'module.dependencies has two elements');
 	});
 	var isUse = true;
