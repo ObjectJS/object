@@ -19,15 +19,29 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 
 	this.DataList = new Class(function() {
 
-		this.initialize = function(self, options) {
+		this.initialize = function(self) {
 			var datalistId = self.getAttribute('list');
-			if (!document.getElementById(datalistId)) {
+			if (datalistId == null || !document.getElementById(datalistId)) {
 				return;
 			}
-			self.initOptions(options);
+			self.init();
+		};
+
+		this.list = property(function(self) {
+			return self.getAttribute('list');
+		}, function(self, list) {
+			self._set('list', list);
+			self.setAttribute('list', list);
+			if (list && document.getElementById(list)) {
+				self.init();
+			}
+		});
+
+		this.init = function(self) {
+			self.initOptions(defaultOptions);
 			self._set('autocomplete', 'off');
 			self.bindInputEvent();
-		};
+		}
 
 		this.initOptions = function(self, options) {
 			self.options = object.extend(defaultOptions, options);
@@ -189,6 +203,7 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 			'<ul style="list-style:none;margin:0;padding:0;z-index:4;position:relative;">' + 
 				'{{#data}}<li real_value="{{value}}">{{text}}</li>{{/data}}' + 
 			'</ul>';
+		//ie6下只有一条记录的时候会出现滚动条 https://github.com/brandonaaron/bgiframe/blob/master/jquery.bgiframe.js
 		templates.html = 
 			'<div id="datalistContainer" style="border:1px solid gray;position:absolute;z-index:3;left:{{left}}px;top:{{top}}px;background:#fff;font-size:small;">{{#ie6}}<iframe id="datalist_iframe" frameBorder="0" style="position:absolute;z-index:2;top:0px;left:0px;overflow:hidden;display:block;filter:Alpha(Opacity=0);" src="javascript:false;"></iframe>{{/ie6}}</div>';
 
@@ -311,6 +326,7 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 
 			self._handlerFlag = false;
 
+			//点击滚动条不会mouseup  通过监听下一次mousedown的位置来确定是否隐藏 参考jquery autocomplete
 			container.addEvent('mousedown', function(e) {
 				self.clickOnContainer = true;
 				if (!self._handlerFlag && isSubNode(e.target, self._container)) {
@@ -369,7 +385,7 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 			if (!self.options.dynamic && self.data) {
 				return self.data;
 			}
-			var datalistId = self.getAttribute('list');
+			var datalistId = self.get('list');
 			var options = dom.getElements('#' + datalistId + ' option');
 			if (options.length === 0) {
 				throw new Error('浏览器不支持datalist属性或不存在' + datalistId + '对应的datalist');
