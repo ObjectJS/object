@@ -706,7 +706,7 @@ ObjectDependency.prototype.load = function(callback) {
 	 * 如a.b.c，依次获取a、a.b、a.b.c
 	 */
 	function next() {
-		var id, part;
+		var id, tempId, part;
 
 		index++;
 
@@ -716,13 +716,17 @@ ObjectDependency.prototype.load = function(callback) {
 			part = parts[index];
 
 			if (index == parts.length - 1) {
-				id = dep.id;
+				runtime.loadModule(dep.id, next);
 			} else {
-				id = loader.find(urljoin(context, parts.slice(0, index + 1).join('/'))).id;
+				tempId = urljoin(context, parts.slice(0, index + 1).join('/'));
+				id = loader.find(tempId).id;
+				if (id) {
+					runtime.loadModule(id, next);
+				} else {
+					loader.definePrefix(tempId);
+					next();
+				}
 			}
-			runtime.loadModule(id, function(deps, pkg) {
-				next(deps, pkg);
-			});
 		}
 	}
 
@@ -753,6 +757,7 @@ ObjectDependency.prototype.execute = function() {
 
 	var rootName = (prefix? prefix + '.' : '') + parts[0];
 	var deps = runtime.packages[this.id];
+	var id, tempId, exports;
 
 	/**
 	 * 依次获取当前模块的每个部分
@@ -767,9 +772,10 @@ ObjectDependency.prototype.execute = function() {
 			if (i == parts.length - 1) {
 				id = dep.id;
 			} else {
-				id = loader.find(urljoin(context, parts.slice(0, i + 1).join('/'))).id;
+				tempId = urljoin(context, parts.slice(0, i + 1).join('/'));
+				id = loader.find(tempId).id;
 			}
-			exports = runtime.modules[name] || runtime.loader.lib[id].execute(name, deps, runtime);
+			exports = loader.lib[id].execute(name, deps, runtime);
 			runtime.setMemberTo(pName, part, exports);
 		}
 		pName = name;
@@ -1178,21 +1184,6 @@ Loader.prototype.createRuntime = function(id) {
 };
 
 /**
- * 建立前缀模块
- * 比如 a/b/c/d.js ，会建立 a a/b a/b/c 三个空模块，最后一个模块为目标模块
- */
-Loader.prototype.definePrefixFor = function(id, context) {
-	if (!id || typeof id != 'string') return;
-
-	var idParts = urljoin(id, '.').slice(context.length).split('/');
-	for (var i = 0, prefix, pkg, l = idParts.length; i < l; i++) {
-		prefix = idParts.slice(0, i + 1).join('/');
-		prefix = urljoin(prefix, 'index.js');
-		this.definePrefix(urljoin(context, prefix));
-	}
-};
-
-/**
  * 定义一个prefix module
  */
 Loader.prototype.definePrefix = function(id) {
@@ -1213,8 +1204,6 @@ Loader.prototype.defineFile = function(id, src) {
 	// 存在factory或file则返回
 	if (id in this.lib && (this.lib[id].factory || this.lib[id].file)) return;
 
-	this.definePrefixFor(id);
-
 	var pkg = new Package(id);
 	pkg.file = src;
 	this.lib[id] = pkg;
@@ -1228,9 +1217,6 @@ Loader.prototype.defineModule = function(constructor, id, context, dependencies,
 
 	// 不允许重复添加
 	if (id in this.lib && this.lib[id].factory) return;
-
-	// 添加前缀package
-	this.definePrefixFor(id, context);
 
 	var pkg = new constructor(id, dependencies, factory);
 	pkg.context = context;
