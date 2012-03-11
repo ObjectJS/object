@@ -535,7 +535,7 @@ Package.prototype.execute = function(name, deps, runtime) {
 
 	var exports = new Module(name);
 	// sys.modules
-	if (this.id === urljoin(runtime.loader.base, 'sys')) {
+	if (this.id === 'sys') {
 		exports.modules = runtime.modules;
 	}
 
@@ -619,7 +619,6 @@ CommonJSDependency.prototype.load = function(callback) {
 
 CommonJSDependency.prototype.execute = function() {
 	var runtime = this.runtime;
-	var exports = runtime.modules[runtimeName];
 	var runtimeName, parent;
 
 	if (this.idType == 'top-level') {
@@ -633,6 +632,7 @@ CommonJSDependency.prototype.execute = function() {
 		runtimeName = id;
 	}
 
+	var exports = runtime.modules[runtimeName];
 	var deps = runtime.packages[this.id];
 	if (exports) {
 		return exports;
@@ -659,8 +659,9 @@ function ObjectDependency(name, owner, runtime) {
 	// 当前模块(sys.path中通过'.'定义)；
 	// 全局模块(sys.path中通过'/'定义)；
 	// 运行时路径上的模块(默认的)。
-	var found = loader.find(name.replace(/\./g, '/'), paths, owner.id);
-	var id = found.id;
+	var tempId = name.replace(/\./g, '/');
+	var found = loader.find(tempId, paths, owner.id);
+	var id = found.id || tempId;
 	// context为id的前缀部分
 	var context = found.context;
 	if (context == '') {
@@ -935,8 +936,7 @@ function Loader(base) {
 
 	this.scripts = document.getElementsByTagName('script');
 
-	var sysName = urljoin(this.base, 'sys');
-	this.lib[sysName] = new Package(sysName);
+	this.lib['sys'] = new Package('sys');
 }
 
 // 用于保存url与script节点的键值对
@@ -1054,7 +1054,6 @@ Loader.prototype.find = function(id, paths, base) {
 		return; // TODO
 	}
 
-	//console.log(id, foundId, paths)
 	return {
 		id: foundId,
 		context: foundContext
@@ -1288,7 +1287,7 @@ Loader.prototype.remove = function(name, all) {
  */
 Loader.prototype.clear = function() {
 	for (var prop in this.lib) {
-		if (prop != urljoin(this.base, 'sys')) {
+		if (prop != 'sys') {
 			this.remove(prop);
 		}
 	}

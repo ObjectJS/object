@@ -157,7 +157,7 @@ test('circular dependency - extra', function() {
 			equal(a.a, 1, 'a.a is ok in b, after 100 ms');
 		}, 100);
 	});
-	object.use('a', function(exports, a) {
+	object.use('a', function(a) {
 		equal(a.__name__, 'a', 'module a is ok in circular dependency');
 		equal(a.a, 1, 'a.a is ok in circular dependency');
 	});
@@ -180,7 +180,7 @@ test('circular dependency - extra', function() {
 		}, 100);
 		exports.c3 = 1;
 	});
-	object.use('c1, c2, c3', function(exports, c1, c2, c3) {
+	object.use('c1, c2, c3', function(c1, c2, c3) {
 		equal(c1.c1, 1, 'c1.c1 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
 		equal(c2.c2, 1, 'c2.c2 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
 		equal(c3.c3, 1, 'c3.c3 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
