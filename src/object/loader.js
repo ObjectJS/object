@@ -723,12 +723,11 @@ ObjectDependency.prototype.load = function(callback) {
 			} else {
 				tempId = urljoin(context, parts.slice(0, index + 1).join('/'));
 				id = loader.find(tempId).id;
-				if (id) {
-					runtime.loadModule(id, next);
-				} else {
-					loader.definePrefix(tempId);
-					next();
+				if (!id) {
+					id = tempId;
+					loader.definePrefix(id);
 				}
+				runtime.loadModule(id, next);
 			}
 		}
 	}
