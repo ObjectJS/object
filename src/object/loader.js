@@ -576,7 +576,7 @@ function CommonJSDependency(name, owner, runtime) {
 
 	var loader = runtime.loader;
     var tempId, id;
-	var paths = runtime.loader.paths;
+	var paths = loader.paths;
 	var idType;
 
 	// absolute id
@@ -619,6 +619,7 @@ CommonJSDependency.prototype.load = function(callback) {
 
 CommonJSDependency.prototype.execute = function() {
 	var runtime = this.runtime;
+	var loader = runtime.loader;
 	var runtimeName, parent;
 
 	if (this.idType == 'top-level') {
@@ -633,12 +634,13 @@ CommonJSDependency.prototype.execute = function() {
 	}
 
 	var exports = runtime.modules[runtimeName];
-	var deps = runtime.packages[this.id];
-	if (exports) {
-		return exports;
-	} else {
-		return runtime.loader.lib[this.id].execute(runtimeName, deps, runtime);
+	var pkg, deps;
+	if (!exports) {
+		deps = runtime.packages[this.id];
+		pkg = loader.lib[this.id];
+		exports = pkg.execute(runtimeName, deps, runtime);
 	}
+	return exports;
 };
 
 /**
@@ -745,7 +747,7 @@ ObjectDependency.prototype.execute = function() {
 	if (this.isRelative) {
 		parentName = runtime.stack[runtime.stack.length - 1].id;
 		point = parentName.lastIndexOf('.');
-		if (parentName == '__main__' || point == -1) {
+		if (point == -1) {
 			prefix = '';
 		} else {
 			prefix = parentName.slice(0, point);
@@ -758,7 +760,7 @@ ObjectDependency.prototype.execute = function() {
 
 	var rootName = (prefix? prefix + '.' : '') + parts[0];
 	var deps = runtime.packages[this.id];
-	var id, tempId, exports;
+	var id, tempId, pkg, exports;
 
 	/**
 	 * 依次获取当前模块的每个部分
@@ -776,7 +778,8 @@ ObjectDependency.prototype.execute = function() {
 				tempId = urljoin(context, parts.slice(0, i + 1).join('/'));
 				id = loader.find(tempId).id;
 			}
-			exports = loader.lib[id].execute(name, deps, runtime);
+			pkg = loader.lib[id];
+			exports = pkg.execute(name, deps, runtime);
 			runtime.setMemberTo(pName, part, exports);
 		}
 		pName = name;
