@@ -37,7 +37,7 @@ test('buildFileLib', function() {
 	ok(loader.scripts != null, 'self.scripts should not be null');
 	var len1 = loader.scripts.length;
 
-	loader.loadScript(emptyJS, emptyCallback);
+	Loader.loadScript(emptyJS, emptyCallback);
 	var len2 = loader.scripts.length;
 	equal(len1 + 1, len2, 'when new script inserted, loader.scripts should be added automatically');
 
@@ -50,7 +50,7 @@ test('buildFileLib', function() {
 	loader.buildFileLib();
 	var pkg = loader.getModule('test_module');
 	ok(pkg, 'new script tag inserted, new module loaded');
-	ok(pkg.id == 'test_module/index.js', 'module test_module is added, id is ok');
+	ok(pkg.id == loader.base + 'test_module.js', 'module test_module is added, id is ok');
 	ok(pkg.file == emptyJS, 'module test_module is added, file is ok');
 
 	var script = document.createElement('script');
@@ -105,16 +105,16 @@ test('getAbsolutePath', function() {
 	equal(Loader.getAbsolutePath('/a/b/c/../../a.js'), pageDir + 'a/a.js', '/a/b/c/../../a.js -> ' + pageDir + 'a/a/.js');
 	equal(Loader.getAbsolutePath('/a/b/c/../../a.js?a=1'), pageDir + 'a/a.js?a=1', '/a/b/c/../../a.js?a=1 -> ' + pageDir + 'a/a/.js?a=1');
 	equal(Loader.getAbsolutePath('/a/b/c/../../a.js?a=1#'), pageDir + 'a/a.js?a=1', '/a/b/c/../../a.js?a=1# -> ' + pageDir + 'a/a/.js?a=1');
-	equal(Loader.getAbsolutePath('http://hg.xnimg.cn/object/src/dom/index.js'), 'http://hg.xnimg.cn/object/src/dom/index.js', 'http://hg.xnimg.cn/object/src/dom/index.js -> http://hg.xnimg.cn/object/src/dom/index.js');
+	equal(Loader.getAbsolutePath('http://hg.xnimg.cn/object/src/dom.js'), 'http://hg.xnimg.cn/object/src/dom.js', 'http://hg.xnimg.cn/object/src/dom.js -> http://hg.xnimg.cn/object/src/dom.js');
 });
 
 module('loader-basic-removeScript');
 
 test('removeScript', function() {
-	loader.loadScript(emptyJS, function() {});
+	Loader.loadScript(emptyJS, function() {});
 	equal(Object.keys(Loader._urlNodeMap).length, 0, 'no cache, so will not add to _urlNodeMap');
 	loader.removeScript(emptyJS);
-	loader.loadScript(emptyJS, function() {}, true);
+	Loader.loadScript(emptyJS, function() {}, true);
 	equal(Object.keys(Loader._urlNodeMap).length, 1, 'cache is true, so will add to _urlNodeMap');
 	// if jsTestDriver is running, emptyJS contains url, so do not need to add pageDir
 	if (isJsTestDriverRunning) {
@@ -148,11 +148,11 @@ test('add-usage', function() {
 	ok(loader.getModule('b'), 'b is added to loader.lib');
 	loader.add('c', 'a,b', function() {});
 	ok(loader.getModule('c'), 'c is added to loader.lib');
-	equal(loader.lib['c/index.js'].dependencies.length, 2, 'c dependencies a and b, so lib[c].dependencies.length = 2');
+	equal(loader.getModule('c').dependencies.length, 2, 'c dependencies a and b, so lib[c].dependencies.length = 2');
 
 	loader.add('d/dd', 'a,b,c', function() {});
 	ok(loader.getModule('d/dd'), 'd.dd are added to loader.lib');
-	equal(loader.lib['d/dd/index.js'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
+	equal(loader.getModule('d/dd.js').dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
 
 	loader.add('error1', 'a,b');
 	ok(loader.getModule('error1'), 'add module without context, should be added');
@@ -259,9 +259,9 @@ module('loader-basic-loadScript', {
 });
 
 test('loadScript basic test', function() {
-	ok(loader.loadScript, 'loadScript is visible in Loader');
+	ok(Loader.loadScript, 'loadScript is visible in Loader');
 	var len1 = Sizzle('script').length;
-	loader.loadScript(emptyJS, emptyCallback);
+	Loader.loadScript(emptyJS, emptyCallback);
 	var len2 = Sizzle('script').length;
 	equal(len2 - len1, 1, 'add one script tag in document after Loader.loadScript is called');
 });
@@ -286,7 +286,7 @@ if (isJsTestDriverRunning) {
 			var onScriptLoaded = callbacks.add(function() {
 				counter = 1;
 			});
-			loader.loadScript(emptyJS, function() {
+			Loader.loadScript(emptyJS, function() {
 				onScriptLoaded();
 			});
 		});
@@ -300,7 +300,7 @@ if (isJsTestDriverRunning) {
 // normal qunit testcases
 test('loadScript with url', function() {
 	// null/''
-	// loader.loadScript('',emptyCallback); will case error;
+	// Loader.loadScript('',emptyCallback); will case error;
 	//ok(false, 'can not loadScript with null url, which will cause empty script tag');
 	//ok(false, 'can not loadScript with empty url, which will cause empty script tag');
 	//ok(false, 'can not loadScript with an non-javascript url');
@@ -314,11 +314,11 @@ test('loadScript with url', function() {
 		window.onerror = oldOnError;
 		return true;
 	};
-	loader.loadScript('not-exists-url.js', emptyCallback);
+	Loader.loadScript('not-exists-url.js', emptyCallback);
 	//equal(Sizzle('script[src=not-exists-url.js]').length, 0, 'not exists url, script tag should be deleted');
 	stop();
 	// is js, and exists
-	loader.loadScript(emptyJS, function() {
+	Loader.loadScript(emptyJS, function() {
 		start();
 		ok(true, 'callback is called');
 	});
@@ -326,7 +326,7 @@ test('loadScript with url', function() {
 
 asyncTest('loadScript with/without callback', function() {
 	//ok(false, 'callback can not be null');
-	loader.loadScript(emptyJS, function() {
+	Loader.loadScript(emptyJS, function() {
 		start();
 		ok(true, 'callback is called');
 	});
@@ -339,16 +339,16 @@ asyncTest('loadScript with/without callback', function() {
 test('loadScript with/without cache', function() {
 	var cacheIsOk = false;
 	try {
-		loader.loadScript(emptyJS, emptyCallback, true);
+		Loader.loadScript(emptyJS, emptyCallback, true);
 		cacheIsOk = true;
 	} catch(e) {
 		ok(false, 'cache should work with loader.loadScript(emptyJS, emptyCallback, true) : ' + e);
 	}
 
 	if (cacheIsOk) {
-		loader.loadScript(emptyJS, emptyCallback, true);
+		Loader.loadScript(emptyJS, emptyCallback, true);
 		var len1 = Sizzle('script').length;
-		loader.loadScript(emptyJS, emptyCallback, true);
+		Loader.loadScript(emptyJS, emptyCallback, true);
 		var len2 = Sizzle('script').length;
 		equal(len1, len2, 'cache works, load same script, get from cache');
 	}
