@@ -52,6 +52,7 @@ function urlunparse(parts) {
 * 合并两段url
 */
 function urljoin(base, url) {
+	// 逻辑完全照抄python的urlparse.py
 
 	if (!base) {
 		return url;
