@@ -113,7 +113,19 @@
 <script type='text/javascript'>
 	object.use('dom, ua', function(dom, ua) {
 		var input = dom.id('browsers');
-		var input = dom.id('browsers2');
+		var input2 = dom.id('browsers2');
+		input.addEvent('select', function(e) {
+			console.log('select', e.value);
+		}, false);
+		input.addEvent('hover', function() {
+			console.log('over');
+		}, false);
+		input2.addEvent('select', function(e) {
+			console.log('select', e.value);
+		}, false);
+		input2.addEvent('hover', function() {
+			console.log('over');
+		}, false);
 	});
 </script>
 </body>

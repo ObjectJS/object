@@ -121,7 +121,7 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 						// 回车则选择当前项，并且隐藏列表
 						e.preventDefault();
 						if (self._li) {
-							self.value = self._li.getAttribute('real_value');
+							self.selectListItem(self._li);
 						}
 						self.hideDataList();
 						// 屏蔽表单的默认提交
@@ -180,7 +180,6 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 				}
 			}
 			addStyle(self._li);
-			//self.value = self._li.getAttribute('real_value');
 			self.scrollTo(scrollIndex, direction);
 		};
 
@@ -203,7 +202,6 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 				}
 			}
 			addStyle(self._li);
-			//self.value = self._li.getAttribute('real_value');
 			self.scrollTo(scrollIndex, direction);
 		};
 
@@ -213,14 +211,12 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 		 * @param {String} direction 按键的方向（up/down）
 		 */
 		this.scrollTo = function(self, index, direction) {
-			// TODO 干掉这一堆var
-			var scrollTop = self._ul.scrollTop;
-			var scrolled = scrollTop / self._liOffsetHeight;
-			var count = self._ul.offsetHeight / self._liOffsetHeight - 1;
-			var list = self._list;
-			var start = scrolled;
-			var end = scrolled + count;
-			var shouldScroll = -1;
+			var scrollTop = self._ul.scrollTop, 
+				scrolled = scrollTop / self._liOffsetHeight,
+				count = self._ul.offsetHeight / self._liOffsetHeight - 1;
+				list = self._list, 
+				start = scrolled, end = scrolled + count, 
+				shouldScroll = -1;
 			if (direction == 'down') {
 				if (index == 0) {
 					shouldScroll = 0; 
@@ -243,13 +239,6 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 		 * 显示数据列表，每一次获取焦点时调用此方法显示数据
 		 */
 		this.showDataList = function(self) {
-			var data = self.getListData();
-			var value = self.value.trim();
-			if (value.length != 0) {
-				data = data.filter(function(ele) {
-					return ele.value.toLowerCase().indexOf(value.toLowerCase()) != -1;
-				});
-			}
 			if (!self._container) {
 				var pos = position(self);
 				var output = Mustache.to_html(templates.html, {
@@ -369,6 +358,8 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 				var li = e.target;
 				self._li = li;
 				addStyle(li);
+
+				self.fireEvent('hover', {ele:li});
 			});
 
 			container.delegate('li', 'mouseout', function(e) {
@@ -402,11 +393,20 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 
 			// 代理li的点击事件
 			container.delegate('li', 'click', function(e) {
-				self.value = e.target.getAttribute('real_value');
+				self.selectListItem(e.target);
 				self.focusFromContainer = true;
 				self.getFocus();
 				self.hideDataList();
 			});
+		}
+
+		/**
+		 * 选择列表中的一项，并触发select事件
+		 * @param {HTMLLIElement} li 选中的li项
+		 */
+		this.selectListItem = function(self, li) {
+			self.value = li.getAttribute('real_value');
+			self.fireEvent('select', {ele:li, value:self.value});
 		}
 
 		/**
