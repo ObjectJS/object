@@ -1,42 +1,4 @@
-// TODO 注意可能存在的属性名称冲突
 object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
-
-	// 为container的id属性添加标识，区分同时存在的多个datalist容器
-	var listIdCounter = 0;
-
-	// 定义键位与名称的映射
-	var KEY = {
-		UP: 38,
-		DOWN: 40,
-		DEL: 46,
-		TAB: 9,
-		ENTER: 13,
-		ESC: 27,
-		BACKSPACE: 8
-	};
-
-	// 一些默认设置（貌似不能通过传参来设置）
-	var defaultOptions = {
-		maxHeight: 190,
-		maxCharCount: 150,
-		dynamic: false,
-		matchFirst : false
-	}
-
-    // 模板引擎使用的模板
-	var templates = {
-		// 列表模板，每一次刷新列表都会渲染一次
-		list : '<ul style="list-style:none;margin:0;padding:0;z-index:4;position:relative;overflow:auto;">' + 
-					'{{#data}}<li real_value="{{value}}">{{text}}</li>{{/data}}' + 
-			   '</ul>',
-		// HTML模板，第一次新建div时渲染一次
-		html : 
-			'<div id="datalistContainer{{index}}" style="border:1px solid gray;position:absolute;z-index:3;left:{{left}}px;top:{{top}}px;background:#fff;font-size:small;">{{#ie6}}' +
-				// ie6使用iframe遮挡select
-				// 遇到的问题：只有一条记录的时候会出现滚动条 https://github.com/brandonaaron/bgiframe/blob/master/jquery.bgiframe.js
-				'<iframe id="datalist_iframe" frameBorder="0" style="position:absolute;z-index:2;top:0px;left:0px;overflow:hidden;display:block;filter:Alpha(Opacity=0);" src="javascript:false;"></iframe>{{/ie6}}' + 
-			'</div>'
-	};
 
 	/**
 	 * 数据列表实现类，模拟HTML5的input元素的list属性
@@ -44,27 +6,101 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 	this.DataList = new Class(function() {
 
 		/**
-		 * 初始化方法，判断list属性是否存在，并调用init方法
+		 * 初始化方法，为input添加focus/blur/keydown/keyup事件，并监听list属性变化
 		 */
 		this.initialize = function(self) {
-			var datalistId = self.getAttribute('list');
-			if (datalistId == null) {
-				return;
-			} else if(!document.getElementById(datalistId)) {
-				throw new Error('list属性设置错误' + datalistId);
-			}
-			self.init();
+			// 获取焦点时显示列表
+			self.addEvent('focus', function(e) {
+				wrapDataListIfListExists(self, 'handleInputFocus', e);
+			}, false);
+
+			// 焦点移除时隐藏列表
+			self.addEvent('blur', function(e) {
+				wrapDataListIfListExists(self, 'handleInputBlur', e);
+			}, false);
+
+			// 键盘按键点击时的处理
+			self.addEvent('keydown', function(e) {
+				wrapDataListIfListExists(self, 'handleInputKeydown', e);
+			}, false);
+
+			// keyup的时候才能正确处理字符输入
+			self.addEvent('keyup', function(e) {
+				wrapDataListIfListExists(self, 'handleInputKeyup', e);
+			}, false);
 		};
 
 		/**
-		 * 初始化方法
+		 * 定义只读property：list
 		 */
-		this.init = function(self) {
-			self.initOptions(defaultOptions);
+		this.list = property(function(self) {
+			return self.getAttribute('list') || self.list;
+		});
+
+		/**
+		 * 如果list属性存在，则利用DataListWrapper的方法来处理事件
+		 * @param {HTMLInputElement} input 输入域
+		 * @param {String} methodName DataListWrapper中用于处理对应事件类型的处理函数
+		 * @param {Event}  e 事件对象
+		 */
+		function wrapDataListIfListExists(self, methodName, e) {
+			if (self.get('list')) {
+				// 如果没有_datalistWrapper属性，说明还没有包装过
+				if (!self._datalistWrapper) {
+					self._datalistWrapper = new DataListWrapper(self);
+				}
+				self._datalistWrapper[methodName](e);
+			}
+		}
+	});	
+
+	// 为container的id属性添加标识，区分同时存在的多个datalist容器
+	var listIdCounter = 0;
+
+	// 一些默认设置
+	var defaultOptions = {
+		maxHeight: 190,
+		maxCharCount: 150,
+		dynamicData: false,
+		matchFirst : false
+	}
+
+	// 定义键位与名称的映射
+	var KEY = { UP: 38, DOWN: 40, DEL: 46, TAB: 9, ENTER: 13, ESC: 27, BACKSPACE: 8 };
+
+    // 模板引擎使用的模板
+	var TEMPLATES = {
+		// 列表模板，每一次刷新列表都会渲染一次
+		LIST : '<ul style="list-style:none;margin:0;padding:0;z-index:4;position:relative;overflow:auto;">' + 
+					'{{#data}}<li real_value="{{value}}">{{text}}</li>{{/data}}' + 
+			   '</ul>',
+		// HTML模板，第一次新建div时渲染一次
+		CONTAINER : 
+			'<div id="datalistContainer{{index}}" style="border:1px solid gray;position:absolute;z-index:3;left:{{left}}px;top:{{top}}px;background:#fff;font-size:small;">{{#ie6}}' +
+				// ie6使用iframe遮挡select
+				// 遇到的问题：只有一条记录的时候会出现滚动条 https://github.com/brandonaaron/bgiframe/blob/master/jquery.bgiframe.js
+				'<iframe id="datalist_iframe" frameBorder="0" style="position:absolute;z-index:2;top:0px;left:0px;overflow:hidden;display:block;filter:Alpha(Opacity=0);" src="javascript:false;"></iframe>{{/ie6}}' + 
+			'</div>'
+	};
+
+
+	/**
+	 * datalist的封装类，所有datalist的操作都由此类完成
+	 * 将此类与DataList类分离开，减少往input上添加的不必要的属性
+	 */
+	var DataListWrapper = new Class(function() {
+
+		/**
+		 * 初始化方法，主要是禁用浏览器自带的自动提示、并初始化参数选项
+		 * @param {HTMLInputElement} input 自动提示的输入域
+		 */
+		this.initialize = function(self, input) {
+			// 保存对input的引用，用于控制，但是不为input添加新属性
+			self.input = input;
 			// 屏蔽浏览器默认的自动提示
-			self._set('autocomplete', 'off');
-			// 为input元素绑定事件
-			self.bindEventForInput();
+			self.input._set('autocomplete', 'off');
+			// 初始化参数
+			self.initOptions();
 		}
 
 		/**
@@ -76,133 +112,55 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 		}
 
 		/**
-		 * 为input绑定事件，包括focus、blur、keydown、keyup等
-		 */
-		this.bindEventForInput = function(self) {
-			// 获取焦点时显示列表
-			self.addEvent('focus', function(e) {
-				if (!self.isDisplayed() && !self.focusFromContainer) {
-					self.showDataList();
-				}
-				if (self.focusFromContainer) {
-					self.focusFromContainer = false;
-				}
-			}, false);
-
-			// 焦点移除时隐藏列表
-			self.addEvent('blur', function(e) {
-				if (self._clickOnContainer) {
-					self._clickOnContainer = false;
-				} else {
-					self.hideDataList();
-				}
-			}, false);
-
-			// 键盘按键点击时的处理
-			self.addEvent('keydown', function(e) {
-				if (!self.isDisplayed()) {
-					return;
-				}
-				var keyCode = e.keyCode;
-				switch (keyCode) {
-					case KEY.UP : 
-						// 向上则选择上一条
-						e.preventDefault();
-						self.previous();
-						self.getFocus();
-						break;
-					case KEY.DOWN : 
-						// 向下则选择下一条
-						e.preventDefault();
-						self.next();
-						self.getFocus();
-						break;
-					case KEY.ENTER : 
-						// 回车则选择当前项，并且隐藏列表
-						e.preventDefault();
-						if (self._li) {
-							self.selectListItem(self._li);
-						}
-						self.hideDataList();
-						// 屏蔽表单的默认提交
-						return false;
-					case KEY.ESC : 
-						// ESC键隐藏列表
-						self.hideDataList();
-						break;
-					default:
-						break;
-				}
-			}, false);
-
-			// keyup的时候才能正确处理字符输入
-			self.addEvent('keyup', function(e) {
-				var keyCode = e.keyCode;
-				// TODO 判断keyCode是否是字符输入
-				switch (keyCode) {
-					case KEY.UP : 
-					case KEY.DOWN : 
-					case KEY.ENTER : 
-					case KEY.ESC : 
-						break;
-					default:
-						self._li = null;
-						self.filter();
-						break;
-				};
-			}, false);
-		}
-
-		/**
 		 * 让input获取焦点
 		 */
-		this.getFocus = function(self) {
+		this.focusToInput = function(self) {
 			setTimeout(function() {
-				self.focusToPosition(self.value.length);
+				self.input.focusToPosition(self.input.value.length);
 			}, 0);
 		};
 
 		/**
 		 * 选择上一条记录
 		 */
-		this.previous = function(self) {
+		this.selectPrevListItem = function(self) {
 			var scrollIndex = 0, direction = 'up', list = self._list, len = list.length, scrollIndex = len - 1;
-			if (!self._li) {
-				self._li = list[len - 1];
+			if (!self._highlighted) {
+				self._highlighted = list[len - 1];
 			} else {
 				for(var i = 0; i < len; i++) {
-					if (list[i] === self._li) {
-						rmStyle(self._li);
-						self._li = list[(i == 0 ? len - 1 : i - 1)];
+					if (list[i] === self._highlighted) {
+						removeSelectStyle(self._highlighted);
+						self._highlighted = list[(i == 0 ? len - 1 : i - 1)];
 						scrollIndex = (i == 0 ? len - 1 : i - 1);
 						break;
 					}
 				}
 			}
-			addStyle(self._li);
-			self.scrollTo(scrollIndex, direction);
+			addSelectStyle(self._highlighted);
+			self.scrollToSelectedItem(scrollIndex, direction);
 		};
 
 		/**
 		 * 选择下一条记录
 		 */
-		this.next = function(self) {
+		this.selectNextListItem = function(self) {
 			var scrollIndex = 0, direction = 'down', list = self._list;
-			if (!self._li) {
-				self._li = list[0];
+			if (!self._highlighted) {
+				self._highlighted = list[0];
 			} else {
 				var len = list.length;
 				for(var i = 0; i < len; i++) {
-					if (list[i] === self._li) {
-						rmStyle(self._li);
-						self._li = list[(i == len - 1 ? 0 : i + 1)];
+					if (list[i] === self._highlighted) {
+						removeSelectStyle(self._highlighted);
+						self._highlighted = list[(i == len - 1 ? 0 : i + 1)];
 						scrollIndex = (i == len - 1 ? 0 : i + 1);
 						break;
 					}
 				}
 			}
-			addStyle(self._li);
-			self.scrollTo(scrollIndex, direction);
+			addSelectStyle(self._highlighted);
+			self.scrollToSelectedItem(scrollIndex, direction);
 		};
 
 		/**
@@ -210,7 +168,7 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 		 * @param {int} index 选中项的索引
 		 * @param {String} direction 按键的方向（up/down）
 		 */
-		this.scrollTo = function(self, index, direction) {
+		this.scrollToSelectedItem = function(self, index, direction) {
 			var scrollTop = self._ul.scrollTop, 
 				scrolled = scrollTop / self._liOffsetHeight,
 				count = self._ul.offsetHeight / self._liOffsetHeight - 1;
@@ -240,42 +198,34 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 		 */
 		this.showDataList = function(self) {
 			if (!self._container) {
-				var pos = position(self);
-				var output = Mustache.to_html(templates.html, {
+				var pos = calculatePosition(self.input);
+				var output = Mustache.to_html(TEMPLATES.CONTAINER, {
 					index : listIdCounter,
 					ie6 : ua.ua.ie <= 6,
-					top : pos.y + self.offsetHeight,
+					top : pos.y + self.input.offsetHeight,
 					left : pos.x
 				});
 
 				var node = dom.getDom(output);
-				if (self.nextSibling) {
-					self.parentNode.insertBefore(node, self.nextSibling);
+				if (self.input.nextSibling) {
+					self.input.parentNode.insertBefore(node, self.input.nextSibling);
 				} else {
-					self.parentNode.appendChild(node);
+					self.input.parentNode.appendChild(node);
 				}
 				self._container = dom.id('datalistContainer' + listIdCounter);
 				self.bindEventForContainer();
 				listIdCounter ++;
 			}
 			
-			self.filter();
-		}
-
-		/**
-		 * 判断列表数据是否已经显示
-		 * @returns {Boolean} 如果已经显示返回true，否则返回false
-		 */
-		this.isDisplayed = function(self) {
-			return self._container && self._container.style.display != 'none';
+			self.filterListItems();
 		}
 
 		/**
 		 * 根据input中现有的输入内容，过滤数据列表项
 		 */
-		this.filter = function(self) {
+		this.filterListItems = function(self) {
 			var data = self.getListData();
-			var value = self.value.trim();
+			var value = self.input.value.trim();
 			if (value != "") {
 				data = data.filter(function(ele) {
 					if (self.options.matchFirst) {
@@ -287,7 +237,7 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 			}
 
 			// 利用模板引擎渲染html
-			var ulHtml = Mustache.to_html(templates.list, {
+			var ulHtml = Mustache.to_html(TEMPLATES.LIST, {
 				data: data
 			});
 
@@ -299,6 +249,7 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 			// 加入新的
 			var node = dom.getDom(ulHtml);
 			self._container.appendChild(node);
+			// 保存ul避免多次获取
 			self._ul = dom.getElement('ul', self._container);
 			self._list = dom.getElements('li', self._ul);
 
@@ -310,15 +261,15 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 				}
 				self._container.style.display = '';
 				// 调整容器的显示
-				self.adjust();
+				self.adjustContainerDisplay();
 			}
 		}
 
 		/**
 		 * 调整容器的显示，比如高宽、ie6下iframe的高宽
 		 */
-		this.adjust = function(self) {
-			var ul = self._ul, inputOffsetWidth = self.offsetWidth, ulOffsetWidth = ul.offsetWidth,
+		this.adjustContainerDisplay = function(self) {
+			var ul = self._ul, inputOffsetWidth = self.input.offsetWidth, ulOffsetWidth = ul.offsetWidth,
 				listHeight = self._list.length * self._liOffsetHeight,
 				isScrolled = listHeight > self.options.maxHeight;
 
@@ -352,22 +303,20 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 		this.bindEventForContainer = function(self) {
 			var container = self._container;
 			container.delegate('li', 'mouseover', function(e) {
-				if (self._li) {
-					rmStyle(self._li);
+				if (self._highlighted) {
+					removeSelectStyle(self._highlighted);
 				}
 				var li = e.target;
-				self._li = li;
-				addStyle(li);
-
-				self.fireEvent('hover', {ele:li});
+				self._highlighted = li;
+				addSelectStyle(li);
 			});
 
 			container.delegate('li', 'mouseout', function(e) {
 				//var li = e.target;
 				//var relatedTarget = e.relatedTarget;
 				//if (relatedTarget.tagName == 'LI') {
-					rmStyle(self._li);
-					self._li = null;
+					removeSelectStyle(self._highlighted);
+					self._highlighted = null;
 				//}
 			});
 
@@ -395,28 +344,9 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 			container.delegate('li', 'click', function(e) {
 				self.selectListItem(e.target);
 				self.focusFromContainer = true;
-				self.getFocus();
+				self.focusToInput();
 				self.hideDataList();
 			});
-		}
-
-		/**
-		 * 选择列表中的一项，并触发select事件
-		 * @param {HTMLLIElement} li 选中的li项
-		 */
-		this.selectListItem = function(self, li) {
-			self.value = li.getAttribute('real_value');
-			self.fireEvent('select', {ele:li, value:self.value});
-		}
-
-		/**
-		 * 隐藏列表
-		 */
-		this.hideDataList = function(self) {
-			if (self._container) {
-				self._container.style.display = 'none';
-				self._li = null;
-			}
 		}
 
 		/**
@@ -425,14 +355,15 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 		 * TODO 需要增加缓存以减少查询
 		 */
 		this.getListData = function(self) {
-			if (!self.options.dynamic && self.data) {
+			if (!self.options.dynamicData && self.data) {
 				return self.data;
 			}
 			// 获取datalist
-			var datalistId = self.getAttribute('list');
+			var datalistId = self.input.get('list');
 			var options = dom.getElements('#' + datalistId + ' option');
 			if (options.length === 0) {
-				throw new Error('浏览器不支持datalist属性或不存在' + datalistId + '对应的datalist');
+				reportError('浏览器不支持datalist属性或不存在' + datalistId + '对应的datalist');
+				return [];
 			}
 			var result = [];
 			for (var i = 0, l = options.length, current, value; i < l; i++) {
@@ -446,14 +377,123 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 					result[result.length] = {value:value,text:value};
 				}
 			}
-			if (!self.options.dynamic) {
+			if (!self.options.dynamicData) {
 				self.data = result;
 			}
 			return result;
 		}
 
+		/**
+		 * 处理input的焦点获取
+		 */
+		this.handleInputFocus = function(self) {
+			if (!self.isDataListDisplayed() && !self.focusFromContainer) {
+				self.showDataList();
+			}
+			if (self.focusFromContainer) {
+				self.focusFromContainer = false;
+			}			
+		};
+
+		/**
+		 * 处理input的焦点丢失
+		 */
+		this.handleInputBlur = function(self) {
+			if (self._clickOnContainer) {
+				self._clickOnContainer = false;
+			} else {
+				self.hideDataList();
+			}
+		};
+
+		/**
+		 * 处理input的keydown事件
+		 * @param {Event} e 事件对象，用于获取keyCode
+		 */
+		this.handleInputKeydown = function(self, e) {
+			if (!self.isDataListDisplayed()) {
+				return;
+			}
+			var keyCode = e.keyCode;
+			switch (keyCode) {
+				case KEY.UP : 
+					// 向上则选择上一条
+					e.preventDefault();
+					self.selectPrevListItem();
+					self.focusToInput();
+					break;
+				case KEY.DOWN : 
+					// 向下则选择下一条
+					e.preventDefault();
+					self.selectNextListItem();
+					self.focusToInput();
+					break;
+				case KEY.ENTER : 
+					// 回车则选择当前项，并且隐藏列表
+					e.preventDefault();
+					if (self._highlighted) {
+						self.selectListItem(self._highlighted);
+					}
+					self.hideDataList();
+					// 屏蔽表单的默认提交
+					return false;
+				case KEY.ESC : 
+					// ESC键隐藏列表
+					self.hideDataList();
+					break;
+				default:
+					break;
+			}
+		};
+
+		/**
+		 * 处理input的keyup事件
+		 * @param {Event} e 事件对象，用于获取keyCode
+		 */
+		this.handleInputKeyup = function(self, e) {
+			var keyCode = e.keyCode;
+			switch (keyCode) {
+				case KEY.UP : 
+				case KEY.DOWN : 
+				case KEY.ENTER : 
+				case KEY.ESC : 
+					break;
+				default:
+					self._highlighted = null;
+					self.filterListItems();
+					break;
+			};
+		};
+
+		/**
+		 * 选择列表中的一项，并触发select事件
+		 * @param {HTMLLIElement} li 选中的li项
+		 */
+		this.selectListItem = function(self, li) {
+			var value = li.getAttribute('real_value');
+			self.input.value = value;
+		}
+
+		/**
+		 * 隐藏列表
+		 */
+		this.hideDataList = function(self) {
+			if (self._container) {
+				self._container.style.display = 'none';
+				self._highlighted = null;
+			}
+		}
+
+		/**
+		 * 判断列表数据是否已经显示
+		 * @returns {Boolean} 如果已经显示返回true，否则返回false
+		 */
+		this.isDataListDisplayed = function(self) {
+			return self._container && self._container.style.display != 'none';
+		}
+
 		// 内部方法，为li元素添加选中的样式
-		function addStyle(li) {
+		function addSelectStyle(li) {
 			if (li) {
 				li.style.backgroundColor = '#316AC5';
 				li.style.color = 'white';
@@ -462,7 +502,7 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 		}
 
 		// 内部方法，为li元素移除选中的样式
-		function rmStyle(li) {
+		function removeSelectStyle(li) {
 			if (li) {
 				li.style.backgroundColor = 'white';
 				li.style.color = 'black';
@@ -471,7 +511,7 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 		}
 
 		// 内部方法，获取元素ele相对于document的位置left/top
-		function position(ele) {
+		function calculatePosition(ele) {
 			var left = 0, top = 0;
 
 			while (ele) {
@@ -497,6 +537,13 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 				node = node.parentNode;
 			}
 			return false;
+		}
+
+		// 内部方法，将错误信息打印至控制台
+		function reportError(msg) {
+			if (typeof console != 'undefined' && console.error) {
+				console.error(msg);
+			}
 		}
 	});
 });
