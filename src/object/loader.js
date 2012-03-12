@@ -306,11 +306,15 @@ CommonJSPackage.prototype.make = function(name, deps, runtime) {
  * 执行factory，返回模块实例
  * @override
  */
-CommonJSPackage.prototype.execute = function(name, deps, runtime) {
+CommonJSPackage.prototype.execute = function(name, runtime) {
 
 	// 循环引用
 	// 出现循环引用但并不立刻报错，而是当作此模块没有获取到，继续获取下一个
-	if (runtime.getStackItem(name)) return null;
+	if (runtime.getStackItem(name)) {
+		return null;
+	}
+
+	var deps = runtime.packages[this.id];
 
 	runtime.pushStack(name, this, deps);
 
@@ -322,6 +326,7 @@ CommonJSPackage.prototype.execute = function(name, deps, runtime) {
 	runtime.addModule(name, exports);
 	runtime.popStack();
 
+	exports.__package__ = this;
 	return exports;
 };
 
@@ -441,10 +446,10 @@ ObjectPackage.prototype.make = function(name, deps, runtime) {
  * 执行factory，返回模块实例
  * @override
  */
-ObjectPackage.prototype.execute = function(name, deps, runtime) {
-
+ObjectPackage.prototype.execute = function(name, runtime) {
 	var exports;
 	var parent;
+	var deps;
 
 	// 循环引用
  	// 出现循环依赖时建立一个空的exports返回，待所有流程走完后会将此模块填充完整。
@@ -462,6 +467,8 @@ ObjectPackage.prototype.execute = function(name, deps, runtime) {
 
 	} else {
 
+		deps = runtime.packages[this.id];
+
 		runtime.pushStack(name, this, deps);
 
 		exports = this.make(name, deps, runtime);
@@ -474,6 +481,7 @@ ObjectPackage.prototype.execute = function(name, deps, runtime) {
 		runtime.popStack();
 	}
 
+	exports.__package__ = this;
 	return exports;
 };
 
@@ -527,7 +535,7 @@ Package.prototype.load = function(runtime, callback) {
 /**
  * 获取此package产生的模块的实例
  */
-Package.prototype.execute = function(name, deps, runtime) {
+Package.prototype.execute = function(name, runtime) {
 
 	if (runtime.getStackItem(name)) {
 		throw new CyclicDependencyError(runtime.stack);
@@ -537,9 +545,11 @@ Package.prototype.execute = function(name, deps, runtime) {
 	// sys.modules
 	if (this.id === 'sys') {
 		exports.modules = runtime.modules;
+		exports.stack = runtime.stack;
 	}
 
 	runtime.addModule(name, exports);
+	exports.__package__ = this;
 	return exports;
 };
 
@@ -636,9 +646,8 @@ CommonJSDependency.prototype.execute = function() {
 	var exports = runtime.modules[runtimeName];
 	var pkg, deps;
 	if (!exports) {
-		deps = runtime.packages[this.id];
 		pkg = loader.lib[this.id];
-		exports = pkg.execute(runtimeName, deps, runtime);
+		exports = pkg.execute(runtimeName, runtime);
 	}
 	return exports;
 };
@@ -778,7 +787,7 @@ ObjectDependency.prototype.execute = function() {
 				id = loader.find(tempId).id;
 			}
 			pkg = loader.lib[id];
-			exports = pkg.execute(name, deps, runtime);
+			exports = pkg.execute(name, runtime);
 			runtime.setMemberTo(pName, part, exports);
 		}
 		pName = name;
@@ -1312,8 +1321,7 @@ Loader.prototype.execute = function(name) {
 	var runtime = this.createRuntime(id, context);
 	runtime.loadModule(id, function() {
 		var pkg = runtime.loader.lib[id];
-		var deps = runtime.packages[id];
-		pkg.execute('__main__', deps, runtime);
+		pkg.execute('__main__', runtime);
 	});
 };
 
@@ -1353,8 +1361,7 @@ Loader.prototype.use = function(dependencies, factory) {
 
 	runtime.loadModule(id, function() {
 		var pkg = runtime.loader.lib[id];
-		var deps = runtime.packages[id];
-		pkg.execute('__main__', deps, runtime);
+		pkg.execute('__main__', runtime);
 	});
 };
 
