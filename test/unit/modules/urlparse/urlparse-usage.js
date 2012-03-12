@@ -505,6 +505,42 @@ test('urlparse.urljoin : usage', function() {
 		} catch (e) {
 			ok(false, 'urlparse.urljoin(http://www.renren.com/blog/blog2/test.html, /blog/blog2/blog3/test.html), should not throw error : ' + e);
 		}
+
+		try { 
+			equal(urlparse.urljoin('http://www.renren.com/blog/blog2/test.html', '.'),'http://www.renren.com/blog/blog2/','urlparse.urljoin(http://www.renren.com/blog/blog2/test.html, .)'); 
+		} catch (e) {
+			ok(false, 'urlparse.urljoin(http://www.renren.com/blog/blog2/test.html, .), should not throw error : ' + e);
+		}
+
+		try { 
+			equal(urlparse.urljoin('http://www.renren.com/blog/blog2/test.html', '..'),'http://www.renren.com/blog/','urlparse.urljoin(http://www.renren.com/blog/blog2/test.html, ..)'); 
+		} catch (e) {
+			ok(false, 'urlparse.urljoin(http://www.renren.com/blog/blog2/test.html, ..), should not throw error : ' + e);
+		}
+
+		try { 
+			equal(urlparse.urljoin('http://www.renren.com/blog/blog2/test.html', './test2.html'),'http://www.renren.com/blog/blog2/test2.html','urlparse.urljoin(http://www.renren.com/blog/blog2/test.html, ./test2.html)'); 
+		} catch (e) {
+			ok(false, 'urlparse.urljoin(http://www.renren.com/blog/blog2/test.html, ./test2.html), should not throw error : ' + e);
+		}
+
+		try { 
+			equal(urlparse.urljoin('http://www.renren.com/blog/blog2/test.html', '../test2.html'),'http://www.renren.com/blog/test2.html','urlparse.urljoin(http://www.renren.com/blog/blog2/test.html, ../test2.html)'); 
+		} catch (e) {
+			ok(false, 'urlparse.urljoin(http://www.renren.com/blog/blog2/test.html, ../test2.html), should not throw error : ' + e);
+		}
+
+		try { 
+			equal(urlparse.urljoin('http://www.renren.com/blog/blog2/test.html', '../blog2/test2.html'),'http://www.renren.com/blog/blog2/test2.html','urlparse.urljoin(http://www.renren.com/blog/blog2/test.html, ../blog2/test2.html)'); 
+		} catch (e) {
+			ok(false, 'urlparse.urljoin(http://www.renren.com/blog/blog2/test.html, ../blog2/test2.html), should not throw error : ' + e);
+		}
+
+		try { 
+			equal(urlparse.urljoin('http://www.renren.com/blog/blog2/test.html', './blog3/test2.html'),'http://www.renren.com/blog/blog2/blog3/test2.html','urlparse.urljoin(http://www.renren.com/blog/blog2/test.html, ./blog3/test2.html)'); 
+		} catch (e) {
+			ok(false, 'urlparse.urljoin(http://www.renren.com/blog/blog2/test.html, ./blog3/test2.html), should not throw error : ' + e);
+		}
 		
 	});
 });
