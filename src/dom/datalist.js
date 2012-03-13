@@ -59,10 +59,10 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 
 	// 一些默认设置
 	var defaultOptions = {
-		maxHeight: 190,
-		maxCharCount: 150,
-		dynamicData: false,
-		matchFirst : false
+		maxHeight: 190,           // 容器最大高度
+		maxCharCount: 150,        // 最大字符数
+		dynamicData: false,       // 数据是否动态获取
+		matchFirst: false         // 是否只显示以已输入信息开头的元素
 	}
 
 	// 定义键位与名称的映射
@@ -101,6 +101,56 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 			self.input._set('autocomplete', 'off');
 			// 初始化参数
 			self.initOptions();
+
+			// 添加DOMNodeInserted事件监听，IE8及以下模拟此事件
+			self.bindDOMNodeInsertEvent();
+		};
+
+		/**
+		 * 为list属性对应的datalist添加DOMNodeInserted事件监听，在添加节点后显示列表
+		 */
+		this.bindDOMNodeInsertEvent = function(self) {
+			var datalist = dom.id(self.input.get('list'));
+
+			// 从IE9开始支持DOMNodeInserted事件
+			// http://help.dottoro.com/ljimhdto.php
+			if (ua.ua.ie < 9) {
+				// 模拟DOMNodeInsert事件的触发
+				self.simulateDOMNodeInsertForIE(datalist);
+			}
+
+			// 监听DOMNodeInserted事件
+			// 注意：在标准浏览器下，如果通过DocumentFragment向DOM节点添加子节点：
+			//       每一个子节点都会触发一次DOMNodeInserted事件
+			datalist.addEvent('DOMNodeInserted', function(e) {
+				// 如果有新节点加入，则将动态数据标志置为true
+				self.options.dynamicData = true;
+				self.showDataList();
+				self.focusToInput();
+			}, false);
+		};
+
+		/**
+		 * 在IE下模拟DOMNodeInserted事件
+		 * 根据具体使用，暂替换appendChild和insertBefore
+		 * @param {HTMLDataListElement} datalist datalist对象，事件由datalist发出
+		 */
+		this.simulateDOMNodeInsertForIE = function(self, datalist) {
+			// 避免重复替换导致递归调用
+			if (!datalist._oldAppendChild) {
+				// 替换appendChild
+				datalist._oldAppendChild = datalist.appendChild;
+				datalist.appendChild = function(node) {
+					datalist._oldAppendChild(node);
+					datalist.fireEvent('DOMNodeInserted');
+				};
+				// 替换insertBefore
+				datalist._oldInsertBefore = datalist.insertBefore;
+				datalist.insertBefore = function(newNode, oldNode) {
+					datalist._oldInsertBefore(newNode, oldNode);
+					datalist.fireEvent('DOMNodeInserted');
+				}
+			}
 		}
 
 		/**
@@ -269,12 +319,16 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 		 * 调整容器的显示，比如高宽、ie6下iframe的高宽
 		 */
 		this.adjustContainerDisplay = function(self) {
-			var ul = self._ul, inputOffsetWidth = self.input.offsetWidth, ulOffsetWidth = ul.offsetWidth,
+			var ul = self._ul, 
+				inputOffsetWidth = self.input.offsetWidth, 
+				ulOffsetWidth = ul.offsetWidth,
 				listHeight = self._list.length * self._liOffsetHeight,
 				isScrolled = listHeight > self.options.maxHeight;
 
+			// 设置最大高度和最小宽度
 			ul.style.maxHeight = self.options.maxHeight + 'px';
-			ul.style.minWidth = self._container.style.minWidth = inputOffsetWidth + 'px';
+			ul.style.minWidth = inputOffsetWidth + 'px';
+			// 如果有滚动条出现，还必须让出滚动条的宽度
 			ul.style.width = ulOffsetWidth + (isScrolled ? 20 : 0) + 'px';
 
 			if (ua.ua.ie) {
@@ -360,9 +414,13 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 			}
 			// 获取datalist
 			var datalistId = self.input.get('list');
+			if (!datalistId) {
+				reportError('不存在' + datalistId + '对应的datalist');
+				return [];
+			}
 			var options = dom.getElements('#' + datalistId + ' option');
 			if (options.length === 0) {
-				reportError('浏览器不支持datalist属性或不存在' + datalistId + '对应的datalist');
+				//reportError('浏览器不支持datalist属性或不存在' + datalistId + '对应的datalist');
 				return [];
 			}
 			var result = [];

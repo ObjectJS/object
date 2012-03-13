@@ -76,33 +76,14 @@
 	  <option value="Chrome">
 	  <option value="Opera">
 	  <option value="Safari">
+	  <option value="中文">
+	  <option value="中文2">
+	  <option value="中国">
 	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Safari">
-	  <option value="Firefox">
-	  <option value="Chrome">
+	</datalist>
+	<datalist id="list_browsers3">
+	  <option value="ChromeCCCCCCCCCCC">
 	  <option value="Opera">
-	  <option value="Safari">
-	  <option value="Firefox">
 	  <option value="Chrome">
 	  <option value="Opera">
 	  <option value="Safari">
@@ -111,6 +92,15 @@
 	  <option value="中国">
 	  <option value="Safari">
 	</datalist>
+	<input type="button" value="add list item" onclick="addListItem()" />
+	<script>
+		function addListItem() {
+			var option = document.createElement('option');
+			option.value = 'test';
+			var list = document.getElementById('list_browsers');
+			list.appendChild(option);
+		}
+	</script>
 	<br>
 	jfdaljfdfdasfdas<select><option>1</option></select>
 	<input type="submit" />
@@ -120,18 +110,29 @@
 	object.use('dom, ua', function(dom, ua) {
 		var input = dom.id('browsers');
 		var input2 = dom.id('browsers2');
-		input.addEvent('select', function(e) {
-			console.log('select', e.value);
-		}, false);
-		input.addEvent('hover', function() {
-			console.log('over');
-		}, false);
-		input2.addEvent('select', function(e) {
-			console.log('select', e.value);
-		}, false);
-		input2.addEvent('hover', function() {
-			console.log('over');
-		}, false);
+		var added = false;
+		input.addEvent('keydown',function(e) {
+			if (added) {
+				return;
+			}
+			addListItems();
+			added = true;
+		});
+
+		function addListItems() {
+			var df = document.createDocumentFragment();
+			var option = document.createElement('option');
+			option.value = 'test1';
+			df.appendChild(option);
+			var option = document.createElement('option');
+			option.value = 'test2';
+			df.appendChild(option);
+			var option = document.createElement('option');
+			option.value = 'test3';
+			df.appendChild(option);
+			var list = document.getElementById('list_browsers');
+			list.appendChild(df);
+		}
 	});
 </script>
 </body>
