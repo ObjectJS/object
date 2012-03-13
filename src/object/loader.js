@@ -984,7 +984,7 @@ Loader.getAbsolutePath = function(src) {
 Loader.prototype.name2id = function(name) {
 	if (typeof name != 'string') return '';
 
-	var id, ext;
+	var id, ext, extdot;
 
 	if (name.indexOf('/') == -1) {
 		id = name.replace(/\./g, '/');
@@ -992,9 +992,14 @@ Loader.prototype.name2id = function(name) {
 		id = name;
 	}
 
-	ext = id.slice(id.lastIndexOf('.'));
+	extdot = id.lastIndexOf('.');
+	if (extdot != -1) {
+		ext = id.slice(extdot);
+	} else {
+		ext = '';
+	}
 
-	if (ext != '.js') {
+	if (!ext) {
 		id += '.js';
 	}
 
@@ -1044,6 +1049,7 @@ Loader.prototype.find = function(id, paths, base) {
 	// 尝试查找不同的扩展名
 	function find(id) {
 		var pkg;
+
 		if (pkg = loader.lib[id] || loader.lib[id + '.js'] || loader.lib[id + '/index.js']) {
 			return pkg.id;
 		}
@@ -1060,10 +1066,6 @@ Loader.prototype.find = function(id, paths, base) {
 	};
 
 	paths.some(findIn);
-
-	if (ext == '.css') {
-		return; // TODO
-	}
 
 	return {
 		id: foundId,
