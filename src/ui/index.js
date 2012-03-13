@@ -661,7 +661,7 @@ this.Component = new Class(function() {
 		var nodes;
 
 		// 如果已经存在结构了，则不用再render了
-		if (!!(sub.single? self[name] : self[name].length)) {
+		if (!!(sub.single? self[name] && self[name]._node.parentNode : self[name] && self[name][0] && self[name][0]._node.parentNode)) {
 			return;
 		}
 
@@ -690,6 +690,10 @@ this.Component = new Class(function() {
 
 			self.__initSub(name, nodes);
 		}
+	};
+
+	this.dispose = function(self) {
+		self._node.dispose();
 	};
 
 	/**
