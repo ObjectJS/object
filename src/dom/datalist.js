@@ -62,7 +62,8 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 		maxHeight: 190,           // 容器最大高度
 		maxCharCount: 150,        // 最大字符数
 		dynamicData: false,       // 数据是否动态获取
-		matchFirst: false         // 是否只显示以已输入信息开头的元素
+		matchFirst: false,        // 是否只显示以已输入信息开头的元素
+		clearWhenMouseout: false  // 是否在鼠标离开容器时去除已选择项的选中样式
 	}
 
 	// 定义键位与名称的映射
@@ -121,7 +122,7 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 
 			// 监听DOMNodeInserted事件
 			// 注意：在标准浏览器下，如果通过DocumentFragment向DOM节点添加子节点：
-			//       每一个子节点都会触发一次DOMNodeInserted事件
+			//       每一个添加的子节点都会触发一次DOMNodeInserted事件
 			datalist.addEvent('DOMNodeInserted', function(e) {
 				// 如果有新节点加入，则将动态数据标志置为true
 				self.options.dynamicData = true;
@@ -366,12 +367,12 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 			});
 
 			container.delegate('li', 'mouseout', function(e) {
-				//var li = e.target;
-				//var relatedTarget = e.relatedTarget;
-				//if (relatedTarget.tagName == 'LI') {
+				var li = e.target;
+				var relatedTarget = e.relatedTarget;
+				if (relatedTarget.tagName == 'LI' || self.options.clearWhenMouseout) {
 					removeSelectStyle(self._highlighted);
 					self._highlighted = null;
-				//}
+				}
 			});
 
 			/** 避免多次为document绑定mousedown而设置的标志，jquery使用的是event.one的机制 */
@@ -380,6 +381,7 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 			//绑定mousedow事件，由于点击滚动条时不会触发mouseup，因此监听下一次mousedown
 			container.addEvent('mousedown', function(e) {
 				self._clickOnContainer = true;
+				self.focusToInput();
 				if (!self._bindedFlag && isSubNode(e.target, self._container)) {
 					self._bindedFlag = true;
 					dom.wrap(document).addEvent('mousedown', function(e) {
