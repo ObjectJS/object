@@ -112,6 +112,10 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 		 */
 		this.bindDOMNodeInsertEvent = function(self) {
 			var datalist = dom.id(self.input.get('list'));
+			if (!datalist) {
+				reportError(self.input.get('list') + ' 对应的datalist不存在');
+				return;
+			}
 
 			// 从IE9开始支持DOMNodeInserted事件
 			// http://help.dottoro.com/ljimhdto.php
@@ -278,11 +282,12 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 			var data = self.getListData();
 			var value = self.input.value.trim();
 			if (value != "") {
+				value = value.toLowerCase();
 				data = data.filter(function(ele) {
 					if (self.options.matchFirst) {
-						return ele.value.toLowerCase().indexOf(value.toLowerCase()) == 0;
+						return ele.value.toLowerCase().indexOf(value) == 0;
 					} else {
-						return ele.value.toLowerCase().indexOf(value.toLowerCase()) != -1;
+						return ele.value.toLowerCase().indexOf(value) != -1;
 					}
 				});
 			}
@@ -555,8 +560,11 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 		// 内部方法，为li元素添加选中的样式
 		function addSelectStyle(li) {
 			if (li) {
+				li.oldBgColor = li.style.backgroundColor;
 				li.style.backgroundColor = '#316AC5';
+				li.oldColor = li.style.color;
 				li.style.color = 'white';
+				li.oldCursor = li.style.cursor;
 				li.style.cursor = 'pointer';
 			}
 		}
@@ -564,9 +572,12 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 		// 内部方法，为li元素移除选中的样式
 		function removeSelectStyle(li) {
 			if (li) {
-				li.style.backgroundColor = 'white';
-				li.style.color = 'black';
-				li.style.cursor = 'auto';
+				li.style.backgroundColor = li.oldBgColor;
+				li.oldBgColor = null;
+				li.style.color = li.oldColor;
+				li.oldColor = null;
+				li.style.cursor = li.oldCursor;
+				li.oldCursor = null;
 			}
 		}
 
