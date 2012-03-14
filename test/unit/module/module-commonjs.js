@@ -97,6 +97,23 @@ test('require.async - relative', function() {
 	object.remove('a', true);
 });
 
+test('require.async - setTimeout', function() {
+	expect(1);
+	loader.define('a/b', function() {
+		this.result = 1;
+	});
+	loader.define('a/main', './b', function(require, exports) {
+		stop();
+		setTimeout(function() {
+			start();
+			require.async('./b', function(b) {
+				equals(b.result, 1, 'require.async ok in setTimeout');
+			});
+		}, 0);
+	});
+	loader.execute('a/main');
+});
+
 test('object.execute auto call exports.main', function() {
 	expect(1);
 	object.define('test', function(require, exports) {

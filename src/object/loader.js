@@ -354,7 +354,7 @@ CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 		}
 		var dep = deps[index];
 
-		var exports = dep.execute();
+		var exports = dep.execute(pkg.context);
 
 		if (!exports) {
 			// 有依赖却没有获取到，说明是由于循环依赖
@@ -378,6 +378,7 @@ CommonJSPackage.prototype.createRequire = function(name, deps, runtime) {
 			});
 			callback.apply(null, args);
 		});
+		newPkg.context = pkg.context;
 		newPkg.load(runtime, function() {
 			// 由于newPkg的id与之前的相同，load方法会覆盖掉runtime.packages上保存的成员
 			var deps = runtime.packages[newPkg.id];
@@ -406,7 +407,7 @@ ObjectPackage.prototype.make = function(name, deps, runtime) {
 
 	// 将所有依赖都执行了，放到参数数组中
 	deps.forEach(function(dep) {
-		var depExports = dep.execute();
+		var depExports = dep.execute(this.context);
 		if (args.indexOf(depExports) == -1) {
 			args.push(depExports);
 		}
@@ -627,17 +628,16 @@ CommonJSDependency.prototype.load = function(callback) {
 	this.runtime.loadModule(this.id, callback);
 };
 
-CommonJSDependency.prototype.execute = function() {
+CommonJSDependency.prototype.execute = function(parentContext) {
 	var runtime = this.runtime;
 	var loader = runtime.loader;
-	var runtimeName, parent;
+	var runtimeName;
 
 	if (this.idType == 'top-level') {
 		runtimeName = this.name;
 
 	} else if (this.idType == 'relative') {
-		parent = runtime.stack[runtime.stack.length - 1];
-		runtimeName = this.id.slice(parent.module.context.length);
+		runtimeName = this.id.slice(parentContext.length);
 
 	} else {
 		runtimeName = id;
@@ -1316,8 +1316,9 @@ Loader.prototype.execute = function(name) {
 	}
 	this.buildFileLib();
 
-	var found = this.find(this.name2id(name));
-	var id = found.id;
+	var tempId = this.name2id(name);
+	var found = this.find(tempId);
+	var id = found.id || tempId;
 	var context = found.context;
 
 	var runtime = this.createRuntime(id, context);
