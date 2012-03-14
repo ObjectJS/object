@@ -77,10 +77,10 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 			   '</ul>',
 		// HTML模板，第一次新建div时渲染一次
 		CONTAINER : 
-			'<div id="datalistContainer{{index}}" style="border:1px solid gray;position:absolute;z-index:3;left:{{left}}px;top:{{top}}px;background:#fff;font-size:small;">{{#ie6}}' +
+			'<div id="datalistContainer{{index}}" style="border:1px solid gray;position:absolute;z-index:3;left:{{left}}px;top:{{top}}px;background:#fff;font-size:small;">' +
 				// ie6使用iframe遮挡select
 				// 遇到的问题：只有一条记录的时候会出现滚动条 https://github.com/brandonaaron/bgiframe/blob/master/jquery.bgiframe.js
-				'<iframe id="datalist_iframe" frameBorder="0" style="position:absolute;z-index:2;top:0px;left:0px;overflow:hidden;display:block;filter:Alpha(Opacity=0);" src="javascript:false;"></iframe>{{/ie6}}' + 
+				'{{#ie6}}<iframe id="datalist_iframe" frameBorder="0" style="position:absolute;z-index:2;top:0px;left:0px;overflow:hidden;display:block;filter:Alpha(Opacity=0);" src="javascript:false;"></iframe>{{/ie6}}' + 
 			'</div>'
 	};
 
