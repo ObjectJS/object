@@ -829,10 +829,15 @@ this.Element = new Class(function() {
 	};
 
 	/**
-	 * 添加className
+	 * 添加className<br>
+	 * 坚决支持标准，addClass方法传空字串会报错（火狐）
 	 * @param name
 	 */
 	this.addClass = function(self, name) {
+		if (!name) {
+			throw new Error('addClass的参数不能为空');
+			return;
+		}
 		self.classList.add(name);
 	};
 
