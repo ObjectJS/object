@@ -108,3 +108,32 @@ test('object.execute auto call exports.main', function() {
 	object.execute('test');
 	object.remove('test');
 });
+
+test('objectjs style dependency in object.define', function() {
+	object.define('test/a/aa/aaa', function() {
+		this.haha = 1;
+	});
+	object.define('test/b/bb/bbb', function() {
+		this.haha = 2;
+	});
+	object.define('main', 'test.a.aa.aaa, test.b.bb.bbb, test', function(require, exports) {
+		require('test.a.aa.aaa');
+		require('test.b.bb.bbb');
+		var test = require('test');
+		equals(test.a.aa.aaa.haha, 1);
+		equals(test.b.bb.bbb.haha, 2);
+	});
+
+	object.execute('main');
+});
+
+test('require mustach template', function() {
+
+	object.define('test/publisher', './publisher.mustache', function(require) {
+		var tpl = require('./publisher.mustache');
+	});
+
+	object.use('test/publisher', function(publisher) {
+	});
+
+});
