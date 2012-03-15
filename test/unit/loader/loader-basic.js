@@ -1,4 +1,5 @@
-var Loader = object.Loader;
+var loader = object._loader;
+var Loader = loader.constructor;
 
 // surround with closure
 (function() {
@@ -16,9 +17,6 @@ if (isJsTestDriverRunning) {
 var emptyJS = path + 'empty.js';
 
 var head = document.getElementsByTagName('head')[0];
-
-// the only loader instance
-var loader = new Loader();
 
 module("loader-basic-buildFileLib", {
 	teardown: function() {
@@ -167,14 +165,15 @@ test('add-usage', function() {
 });
 
 module('loader-basic-remove');
+
 test('remove-usage', function() {
 	loader.add('a', function() {});
 	loader.add('a/b', function() {});
 	loader.remove('a');
-	ok(!('a' in loader.lib), 'remove ok.');
+	equals(loader.getModule('a'), null, 'remove ok.');
 	ok(loader.getModule('a/b'), 'sub not removed, ok');
-	loader.remove('a', true);
-	ok(!('a/b' in loader.lib), 'sub removed, ok');
+	loader.remove('a/', true);
+	ok(!loader.getModule('a/b'), 'sub removed, ok');
 });
 
 module("loader-basic-use");

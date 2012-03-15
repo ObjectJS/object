@@ -28,7 +28,7 @@ test('use object.define - basic', function() {
 	object.execute('define_a');
 
 	// keep clean
-	object.remove('defile', true);
+	object.remove('defile/', true);
 });
 
 test('use object.define - submodule', function() {
@@ -94,7 +94,26 @@ test('require.async - relative', function() {
 		})
 	});
 	object.execute('a/b');
-	object.remove('a', true);
+	object.remove('a/', true);
+});
+
+test('require.async - setTimeout', function() {
+	expect(1);
+	loader.define('a/b', function() {
+		this.result = 1;
+	});
+	loader.define('a/main', './b', function(require, exports) {
+		stop();
+		setTimeout(function() {
+			require.async('./b', function(b) {
+				start();
+				equals(b.result, 1, 'require.async ok in setTimeout');
+				// 必须执行完了再删除，否则在setTimeout执行时a/b已经被删除，找不到了
+				loader.remove('a/', true);
+			});
+		}, 0);
+	});
+	loader.execute('a/main');
 });
 
 test('object.execute auto call exports.main', function() {
@@ -133,7 +152,7 @@ test('require mustach template', function() {
 		var tpl = require('./publisher.mustache');
 	});
 
-	object.use('test/publisher', function(publisher) {
-	});
+	//object.use('test/publisher', function(publisher) {
+	//});
 
 });
