@@ -274,5 +274,5 @@ test('object.add a full url module', function() {
 	var url = loader.base + 'object/renren/apps/home/a.js';
 	object.add(url, function() {
 	});
-	equal(loader.getModule(url).context, loader.base, 'module\'s context ok.');
+	equal(loader.getModule(url).id, loader.base + 'object/renren/apps/home/a.js', 'module\'s id ok.');
 });
