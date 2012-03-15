@@ -683,7 +683,6 @@ ObjectDependency.prototype.load = function(callback) {
 	var dep = this;
 	var runtime = this.runtime;
 	var loader = runtime.loader;
-	var paths = runtime.path.concat([runtime.moduleId]);
 	var context = this.context || '';
 	var parts = this.nameParts;
 	var index = -1;
@@ -740,8 +739,7 @@ ObjectDependency.prototype.execute = function(parentName, parentContext) {
 	var name;
 
 	var rootName = (prefix? prefix + '.' : '') + parts[0];
-	var deps = runtime.packages[this.id];
-	var id, tempId, pkg, exports;
+	var id, pkg, exports;
 
 	/**
 	 * 依次获取当前模块的每个部分
@@ -779,6 +777,9 @@ function LoaderRuntime(moduleId) {
 	 */
 	this.modules = {};
 
+	/**
+	* load阶段所有模块的集合
+	*/
 	this.packages = {};
 
 	/**
