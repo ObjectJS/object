@@ -108,11 +108,12 @@ test('require.async - setTimeout', function() {
 			require.async('./b', function(b) {
 				start();
 				equals(b.result, 1, 'require.async ok in setTimeout');
+				// 必须执行完了再删除，否则在setTimeout执行时a/b已经被删除，找不到了
+				loader.remove('a/', true);
 			});
 		}, 0);
 	});
 	loader.execute('a/main');
-	loader.remove('a/', true);
 });
 
 test('object.execute auto call exports.main', function() {
@@ -151,7 +152,7 @@ test('require mustach template', function() {
 		var tpl = require('./publisher.mustache');
 	});
 
-	object.use('test/publisher', function(publisher) {
-	});
+	//object.use('test/publisher', function(publisher) {
+	//});
 
 });
