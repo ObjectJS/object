@@ -154,37 +154,6 @@ function urljoin(base, url) {
 }
 
 /**
- * http://sample.com/a.js
- */
-function isAbsolute(id) {
-	return ~id.indexOf('://') || id.indexOf('//') === 0;
-}
-
-/**
- * ./a.js
- * ../a.js
- * ../../a.js
- */
-function isRelative(id) {
-	return id.indexOf('./') === 0 || id.indexOf('../') === 0;
-}
-
-/**
- * /a.js
- */
-function isRoot(id) {
-	return id.charAt(0) === '/' && id.charAt(1) !== '/';
-}
-
-/**
- * a.js
- */
-function isTopLevel(id) {
-	var c = id.charAt(0);
-	return id.indexOf('://') === -1 && c !== '.' && c !== '/';
-}
-
-/**
  * 计算当前引用objectjs的页面文件的目录路径
  */
 function calculatePageDir() {
@@ -586,39 +555,48 @@ function CommonJSDependency(name, owner, runtime) {
 	var loader = runtime.loader;
     var info, id, context;
 	var paths = loader.paths;
-	var idType;
+	var type = this.getType(name);
 
 	// absolute id
-	if (isAbsolute(name)) {
+	if (type == 'absolute') {
 		id = name;
-		idType = 'absolute';
 	}
 	// relative id
-	else if (isRelative(name)) {
+	else if (type == 'relative') {
 		info = loader.find(urljoin(urljoin(owner.id, '.'), name), paths);
 		id = info.id;
 		context = info.context;
-		idType = 'relative';
 	}
 	// root id
-	else if (isRoot(name)) {
+	else if (type == 'root') {
 		id = urljoin(Loader._pageDir, name);
-		idType = 'root';
 	}
 	// top-level id
 	else {
 		info = loader.find(name, paths);
 		id = info.id;
 		context = info.context;
-		idType = 'top-level';
 	}
 
 	this.id = id;
 	this.context = context;
-	this.idType = idType;
+	this.type = type;
 };
 
 CommonJSDependency.prototype = new Dependency();
+
+CommonJSDependency.prototype.getType = function(name) {
+	if (~name.indexOf('://') || name.indexOf('//') === 0) {
+		return 'absolute';
+	}
+	if (name.indexOf('./') === 0 || name.indexOf('../') === 0) {
+		return 'relative';
+	}
+	if (name.charAt(0) === '/' && name.charAt(1) !== '/') {
+		return 'root';
+	}
+	return 'top-level';
+};
 
 CommonJSDependency.prototype.constructor = CommonJSDependency;
 
@@ -631,10 +609,10 @@ CommonJSDependency.prototype.execute = function(parentName, parentContext) {
 	var loader = runtime.loader;
 	var runtimeName;
 
-	if (this.idType == 'top-level') {
+	if (this.type == 'top-level') {
 		runtimeName = this.name;
 
-	} else if (this.idType == 'relative') {
+	} else if (this.type == 'relative') {
 		runtimeName = this.id.slice(parentContext.length);
 
 	} else {
@@ -715,7 +693,7 @@ ObjectDependency.prototype.load = function(callback) {
 	 * 如a.b.c，依次获取a、a.b、a.b.c
 	 */
 	function next() {
-		var id, tempId, part;
+		var id, info, part;
 
 		index++;
 
@@ -727,7 +705,7 @@ ObjectDependency.prototype.load = function(callback) {
 			if (index == parts.length - 1) {
 				runtime.loadModule(dep.id, next);
 			} else {
-				var info = loader.find(urljoin(context, parts.slice(0, index + 1).join('/')));
+				info = loader.find(urljoin(context, parts.slice(0, index + 1).join('/')));
 				id = info.id;
 				if (!info.found) {
 					loader.definePrefix(id);
