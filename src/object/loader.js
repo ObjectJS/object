@@ -584,7 +584,7 @@ function CommonJSDependency(name, owner, runtime) {
 	Dependency.apply(this, arguments);
 
 	var loader = runtime.loader;
-    var tempId, id, context;
+    var info, id, context;
 	var paths = loader.paths;
 	var idType;
 
@@ -595,11 +595,9 @@ function CommonJSDependency(name, owner, runtime) {
 	}
 	// relative id
 	else if (isRelative(name)) {
-		tempId = urljoin(urljoin(owner.id, '.'), name);
-		found = loader.find(tempId, paths);
-		id = found.id;
-		context = found.context;
-		if (!id) id = tempId;
+		info = loader.find(urljoin(urljoin(owner.id, '.'), name), paths);
+		id = info.id;
+		context = info.context;
 		idType = 'relative';
 	}
 	// root id
@@ -609,10 +607,9 @@ function CommonJSDependency(name, owner, runtime) {
 	}
 	// top-level id
 	else {
-		found = loader.find(name, paths);
-		id = found.id;
-		context = found.context;
-		if (!id) id = name;
+		info = loader.find(name, paths);
+		id = info.id;
+		context = info.context;
 		idType = 'top-level';
 	}
 
@@ -671,11 +668,10 @@ function ObjectDependency(name, owner, runtime) {
 	// 当前模块(sys.path中通过'.'定义)；
 	// 全局模块(sys.path中通过'/'定义)；
 	// 运行时路径上的模块(默认的)。
-	var tempId = name.replace(/\./g, '/');
-	var found = loader.find(tempId, paths, owner.id);
-	var id = found.id || tempId;
+	var info = loader.find(name.replace(/\./g, '/'), paths, owner.id);
+	var id = info.id;
 	// context为id的前缀部分
-	var context = found.context;
+	var context = info.context;
 	if (context == '') {
 		isRelative = true;
 		context = urljoin(urljoin(owner.id, '.'), context);
@@ -731,10 +727,9 @@ ObjectDependency.prototype.load = function(callback) {
 			if (index == parts.length - 1) {
 				runtime.loadModule(dep.id, next);
 			} else {
-				tempId = urljoin(context, parts.slice(0, index + 1).join('/'));
-				id = loader.find(tempId).id;
-				if (!id) {
-					id = tempId;
+				var info = loader.find(urljoin(context, parts.slice(0, index + 1).join('/')));
+				id = info.id;
+				if (!info.found) {
 					loader.definePrefix(id);
 				}
 				runtime.loadModule(id, next);
@@ -783,8 +778,7 @@ ObjectDependency.prototype.execute = function(parentName, parentContext) {
 			if (i == parts.length - 1) {
 				id = dep.id;
 			} else {
-				tempId = urljoin(context, parts.slice(0, i + 1).join('/'));
-				id = loader.find(tempId).id;
+				id = loader.find(urljoin(context, parts.slice(0, i + 1).join('/'))).id;
 			}
 			pkg = loader.lib[id];
 			exports = pkg.execute(name, context, runtime);
@@ -1008,29 +1002,6 @@ Loader.prototype.name2id = function(name) {
 	return id;
 };
 
-Loader.prototype.parse = function(id) {
-	var context = '';
-	if (isAbsolute(id)) {
-		// 按照路径的长度倒序排列，确保当多个path处于同一路径时，模块能被分配到正确的context中
-		var paths = this.paths.sort(function(a, b) {
-			return a.length > b.length;
-		});
-		paths.some(function(path) {
-			if (id.indexOf(path) == 0) {
-				context = path;
-				return true;
-			}
-		}, this);
-	} else {
-		id = urljoin(this.base, id);
-		context = this.base;
-	}
-	return {
-		id: id,
-		context: context
-	};
-};
-
 /**
  * 从paths中寻找符合此id的模块
  * @param id
@@ -1070,7 +1041,8 @@ Loader.prototype.find = function(id, paths, base) {
 	paths.some(findIn);
 
 	return {
-		id: foundId,
+		found: !!foundId,
+		id: foundId || id,
 		context: foundContext
 	};
 };
@@ -1258,9 +1230,8 @@ Loader.prototype.define = function(name, dependencies, factory) {
 		dependencies = [];
 	}
 
-	var info = this.parse(this.name2id(name));
-
-	this.defineModule(CommonJSPackage, info.id, dependencies, factory);
+	var id = urljoin(this.base, this.name2id(name));
+	this.defineModule(CommonJSPackage, id, dependencies, factory);
 };
 
 /**
@@ -1276,8 +1247,8 @@ Loader.prototype.add = function(name, dependencies, factory) {
 		dependencies = [];
 	}
 
-	var info = this.parse(this.name2id(name));
-	this.defineModule(ObjectPackage, info.id, dependencies, factory);
+	var id = urljoin(this.base, this.name2id(name));
+	this.defineModule(ObjectPackage, id, dependencies, factory);
 };
 
 /**
@@ -1325,10 +1296,9 @@ Loader.prototype.execute = function(name) {
 	}
 	this.buildFileLib();
 
-	var tempId = this.name2id(name);
-	var found = this.find(tempId);
-	var id = found.id || tempId;
-	var context = found.context;
+	var info = this.find(this.name2id(name));
+	var id = info.id;
+	var context = info.context;
 
 	var runtime = this.createRuntime(id, context);
 	runtime.loadModule(id, function() {
