@@ -172,7 +172,7 @@ test('remove-usage', function() {
 	loader.remove('a');
 	equals(loader.getModule('a'), null, 'remove ok.');
 	ok(loader.getModule('a/b'), 'sub not removed, ok');
-	loader.remove('a/', true);
+	loader.remove('a', true);
 	ok(!loader.getModule('a/b'), 'sub removed, ok');
 });
 
@@ -265,37 +265,6 @@ test('loadScript basic test', function() {
 	equal(len2 - len1, 1, 'add one script tag in document after Loader.loadScript is called');
 });
 
-// if is executed by jsTestDriver
-if (isJsTestDriverRunning) {
-	// jsTestDriver testcases start
-	var AsynchronousTest_loadScriptWithUrl = AsyncTestCase('loadScriptBasicTest');
-
-	AsynchronousTest_loadScriptWithUrl.prototype.tearDown = function() {
-		var scripts = Sizzle('script');
-		for (var i = 0; i < scripts.length; i++) {
-			if (scripts[i].callbacks) {
-				head.removeChild(scripts[i]);
-			}
-		}	
-	}
-
-	AsynchronousTest_loadScriptWithUrl.prototype.testLoadScriptWithUrl = function(queue) {
-		var counter = 0;
-		queue.call('Step 1: loadScript.', function(callbacks) {
-			var onScriptLoaded = callbacks.add(function() {
-				counter = 1;
-			});
-			Loader.loadScript(emptyJS, function() {
-				onScriptLoaded();
-			});
-		});
-
-	  	queue.call('Step 2: assert counter', function() {
-			assertEquals('callback is called, script is loaded', 1, counter);
-	  	});
-	};
-	// jsTestDriver testcases end 
-} else {
 // normal qunit testcases
 test('loadScript with url', function() {
 	// null/''
@@ -332,8 +301,7 @@ asyncTest('loadScript with/without callback', function() {
 	//loader.loadScript('not-exists-url', function() {
 	//		ok(false, 'callback is called when not-exists-url loaded');
 	//});
-})
-}
+});
 
 test('loadScript with/without cache', function() {
 	var cacheIsOk = false;

@@ -1293,7 +1293,10 @@ Loader.prototype.remove = function(name, all) {
 	delete this.lib[id];
 
 	// 只有目录才可能递归删除
-	if (all && urljoin(id, '.') == id) {
+	if (all) {
+		// 确保all时是个目录
+		name = name.charAt(name.length - 1) == '/'? name : name + '/';
+		id = urljoin(this.base, this.name2id(name));
 		Object.keys(this.lib).forEach(function(key) {
 			if (key.indexOf(id) == 0) {
 				delete this.lib[key];
@@ -1301,6 +1304,7 @@ Loader.prototype.remove = function(name, all) {
 		}, this);
 	}
 };
+
 
 /**
  * 清空模块

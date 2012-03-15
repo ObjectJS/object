@@ -135,7 +135,7 @@ test('relative module - use', function() {
 	object.add('foo.a.b.c', function(exports) {
 	});
 	object.add('foo.a', './a/b/c, sys', function(exports, c, sys) {
-		equal(c.__name__, 'foo/a/b/c', 'relative submodule name.');
+		equal(c.__name__, 'foo/a/b/c.js', 'relative submodule name.');
 	});
 	object.add('foo', './foo/a', function(exports, a) {
 	});
