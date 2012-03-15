@@ -312,6 +312,9 @@ this.Component = new Class(function() {
 			}
 			var str = string.substitute(node.template, tdata);
 			node = dom.Element.fromString(str);
+			if (!node) {
+				throw new Error('render component error with template.');
+			}
 		}
 
 		self.__nodeMap = {}; // 相应node的uid对应component，用于在需要通过node找到component时使用
