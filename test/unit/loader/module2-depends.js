@@ -1,4 +1,4 @@
-object.add('module2', 'ua', function(exports) {
+object.add('module2', function(exports) {
 	exports.a = 2;
 	exports.b = 2;
 });

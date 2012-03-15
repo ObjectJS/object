@@ -135,7 +135,7 @@ test('relative module - use', function() {
 	object.add('foo.a.b.c', function(exports) {
 	});
 	object.add('foo.a', './a/b/c, sys', function(exports, c, sys) {
-		equal(c.__name__, 'foo/a/b/c', 'relative submodule name.');
+		equal(c.__name__, 'foo/a/b/c.js', 'relative submodule name.');
 	});
 	object.add('foo', './foo/a', function(exports, a) {
 	});
@@ -274,5 +274,5 @@ test('object.add a full url module', function() {
 	var url = loader.base + 'object/renren/apps/home/a.js';
 	object.add(url, function() {
 	});
-	equal(loader.getModule(url).context, loader.base, 'module\'s context ok.');
+	equal(loader.getModule(url).id, loader.base + 'object/renren/apps/home/a.js', 'module\'s id ok.');
 });
