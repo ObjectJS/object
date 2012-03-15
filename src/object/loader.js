@@ -477,6 +477,9 @@ function Package(id, dependencies, factory) {
 	this.dependencies = this.parseDependencies(dependencies);
 }
 
+/**
+ * 尝试获取此模块的所有依赖模块
+ */
 Package.prototype.load = function(runtime, callback) {
 	var deps = [];
 	var pkg = this;
@@ -680,39 +683,36 @@ ObjectDependency.prototype = new Dependency();
 ObjectDependency.prototype.constructor = ObjectDependency;
 
 ObjectDependency.prototype.load = function(callback) {
-	var dep = this;
 	var runtime = this.runtime;
 	var loader = runtime.loader;
-	var context = this.context || '';
 	var parts = this.nameParts;
-	var index = -1;
+
+	var loaded = -1;
+	function next() {
+		loaded++;
+		if (loaded == parts.length) {
+			if (callback) callback();
+		}
+	}
 
 	/**
 	 * 依次获取当前模块的每个部分
 	 * 如a.b.c，依次获取a、a.b、a.b.c
 	 */
-	function next() {
-		var id, info, part;
+	parts.forEach(function(part, i) {
+		var id, info;
 
-		index++;
-
-		if (index == parts.length) {
-			callback();
+		if (i == parts.length - 1) {
+			id = this.id;
 		} else {
-			part = parts[index];
-
-			if (index == parts.length - 1) {
-				runtime.loadModule(dep.id, next);
-			} else {
-				info = loader.find(urljoin(context, parts.slice(0, index + 1).join('/')));
-				id = info.id;
-				if (!info.found) {
-					loader.definePrefix(id);
-				}
-				runtime.loadModule(id, next);
+			info = loader.find(urljoin(this.context, parts.slice(0, i + 1).join('/')));
+			id = info.id;
+			if (!info.found) {
+				loader.definePrefix(id);
 			}
 		}
-	}
+		runtime.loadModule(id, next);
+	}, this);
 
 	next();
 };
@@ -778,8 +778,8 @@ function LoaderRuntime(moduleId) {
 	this.modules = {};
 
 	/**
-	* load阶段所有模块的集合
-	*/
+	 * load阶段所有模块的集合
+	 */
 	this.packages = {};
 
 	/**
