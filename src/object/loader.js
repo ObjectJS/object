@@ -992,15 +992,18 @@ Loader.prototype.name2id = function(name) {
 		id = name;
 	}
 
-	extdot = id.lastIndexOf('.');
-	if (extdot != -1) {
-		ext = id.slice(extdot);
-	} else {
-		ext = '';
-	}
+	// name有可能是个目录
+	if (name.lastIndexOf('/') != name.length - 1) {
+		extdot = id.lastIndexOf('.');
+		if (extdot != -1) {
+			ext = id.slice(extdot);
+		} else {
+			ext = '';
+		}
 
-	if (!ext) {
-		id += '.js';
+		if (!ext) {
+			id += '.js';
+		}
 	}
 
 	return id;
@@ -1240,7 +1243,8 @@ Loader.prototype.defineModule = function(constructor, id, context, dependencies,
  */
 Loader.prototype.getModule = function(name) {
 	var id = this.find(this.name2id(name)).id;
-	return this.lib[id];
+	if (id in this.lib) return this.lib[id];
+	return null;
 };
 
 /**
@@ -1285,10 +1289,13 @@ Loader.prototype.add = function(name, dependencies, factory) {
  */
 Loader.prototype.remove = function(name, all) {
 	var id = urljoin(this.base, this.name2id(name));
+
 	delete this.lib[id];
-	if (all) {
+
+	// 只有目录才可能递归删除
+	if (all && urljoin(id, '.') == id) {
 		Object.keys(this.lib).forEach(function(key) {
-			if (key.indexOf(id + '/') == 0) {
+			if (key.indexOf(id) == 0) {
 				delete this.lib[key];
 			}
 		}, this);

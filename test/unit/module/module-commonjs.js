@@ -28,7 +28,7 @@ test('use object.define - basic', function() {
 	object.execute('define_a');
 
 	// keep clean
-	object.remove('defile', true);
+	object.remove('defile/', true);
 });
 
 test('use object.define - submodule', function() {
@@ -94,7 +94,7 @@ test('require.async - relative', function() {
 		})
 	});
 	object.execute('a/b');
-	object.remove('a', true);
+	object.remove('a/', true);
 });
 
 test('require.async - setTimeout', function() {
@@ -105,13 +105,14 @@ test('require.async - setTimeout', function() {
 	loader.define('a/main', './b', function(require, exports) {
 		stop();
 		setTimeout(function() {
-			start();
 			require.async('./b', function(b) {
+				start();
 				equals(b.result, 1, 'require.async ok in setTimeout');
 			});
 		}, 0);
 	});
 	loader.execute('a/main');
+	loader.remove('a/', true);
 });
 
 test('object.execute auto call exports.main', function() {
