@@ -237,6 +237,9 @@ test('parent module and sub module', function() {
 	object.remove('parent.sub2.sub3');
 	object.remove('parent.sub');
 
+});
+
+test('parent module and sub module - prefix auto-define', function() {
 	object.add('parent.sub.sub2.sub', function(exports) {
 		exports.a = 1;
 	});
@@ -244,6 +247,13 @@ test('parent module and sub module', function() {
 		equal(parent.sub.sub2.sub.a, 1, 'parent.sub.sub2.sub.a = 1 is ok');
 		equal(parent.sub.fn, undefined, 'parent.sub.fn is undefined');
 		equal(parent.sub.sub2.fn, undefined, 'parent.sub.sub2.fn is undefined');
+	});
+	// 重新定义父模块，确保能够覆盖掉自定义模块
+	object.add('parent.sub', function(exports) {
+		exports.a = 1;
+	});
+	object.use('parent.sub.sub2.sub', function(exports, parent) {
+		equal(parent.sub.a, 1, 'user-define module have override auto-define module.');
 	});
 	object.remove('parent.sub', true);
 });

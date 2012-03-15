@@ -588,6 +588,13 @@ function CommonJSDependency(name, owner, runtime) {
 
 CommonJSDependency.prototype = new Dependency();
 
+/**
+ * 获取依赖的路径形式
+ * absolute: http://xxx/abc.js
+ * relative: ./abc.js
+ * root: /abc.js
+ * top-level: abc.js
+ */
 CommonJSDependency.prototype.getType = function(name) {
 	if (~name.indexOf('://') || name.indexOf('//') === 0) {
 		return 'absolute';
@@ -705,9 +712,12 @@ ObjectDependency.prototype.load = function(callback) {
 		if (i == parts.length - 1) {
 			id = this.id;
 		} else {
+			// 先用最短的名字查找，确保能找到所有的可能
 			info = loader.find(urljoin(this.context, parts.slice(0, i + 1).join('/')));
 			id = info.id;
+			// 没找到，用最后才能查找到的文件名生成临时模块，确保后续手工定义的模块能够在临时模块前被找到。
 			if (!info.found) {
+				id = id + '/index.js';
 				loader.definePrefix(id);
 			}
 		}
