@@ -128,7 +128,7 @@ object.add('ui.autocomplete', 'dom, ua, events, sys', function(exports, dom, ua,
 			// 保存对input的引用，用于控制，但是不为input添加新属性
 			self.input = input;
 			// 屏蔽浏览器默认的自动提示
-			self.input._set('autocomplete', 'off');
+			self.input.autocomplete = 'off';
 			// 初始化参数
 			self.initOptions();
 
