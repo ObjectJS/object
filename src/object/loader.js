@@ -963,8 +963,7 @@ Loader.getAbsolutePath = function(src) {
 /**
  * 将name中的“.”换成id形式的“/”
  */
-Loader.prototype.name2id = function(name) {
-	if (typeof name != 'string') return '';
+Loader.prototype.name2id = function(name) { if (typeof name != 'string') return '';
 
 	var id, ext, extdot;
 
