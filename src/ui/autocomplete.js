@@ -4,6 +4,15 @@ object.add('ui.autocomplete', 'dom, ua, events, sys', function(exports, dom, ua,
 	var supportHTML5DataList = document.createElement('datalist').options != null;
 
 	/**
+	 * 使得一个input元素能够自动提示
+	 * @param {HTMLInputElement} input 输入域
+	 * @return 经过dom包装后的input元素
+	 */
+	this.enable = function(input) {
+		return new exports.AutoComplete(input);
+	};
+
+	/**
 	 * 数据列表实现类，模拟HTML5的input元素的list属性
 	 */
 	this.AutoComplete = new Class(function() {
@@ -12,7 +21,11 @@ object.add('ui.autocomplete', 'dom, ua, events, sys', function(exports, dom, ua,
 		 * 初始化方法，为input添加focus/blur/keydown/keyup事件，并监听data-list属性变化
 		 */
 		this.initialize = function(self, input) {
-			input = dom.wrap(input);
+			if (typeof input == 'string') {
+				input = dom.id(input);
+			} else {
+				dom.wrap(input);
+			}
 
 			// 如果支持list，而且input设置的list属性存在对应的datalist，则使用浏览器提供的自动提示
 			if (supportHTML5DataList) {
@@ -54,11 +67,11 @@ object.add('ui.autocomplete', 'dom, ua, events, sys', function(exports, dom, ua,
 		function wrapDataListIfListExists(input, methodName, e) {
 			var datalist = input.getAttribute('data-list');
 			if (datalist) {
-				// 如果没有_datalistWrapper属性，说明还没有包装过
-				if (!input._datalistWrapper) {
-					input._datalistWrapper = new AutoCompleteWrapper(input);
+				// 如果没有_autocompleter属性，说明还没有包装过
+				if (!input._autocompleter) {
+					input._autocompleter = new AutoCompleteWrapper(input);
 				}
-				input._datalistWrapper[methodName](e);
+				input._autocompleter[methodName](e);
 			}
 		}
 	});	

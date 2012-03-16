@@ -110,18 +110,16 @@
 <script type='text/javascript'>
 	object.use('dom, ui.autocomplete', function(dom, ui) {
 
-		var input = dom.id('browsers');
-		input = new ui.autocomplete.AutoComplete(input);
-		var input2 = dom.id('browsers2');
-		input2 = new ui.autocomplete.AutoComplete(input2);
-		//var added = true;
-		//input.addEvent('keydown',function(e) {
-		//	if (added) {
-		//		return;
-		//	}
-		//	addListItems();
-		//	added = true;
-		//});
+		var input = ui.autocomplete.enable('browsers');
+		var added = false;
+		input.addEvent('keydown',function(e) {
+			if (!input._autocompleter || added) {
+				return;
+			}
+			addListItems();
+			added = true;
+		});
+		ui.autocomplete.enable('browsers2');
 
 		function addListItems() {
 			var df = document.createDocumentFragment();
