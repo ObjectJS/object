@@ -20,6 +20,7 @@
 	<input type="button" value="add list" onclick="addList()" />
 	<script >
 		function addList() {
+			document.getElementById('browsers').setAttribute('data-list', 'list_browsers');
 			document.getElementById('browsers').list = 'list_browsers';
 		}
 	</script>
@@ -67,7 +68,7 @@
 	  <option value="中国">
 	  <option value="Safari">
 	</datalist>
-	jfdaljfdfdasfdas<input id='browsers2' list='list_browsers2'/>
+	jfdaljfdfdasfdas<input id='browsers2' list='list_browsers2' data-list='list_browsers2'/>
 	<datalist id="list_browsers2">
 	  <option value="ChromeCCCCCCCCCCC">
 	  <option value="Opera">
@@ -107,17 +108,20 @@
 </form>
 <script type='text/javascript' src='http://s.xnimg.cn/a33750/n/core/base-all2.js'></script>
 <script type='text/javascript'>
-	object.use('dom, ua', function(dom, ua) {
+	object.use('dom, ui.autocomplete', function(dom, ui) {
+
 		var input = dom.id('browsers');
+		input = new ui.autocomplete.AutoComplete(input);
 		var input2 = dom.id('browsers2');
-		var added = false;
-		input.addEvent('keydown',function(e) {
-			if (added) {
-				return;
-			}
-			addListItems();
-			added = true;
-		});
+		input2 = new ui.autocomplete.AutoComplete(input2);
+		//var added = true;
+		//input.addEvent('keydown',function(e) {
+		//	if (added) {
+		//		return;
+		//	}
+		//	addListItems();
+		//	added = true;
+		//});
 
 		function addListItems() {
 			var df = document.createDocumentFragment();

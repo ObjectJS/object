@@ -1,55 +1,64 @@
-object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
+object.add('ui.autocomplete', 'dom, ua, events, sys', function(exports, dom, ua, events, sys) {
+
+	// 判断是否支持HTML5的datalist
+	var supportHTML5DataList = document.createElement('datalist').options != null;
 
 	/**
 	 * 数据列表实现类，模拟HTML5的input元素的list属性
 	 */
-	this.DataList = new Class(function() {
+	this.AutoComplete = new Class(function() {
 
 		/**
-		 * 初始化方法，为input添加focus/blur/keydown/keyup事件，并监听list属性变化
+		 * 初始化方法，为input添加focus/blur/keydown/keyup事件，并监听data-list属性变化
 		 */
-		this.initialize = function(self) {
+		this.initialize = function(self, input) {
+			input = dom.wrap(input);
+
+			// 如果支持list，而且input设置的list属性存在对应的datalist，则使用浏览器提供的自动提示
+			if (supportHTML5DataList) {
+				var datalist = input.getAttribute('list');
+				if (datalist && document.getElementById(datalist)) {
+					return input;
+				}
+			}
+
 			// 获取焦点时显示列表
-			self.addEvent('focus', function(e) {
-				wrapDataListIfListExists(self, 'handleInputFocus', e);
-			}, false);
+			input.addEvent('focus', function(e) {
+				wrapDataListIfListExists(input, 'handleInputFocus', e);
+			}, events.HOLD);
 
 			// 焦点移除时隐藏列表
-			self.addEvent('blur', function(e) {
-				wrapDataListIfListExists(self, 'handleInputBlur', e);
-			}, false);
+			input.addEvent('blur', function(e) {
+				wrapDataListIfListExists(input, 'handleInputBlur', e);
+			}, events.HOLD);
 
 			// 键盘按键点击时的处理
-			self.addEvent('keydown', function(e) {
-				wrapDataListIfListExists(self, 'handleInputKeydown', e);
-			}, false);
+			input.addEvent('keydown', function(e) {
+				wrapDataListIfListExists(input, 'handleInputKeydown', e);
+			}, events.HOLD);
 
 			// keyup的时候才能正确处理字符输入
-			self.addEvent('keyup', function(e) {
-				wrapDataListIfListExists(self, 'handleInputKeyup', e);
-			}, false);
+			input.addEvent('keyup', function(e) {
+				wrapDataListIfListExists(input, 'handleInputKeyup', e);
+			}, events.HOLD);
+
+			return input;
 		};
 
 		/**
-		 * 定义只读property：list
-		 */
-		this.list = property(function(self) {
-			return self.getAttribute('list') || self.list;
-		});
-
-		/**
-		 * 如果list属性存在，则利用DataListWrapper的方法来处理事件
+		 * 如果data-list属性存在，则利用AutoCompleteWrapper的方法来处理事件
 		 * @param {HTMLInputElement} input 输入域
-		 * @param {String} methodName DataListWrapper中用于处理对应事件类型的处理函数
+		 * @param {String} methodName AutoCompleteWrapper中用于处理对应事件类型的处理函数
 		 * @param {Event}  e 事件对象
 		 */
-		function wrapDataListIfListExists(self, methodName, e) {
-			if (self.get('list')) {
+		function wrapDataListIfListExists(input, methodName, e) {
+			var datalist = input.getAttribute('data-list');
+			if (datalist) {
 				// 如果没有_datalistWrapper属性，说明还没有包装过
-				if (!self._datalistWrapper) {
-					self._datalistWrapper = new DataListWrapper(self);
+				if (!input._datalistWrapper) {
+					input._datalistWrapper = new AutoCompleteWrapper(input);
 				}
-				self._datalistWrapper[methodName](e);
+				input._datalistWrapper[methodName](e);
 			}
 		}
 	});	
@@ -57,12 +66,19 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 	// 为container的id属性添加标识，区分同时存在的多个datalist容器
 	var listIdCounter = 0;
 
+	// 匹配模式设置，ALL为全部显示，FIRST为匹配首字母，ANY为匹配任意位置
+	var MATCH = {
+		ALL: 0,
+		FIRST: 1,
+		ANY: 2
+	}
+
 	// 一些默认设置
 	var defaultOptions = {
 		maxHeight: 190,           // 容器最大高度
 		maxCharCount: 150,        // 最大字符数
 		dynamicData: false,       // 数据是否动态获取
-		matchFirst: false,        // 是否只显示以已输入信息开头的元素
+		matchMode: MATCH.ALL,     // 匹配模式
 		clearWhenMouseout: false  // 是否在鼠标离开容器时去除已选择项的选中样式
 	}
 
@@ -87,9 +103,9 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 
 	/**
 	 * datalist的封装类，所有datalist的操作都由此类完成
-	 * 将此类与DataList类分离开，减少往input上添加的不必要的属性
+	 * 将此类与AutoComplete类分离开，减少往input上添加的不必要的属性
 	 */
-	var DataListWrapper = new Class(function() {
+	var AutoCompleteWrapper = new Class(function() {
 
 		/**
 		 * 初始化方法，主要是禁用浏览器自带的自动提示、并初始化参数选项
@@ -111,9 +127,9 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 		 * 为list属性对应的datalist添加DOMNodeInserted事件监听，在添加节点后显示列表
 		 */
 		this.bindDOMNodeInsertEvent = function(self) {
-			var datalist = dom.id(self.input.get('list'));
+			var datalist = dom.id(self.input.getAttribute('data-list'));
 			if (!datalist) {
-				reportError(self.input.get('list') + ' 对应的datalist不存在');
+				reportError(datalist + ' 对应的datalist不存在');
 				return;
 			}
 
@@ -132,7 +148,7 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 				self.options.dynamicData = true;
 				self.showDataList();
 				self.focusToInput();
-			}, false);
+			}, events.HOLD);
 		};
 
 		/**
@@ -284,10 +300,16 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 			if (value != "") {
 				value = value.toLowerCase();
 				data = data.filter(function(ele) {
-					if (self.options.matchFirst) {
-						return ele.value.toLowerCase().indexOf(value) == 0;
-					} else {
-						return ele.value.toLowerCase().indexOf(value) != -1;
+					// 判断过滤模式
+					switch (self.options.matchMode) {
+						case MATCH.ALL:
+							return true;
+						case MATCH.FIRST:
+							return ele.value.toLowerCase().indexOf(value) == 0;
+						case MATCH.ANY:
+							return ele.value.toLowerCase().indexOf(value) != -1;
+						default:
+							return true;
 					}
 				});
 			}
@@ -369,7 +391,7 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 				var li = e.target;
 				self._highlighted = li;
 				addSelectStyle(li);
-			});
+			}, events.HOLD);
 
 			container.delegate('li', 'mouseout', function(e) {
 				var li = e.target;
@@ -378,7 +400,7 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 					removeSelectStyle(self._highlighted);
 					self._highlighted = null;
 				}
-			});
+			}, events.HOLD);
 
 			/** 避免多次为document绑定mousedown而设置的标志，jquery使用的是event.one的机制 */
 			self._bindedFlag = false;
@@ -394,12 +416,13 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 						if (target !== self && !isSubNode(target, self._container)) {
 							self._bindedFlag = false;
 							self._clickOnContainer = false;
+							self.focusFromContainer = false;
 							self.hideDataList();
 							document.removeEvent('mousedown', arguments.callee, false);
 						}
-					}, false);
+					}, events.HOLD);
 				}
-			}, false);
+			}, events.HOLD);
 
 			// 代理li的点击事件
 			container.delegate('li', 'click', function(e) {
@@ -407,7 +430,7 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 				self.focusFromContainer = true;
 				self.focusToInput();
 				self.hideDataList();
-			});
+			}, events.HOLD);
 		}
 
 		/**
@@ -420,7 +443,7 @@ object.add('dom.datalist', 'dom, ua, sys', function(exports, dom, ua, sys) {
 				return self.data;
 			}
 			// 获取datalist
-			var datalistId = self.input.get('list');
+			var datalistId = self.input.getAttribute('data-list');
 			if (!datalistId) {
 				reportError('不存在' + datalistId + '对应的datalist');
 				return [];

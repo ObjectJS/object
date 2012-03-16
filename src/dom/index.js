@@ -1,4 +1,4 @@
-object.add('dom', 'ua, events, string, dom/dd, dom/datalist, sys', function(exports, ua, events, string, dd, datalist, sys) {
+object.add('dom', 'ua, events, string, dom/dd, sys', function(exports, ua, events, string, dd, sys) {
 
 window.UID = 1;
 var storage = {};
@@ -1567,17 +1567,11 @@ this.TextBaseElement = new Class(exports.FormItemElement, function() {
 
 });
 
-var supportHTML5DataList = document.createElement('datalist').options != null;
-
 /**
  * input元素的包装类
  * @class
  */
 this.InputElement = new Class(exports.TextBaseElement, function() {
-
-	if (!supportHTML5DataList) {
-		Class.mixin(this, datalist.DataList);
-	}
 
 	/**
 	 * HTML5 formAction
