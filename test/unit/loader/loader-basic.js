@@ -142,26 +142,33 @@ test('add-basic', function() {
 test('add-usage', function() {
 	loader.add('a', function() {});
 	ok(loader.getModule('a'), 'a is added to loader.lib');
+	loader.remove('a');
+
 	loader.add('b', 'a', function() {});
 	ok(loader.getModule('b'), 'b is added to loader.lib');
+	loader.remove('b');
+
 	loader.add('c', 'a,b', function() {});
 	ok(loader.getModule('c'), 'c is added to loader.lib');
 	equal(loader.getModule('c').dependencies.length, 2, 'c dependencies a and b, so lib[c].dependencies.length = 2');
+	loader.remove('c');
 
 	loader.add('d/dd', 'a,b,c', function() {});
 	ok(loader.getModule('d/dd'), 'd.dd are added to loader.lib');
 	equal(loader.getModule('d/dd.js').dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
+	loader.remove('d', true);
 
 	loader.add('error1', 'a,b');
 	ok(loader.getModule('error1'), 'add module without context, should be added');
+	loader.remove('error1');
+
 	loader.add('error2', 'a', 'a');
 	ok(loader.getModule('error2'), 'add module with not-function context, should be added');
-	loader.remove('a');
-	loader.remove('b');
-	loader.remove('c');
-	loader.remove('d', true);
-	loader.remove('error1');
 	loader.remove('error2');
+
+	loader.add('a/b/index.js');
+	ok(loader.getModule('a/b'), 'add module with index.js, can get without index.js');
+
 });
 
 module('loader-basic-remove');
