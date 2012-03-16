@@ -290,30 +290,27 @@ this.Component = new Class(function() {
 
 	this.__mixins__ = [Element];
 
+	/**
+	 * 根据模板和选项生成一个节点
+	 */
+	this.createNode = function(self, template, options) {
+		var node, result, data = {};
+		// 组合options和defaultOption，生成node
+		// 传进来的优先于defaultOption
+		self.__defaultOptions.forEach(function(key) {
+			if (!(key in options)) data[key] = self.get(key);
+		});
+		object.extend(data, options);
+		result = string.substitute(template, data);
+		node = dom.Element.fromString(result);
+		return node;
+	};
+
+	/**
+	 * @param node 包装的节点
+	 * @param options 配置
+	 */
 	this.initialize = function(self, node, options) {
-		if (!node.nodeType) {
-			if (typeof node == 'string') {
-				node = {
-					template: node
-				};
-			}
-			var data = {};
-			self.__defaultOptions.forEach(function(key) {
-				if (options[key] === undefined) data[key] = self.get(key);
-			});
-			object.extend(data, options);
-
-			var tdata;
-			if (node.section) {
-				tdata = {};
-				tdata[node.section] = data;
-			} else {
-				tdata = data;
-			}
-			var str = string.substitute(node.template, tdata);
-			node = dom.Element.fromString(str);
-		}
-
 		self.__nodeMap = {}; // 相应node的uid对应component，用于在需要通过node找到component时使用
 		self.__rendered = {}; // 后来被加入的，而不是首次通过selector选择的node的引用
 
@@ -700,11 +697,8 @@ this.Component = new Class(function() {
 			});
 		}
 
-		var comp = new sub.type({
-			template: options.template || sub.template,
-			section: options.templateSection || sub.section
-		}, options);
-		var node = comp._node;
+		var node = self.createNode(options.template || sub.template, options);
+		var comp = new sub.type(node, options);
 
 		if (sub.single) {
 			self[name] = comp;
@@ -722,11 +716,10 @@ this.Component = new Class(function() {
 	/**
 	 * 设置subcomponent的template
 	 */
-	this.setTemplate = function(self, name, template, section) {
+	this.setTemplate = function(self, name, template) {
 		if (!self._options[name]) self._options[name] = {};
 		var options = self._options[name];
 		options.template = template;
-		options.templateSection = section;
 	};
 
 	/**
