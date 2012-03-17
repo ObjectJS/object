@@ -619,18 +619,28 @@ this.Component = new Class(function() {
 	 * @param value value
 	 */
 	this.setOption = options.overloadsetter(function(self, name, value) {
+
+		function setToComponent(comp) {
+			comp.__setOption(name, value);
+			comp.fireEvent('__option_change_' + name, {value: value});
+		}
+
 		// 由于overloadsetter是通过name是否为string来判断传递形式是name-value还是{name:value}的
 		// 在回调中为了性能需要直接传的parts，类型为数组，而不是字符串，因此无法通过回调用overloadsetter包装后的方法进行回调
 		(function(self, name, value) {
 			var parts = Array.isArray(name)? name : name.split('.');
+			var ref = self[parts[0]]; // 如果是已经创建好的组件，除了存储到_options，还要更新组件的option
 			if (parts.length > 1) {
 				exports.setOptionTo(self._options, parts, value);
-				if (self[parts[0]]) {
-					arguments.callee(self[parts[0]], parts.slice(1), value);
+				if (ref) {
+					arguments.callee(ref, parts.slice(1), value);
 				}
 			} else {
-				self.__setOption(name, value);
-				self.fireEvent('__option_change_' + name, {value: value});
+				if (self.constructor == exports.Components) {
+					self.forEach(setToComponent);
+				} else {
+					setToComponent(self);
+				}
 			}
 		})(self, name, value);
 	});
@@ -679,6 +689,10 @@ this.Component = new Class(function() {
 		}
 	};
 
+	this.dispose = function(self) {
+		self._node.dispose();
+	};
+
 	/**
 	 * 根据subs的type创建一个component，并加入到引用中，这一般是在renderXXX方法中进行调用
 	 * @param name
@@ -716,10 +730,9 @@ this.Component = new Class(function() {
 	/**
 	 * 设置subcomponent的template
 	 */
-	this.setTemplate = function(self, name, template) {
-		if (!self._options[name]) self._options[name] = {};
-		var options = self._options[name];
-		options.template = template;
+	this.setTemplate = function(self, name, template, section) {
+		self.setOption(name + '.template', template);
+		self.setOption(name + '.templateSection', section);
 	};
 
 	/**
