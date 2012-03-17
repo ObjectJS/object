@@ -1,4 +1,4 @@
-object.use('dom, ui, events', function(exports, dom, ui, events) {
+object.use('dom, ui/ui2, events', function(exports, dom, ui, events) {
 
 var StatusPublisherAddon = new Class(ui.Component, function() {
 
@@ -10,6 +10,7 @@ var StatusPublisherAddon = new Class(ui.Component, function() {
 	};
 
 });
+
 
 var SharePublisherAddon = new Class(ui.Component, function() {
 
@@ -65,9 +66,9 @@ var Publisher = new Class(ui.Component, function() {
 });
 
 var StatusDefaultPublisher = new Class(Publisher, function() {
-	ui.addon(this, PhotoPublisherAddon);
-	ui.addon(this, StatusPublisherAddon);
-	ui.addon(this, SharePublisherAddon);
+
+	//this.__mixins__ = [PhotoPublisherAddon, StatusPublisherAddon, SharePublisherAddon];
+	this.a = ui.option(0);
 
 	this._close = function(self) {
 		this.parent(self);
@@ -76,9 +77,14 @@ var StatusDefaultPublisher = new Class(Publisher, function() {
 });
 
 dom.ready(function() {
-	var c = new StatusDefaultPublisher(dom.getElement('#publisher'));
-	c.open(c.status);
-	c.test()
+	var c = new StatusDefaultPublisher(dom.getElement('#publisher'), {
+		a: 1
+	});
+	c.setOption('b.c.d.e.f', 2);
+	console.log(c.a, c.b);
+	console.log(c.getOption('b.c.d.e.f'))
+	//c.open(c.status);
+	//c.test()
 });
 
 });
