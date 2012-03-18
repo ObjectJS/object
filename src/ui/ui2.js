@@ -304,6 +304,10 @@ this.Component = new Class(function() {
 		self.__rendered = {}; // 后来被加入的，而不是首次通过selector选择的node的引用
 
 		self._node = dom.wrap(node);
+		if (node.compoment) {
+			throw new Error('一个元素只可以作为一个组件');
+		}
+		self._node.component = self;
 		self.__initOptions(options);
 		self.__initEvents();
 		self.__initSubs();
