@@ -95,7 +95,7 @@ var membergetter = function(name) {
 	var proto = this.prototype;
 	var properties = proto.__properties__;
 	if (name in cls) return cls[name];
-	if (name in properties) return properties[name];
+	if (properties && name in properties) return properties[name];
 	if (!name in proto) throw new Error('no member named ' + name + '.');
 	var member = proto[name];
 	if (!member) return member;
@@ -107,10 +107,11 @@ var membergetter = function(name) {
  * 判断是否存在成员
  * 会被放到cls.has
  */
-var hasmember = function(name) {
+var memberchecker = function(name) {
 	if (name == '@mixins') name = '__mixins__';
 	var proto = this.prototype;
-	return (name in this || name in proto || name in proto.__properties__);
+	var properties = proto.__properties__;
+	return (name in this || name in proto || (properties && name in properties));
 };
 
 /**
@@ -159,6 +160,10 @@ var ArrayClass, StringClass;
 
 var type = this.type = function() {
 };
+
+type.get = membergetter;
+type.has = memberchecker;
+type.set = membersetter;
 
 /**
  * 创建一个类的核心过程
@@ -412,7 +417,7 @@ Class.create = function() {
 	cls.__subclasses__ = subclassesgetter;
 	cls.__mixin__ = cls.set = membersetter;
 	cls.get = membergetter;
-	cls.has = hasmember;
+	cls.has = memberchecker;
 	return cls;
 };
 
