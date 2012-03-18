@@ -33,10 +33,14 @@ var overloadSetter = function(func, usePlural) {
  */
 var getter = function(prop) {
 	var property = this.__properties__[prop];
-	if (property && property.fget) {
+	if (!property) {
+		return this[prop];
+	}
+	else if (property.fget) {
 		return property.fget.call(this.__this__, this);
-	} else {
-		throw 'get not defined property ' + prop;
+	}
+	else {
+		throw 'get not allowed property ' + prop;
 	}
 };
 
@@ -47,10 +51,17 @@ var getter = function(prop) {
  */
 var setter = function(prop, value) {
 	var property = this.__properties__[prop];
-	if (property && property.fset) {
+	// 此prop不是property，直接赋值即可。
+	if (!property) {
+		this[prop] = value;
+	}
+	// 有fset
+	else if (property.fset) {
 		property.fset.call(this.__this__, this, value);
-	} else {
-		throw 'set not defined property ' + prop;
+	}
+	// 未设置fset，不允许set
+	else {
+		throw 'set not allowed property ' + prop;
 	}
 };
 
