@@ -79,6 +79,21 @@ test('__getattr__/__setattr__', function() {
 	equals(a.b, 1, 'ok')
 });
 
+test('__getattr__/__setattr__ in class', function() {
+	var M = new Class(function() {
+		this.__setattr__ = function(self, name, value) {
+			console.log(self, name, value)
+		}
+	});
+
+	var A = new Class(function() {
+		this.__metaclass__ = M;
+	});
+
+	A.set('fuck', 1);
+
+});
+
 test('set to null/0/""/undefined/NaN', function() {
 	var A = new Class(function() {});
 	A.set('a', null);

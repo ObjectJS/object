@@ -62,8 +62,8 @@ var getter = function(prop) {
  * 会被放到 cls.prototype.set
  */
 var setter = function(prop, value) {
-	if (this.__setattr__) {
-		this.__setattr__.call(this, prop, value);
+	if (Class.hasMember(this.__class__, '__setattr__')) {
+		this.__class__.get('__setattr__')(this, prop, value);
 	} else {
 		object.__setattr__(this, prop, value);
 	}
@@ -382,14 +382,13 @@ var Class = this.Class = function() {
 	// metaclass
 	var metaclass = dict.__metaclass__ || base.__metaclass__ || type;
 
-	if (!metaclass.__new__ || !metaclass.initialize) {
-		throw new Error('__metaclass__ should have __new__ method and initialize method');
-	}
 	var cls = metaclass.__new__(metaclass, null, base, dict);
 	if (!cls || typeof cls != 'function') {
 		throw new Error('__new__ method should return cls');
 	}
-	metaclass.initialize(cls, null, base, dict);
+	if (metaclass.initialize) {
+		metaclass.initialize(cls, null, base, dict);
+	}
 
 	return cls;
 };
