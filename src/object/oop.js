@@ -32,19 +32,19 @@ var overloadSetter = function(func, usePlural) {
  * 会被放到 cls.prototype.get
  */
 var getter = function(prop) {
-	var property;
-	// 已存在此成员
-	if (Class.hasMember(this.__class__, prop)) {
-		property = this.__properties__[prop];
-		if (!property) {
-			return this[prop];
-		}
-		else if (property.fget) {
+	var property = this.__properties__[prop];
+	// property
+	if (property) {
+		if (property.fget) {
 			return property.fget.call(this.__this__, this);
 		}
 		else {
 			throw new Error('get not allowed property ' + prop);
 		}
+	}
+	// 已存在此成员
+	else if (this[prop]) {
+		return this[prop];
 	}
 	// 调用getattr
 	else if (this.__getattr__) {
@@ -61,13 +61,13 @@ var getter = function(prop) {
  * obj.set(prop_name, value)
  * 会被放到 cls.prototype.set
  */
-var setter = function(prop, value) {
+var setter = overloadSetter(function(prop, value) {
 	if (Class.hasMember(this.__class__, '__setattr__')) {
 		this.__class__.get('__setattr__')(this, prop, value);
 	} else {
 		object.__setattr__(this, prop, value);
 	}
-};
+});
 
 object.__setattr__ = function(obj, prop, value) {
 	var property = obj.__properties__[prop];
@@ -120,86 +120,10 @@ var hasmember = function(name) {
  * 子类不会被覆盖
  */
 var membersetter = overloadSetter(function(name, member) {
-	var cls = this;
-	var proto = cls.prototype;
-	var properties = proto.__properties__;
-	var subs = cls.__subclassesarray__;
-	var constructing = cls.__constructing__;
-
-	if (['__new__', '__this__', '__base__', '@mixins', '__mixins__'].indexOf(name) != -1) {
-		if (!member || (typeof member != 'object' && typeof member != 'function')) {
-			return;
-		}
-	}
-	
-	// 类构建完毕后才进行set，需要先删除之前的成员
-	delete cls[name];
-	delete proto[name];
-	delete properties[name];
-
-	// 这里的member指向new Class参数的书写的对象/函数
-	if (name == '@mixins') {
-		// 避免@mixins与Class.mixin设置的值相互覆盖
-		name = '__mixins__';
-		if (cls[name]) {
-			cls[name] = cls[name].concat(member);
-		} else {
-			cls[name] = member;
-		}
-	} else if (['__new__', '__metaclass__', '__mixins__'].indexOf(name) != -1) {
-		if (member && (typeof member == 'object' || typeof member == 'function')) {
-			cls[name] = member;
-		}
-
-	} else if (['__this__', '__base__'].indexOf(name) != -1) {
-		cls[name] = proto[name] = member;
-	}
-	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
-	else if (member == null) {
-		proto[name] = member;
-	}
-	// 先判断最常出现的instancemethod
-	// this.a = function() {}
-	else if (member.__class__ === undefined && typeof member == 'function') {
-		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
-		member.__name__ = name;
-		proto[name] = instancemethod(member);
-		proto[name].__name__ = name;
-		// 初始化方法放在cls上，metaclass会从cls上进行调用
-		if (name == 'initialize') {
-			cls[name] = instancemethod(member, cls);
-		}
-	}
-	// this.a = property(function fget() {}, function fset() {})
-	else if (member.__class__ === property) {
-		member.__name__ = name;
-		properties[name] = member;
-		// 当prototype覆盖instancemethod/classmethod/staticmethod时，需要去除prototype上的属性
-		proto[name] = undefined;
-	}
-	// this.a = classmethod(function() {})
-	else if (member.__class__ === classmethod) {
-		member.im_func.__name__ = name;
-		member.__name__ = name;
-		cls[name] = proto[name] = member;
-	}
-	// this.a = staticmethod(function() {})
-	else if (member.__class__ === staticmethod) {
-		member.im_func.__name__ = name;
-		member.__name__ = name;
-		cls[name] = proto[name] = member.im_func;
-	}
-	// this.a = someObject
-	else {
-		proto[name] = member;
-	}
-
-	// 所有子类cls上加入
-	if (!constructing && name in cls && subs) {
-		subs.forEach(function(sub) {
-			// !(name in sub) 与 !name in sub 得到的结果不一样
-			if (!(name in sub)) sub.set(name, member);
-		});
+	if (Class.hasMember(this.__class__, '__setattr__')) {
+		this.__class__.get('__setattr__')(this, name, member);
+	} else {
+		type.__setattr__(this, name, member);
 	}
 });
 
@@ -310,7 +234,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 		}
 	});
 	cls.__new__ = base.__new__;
-	cls.__metaclass__ = base.__metaclass__;
+	cls.__metaclass__ = metaclass;
 
 	// Dict
 	cls.set(dict);
@@ -340,6 +264,89 @@ type.__new__ = function(metaclass, name, base, dict) {
 	cls.prototype._set = nativesetter;
 
 	return cls;
+};
+
+type.__setattr__ = function(cls, name, member) {
+	var proto = cls.prototype;
+	var properties = proto.__properties__;
+	var subs = cls.__subclassesarray__;
+	var constructing = cls.__constructing__;
+
+	if (['__new__', '__this__', '__base__', '@mixins', '__mixins__'].indexOf(name) != -1) {
+		if (!member || (typeof member != 'object' && typeof member != 'function')) {
+			return;
+		}
+	}
+	
+	// 类构建完毕后才进行set，需要先删除之前的成员
+	delete cls[name];
+	delete proto[name];
+	delete properties[name];
+
+	// 这里的member指向new Class参数的书写的对象/函数
+	if (name == '@mixins') {
+		// 避免@mixins与Class.mixin设置的值相互覆盖
+		name = '__mixins__';
+		if (cls[name]) {
+			cls[name] = cls[name].concat(member);
+		} else {
+			cls[name] = member;
+		}
+	} else if (['__new__', '__metaclass__', '__mixins__'].indexOf(name) != -1) {
+		if (member && (typeof member == 'object' || typeof member == 'function')) {
+			cls[name] = member;
+		}
+
+	} else if (['__this__', '__base__'].indexOf(name) != -1) {
+		cls[name] = proto[name] = member;
+	}
+	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
+	else if (member == null) {
+		proto[name] = member;
+	}
+	// 先判断最常出现的instancemethod
+	// this.a = function() {}
+	else if (member.__class__ === undefined && typeof member == 'function') {
+		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
+		member.__name__ = name;
+		proto[name] = instancemethod(member);
+		proto[name].__name__ = name;
+		// 初始化方法放在cls上，metaclass会从cls上进行调用
+		if (name == 'initialize') {
+			cls[name] = instancemethod(member, cls);
+		}
+	}
+	// this.a = property(function fget() {}, function fset() {})
+	else if (member.__class__ === property) {
+		member.__name__ = name;
+		properties[name] = member;
+		// 当prototype覆盖instancemethod/classmethod/staticmethod时，需要去除prototype上的属性
+		proto[name] = undefined;
+	}
+	// this.a = classmethod(function() {})
+	else if (member.__class__ === classmethod) {
+		member.im_func.__name__ = name;
+		member.__name__ = name;
+		cls[name] = proto[name] = member;
+	}
+	// this.a = staticmethod(function() {})
+	else if (member.__class__ === staticmethod) {
+		member.im_func.__name__ = name;
+		member.__name__ = name;
+		cls[name] = proto[name] = member.im_func;
+	}
+	// this.a = someObject
+	else {
+		proto[name] = member;
+	}
+
+	// 所有子类cls上加入
+	if (!constructing && name in cls && subs) {
+		subs.forEach(function(sub) {
+			// !(name in sub) 与 !name in sub 得到的结果不一样
+			if (!(name in sub)) sub.set(name, member);
+		});
+	}
 };
 
 type.initialize = function() {

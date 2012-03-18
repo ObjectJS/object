@@ -50,6 +50,13 @@ test('getter/setter basic', function() {
 	equal(A.get('b'), 2, 'cls.get is ok, because A.b=2, so A.get(b) is 2');
 	A.set('b', 4);
 	equal(A.get('b'), 4, 'A.get(b) should be 4 after A.set(b, 4)');
+
+	// mutiple
+	a.set({
+		'c': 1,
+		'd': 1
+	});
+	ok(a.get('c') == 1 && a.get('d') == 1, 'mutiple set ok.');
 });
 
 test('__getattr__/__setattr__', function() {
