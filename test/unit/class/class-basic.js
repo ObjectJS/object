@@ -89,7 +89,7 @@ test('__getattr__/__setattr__', function() {
 test('__getattr__/__setattr__ in class', function() {
 	var M = new Class(function() {
 		this.__setattr__ = function(self, name, value) {
-			console.log(self, name, value)
+			type.__setattr__(self, name, value);
 		}
 	});
 
@@ -98,6 +98,7 @@ test('__getattr__/__setattr__ in class', function() {
 	});
 
 	A.set('fuck', 1);
+	console.log(A.get('fuck'))
 
 });
 

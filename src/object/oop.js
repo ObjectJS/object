@@ -121,11 +121,7 @@ var memberchecker = function(name) {
  * 子类不会被覆盖
  */
 var membersetter = overloadSetter(function(name, member) {
-	if (Class.hasMember(this.__class__, '__setattr__')) {
-		this.__class__.get('__setattr__')(this, name, member);
-	} else {
-		type.__setattr__(this, name, member);
-	}
+	this.__class__.get('__setattr__')(this, name, member);
 });
 
 /**
@@ -165,6 +161,8 @@ type.get = membergetter;
 type.has = memberchecker;
 type.set = membersetter;
 
+type.__class__ = type;
+
 /**
  * 创建一个类的核心过程
  */
@@ -193,6 +191,10 @@ type.__new__ = function(metaclass, name, base, dict) {
 			}
 		}
 	}
+	cls.__new__ = base.__new__;
+	cls.__setattr__ = base.__setattr__;
+	cls.__metaclass__ = metaclass;
+	cls.__class__ = metaclass;
 	cls.set('__base__', base);
 	// 支持 this.parent 调用父级同名方法
 	cls.set('__this__', {
@@ -238,8 +240,6 @@ type.__new__ = function(metaclass, name, base, dict) {
 			}
 		}
 	});
-	cls.__new__ = base.__new__;
-	cls.__metaclass__ = metaclass;
 
 	// Dict
 	cls.set(dict);
