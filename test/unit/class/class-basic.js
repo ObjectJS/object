@@ -52,6 +52,33 @@ test('getter/setter basic', function() {
 	equal(A.get('b'), 4, 'A.get(b) should be 4 after A.set(b, 4)');
 });
 
+test('__getattr__/__setattr__', function() {
+	expect(5);
+	var A = new Class(function() {
+		this.__getattr__ = function(self, name) {
+			if (name == 'a') {
+				ok(false, 'get an exists attr, __getattr__ will not called.');
+			}
+			if (name == 'b') {
+				ok(true, 'get an unexists attr, __getattr__ will called.');
+			}
+		};
+		this.__setattr__ = function(self, name, value) {
+			ok(true, 'set an attr will always call __setattr__.');
+			object.__setattr__(self, name, value);
+		};
+		this.a = 1;
+	});
+
+	var a = new A();
+	a.get('a'); // will not call
+	a.get('b'); // will call
+	a.set('a', 1) // will call
+	a.set('b', 1) // will call
+	equals(a.a, 1, 'ok')
+	equals(a.b, 1, 'ok')
+});
+
 test('set to null/0/""/undefined/NaN', function() {
 	var A = new Class(function() {});
 	A.set('a', null);
@@ -337,7 +364,7 @@ test('set after class instance is created', function() {
 	equal(a.get('e'), 1, 'e is an property, get(e) ok');
 	A.set('e', 2);
 	try {
-		equal(a.get('e'), 1, 'e is an property, get(e) ok');
+		equal(a.get('e'), 2, 'e is an property, get(e) ok');
 	} catch (e) {
 		ok(true, 'A.set changed the behavior of a.get(e), even after instance is created : ' + e);
 	}

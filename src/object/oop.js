@@ -32,15 +32,27 @@ var overloadSetter = function(func, usePlural) {
  * 会被放到 cls.prototype.get
  */
 var getter = function(prop) {
-	var property = this.__properties__[prop];
-	if (!property) {
-		return this[prop];
+	var property;
+	// 已存在此成员
+	if (Class.hasMember(this.__class__, prop)) {
+		property = this.__properties__[prop];
+		if (!property) {
+			return this[prop];
+		}
+		else if (property.fget) {
+			return property.fget.call(this.__this__, this);
+		}
+		else {
+			throw new Error('get not allowed property ' + prop);
+		}
 	}
-	else if (property.fget) {
-		return property.fget.call(this.__this__, this);
+	// 调用getattr
+	else if (this.__getattr__) {
+		this.__getattr__.call(this, prop);
 	}
+	// 无此成员，报错
 	else {
-		throw 'get not allowed property ' + prop;
+		throw new Error('member not found ' + prop);
 	}
 };
 
@@ -50,20 +62,28 @@ var getter = function(prop) {
  * 会被放到 cls.prototype.set
  */
 var setter = function(prop, value) {
-	var property = this.__properties__[prop];
+	if (this.__setattr__) {
+		this.__setattr__.call(this, prop, value);
+	} else {
+		object.__setattr__(this, prop, value);
+	}
+};
+
+object.__setattr__ = function(obj, prop, value) {
+	var property = obj.__properties__[prop];
 	// 此prop不是property，直接赋值即可。
 	if (!property) {
-		this[prop] = value;
+		obj[prop] = value;
 	}
 	// 有fset
 	else if (property.fset) {
-		property.fset.call(this.__this__, this, value);
+		property.fset.call(obj.__this__, obj, value);
 	}
 	// 未设置fset，不允许set
 	else {
 		throw 'set not allowed property ' + prop;
 	}
-};
+}
 
 /**
  * 从类上获取成员
@@ -430,8 +450,21 @@ Class.mixin = function(dict, cls) {
 	dict.__mixins__.push(cls);
 };
 
+/**
+ * 是否存在property
+ */
 Class.hasProperty = function(obj, name) {
 	return (obj && obj.__properties__) ? (name in obj.__properties__) : false;
+};
+
+/**
+ * 是否存在类成员
+ */
+Class.hasMember = function(cls, name) {
+	if (!cls) return false;
+	if (name in cls.prototype) return true;
+	if (name in cls.prototype.__properties__) return true;
+	return false;
 };
 
 /**

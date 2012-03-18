@@ -385,6 +385,11 @@ this.ElementClassList = new Class(Array, function() {
 	 * @param token class
 	 */
 	this.toggle = function(self, token) {
+		if (!token) {
+			throw new Error('token不能为空');
+			return;
+		}
+		if (typeof token != 'string') return;
 		if (self.contains(token)) self.remove(token);
 		else self.add(token);
 	};
@@ -394,6 +399,11 @@ this.ElementClassList = new Class(Array, function() {
 	 * @param token class
 	 */
 	this.add = function(self, token) {
+		if (!token) {
+			throw new Error('token不能为空');
+			return;
+		}
+		if (typeof token != 'string') return;
 		if (!self.contains(token)) {
 			self._ele.className = (self._ele.className + ' ' + token).trim(); // 根据规范，不允许重复添加
 			self._loadClasses();
@@ -405,7 +415,11 @@ this.ElementClassList = new Class(Array, function() {
 	 * @param token class
 	 */
 	this.remove = function(self, token) {
-		if (!token || typeof token != 'string') return;
+		if (!token) {
+			throw new Error('token不能为空');
+			return;
+		}
+		if (typeof token != 'string') return;
 		//为了避免出现classAdded中remove class的情况，增加处理
 		if (!self.contains(token)) return;
 		self._ele.className = self._ele.className.replace(new RegExp(token.trim(), 'i'), '').trim();
@@ -417,6 +431,11 @@ this.ElementClassList = new Class(Array, function() {
 	 * @param token class
 	 */
 	this.contains = function(self, token) {
+		if (!token) {
+			throw new Error('token不能为空');
+			return false;
+		}
+		if (typeof token != 'string') return false;
 		if (self._classes.indexOf(token) != -1) return true;
 		else return false;
 	};
@@ -833,6 +852,9 @@ this.Element = new Class(function() {
 	 * @param name
 	 */
 	this.addClass = function(self, name) {
+		if (!name) {
+			return;
+		}
 		self.classList.add(name);
 	};
 
@@ -841,6 +863,9 @@ this.Element = new Class(function() {
 	 * @param name
 	 */
 	this.removeClass = function(self, name) {
+		if (!name) {
+			return;
+		}
 		self.classList.remove(name);
 	};
 
@@ -849,6 +874,9 @@ this.Element = new Class(function() {
 	 * @param name
 	 */
 	this.toggleClass = function(self, name) {
+		if (!name) {
+			return;
+		}
 		self.classList.toggle(name);
 	};
 
@@ -857,6 +885,9 @@ this.Element = new Class(function() {
 	 * @param name
 	 */
 	this.hasClass = function(self, name) {
+		if (!name) {
+			return false;
+		}
 		return self.classList.contains(name);
 	};
 
