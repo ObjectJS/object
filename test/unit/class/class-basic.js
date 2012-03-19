@@ -50,6 +50,13 @@ test('getter/setter basic', function() {
 	equal(A.get('b'), 2, 'cls.get is ok, because A.b=2, so A.get(b) is 2');
 	A.set('b', 4);
 	equal(A.get('b'), 4, 'A.get(b) should be 4 after A.set(b, 4)');
+
+	// mutiple
+	a.set({
+		'c': 1,
+		'd': 1
+	});
+	ok(a.get('c') == 1 && a.get('d') == 1, 'mutiple set ok.');
 });
 
 test('__getattr__/__setattr__', function() {
@@ -77,6 +84,25 @@ test('__getattr__/__setattr__', function() {
 	a.set('b', 1) // will call
 	equals(a.a, 1, 'ok')
 	equals(a.b, 1, 'ok')
+});
+
+test('__getattr__/__setattr__ in class', function() {
+	var M = new Class(type, function() {
+		this.__setattr__ = function(self, name, value) {
+			if (name == 'test') {
+				ok(true, '__setattr__ called.')
+			}
+			type.__setattr__(self, name, value);
+		}
+	});
+
+	var A = new Class(function() {
+		this.__metaclass__ = M;
+	});
+
+	A.set('test', 1);
+	equal(A.get('test'), 1, 'value setted.');
+
 });
 
 test('set to null/0/""/undefined/NaN', function() {
@@ -128,7 +154,7 @@ test('set special property : __metaclass__', function() {
 	});
 
 	A.set('__metaclass__', 'string');
-	equal(A.get('__metaclass__'), undefined, '__metaclass__ is not changed if set to string');
+	equal(A.get('__metaclass__'), undefined, '__metaclass__ is changed if set to string');
 
 	try {
 		var B = new Class(A, function() {});

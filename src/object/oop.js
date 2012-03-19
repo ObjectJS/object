@@ -32,19 +32,19 @@ var overloadSetter = function(func, usePlural) {
  * 会被放到 cls.prototype.get
  */
 var getter = function(prop) {
-	var property;
-	// 已存在此成员
-	if (Class.hasMember(this.__class__, prop)) {
-		property = this.__properties__[prop];
-		if (!property) {
-			return this[prop];
-		}
-		else if (property.fget) {
+	var property = this.__properties__[prop];
+	// property
+	if (property) {
+		if (property.fget) {
 			return property.fget.call(this.__this__, this);
 		}
 		else {
 			throw new Error('get not allowed property ' + prop);
 		}
+	}
+	// 已存在此成员
+	else if (this[prop]) {
+		return this[prop];
 	}
 	// 调用getattr
 	else if (this.__getattr__) {
@@ -61,13 +61,13 @@ var getter = function(prop) {
  * obj.set(prop_name, value)
  * 会被放到 cls.prototype.set
  */
-var setter = function(prop, value) {
-	if (this.__setattr__) {
+var setter = overloadSetter(function(prop, value) {
+	if ('__setattr__' in this) {
 		this.__setattr__.call(this, prop, value);
 	} else {
 		object.__setattr__(this, prop, value);
 	}
-};
+});
 
 object.__setattr__ = function(obj, prop, value) {
 	var property = obj.__properties__[prop];
@@ -95,7 +95,7 @@ var membergetter = function(name) {
 	var proto = this.prototype;
 	var properties = proto.__properties__;
 	if (name in cls) return cls[name];
-	if (name in properties) return properties[name];
+	if (properties && name in properties) return properties[name];
 	if (!name in proto) throw new Error('no member named ' + name + '.');
 	var member = proto[name];
 	if (!member) return member;
@@ -107,10 +107,11 @@ var membergetter = function(name) {
  * 判断是否存在成员
  * 会被放到cls.has
  */
-var hasmember = function(name) {
+var memberchecker = function(name) {
 	if (name == '@mixins') name = '__mixins__';
 	var proto = this.prototype;
-	return (name in this || name in proto || name in proto.__properties__);
+	var properties = proto.__properties__;
+	return (name in this || name in proto || (properties && name in properties));
 };
 
 /**
@@ -120,13 +121,173 @@ var hasmember = function(name) {
  * 子类不会被覆盖
  */
 var membersetter = overloadSetter(function(name, member) {
-	var cls = this;
+	this.__class__.get('__setattr__')(this, name, member);
+});
+
+/**
+ * 对于支持defineProperty的浏览器，可考虑将此setter不设置任何动作
+ */
+var nativesetter = function(prop, value) {
+	this[prop] = value;
+};
+
+/**
+ * 获取一个类的子类
+ * 会被放到 cls.__subclasses__
+ */
+var subclassesgetter = function() {
+	return this.__subclassesarray__;
+};
+
+/**
+ * this.parent
+ */
+var parent = function() {
+	// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
+	var name = arguments.callee.caller.__name__;
+	if (!name) {
+		throw new Error('can not get function name when this.parent called');
+	}
+
+	// 拥有此方法的代码书写的类
+	var ownCls = this;
+
+	// parent应该调用“代码书写的方法所在的类的父同名方法”
+	// 而不是方法调用者实例的类的父同名方法
+	// 比如C继承于B继承于A，当C的实例调用从B继承来的某方法时，其中调用了this.parent，应该直接调用到A上的同名方法，而不是B的。
+	// 因此，这里通过hasOwnProperty，从当前类开始，向上找到同名方法的原始定义类
+	while (ownCls && !ownCls.prototype.hasOwnProperty(name)) {
+		ownCls = ownCls.__base__;
+	}
+
+	var base = ownCls.__base__;
+	var mixins = ownCls.__mixins__;
+	var member, owner;
+
+	// 先从base中找同名func
+	if (base && base.get && base.has(name)) {
+		owner = base;
+		member = base.get(name);
+	}
+	// 再从mixins中找同名func
+	else if (mixins && mixins.length && mixins.some(function(mixin) {
+		owner = mixin;
+		return mixin.has(name);
+	})) {
+		member = owner.get(name);
+	}
+
+	if (!member || typeof member != 'function') {
+		throw new Error('no such method in parent : \'' + name + '\'');
+	} else {
+		return member.apply(base, arguments);
+	}
+};
+
+// IE不可以通过prototype = new Array的方式使function获得数组功能。
+var _nativeExtendable = (function() {
+	// IE和webkit没有统一访问方法（Array.forEach)，避免使用native extend
+	if (!Array.push) return false;
+
+	// 理论上走不到
+	var a = function() {};
+	a.prototype = new Array;
+	var b = new a;
+	b.push(null);
+	return !!b.length;
+})();
+
+var ArrayClass, StringClass;
+
+var type = this.type = function() {
+};
+
+type.get = membergetter;
+type.has = memberchecker;
+type.set = membersetter;
+
+type.__class__ = type;
+
+/**
+ * 创建一个类的核心过程
+ */
+type.__new__ = function(metaclass, name, base, dict) {
+	var cls = Class.create();
+
+	cls.__constructing__ = true;
+
+	// 继承的核心
+	cls.prototype = Class.getInstance(base);
+	cls.prototype.constructor = cls;
+	// Array / String 没有 subclass，需要先判断一下是否存在 subclassesarray
+	if (base.__subclassesarray__) base.__subclassesarray__.push(cls);
+
+	// Propeties
+	var proto = cls.prototype;
+	// 有可能已经继承了base的__properties__了
+	var baseProperties = proto.__properties__ || {};
+	proto.__properties__ = object.extend({}, baseProperties);
+
+	// object有其他成员了，略过
+	if (base !== object && base !== type) {
+		for (var property in base) {
+			// 过滤双下划线开头结尾的系统成员
+			// 过滤已存在成员
+			if (property.indexOf('__') != 0 && property.slice(-2) != '__' && !(property in cls)) {
+				cls[property] = base[property];
+			}
+		}
+	}
+	cls.__new__ = metaclass.__new__;
+	cls.__setattr__ = metaclass.__setattr__;
+	cls.__metaclass__ = metaclass;
+	cls.__class__ = metaclass;
+	cls.set('__base__', base);
+	// 支持 this.parent 调用父级同名方法
+	cls.set('__this__', {
+		base: base,
+		parent: parent.bind(cls)
+	});
+
+	// Dict
+	cls.set(dict);
+
+	// Mixin
+	var mixins = cls.__mixins__;
+	if (mixins) {
+		mixins.forEach(function(mixin) {
+			Class.keys(mixin).forEach(function(name) {
+				if (cls.has(name)) return; // 不要覆盖自定义的
+
+				var member = mixin.get(name);
+
+				if (typeof member == 'function' && member.__class__ === instancemethod) {
+					cls.set(name, member.im_func);
+				} else {
+					cls.set(name, member);
+				}
+			});
+		});
+	}
+	delete cls.__constructing__;
+
+	cls.__dict__ = dict;
+	cls.prototype.get = getter;
+	cls.prototype.set = setter;
+	cls.prototype._set = nativesetter;
+
+	return cls;
+};
+
+type.__setattr__ = function(cls, name, member) {
+	if (name == '@mixins') name = '__mixins__';
+
 	var proto = cls.prototype;
 	var properties = proto.__properties__;
 	var subs = cls.__subclassesarray__;
 	var constructing = cls.__constructing__;
 
-	if (['__new__', '__this__', '__base__', '@mixins', '__mixins__'].indexOf(name) != -1) {
+	if (['__mixins__', '__new__', '__this__', '__base__'].indexOf(name) != -1) {
 		if (!member || (typeof member != 'object' && typeof member != 'function')) {
 			return;
 		}
@@ -138,20 +299,13 @@ var membersetter = overloadSetter(function(name, member) {
 	delete properties[name];
 
 	// 这里的member指向new Class参数的书写的对象/函数
-	if (name == '@mixins') {
-		// 避免@mixins与Class.mixin设置的值相互覆盖
-		name = '__mixins__';
-		if (cls[name]) {
-			cls[name] = cls[name].concat(member);
-		} else {
-			cls[name] = member;
-		}
-	} else if (['__new__', '__metaclass__', '__mixins__'].indexOf(name) != -1) {
+	if (['__new__', '__metaclass__', '__mixins__'].indexOf(name) != -1) {
 		if (member && (typeof member == 'object' || typeof member == 'function')) {
 			cls[name] = member;
 		}
-
-	} else if (['__this__', '__base__'].indexOf(name) != -1) {
+	}
+	// 
+	else if (['__this__', '__base__'].indexOf(name) != -1) {
 		cls[name] = proto[name] = member;
 	}
 	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
@@ -201,145 +355,6 @@ var membersetter = overloadSetter(function(name, member) {
 			if (!(name in sub)) sub.set(name, member);
 		});
 	}
-});
-
-/**
- * 对于支持defineProperty的浏览器，可考虑将此setter不设置任何动作
- */
-var nativesetter = function(prop, value) {
-	this[prop] = value;
-};
-
-/**
- * 获取一个类的子类
- * 会被放到 cls.__subclasses__
- */
-var subclassesgetter = function() {
-	return this.__subclassesarray__;
-};
-
-// IE不可以通过prototype = new Array的方式使function获得数组功能。
-var _nativeExtendable = (function() {
-	// IE和webkit没有统一访问方法（Array.forEach)，避免使用native extend
-	if (!Array.push) return false;
-
-	// 理论上走不到
-	var a = function() {};
-	a.prototype = new Array;
-	var b = new a;
-	b.push(null);
-	return !!b.length;
-})();
-
-var ArrayClass, StringClass;
-
-var type = this.type = function() {
-};
-
-/**
- * 创建一个类的核心过程
- */
-type.__new__ = function(metaclass, name, base, dict) {
-	var cls = Class.create();
-
-	cls.__constructing__ = true;
-
-	// 继承的核心
-	cls.prototype = Class.getInstance(base);
-	cls.prototype.constructor = cls;
-	// Array / String 没有 subclass，需要先判断一下是否存在 subclassesarray
-	if (base.__subclassesarray__) base.__subclassesarray__.push(cls);
-
-	// Propeties
-	var proto = cls.prototype;
-	// 有可能已经继承了base的__properties__了
-	var baseProperties = proto.__properties__ || {};
-	proto.__properties__ = object.extend({}, baseProperties);
-
-	if (base !== type) {
-		for (var property in base) {
-			// 过滤双下划线开头的系统成员和私有成员
-			if (property.indexOf('__') != 0 && cls[property] === undefined) {
-				cls[property] = base[property];
-			}
-		}
-	}
-	cls.set('__base__', base);
-	// 支持 this.parent 调用父级同名方法
-	cls.set('__this__', {
-		base: base,
-		parent: function() {
-			// 这里必须取一个cls的别名，否则在while循环中赋值的cls会影响所有的parent方法调用
-			var clsAlias = cls;
-			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
-			var name = arguments.callee.caller.__name__;
-			if (!name) {
-				throw new Error('can not get function name when this.parent called');
-			}
-
-			// parent应该调用“代码书写的方法所在的类的父同名方法”
-			// 而不是方法调用者实例的类的父同名方法
-			// 比如C继承于B继承于A，当C的实例调用从B继承来的某方法时，其中调用了this.parent，应该直接调用到A上的同名方法，而不是B的。
-			// 因此，这里通过hasOwnProperty，从当前类开始，向上找到同名方法的原始定义类
-			while (clsAlias && !clsAlias.prototype.hasOwnProperty(name)) {
-				clsAlias = clsAlias.__base__;
-			}
-
-			var base = clsAlias.__base__;
-			var mixins = clsAlias.__mixins__;
-			var member, owner;
-
-			// 先从base中找同名func
-			if (base && base.get && base.has(name)) {
-				owner = base;
-				member = base.get(name);
-			}
-			// 再从mixins中找同名func
-			else if (mixins && mixins.length && mixins.some(function(mixin) {
-				owner = mixin;
-				return mixin.has(name);
-			})) {
-				member = owner.get(name);
-			}
-
-			if (!member || typeof member != 'function') {
-				throw new Error('no such method in parent : \'' + name + '\'');
-			} else {
-				return member.apply(base, arguments);
-			}
-		}
-	});
-	cls.__new__ = base.__new__;
-	cls.__metaclass__ = base.__metaclass__;
-
-	// Dict
-	cls.set(dict);
-
-	// Mixin
-	var mixins = cls.__mixins__;
-	if (mixins) {
-		mixins.forEach(function(mixin) {
-			Class.keys(mixin).forEach(function(name) {
-				if (cls.has(name)) return; // 不要覆盖自定义的
-
-				var member = mixin.get(name);
-
-				if (typeof member == 'function' && member.__class__ === instancemethod) {
-					cls.set(name, member.im_func);
-				} else {
-					cls.set(name, member);
-				}
-			});
-		});
-	}
-	delete cls.__constructing__;
-
-	cls.__dict__ = dict;
-	cls.prototype.get = getter;
-	cls.prototype.set = setter;
-	cls.prototype._set = nativesetter;
-
-	return cls;
 };
 
 type.initialize = function() {
@@ -350,10 +365,11 @@ type.initialize = function() {
  * @namespace Class
  */
 var Class = this.Class = function() {
+
 	var length = arguments.length;
 	if (length < 1) throw new Error('bad arguments');
 	// 父类
-	var base = length > 1? arguments[0] : type;
+	var base = length > 1? arguments[0] : object;
 	if (typeof base != 'function' && typeof base != 'object') {
 		throw new Error('base is not function or object');
 	}
@@ -382,14 +398,13 @@ var Class = this.Class = function() {
 	// metaclass
 	var metaclass = dict.__metaclass__ || base.__metaclass__ || type;
 
-	if (!metaclass.__new__ || !metaclass.initialize) {
-		throw new Error('__metaclass__ should have __new__ method and initialize method');
-	}
 	var cls = metaclass.__new__(metaclass, null, base, dict);
 	if (!cls || typeof cls != 'function') {
 		throw new Error('__new__ method should return cls');
 	}
-	metaclass.initialize(cls, null, base, dict);
+	if (metaclass.initialize) {
+		metaclass.initialize(cls, null, base, dict);
+	}
 
 	return cls;
 };
@@ -406,7 +421,7 @@ Class.create = function() {
 	cls.__subclasses__ = subclassesgetter;
 	cls.__mixin__ = cls.set = membersetter;
 	cls.get = membergetter;
-	cls.has = hasmember;
+	cls.has = memberchecker;
 	return cls;
 };
 
