@@ -140,7 +140,7 @@ this.option = function(defaultValue, getter, setter) {
 };
 
 // metaclass
-this.component = new Class(function() {
+this.component = new Class(type, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 
