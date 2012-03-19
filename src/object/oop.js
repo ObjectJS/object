@@ -280,7 +280,7 @@ type.__setattr__ = function(cls, name, member) {
 	var subs = cls.__subclassesarray__;
 	var constructing = cls.__constructing__;
 
-	if (['__new__', '__this__', '__base__', '@mixins', '__mixins__'].indexOf(name) != -1) {
+	if (['__new__', '__this__', '__base__', '__mixins__'].indexOf(name) != -1) {
 		if (!member || (typeof member != 'object' && typeof member != 'function')) {
 			return;
 		}
@@ -292,15 +292,7 @@ type.__setattr__ = function(cls, name, member) {
 	delete properties[name];
 
 	// 这里的member指向new Class参数的书写的对象/函数
-	if (name == '@mixins') {
-		// 避免@mixins与Class.mixin设置的值相互覆盖
-		name = '__mixins__';
-		if (cls[name]) {
-			cls[name] = cls[name].concat(member);
-		} else {
-			cls[name] = member;
-		}
-	} else if (['__new__', '__metaclass__', '__mixins__'].indexOf(name) != -1) {
+	if (['__new__', '__metaclass__', '__mixins__'].indexOf(name) != -1) {
 		if (member && (typeof member == 'object' || typeof member == 'function')) {
 			cls[name] = member;
 		}
