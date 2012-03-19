@@ -280,7 +280,7 @@ type.__setattr__ = function(cls, name, member) {
 	var subs = cls.__subclassesarray__;
 	var constructing = cls.__constructing__;
 
-	if (['__new__', '__this__', '__base__', '__mixins__'].indexOf(name) != -1) {
+	if (['__mixins__', '__new__', '__this__', '__base__'].indexOf(name) != -1) {
 		if (!member || (typeof member != 'object' && typeof member != 'function')) {
 			return;
 		}
@@ -296,8 +296,9 @@ type.__setattr__ = function(cls, name, member) {
 		if (member && (typeof member == 'object' || typeof member == 'function')) {
 			cls[name] = member;
 		}
-
-	} else if (['__this__', '__base__'].indexOf(name) != -1) {
+	}
+	// 
+	else if (['__this__', '__base__'].indexOf(name) != -1) {
 		cls[name] = proto[name] = member;
 	}
 	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
@@ -357,6 +358,7 @@ type.initialize = function() {
  * @namespace Class
  */
 var Class = this.Class = function() {
+
 	var length = arguments.length;
 	if (length < 1) throw new Error('bad arguments');
 	// 父类

@@ -87,8 +87,11 @@ test('__getattr__/__setattr__', function() {
 });
 
 test('__getattr__/__setattr__ in class', function() {
-	var M = new Class(function() {
+	var M = new Class(type, function() {
 		this.__setattr__ = function(self, name, value) {
+			if (name == 'test') {
+				ok(true, '__setattr__ called.')
+			}
 			type.__setattr__(self, name, value);
 		}
 	});
@@ -97,8 +100,8 @@ test('__getattr__/__setattr__ in class', function() {
 		this.__metaclass__ = M;
 	});
 
-	A.set('fuck', 1);
-	console.log(A.get('fuck'))
+	A.set('test', 1);
+	equal(A.get('test'), 1, 'value setted.');
 
 });
 
@@ -151,7 +154,7 @@ test('set special property : __metaclass__', function() {
 	});
 
 	A.set('__metaclass__', 'string');
-	equal(A.get('__metaclass__'), undefined, '__metaclass__ is not changed if set to string');
+	equal(A.get('__metaclass__'), undefined, '__metaclass__ is changed if set to string');
 
 	try {
 		var B = new Class(A, function() {});
