@@ -30,6 +30,7 @@ test('see what is in Class, Class.prototype, instance.prototype', function() {
 	});
 	var A = new Class(function() {
 		Class.mixin(this, mixined);
+		// overwrite Class.mixin
 		this['@mixins'] = [__mixined__];
 
 		this.__metaclass__ = metaclass; 
@@ -67,7 +68,7 @@ test('see what is in Class, Class.prototype, instance.prototype', function() {
 		ok(membersOfClass[i] in A, membersOfClass[i] + ' is in class members');
 	}
 
-	equal(A.__mixins__.length, 2, 'has mixined two elements, one by Class.mixin, another by @mixins');
+	equal(A.__mixins__.length, 1, 'has mixined two elements, one by Class.mixin, another by @mixins');
 	equal(A.__subclassesarray__.length, 0, 'A has no subclasses');
 	//ok(false, '__subclasses__ is confused, __getsubclasses__ is better');
 	equal(A.set, A.__mixin__, 'set is equals to __mixin__');
@@ -87,7 +88,6 @@ test('see what is in Class, Class.prototype, instance.prototype', function() {
 	for(var i=0,l=memebersOfClassPrototype.length; i<l; i++) {
 		ok(memebersOfClassPrototype[i] in AP, memebersOfClassPrototype[i] + ' is in class prototype');
 	}
-	ok('mixined_by_Class_mixin' in AP, 'mixined_by_Class_mixin is in class prototype');
 	ok('a' in AP, 'value a is in A.prototype');
 	ok('b' in AP, 'null b is in A.prototype');
 	ok('c' in AP, 'instancemethod c is in A.prototype');

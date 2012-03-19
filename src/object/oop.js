@@ -62,8 +62,8 @@ var getter = function(prop) {
  * 会被放到 cls.prototype.set
  */
 var setter = overloadSetter(function(prop, value) {
-	if (Class.hasMember(this.__class__, '__setattr__')) {
-		this.__class__.get('__setattr__')(this, prop, value);
+	if ('__setattr__' in this) {
+		this.__setattr__.call(this, prop, value);
 	} else {
 		object.__setattr__(this, prop, value);
 	}
@@ -273,6 +273,8 @@ type.__new__ = function(metaclass, name, base, dict) {
 };
 
 type.__setattr__ = function(cls, name, member) {
+	if (name == '@mixins') name = '__mixins__';
+
 	var proto = cls.prototype;
 	var properties = proto.__properties__;
 	var subs = cls.__subclassesarray__;
