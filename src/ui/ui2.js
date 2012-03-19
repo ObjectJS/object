@@ -63,6 +63,7 @@ this.define1 = function(selector, type) {
 	}
 	var prop = property(fget);
 	prop.isComponent = true;
+	return prop;
 };
 
 /**
@@ -147,50 +148,43 @@ this.setOptionTo = function(current, name, value) {
 };
 
 // metaclass
-this.component = new Class(function() {
+this.component = new Class(type, function() {
+
+	function handleSet(dict, name, member) {
+		if (name == 'initialize' || name.indexOf('__') == 0 || member == null) return;
+
+		if (typeof member == 'function') {
+			if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
+				(dict.__subEvents[RegExp.$1] = dict.__subEvents[RegExp.$1] || []).push(RegExp.$2);
+
+			} else if (name.match(/^on([a-zA-Z]+)$/)) {
+				dict.__onEvents.push(RegExp.$1);
+
+			} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
+				dict.__handles.push(name.slice(1));
+
+			} else {
+				dict.__methods.push(name);
+			}
+		}
+	}
 
 	this.__new__ = function(cls, name, base, dict) {
 
+		dict.__subs = []; // 引用
+		dict.__subEvents = {}; // 通过subName_eventType进行注册的事件
+		dict.__onEvents = []; // 通过oneventtype对宿主component注册的事件
+		dict.__handles = []; // _xxx形式的触发事件的方法
+		dict.__methods = []; // 普通方法
+
+		// Component直接调用，为提高性能，就不遍历dict了
 		if (dict.__metaclass__) {
-			dict.__defaultOptions = []; // 默认options
-			dict.__subs = [];
-			dict.__subEvents = {}; // 通过subName_eventType进行注册的事件
-			dict.__onEvents = []; // 通过oneventtype对宿主component注册的事件 // 通过oneventtype对宿主component注册的事件 // 通过oneventtype对宿主component注册的事件 // 通过oneventtype对宿主component注册的事件
-			dict.__handles = ['init', 'destory', 'invalid', 'error', 'revert', 'reset']; // 定义的会触发事件的方法集合, revert, reset为兼容处理 Compatible
-			dict.__methods = [];
-		} else {
-			dict.__defaultOptions = [];
-			dict.__subs = [];
-			dict.__subEvents = {};
-			dict.__onEvents = [];
-			dict.__handles = [];
-			dict.__methods = [];
-
+			dict.__handles = ['init', 'destory', 'invalid', 'error']; // 定义的会触发事件的方法集合
+		}
+		// 一个继承了ui.Component的组件
+		else {
 			Object.keys(dict).forEach(function(name) {
-				if (name == 'initialize' || name.indexOf('__') == 0) return;
-				var member = dict[name];
-
-				// member有可能是null
-				if (member != null && member.__class__ === property) {
-					if (member.isComponent) {
-						dict.__subs.push(name);
-					} else if (member.isOption) {
-						dict.__defaultOptions.push(name);
-					}
-				} else if (typeof member == 'function') {
-					if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
-						(dict.__subEvents[RegExp.$1] = dict.__subEvents[RegExp.$1] || []).push(RegExp.$2);
-
-					} else if (name.match(/^on([a-zA-Z]+)$/)) {
-						dict.__onEvents.push(RegExp.$1);
-
-					} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
-						dict.__handles.push(name.slice(1));
-
-					} else {
-						dict.__methods.push(name);
-					}
-				}
+				handleSet(dict, name, dict[name]);
 			});
 		}
 
@@ -217,12 +211,6 @@ this.component = new Class(function() {
 				if (!comp) throw new Error('bad addon');
 
 				var compProto = comp.prototype;
-				compProto.__defaultOptions.forEach(function(name) {
-					var defaultOptions = proto.__defaultOptions;
-					if (defaultOptions.indexOf(name) != -1) return;
-					defaultOptions.push(name);
-					cls.set(name, comp.get(name));
-				});
 
 				compProto.__subs.forEach(function(name) {
 					var subs = proto.__subs;
@@ -251,10 +239,6 @@ this.component = new Class(function() {
 		}
 
 		if (base && base !== type) {
-			baseProto.__defaultOptions.forEach(function(name) {
-				var defaultOptions = proto.__defaultOptions;
-				if (defaultOptions.indexOf(name) == -1) defaultOptions.push(name);
-			});
 
 			baseProto.__subs.forEach(function(name) {
 				var subs = proto.__subs;
@@ -300,14 +284,20 @@ this.Component = new Class(function() {
 	 * @param options 配置
 	 */
 	this.initialize = function(self, node, options) {
-		self.__nodeMap = {}; // 相应node的uid对应component，用于在需要通过node找到component时使用
-		self.__rendered = {}; // 后来被加入的，而不是首次通过selector选择的node的引用
+		if (!node) {
+			return;
+		}
 
 		self._node = dom.wrap(node);
 		if (node.compoment) {
-			throw new Error('一个元素只可以作为一个组件');
+			console.error('一个元素只可以作为一个组件');
+			return;
 		}
 		self._node.component = self;
+
+		self.__nodeMap = {}; // 相应node的uid对应component，用于在需要通过node找到component时使用
+		self.__rendered = {}; // 后来被加入的，而不是首次通过selector选择的node的引用
+
 		self.__initOptions(options);
 		self.__initEvents();
 		self.__initSubs();
@@ -443,13 +433,13 @@ this.Component = new Class(function() {
 			}
 		} else {
 			if (nodes) {
-				comps = new exports.Components(nodes, sub.type, options);
-				comps.forEach(function(comp) {
-					self.__fillSub(name, comp);
-				});
+				//comps = new exports.Components(nodes, sub.type, options);
+				//comps.forEach(function(comp) {
+					//self.__fillSub(name, comp);
+				//});
 			} else {
 				// 没有的也留下一个空的Components
-				comps = new exports.Components([], sub.type);
+				//comps = new exports.Components([], sub.type);
 			}
 		}
 

@@ -77,9 +77,10 @@ var StatusDefaultPublisher = new Class(Publisher, function() {
 });
 
 dom.ready(function() {
-	var c = new StatusDefaultPublisher(dom.getElement('#publisher'), {
-		a: 1
-	});
+	//var c = new StatusDefaultPublisher(dom.getElement('#publisher'), {
+		//a: 1
+	//});
+	var c = new Publisher(dom.getElement('#publisher'));
 	c.setOption('b.c.d.e.f', 2);
 	console.log(c.a, c.b);
 	console.log(c.getOption('b.c.d.e.f'))
