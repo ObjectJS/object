@@ -1,5 +1,6 @@
 <package id="object" url="http://objectjs.org/object">
 
+
 	<publish dir="pub">
 	</publish>
 
@@ -30,6 +31,7 @@
 			<include path="mvc.js" />
 			<include path="ui/index.js" />
 			<include path="ui/decorators.js" />
+			<include path="ui/autocomplete.js" />
 			<include path="urlparse.js" />
 			<include path="validator.js" />
 		</combine>
