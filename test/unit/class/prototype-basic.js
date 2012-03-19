@@ -126,6 +126,6 @@ test('see what is in Class, Class.prototype, instance.prototype', function() {
 	equal(a.get('f'), 1, 'property f is 1 now');
 	equal(a.__f, a.get('f'), '__f is setted/getted by property f');
 	equal(a.__class__, A, 'a.__class__ is reference of A');
-	equal(a.__this__.base, type, 'a.__this__.base is reference of type, because A did not inherit any Class');
+	equal(a.__this__.base, object, 'a.__this__.base is reference of object, because A did not inherit any Class');
 	ok(a.__this__.parent != null, 'a.__this__.parent is not null');
 });

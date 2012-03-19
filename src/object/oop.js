@@ -183,7 +183,8 @@ type.__new__ = function(metaclass, name, base, dict) {
 	var baseProperties = proto.__properties__ || {};
 	proto.__properties__ = object.extend({}, baseProperties);
 
-	if (base !== type) {
+	// object有其他成员了，略过
+	if (base !== object && base !== type) {
 		for (var property in base) {
 			// 过滤双下划线开头结尾的系统成员
 			// 过滤已存在成员
@@ -193,7 +194,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 		}
 	}
 	cls.__new__ = base.__new__;
-	cls.__setattr__ = base.__setattr__;
+	cls.__setattr__ = metaclass.__setattr__;
 	cls.__metaclass__ = metaclass;
 	cls.__class__ = metaclass;
 	cls.set('__base__', base);
@@ -362,7 +363,7 @@ var Class = this.Class = function() {
 	var length = arguments.length;
 	if (length < 1) throw new Error('bad arguments');
 	// 父类
-	var base = length > 1? arguments[0] : type;
+	var base = length > 1? arguments[0] : object;
 	if (typeof base != 'function' && typeof base != 'object') {
 		throw new Error('base is not function or object');
 	}
