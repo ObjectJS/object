@@ -169,6 +169,10 @@ this.component = new Class(type, function() {
 		}
 	}
 
+	this.__setattr__ = function(cls, name, value) {
+		type.__setattr__(cls, name, value);
+	};
+
 	this.__new__ = function(cls, name, base, dict) {
 
 		dict.__subs = []; // 引用
