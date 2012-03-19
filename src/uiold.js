@@ -121,7 +121,6 @@ this.Component = new Class(dom.Element, function() {
 
 			var classBases = Class.getChain(cls);
 
-			// 现有包装不在同一继承树上，报错
 			if (classBases.indexOf(ele._wrapper) === -1) {
 				throw '包装出错，一个元素只能有一个包装类';
 			}
