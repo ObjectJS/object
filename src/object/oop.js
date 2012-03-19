@@ -185,8 +185,9 @@ type.__new__ = function(metaclass, name, base, dict) {
 
 	if (base !== type) {
 		for (var property in base) {
-			// 过滤双下划线开头的系统成员和私有成员
-			if (property.indexOf('__') != 0 && cls[property] === undefined) {
+			// 过滤双下划线开头结尾的系统成员
+			// 过滤已存在成员
+			if (property.indexOf('__') != 0 && property.slice(-2) != '__' && !(property in cls)) {
 				cls[property] = base[property];
 			}
 		}
