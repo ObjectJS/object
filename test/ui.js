@@ -40,6 +40,10 @@ var PhotoPublisherAddon = new Class(ui.Component, function() {
 		console.log('test');
 	};
 
+	this.closeButton_click = function() {
+		alert('clicked');
+	};
+
 });
 
 var Publisher = new Class(ui.Component, function() {
@@ -67,7 +71,7 @@ var Publisher = new Class(ui.Component, function() {
 
 var StatusDefaultPublisher = new Class(Publisher, function() {
 
-	//this.__mixins__ = [PhotoPublisherAddon, StatusPublisherAddon, SharePublisherAddon];
+	this.__mixins__ = [PhotoPublisherAddon, StatusPublisherAddon, SharePublisherAddon];
 	this.a = ui.option(0);
 
 	this._close = function(self) {
@@ -77,10 +81,10 @@ var StatusDefaultPublisher = new Class(Publisher, function() {
 });
 
 dom.ready(function() {
-	//var c = new StatusDefaultPublisher(dom.getElement('#publisher'), {
-		//a: 1
-	//});
-	var c = new Publisher(dom.getElement('#publisher'));
+	var c = new StatusDefaultPublisher(dom.getElement('#publisher'), {
+		a: 1
+	});
+	console.dir(c)
 	c.setOption('b.c.d.e.f', 2);
 	console.log(c.a, c.b);
 	console.log(c.getOption('b.c.d.e.f'))

@@ -1,5 +1,7 @@
 object.add('ui/ui2.js', 'string, options, dom, events', function(exports, string, options, dom, events) {
 
+var gid = 0;
+
 /**
  * 用于承载options的空对象
  */
@@ -155,25 +157,19 @@ this.component = new Class(type, function() {
 
 		if (typeof member == 'function') {
 			if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
-				(dict.__subEvents[RegExp.$1] = dict.__subEvents[RegExp.$1] || []).push(RegExp.$2);
+				dict[name + '_' + gid] = dict[name];
+				delete dict[name];
 
 			} else if (name.match(/^on([a-zA-Z]+)$/)) {
-				dict.__onEvents.push(RegExp.$1);
+				dict[name + '_' + gid] = dict[name];
+				delete dict[name];
 
-			} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
-				dict.__handles.push(name.slice(1));
-
-			} else {
-				dict.__methods.push(name);
 			}
 		}
 	}
 
-	this.__setattr__ = function(cls, name, value) {
-		type.__setattr__(cls, name, value);
-	};
-
 	this.__new__ = function(cls, name, base, dict) {
+		dict.id = gid++;
 
 		dict.__subs = []; // 引用
 		dict.__subEvents = {}; // 通过subName_eventType进行注册的事件
@@ -242,7 +238,7 @@ this.component = new Class(type, function() {
 			});
 		}
 
-		if (base && base !== type) {
+		if (base && base !== object) {
 
 			baseProto.__subs.forEach(function(name) {
 				var subs = proto.__subs;
@@ -281,91 +277,18 @@ this.component = new Class(type, function() {
  */
 this.Component = new Class(function() {
 
-	this.__metaclass__ = exports.component;
-
-	/**
-	 * @param node 包装的节点
-	 * @param options 配置
-	 */
-	this.initialize = function(self, node, options) {
-		if (!node) {
-			return;
-		}
-
-		self._node = dom.wrap(node);
-		if (node.compoment) {
-			console.error('一个元素只可以作为一个组件');
-			return;
-		}
-		self._node.component = self;
-
-		self.__nodeMap = {}; // 相应node的uid对应component，用于在需要通过node找到component时使用
-		self.__rendered = {}; // 后来被加入的，而不是首次通过selector选择的node的引用
-
-		self.__initOptions(options);
-		self.__initEvents();
-		self.__initSubs();
-		self.__initAddons();
-
-		self.init();
-	};
-
-	this.fireEvent = function(self, type) {
-		return self._node.fireEvent(type);
-	}
-
-	/**
-	 * 根据模板和选项生成一个节点
-	 */
-	this.createNode = function(self, template, options) {
-		var node, result, data = {};
-		// 组合options和defaultOption，生成node
-		// 传进来的优先于defaultOption
-		self.__defaultOptions.forEach(function(key) {
-			if (!(key in options)) data[key] = self.get(key);
-		});
-		object.extend(data, options);
-		result = string.substitute(template, data);
-		node = dom.Element.fromString(result);
-		return node;
-	};
-
-	this.__initAddons = function(self) {
+	function initAddons(self) {
 		if (!self.addons) return;
 		self.addons.forEach(function(addon) {
 			addon.get('init')(self);
 		});
-	};
+	}
 
-	/**
-	 * 加入addon中用onxxx方法定义的事件
-	 */
-	this.__initEvents = function(self) {
-		if (!self.addons) return;
-		self.addons.forEach(function(addon) {
-			addon.prototype.__onEvents.forEach(function(eventType) {
-				var trueEventType; // 正常大小写的名称
-				if (self.__handles.some(function(handle) {
-					if (handle.toLowerCase() == eventType) {
-						trueEventType = handle;
-						return true;
-					}
-					return false;
-				})) {
-					self.addEvent(trueEventType, function(event) {
-						// 将event._args pass 到函数后面
-						var args = [self, event].concat(event._args);
-						addon.get('on' + eventType).apply(addon, args);
-					});
-				}
-			});
-		});
-	};
-
-	this.__initOptions = function(self, options) {
+	function initOptions(self, options) {
 		if (!options) options = {};
 		// 保存options，生成sub时用于传递
 		self._options = exports.parseOptions(options);
+		return;
 
 		self.__defaultOptions.forEach(function(name) {
 			// 从options参数获取配置到self[name]
@@ -399,9 +322,31 @@ this.Component = new Class(function() {
 			}
 
 		});
-	};
+	}
 
-	this.__initSubs = function(self) {
+	function initEvents(self) {
+		if (!self.addons) return;
+		self.addons.forEach(function(addon) {
+			addon.prototype.__onEvents.forEach(function(eventType) {
+				var trueEventType; // 正常大小写的名称
+				if (self.__handles.some(function(handle) {
+					if (handle.toLowerCase() == eventType) {
+						trueEventType = handle;
+						return true;
+					}
+					return false;
+				})) {
+					self.addEvent(trueEventType, function(event) {
+						// 将event._args pass 到函数后面
+						var args = [self, event].concat(event._args);
+						addon.get('on' + eventType).apply(addon, args);
+					});
+				}
+			});
+		});
+	}
+
+	function initSubs(self) {
 		// TODO 这里修改了__properties__中的成员，导致如果某一个组件实例修改了类，后面的组件就都变化了。
 		self.__subs.forEach(function(name) {
 			var sub = self.__properties__[name];
@@ -416,50 +361,17 @@ this.Component = new Class(function() {
 				});
 			}
 
-			self.__initSub(name, self.get(name));
+			initSub(self, name, self.get(name));
 		});
-	};
-
-	/**
-	 * 根据sub的定义获取component的引用
-	 */
-	this.__initSub = function(self, name, nodes) {
-		if (!self._node) return null;
-
-		var sub = self.__properties__[name];
-		var comps;
-		var options = self._options[name];
-
-		if (sub.single) {
-			if (nodes) {
-				comps = new sub.type(nodes, options);
-				self.__fillSub(name, comps);
-			}
-		} else {
-			if (nodes) {
-				//comps = new exports.Components(nodes, sub.type, options);
-				//comps.forEach(function(comp) {
-					//self.__fillSub(name, comp);
-				//});
-			} else {
-				// 没有的也留下一个空的Components
-				//comps = new exports.Components([], sub.type);
-			}
-		}
-
-		self['_' + name] = nodes;
-		self._set(name, comps);
-
-		return comps;
-	};
+	}
 
 	/**
 	 * 将一个comp的信息注册到__subs上
 	 */
-	this.__fillSub = function(self, name, comp) {
+	function fillSub(self, name, comp) {
 		var sub = self.__properties__[name];
 		var node = comp._node;
-		self.__addNodeMap(name, String(node.uid), comp);
+		addNodeMap(self, name, String(node.uid), comp);
 		comp = self.__nodeMap[name][String(node.uid)];
 
 		// 注册 option_change 等事件
@@ -490,13 +402,95 @@ this.Component = new Class(function() {
 		}
 	};
 
-	this.__addRendered = function(self, name, node) {
+	function addRendered(self, name, node) {
 		var rendered = self.__rendered;
 		if (!rendered[name]) rendered[name] = [];
 		rendered[name].push(node);
 	};
 
-	this.__addNodeMap = function(self, name, id, comp) {
+	/**
+	 * 根据sub的定义获取component的引用
+	 */
+	function initSub(self, name, nodes) {
+		if (!self._node) return null;
+
+		var sub = self.__properties__[name];
+		var comps;
+		var options = self._options[name];
+
+		if (sub.single) {
+			if (nodes) {
+				comps = new sub.type(nodes, options);
+				fillSub(self, name, comps);
+			}
+		} else {
+			if (nodes) {
+				//comps = new exports.Components(nodes, sub.type, options);
+				//comps.forEach(function(comp) {
+					//self.__fillSub(name, comp);
+				//});
+			} else {
+				// 没有的也留下一个空的Components
+				//comps = new exports.Components([], sub.type);
+			}
+		}
+
+		self['_' + name] = nodes;
+		self._set(name, comps);
+
+		return comps;
+	};
+
+	this.__metaclass__ = exports.component;
+
+	/**
+	 * @param node 包装的节点
+	 * @param options 配置
+	 */
+	this.initialize = function(self, node, options) {
+		if (!node) {
+			return;
+		}
+
+		self._node = dom.wrap(node);
+		if (node.compoment) {
+			console.error('一个元素只可以作为一个组件');
+			return;
+		}
+		self._node.component = self;
+
+		self.__nodeMap = {}; // 相应node的uid对应component，用于在需要通过node找到component时使用
+		self.__rendered = {}; // 后来被加入的，而不是首次通过selector选择的node的引用
+
+		initOptions(self, options);
+		initEvents(self);
+		initSubs(self);
+		initAddons(self);
+
+		self.init();
+	};
+
+	this.fireEvent = function(self, type) {
+		return self._node.fireEvent(type);
+	}
+
+	/**
+	 * 根据模板和选项生成一个节点
+	 */
+	this.createNode = function(self, template, options) {
+		var node, result, data = {};
+		// 组合options和defaultOption，生成node
+		// 传进来的优先于defaultOption
+		self.__defaultOptions.forEach(function(key) {
+			if (!(key in options)) data[key] = self.get(key);
+		});
+		object.extend(data, options);
+		result = string.substitute(template, data);
+		node = dom.Element.fromString(result);
+		return node;
+	};
+
+	function addNodeMap(self, name, id, comp) {
 		var nodeMap = self.__nodeMap;
 		if (!nodeMap[name]) nodeMap[name] = {};
 		nodeMap[name][id] = comp;
@@ -631,16 +625,16 @@ this.Component = new Class(function() {
 		if (nodes) {
 			if (sub.single) {
 				if (Array.isArray(nodes) || nodes.constructor === dom.Elements) throw '这是一个唯一引用元素，请不要返回一个数组';
-				self.__addRendered(name, nodes);
+				addRendered(self, name, nodes);
 			} else {
 				if (!Array.isArray(nodes) && nodes.constructor !== dom.Elements) throw '这是一个多引用元素，请返回一个数组';
 				nodes = new dom.Elements(nodes);
 				nodes.forEach(function(node) {
-					self.__addRendered(name, node);
+					addRendered(self, name, node);
 				});
 			}
 
-			self.__initSub(name, nodes);
+			initSub(self, name, nodes);
 		}
 	};
 
@@ -672,8 +666,8 @@ this.Component = new Class(function() {
 			self[name].push(comp);
 			self[pname].push(node);
 		}
-		self.__fillSub(name, comp);
-		self.__addRendered(name, node);
+		fillSub(self, name, comp);
+		addRendered(self, name, node);
 
 		return comp;
 	};
