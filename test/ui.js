@@ -84,7 +84,6 @@ dom.ready(function() {
 	var c = new StatusDefaultPublisher(dom.getElement('#publisher'), {
 		a: 1
 	});
-	console.dir(c)
 	c.setOption('b.c.d.e.f', 2);
 	console.log(c.a, c.b);
 	console.log(c.getOption('b.c.d.e.f'))

@@ -152,123 +152,78 @@ this.setOptionTo = function(current, name, value) {
 // metaclass
 this.component = new Class(type, function() {
 
-	function handleSet(dict, name, member) {
-		if (name == 'initialize' || name.indexOf('__') == 0 || member == null) return;
-
-		if (typeof member == 'function') {
-			if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
-				dict[name + '_' + gid] = dict[name];
-				delete dict[name];
-
-			} else if (name.match(/^on([a-zA-Z]+)$/)) {
-				dict[name + '_' + gid] = dict[name];
-				delete dict[name];
-
-			}
-		}
-	}
-
 	this.__new__ = function(cls, name, base, dict) {
 		dict.id = gid++;
 
-		dict.__subs = []; // 引用
-		dict.__subEvents = {}; // 通过subName_eventType进行注册的事件
-		dict.__onEvents = []; // 通过oneventtype对宿主component注册的事件
-		dict.__handles = []; // _xxx形式的触发事件的方法
-		dict.__methods = []; // 普通方法
+		Object.keys(dict).forEach(function(name) {
+			var member = dict[name];
+			var newName = name + '$' + gid;
+			if (name == 'initialize' || name.indexOf('__') == 0 || member == null) return;
+			if (typeof member == 'function') {
+				if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
+					dict[newName] = dict[name];
+					delete dict[name];
+					dict[newName].meta = {
+						type: 'subEvent',
+						sub: RegExp.$1,
+						eventType: RegExp.$2,
+						method: newName
+					}
+				} else if (name.match(/^on([a-zA-Z]+)$/)) {
+					dict[newName] = dict[name];
+					delete dict[name];
+					dict[newName].meta = {
+						type: 'onEvent',
+						eventType: RegExp.$1,
+						method: newName
+					}
+				} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
+					dict[name].meta = {
+						type: 'handle',
+						name: name.slice(1)
+					}
+				}
 
-		// Component直接调用，为提高性能，就不遍历dict了
-		if (dict.__metaclass__) {
-			dict.__handles = ['init', 'destory', 'invalid', 'error']; // 定义的会触发事件的方法集合
-		}
-		// 一个继承了ui.Component的组件
-		else {
-			Object.keys(dict).forEach(function(name) {
-				handleSet(dict, name, dict[name]);
-			});
-		}
+			}
+		});
 
 		return type.__new__(cls, name, base, dict);
 	};
 
 	this.initialize = function(cls, name, base, dict) {
 
-		var proto = cls.prototype;
-		var baseProto = base.prototype;
+		var handles = [];
+		var subEvents = {};
+		var onEvents = [];
 
-		proto.__handles.forEach(function(eventType) {
-			cls.set(eventType, events.fireevent(function(self) {
-				return cls.get('_' + eventType).apply(cls, arguments);
-			}));
+		Class.keys(cls).forEach(function(name) {
+			var member = cls.get(name);
+			var meta;
+			if (member.im_func) {
+				meta = member.im_func.meta;
+				if (meta) {
+					if (meta.type == 'handle') {
+						cls.set(meta.name, events.fireevent(function(self) {
+							return cls.get('_' + meta.name).apply(cls, arguments);
+						}));
+						handles.push(meta);
+
+					} else if (meta.type == 'subEvent') {
+						if (!subEvents[meta.sub]) {
+							subEvents[meta.sub] = [];
+						}
+						subEvents[meta.sub].push(meta.eventType);
+
+					} else if (meta.type == 'onEvent') {
+						onEvents.push(meta);
+					}
+				}
+			}
 		});
 
-		if (base && baseProto.addons) {
-			proto.addons.push.apply(proto.addons, baseProto.addons);
-		}
-
-		if (proto.addons) {
-			proto.addons.forEach(function(comp) {
-				if (!comp) throw new Error('bad addon');
-
-				var compProto = comp.prototype;
-
-				compProto.__subs.forEach(function(name) {
-					var subs = proto.__subs;
-					if (subs.indexOf(name) != -1) return;
-					subs.push(name);
-					cls.set(name, comp.get(name));
-				});
-
-				compProto.__handles.forEach(function(eventType) {
-					var handles = proto.__handles;
-					var methodName = '_' + eventType;
-					if (handles.indexOf(eventType) != -1) return;
-					handles.push(eventType);
-					cls.set(eventType, compProto[eventType].im_func);
-					cls.set(methodName, compProto[methodName].im_func);
-				});
-
-				compProto.__methods.forEach(function(name) {
-					var methods = proto.__methods;
-					if (methods.indexOf(name) != -1) return;
-					methods.push(name);
-					cls.set(name, compProto[name].im_func);
-				});
-				// onEvents和subEvents在宿主中处理，方法不添加到宿主类上
-			});
-		}
-
-		if (base && base !== object) {
-
-			baseProto.__subs.forEach(function(name) {
-				var subs = proto.__subs;
-				if (subs.indexOf(name) == -1) subs.push(name);
-			});
-
-			baseProto.__handles.forEach(function(eventType) {
-				var handles = proto.__handles;
-				if (handles.indexOf(eventType) == -1) proto.__handles.push(eventType);
-			});
-
-			baseProto.__methods.forEach(function(name) {
-				var methods = proto.__methods;
-				if (methods.indexOf(name) == -1) methods.push(name);
-			});
-
-			Object.keys(baseProto.__subEvents).forEach(function(subName) {
-				var subEvents = proto.__subEvents;
-				baseProto.__subEvents[subName].forEach(function(eventType) {
-					var subEvent = subEvents[subName];
-					if (subEvent && subEvent.indexOf(eventType) != -1) return;
-					(subEvents[subName] = subEvents[subName] || []).push(eventType);
-				});
-			});
-
-			baseProto.__onEvents.forEach(function(eventType) {
-				var onEvents = proto.__onEvents;
-				if (onEvents.indexOf(eventType) == -1) onEvents.push(eventType);
-			});
-		}
+		cls.set('__handles', handles);
+		cls.set('__subEvents', subEvents);
+		cls.set('__onEvents', onEvents);
 	};
 });
 
@@ -276,13 +231,6 @@ this.component = new Class(type, function() {
  * UI模块基类，所有UI组件的基本类
  */
 this.Component = new Class(function() {
-
-	function initAddons(self) {
-		if (!self.addons) return;
-		self.addons.forEach(function(addon) {
-			addon.get('init')(self);
-		});
-	}
 
 	function initOptions(self, options) {
 		if (!options) options = {};
@@ -325,24 +273,21 @@ this.Component = new Class(function() {
 	}
 
 	function initEvents(self) {
-		if (!self.addons) return;
-		self.addons.forEach(function(addon) {
-			addon.prototype.__onEvents.forEach(function(eventType) {
-				var trueEventType; // 正常大小写的名称
-				if (self.__handles.some(function(handle) {
-					if (handle.toLowerCase() == eventType) {
-						trueEventType = handle;
-						return true;
-					}
-					return false;
-				})) {
-					self.addEvent(trueEventType, function(event) {
-						// 将event._args pass 到函数后面
-						var args = [self, event].concat(event._args);
-						addon.get('on' + eventType).apply(addon, args);
-					});
+		self.__onEvents.forEach(function(meta) {
+			var trueEventType; // 正常大小写的名称
+			if (self.__handles.some(function(handle) {
+				if (handle.name.toLowerCase() == meta.eventType) {
+					trueEventType = handle.name;
+					return true;
 				}
-			});
+				return false;
+			})) {
+				self.addEvent(trueEventType, function(event) {
+					// 将event._args pass 到函数后面
+					var args = [self, event].concat(event._args);
+					addon.get('on' + meta.eventType).apply(addon, args);
+				});
+			}
 		});
 	}
 
@@ -463,9 +408,8 @@ this.Component = new Class(function() {
 		self.__rendered = {}; // 后来被加入的，而不是首次通过selector选择的node的引用
 
 		initOptions(self, options);
+		//initSubs(self);
 		initEvents(self);
-		initSubs(self);
-		initAddons(self);
 
 		self.init();
 	};
@@ -473,6 +417,10 @@ this.Component = new Class(function() {
 	this.fireEvent = function(self, type) {
 		return self._node.fireEvent(type);
 	}
+
+	this.addEvent = function(self, type, func, p) {
+		return self._node.addEvent(type, func, p);
+	};
 
 	/**
 	 * 根据模板和选项生成一个节点
