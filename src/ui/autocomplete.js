@@ -573,6 +573,7 @@ object.add('ui.autocomplete', 'dom, ua, events, sys', function(exports, dom, ua,
 		this.selectListItem = function(self, li) {
 			var value = li.getAttribute('real_value');
 			self.input.value = value;
+			self.input.fireEvent('selectDataListItem', {value:value, li:li});
 		}
 
 		/**
