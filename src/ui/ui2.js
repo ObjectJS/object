@@ -1,5 +1,8 @@
 object.add('ui/ui2.js', 'string, options, dom, events', function(exports, string, options, dom, events) {
 
+// defaultOptions需要记录，用于渲染模板时能够将所有option传递到模板中
+// defaultOptions需要记录，用于注册option_change事件
+
 var gid = 0;
 
 /**
