@@ -2,6 +2,26 @@ object.use('ui/ui2.js', function(ui) {
 
 module('basic');
 
+test('sub property.', function() {
+	var TestComponent = new Class(ui.Component, function() {
+		this.test = ui.define1('.test');
+		this.test2 = ui.define1('.test');
+	});
+
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="test">test</div>';
+
+	var test = new TestComponent(div);
+	// 初始化时会获取所有sub
+	equals(test.test.getNode().className, 'test', 'define1 component right when init.');
+
+	// 两个引用相同，返回相同一个component引用
+	var testComp = test.test;
+	ok(test.test2 === testComp, 'using one same component when selector same.');
+
+	// TODO mutiple define
+});
+
 test('handle method.', function() {
 	var methodCalled = 0;
 	var eventFired = 0;
@@ -64,7 +84,7 @@ test('on event method.', function() {
 test('sub event method.', function() {
 	var TestComponent = new Class(ui.Component, function() {
 
-		this.test = ui.define('.test');
+		this.test = ui.define1('.test');
 
 		this.test_click = function() {
 		};
@@ -72,7 +92,7 @@ test('sub event method.', function() {
 	});
 
 	var div = document.createElement('div');
-	div.innerHTML = '<div class=".test">test</div>';
+	div.innerHTML = '<div class="test">test</div>';
 
 	var test = new TestComponent(div);
 });

@@ -30,6 +30,7 @@ function ensureTypedValue(value, type) {
 this.define = function(selector, type) {
 	if (!type) type = exports.Component;
 	function fget(self) {
+		var name = prop.__name__;
 		var nodes;
 		if (typeof selector == 'function') {
 			nodes = selector(self);
@@ -43,9 +44,9 @@ this.define = function(selector, type) {
 		} else {
 			nodes = self._node.getElements(selector);
 		}
+		self._set(name, nodes);
 	}
 	var prop = property(fget);
-	//prop.isComponent = true;
 	return prop;
 };
 
@@ -55,16 +56,18 @@ this.define = function(selector, type) {
 this.define1 = function(selector, type) {
 	if (!type) type = exports.Component;
 	function fget(self) {
-		var node;
+		var name = prop.__name__;
+		var node, comp;
 		if (typeof selector == 'function') {
 			node = dom.wrap(selector(self));
 		} else {
 			node = self._node.getElement(selector);
 		}
-		return node;
+		comp = node.component || new type(node);
+		self._set(name, comp);
+		return comp;
 	}
 	var prop = property(fget);
-	prop.isComponent = true;
 	return prop;
 };
 
@@ -271,7 +274,7 @@ this.Component = new Class(function() {
 			var member = cls.get(name);
 			var meta;
 			if (member.__class__ == property) {
-				console.log(name, member)
+				self.get(name);
 			}
 			else if (typeof member == 'function') {
 				meta = member.im_func.meta;
