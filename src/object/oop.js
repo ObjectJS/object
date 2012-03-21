@@ -478,7 +478,6 @@ Class.hasProperty = function(obj, name) {
 Class.hasMember = function(cls, name) {
 	if (!cls) return false;
 	if (name in cls.prototype) return true;
-	if (name in cls.prototype.__properties__) return true;
 	return false;
 };
 
@@ -574,7 +573,8 @@ Class.keys = function(cls) {
 	if (!cls || !cls.prototype) {
 		return [];
 	}
-	keys = Object.keys(cls.prototype.__properties__);
+	var keys = [];
+	// 找到全部的，不仅仅是 hasOwnProperty 的，因此不能用Object.keys代替
 	for (var prop in cls.prototype) {
     	keys.push(prop);
     }
