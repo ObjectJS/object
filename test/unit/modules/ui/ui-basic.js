@@ -7,6 +7,7 @@ test('sub property.', function() {
 		this.test = ui.define1('.test');
 		this.test2 = ui.define1('.test');
 	});
+	TestComponent.set('test3', ui.define1('.test'));
 
 	var div = document.createElement('div');
 	div.innerHTML = '<div class="test">test</div>';
@@ -18,6 +19,7 @@ test('sub property.', function() {
 	// 两个引用相同，返回相同一个component引用
 	var testComp = test.test;
 	ok(test.test2 === testComp, 'using one same component when selector same.');
+	ok(test.test3 === testComp, 'component defined after class created.');
 
 	// TODO mutiple define
 });
@@ -34,6 +36,10 @@ test('handle method.', function() {
 			ok(false, 'preventDefault bad when event fired.')
 		};
 	});
+	TestComponent.set('_test3', function() {
+		ok(true, 'handle defined after class created.');
+	});
+
 	var test = new TestComponent(document.createElement('div'));
 	test.addEvent('test', function() {
 		eventFired = 1;
@@ -43,6 +49,7 @@ test('handle method.', function() {
 	});
 	test.test('test');
 	test.test2();
+	test.test3();
 	equals(methodCalled, 1, 'method called.');
 	equals(eventFired, 1, 'event fired.');
 });
@@ -55,9 +62,16 @@ test('on event method.', function() {
 	var AddonComponent = new Class(ui.Component, function() {
 
 		this.ontest = function(self, event) {
+			// 不应该被执行，因为被下面覆盖掉了
 			onEventCalled++;
+			ok(false, 'on event override failed.');
 		};
 
+	});
+	AddonComponent.set('ontest', function() {
+		ok(true, 'on event override ok.');
+		// 应该被执行
+		onEventCalled++;
 	});
 
 	var TestComponent = new Class(ui.Component, function() {
@@ -69,7 +83,9 @@ test('on event method.', function() {
 		};
 
 		this.ontest = function(self, event) {
+			// 不应该执行，因为是自己身上的
 			onEventCalled++;
+			ok(false, 'on event runed by self.');
 		};
 
 	});

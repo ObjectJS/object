@@ -227,6 +227,35 @@ this.component = new Class(type, function() {
 		return type.__new__(cls, name, base, dict);
 	};
 
+	this.__setattr__ = function(cls, name, member) {
+		var newName;
+		var gid = cls.get('gid');
+		if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
+			newName = name + '$' + gid;
+			cls.set(newName, subevent(RegExp.$1, RegExp.$2, gid)(member));
+
+		}
+		else if (name.match(/^on([a-zA-Z]+)$/)) {
+			newName = name + '$' + gid;
+			cls.set(newName, onevent(RegExp.$1, gid, newName)(member));
+
+		}
+		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
+			newName = name.slice(1);
+			type.__setattr__(cls, newName, events.fireevent(function(self) {
+				if (self[name]) {
+					return self[name].apply(self, Array.prototype.slice.call(arguments, 1));
+				}
+			}));
+			cls.get('__handles').push(newName);
+			type.__setattr__(cls, name, member);
+
+		}
+		else {
+			type.__setattr__(cls, name, member);
+		}
+	};
+
 	this.initialize = function(cls, name, base, dict) {
 		;(cls.__mixins__ || []).forEach(function(mixin) {
 			var handles = mixin.get('__handles');
