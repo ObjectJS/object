@@ -146,51 +146,6 @@ var subclassesgetter = function() {
 	return this.__subclassesarray__;
 };
 
-/**
- * this.parent
- */
-var parent = function() {
-	// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
-	var name = arguments.callee.caller.__name__;
-	if (!name) {
-		throw new Error('can not get function name when this.parent called');
-	}
-
-	// 拥有此方法的代码书写的类
-	var ownCls = this;
-
-	// parent应该调用“代码书写的方法所在的类的父同名方法”
-	// 而不是方法调用者实例的类的父同名方法
-	// 比如C继承于B继承于A，当C的实例调用从B继承来的某方法时，其中调用了this.parent，应该直接调用到A上的同名方法，而不是B的。
-	// 因此，这里通过hasOwnProperty，从当前类开始，向上找到同名方法的原始定义类
-	while (ownCls && !ownCls.prototype.hasOwnProperty(name)) {
-		ownCls = ownCls.__base__;
-	}
-
-	var base = ownCls.__base__;
-	var mixins = ownCls.__mixins__;
-	var member, owner;
-
-	// 先从base中找同名func
-	if (base && base.get && base.has(name)) {
-		owner = base;
-		member = base.get(name);
-	}
-	// 再从mixins中找同名func
-	else if (mixins && mixins.length && mixins.some(function(mixin) {
-		owner = mixin;
-		return mixin.has(name);
-	})) {
-		member = owner.get(name);
-	}
-
-	if (!member || typeof member != 'function') {
-		throw new Error('no such method in parent : \'' + name + '\'');
-	} else {
-		return member.apply(base, arguments);
-	}
-};
-
 // IE不可以通过prototype = new Array的方式使function获得数组功能。
 var _nativeExtendable = (function() {
 	// IE和webkit没有统一访问方法（Array.forEach)，避免使用native extend
@@ -253,7 +208,47 @@ type.__new__ = function(metaclass, name, base, dict) {
 	// 支持 this.parent 调用父级同名方法
 	cls.set('__this__', {
 		base: base,
-		parent: parent.bind(cls)
+		parent: function() {
+			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
+			var name = arguments.callee.caller.__name__;
+			if (!name) {
+				throw new Error('can not get function name when this.parent called');
+			}
+
+			// 拥有此方法的代码书写的类
+			var ownCls = cls;
+
+			// parent应该调用“代码书写的方法所在的类的父同名方法”
+			// 而不是方法调用者实例的类的父同名方法
+			// 比如C继承于B继承于A，当C的实例调用从B继承来的某方法时，其中调用了this.parent，应该直接调用到A上的同名方法，而不是B的。
+			// 因此，这里通过hasOwnProperty，从当前类开始，向上找到同名方法的原始定义类
+			while (ownCls && !ownCls.prototype.hasOwnProperty(name)) {
+				ownCls = ownCls.__base__;
+			}
+
+			var base = ownCls.__base__;
+			var mixins = ownCls.__mixins__;
+			var member, owner;
+
+			// 先从base中找同名func
+			if (base && base.get && base.has(name)) {
+				owner = base;
+				member = base.get(name);
+			}
+			// 再从mixins中找同名func
+			else if (mixins && mixins.length && mixins.some(function(mixin) {
+				owner = mixin;
+				return mixin.has(name);
+			})) {
+				member = owner.get(name);
+			}
+
+			if (!member || typeof member != 'function') {
+				throw new Error('no such method in parent : \'' + name + '\'');
+			} else {
+				return member.apply(base, arguments);
+			}
+		}
 	});
 
 	// Dict
