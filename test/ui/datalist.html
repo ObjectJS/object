@@ -82,17 +82,9 @@
 	  <option value="Safari">
 	</datalist>
 	<datalist id="list_browsers3">
-	  <option value="ChromeCCCCCCCCCCC">
-	  <option value="Opera">
-	  <option value="Chrome">
-	  <option value="Opera">
-	  <option value="Safari">
-	  <option value="中文">
-	  <option value="中文2">
-	  <option value="中国">
-	  <option value="Safari">
+	  <option value="">
 	</datalist>
-	<input type="button" value="add list item" onclick="addListItem()" />
+	<input type="input" id="browsers3" data-list="list_browsers3" />
 	<script>
 		function addListItem() {
 			var option = document.createElement('option');
@@ -120,6 +112,7 @@
 			added = true;
 		});
 		ui.autocomplete.enable('browsers2');
+		ui.autocomplete.enable('browsers3');
 
 		function addListItems() {
 			var df = document.createDocumentFragment();

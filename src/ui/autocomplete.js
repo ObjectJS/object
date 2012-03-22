@@ -482,6 +482,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 
 				value = current.getAttribute('value') || current.value;
 				if (value.trim().length == 0) {
+					result[result.length] = {value:'', text:'&nbsp;'};
 					continue;
 				}
 				if (value.trim().length > self.options.maxCharCount) {
