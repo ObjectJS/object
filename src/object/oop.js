@@ -121,7 +121,14 @@ var memberchecker = function(name) {
  * 子类不会被覆盖
  */
 var membersetter = overloadSetter(function(name, member) {
-	this.__class__.get('__setattr__')(this, name, member);
+	// 类创建过程中不触发__setattr__
+	if (this.__constructing__) {
+		type.__setattr__(this, name, member);
+	}
+	// 从metaclass中获得__setattr__
+	else {
+		this.__class__.get('__setattr__')(this, name, member);
+	}
 });
 
 /**
