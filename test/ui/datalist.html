@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7" />
+</head>
+
+<body>
+<script>
+	document.createElement('datalist');
+</script>
+	
+<form action="/test.jsp" method="get">
+	<p>fdjaljfdaj</p>
+	<p>fdjaljfdaj</p>
+	<p>fdjaljfdaj</p>
+	<p>fdjaljfdaj</p>
+	<p>fdjaljfdaj</p>
+	jfdaljfdfdasfdas<input id='browsers'/>
+	<input type="button" value="add list" onclick="addList()" />
+	<script >
+		function addList() {
+			document.getElementById('browsers').setAttribute('data-list', 'list_browsers');
+			document.getElementById('browsers').list = 'list_browsers';
+		}
+	</script>
+	<datalist id="list_browsers">
+	  <option value="FirefoxFirefoxFireFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxfoxFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxFireFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxFirefoxfoxFirefoxFirefoxFirefoxFirefox">
+	  <option value="ChromeCCCCCCCCCCC">
+	  <option value="Opera">
+	  <option value="Safari">
+	  <option value="Firefox">
+	  <option value="Chrome">
+	  <option value="Opera">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Safari">
+	  <option value="Firefox">
+	  <option value="Chrome">
+	  <option value="Opera">
+	  <option value="Safari">
+	  <option value="Firefox">
+	  <option value="Chrome">
+	  <option value="Opera">
+	  <option value="Safari">
+	  <option value="中文">
+	  <option value="中文2">
+	  <option value="中国">
+	  <option value="Safari">
+	</datalist>
+	jfdaljfdfdasfdas<input id='browsers2' list='list_browsers2' data-list='list_browsers2'/>
+	<datalist id="list_browsers2">
+	  <option value="Opera">
+	  <option value="Safari">
+	  <option value="Firefox">
+	  <option value="Chrome">
+	  <option value="Opera">
+	  <option value="Safari">
+	  <option value="中文">
+	  <option value="中文2">
+	  <option value="中国">
+	  <option value="Safari">
+	</datalist>
+	<datalist id="list_browsers3">
+	  <option value="ChromeCCCCCCCCCCC">
+	  <option value="Opera">
+	  <option value="Chrome">
+	  <option value="Opera">
+	  <option value="Safari">
+	  <option value="中文">
+	  <option value="中文2">
+	  <option value="中国">
+	  <option value="Safari">
+	</datalist>
+	<input type="button" value="add list item" onclick="addListItem()" />
+	<script>
+		function addListItem() {
+			var option = document.createElement('option');
+			option.value = 'test';
+			var list = document.getElementById('list_browsers');
+			list.appendChild(option);
+		}
+	</script>
+	<br>
+	jfdaljfdfdasfdas<select><option>1</option></select>
+	<input type="submit" />
+</form>
+<script type='text/javascript' src='http://s.xnimg.cn/a33750/n/core/base-all2.js'></script>
+<script type='text/javascript' src='http://s.xnimg.cn/n/core/js/home-frame2.js'></script>
+<script type='text/javascript'>
+	object.use('dom, ui.autocomplete', function(dom, ui) {
+
+		var input = ui.autocomplete.enable('browsers');
+		var added = false;
+		input.addEvent('keydown',function(e) {
+			if (!input._autocompleter || added) {
+				return;
+			}
+			addListItems();
+			added = true;
+		});
+		ui.autocomplete.enable('browsers2');
+
+		function addListItems() {
+			var df = document.createDocumentFragment();
+			var option = document.createElement('option');
+			option.value = 'test1';
+			df.appendChild(option);
+			var option = document.createElement('option');
+			option.value = 'test2';
+			df.appendChild(option);
+			var option = document.createElement('option');
+			option.value = 'test3';
+			df.appendChild(option);
+			var list = document.getElementById('list_browsers');
+			list.appendChild(df);
+		}
+	});
+</script>
+</body>
+</html>
+
