@@ -962,8 +962,10 @@ Loader.getAbsolutePath = function(src) {
 
 /**
  * 将name中的“.”换成id形式的“/”
+ * @param name
+ * @param withExt 确保扩展名为.js
  */
-Loader.prototype.name2id = function(name) {
+Loader.prototype.name2id = function(name, withExt) {
 	if (typeof name != 'string') return '';
 
 	var id, ext, extdot;
@@ -975,7 +977,7 @@ Loader.prototype.name2id = function(name) {
 	}
 
 	// name有可能是个目录
-	if (name.lastIndexOf('/') != name.length - 1) {
+	if (withExt && name.lastIndexOf('/') != name.length - 1) {
 		extdot = id.lastIndexOf('.');
 		if (extdot != -1) {
 			ext = id.slice(extdot);
@@ -1049,7 +1051,7 @@ Loader.prototype.buildFileLib = function() {
 		names = script.getAttribute('data-module');
 		if (!names || !src) continue;
 		names.split(/\s+/ig).forEach(function(name) {
-			this.defineFile(urljoin(this.base, this.name2id(name)), src);
+			this.defineFile(urljoin(this.base, this.name2id(name, true)), src);
 		}, this);
 	}
 };
@@ -1219,7 +1221,7 @@ Loader.prototype.define = function(name, dependencies, factory) {
 		dependencies = [];
 	}
 
-	var id = urljoin(this.base, this.name2id(name));
+	var id = urljoin(this.base, this.name2id(name, true));
 	this.defineModule(CommonJSPackage, id, dependencies, factory);
 };
 
@@ -1236,7 +1238,7 @@ Loader.prototype.add = function(name, dependencies, factory) {
 		dependencies = [];
 	}
 
-	var id = urljoin(this.base, this.name2id(name));
+	var id = urljoin(this.base, this.name2id(name, true));
 	this.defineModule(ObjectPackage, id, dependencies, factory);
 };
 
@@ -1246,7 +1248,7 @@ Loader.prototype.add = function(name, dependencies, factory) {
  * @param all 是否移除其所有子模块
  */
 Loader.prototype.remove = function(name, all) {
-	var id = urljoin(this.base, this.name2id(name));
+	var id = urljoin(this.base, this.name2id(name, true));
 
 	delete this.lib[id];
 
