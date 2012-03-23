@@ -162,7 +162,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 				// 如果有新节点加入，则将动态数据标志置为true
 				self.options.dynamicData = true;
 				// 只有当前输入域拥有焦点的情况下，才显示列表
-				if (self.input == self.input.ownerDocument.activeElement) {
+				if (!self._shouldNotShow && self.input == self.input.ownerDocument.activeElement) {
 					self.showDataList();
 				}
 			}, events.HOLD);
@@ -285,6 +285,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 		 * 显示数据列表，每一次获取焦点时调用此方法显示数据
 		 */
 		this.showDataList = function(self) {
+			self._shouldNotShow = false;
 			var needRelocate = true;
 			if (!self._container) {
 				needRelocate = false;
@@ -587,6 +588,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 			var value = li.getAttribute('real_value');
 			self.input.value = value;
 			self.input.fireEvent('datalistItemSelected', {value:value});
+			self._shouldNotShow = true;
 		};
 
 		this.relocate = function(self) {
