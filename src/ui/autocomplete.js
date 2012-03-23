@@ -40,6 +40,11 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 				wrapDataListIfListExists(input, 'handleInputFocus', e);
 			}, events.HOLD);
 
+			// 获取焦点时显示列表
+			input.addEvent('click', function(e) {
+				wrapDataListIfListExists(input, 'handleInputClick', e);
+			}, events.HOLD);
+
 			// 焦点移除时隐藏列表
 			input.addEvent('blur', function(e) {
 				wrapDataListIfListExists(input, 'handleInputBlur', e);
@@ -501,6 +506,18 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 		}
 
 		/**
+		 * 处理input click
+		 */
+		this.handleInputClick = function(self) {
+			if (!self.isDataListDisplayed() && !self.focusFromContainer) {
+				self.showDataList();
+			}
+			if (self.focusFromContainer) {
+				self.focusFromContainer = false;
+			}
+		};
+
+		/**
 		 * 处理input的焦点获取
 		 */
 		this.handleInputFocus = function(self) {
@@ -509,7 +526,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 			}
 			if (self.focusFromContainer) {
 				self.focusFromContainer = false;
-			}			
+			}
 		};
 
 		/**
