@@ -102,7 +102,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 	var TEMPLATES = {
 		// 列表模板，每一次刷新列表都会渲染一次
 		LIST : '<ul style="list-style:none;margin:0;padding:0;z-index:2004;position:relative;overflow:auto;zoom:1;">' + 
-					'{{#data}}<li style="padding:2px 4px;font-size:14px;font-family:inherit;" real_value="{{value}}">{{text}}</li>{{/data}}' + 
+					'{{#data}}<li style="padding:2px 4px;font-size:12px;font-family:inherit;" real_value="{{value}}">{{text}}</li>{{/data}}' + 
 			   '</ul>',
 		// HTML模板，第一次新建div时渲染一次
 		CONTAINER : 
