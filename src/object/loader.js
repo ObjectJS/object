@@ -1050,7 +1050,7 @@ Loader.prototype.buildFileLib = function() {
 		src = script.getAttribute('data-src');
 		names = script.getAttribute('data-module');
 		if (!names || !src) continue;
-		names.split(/\s+/ig).forEach(function(name) {
+		names.trim().split(/\s+/ig).forEach(function(name) {
 			this.defineFile(urljoin(this.base, this.name2id(name, true)), src);
 		}, this);
 	}
