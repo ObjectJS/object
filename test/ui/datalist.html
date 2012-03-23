@@ -16,7 +16,7 @@
 	<p>fdjaljfdaj</p>
 	<p>fdjaljfdaj</p>
 	<p>fdjaljfdaj</p>
-	jfdaljfdfdasfdas<input id='browsers'/>
+	jfdaljfdfdasfdas<input id='browsers' data-list="list_browsers"/>
 	<input type="button" value="add list" onclick="addList()" />
 	<script >
 		function addList() {
@@ -115,6 +115,7 @@
 		ui.autocomplete.enable('browsers3');
 
 		function addListItems() {
+			return;
 			var df = document.createDocumentFragment();
 			var option = document.createElement('option');
 			option.value = 'test1';
