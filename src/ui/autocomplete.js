@@ -356,7 +356,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 			if (data.length == 0) {
 				self._container.style.display = 'none';
 			} else {
-				self._container.style.display = '';
+				self._container.style.display = 'block';
 				if (!self._liOffsetHeight) {
 					self._liOffsetHeight = self._list[0].offsetHeight;
 				}
@@ -574,6 +574,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 				case KEY.ESC : 
 					break;
 				default:
+					self._shouldNotShow = false;
 					self._highlighted = null;
 					self.filterListItems();
 					break;
