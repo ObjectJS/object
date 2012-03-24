@@ -40,6 +40,11 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 				wrapDataListIfListExists(input, 'handleInputFocus', e);
 			}, events.HOLD);
 
+			// 获取焦点时显示列表
+			input.addEvent('click', function(e) {
+				wrapDataListIfListExists(input, 'handleInputClick', e);
+			}, events.HOLD);
+
 			// 焦点移除时隐藏列表
 			input.addEvent('blur', function(e) {
 				wrapDataListIfListExists(input, 'handleInputBlur', e);
@@ -161,8 +166,10 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 			datalist.addEvent('DOMNodeInserted', function(e) {
 				// 如果有新节点加入，则将动态数据标志置为true
 				self.options.dynamicData = true;
-				self.showDataList();
-				self.focusToInput();
+				// 只有当前输入域拥有焦点的情况下，才显示列表
+				if (!self._shouldNotShow && self.input == self.input.ownerDocument.activeElement) {
+					self.showDataList();
+				}
 			}, events.HOLD);
 		};
 
@@ -201,6 +208,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 		 * 让input获取焦点
 		 */
 		this.focusToInput = function(self) {
+			// 在IE下，拖动列表容器滚动条时，如果不加setTimeout，则不会正确设置焦点
 			setTimeout(function() {
 				self.input.focusToPosition(self.input.value.length);
 			}, 0);
@@ -210,7 +218,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 		 * 选择上一条记录
 		 */
 		this.selectPrevListItem = function(self) {
-			var scrollIndex = 0, direction = 'up', list = self._list, len = list.length, scrollIndex = len - 1;
+			var scrollIndex = 0, list = self._list, len = list.length, scrollIndex = len - 1;
 			if (!self._highlighted) {
 				self._highlighted = list[len - 1];
 			} else {
@@ -224,14 +232,14 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 				}
 			}
 			addSelectStyle(self._highlighted);
-			self.scrollToSelectedItem(scrollIndex, direction);
+			self.scrollToSelectedItem();
 		};
 
 		/**
 		 * 选择下一条记录
 		 */
 		this.selectNextListItem = function(self) {
-			var scrollIndex = 0, direction = 'down', list = self._list;
+			var scrollIndex = 0, list = self._list;
 			if (!self._highlighted) {
 				self._highlighted = list[0];
 			} else {
@@ -246,7 +254,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 				}
 			}
 			addSelectStyle(self._highlighted);
-			self.scrollToSelectedItem(scrollIndex, direction);
+			self.scrollToSelectedItem();
 		};
 
 		/**
@@ -254,28 +262,27 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 		 * @param {int} index 选中项的索引
 		 * @param {String} direction 按键的方向（up/down）
 		 */
-		this.scrollToSelectedItem = function(self, index, direction) {
-			var scrollTop = self._ul.scrollTop, 
-				scrolled = scrollTop / self._liOffsetHeight,
-				count = Math.floor(self._ul.offsetHeight / self._liOffsetHeight) - 1;
-				list = self._list, 
-				start = scrolled, end = scrolled + count, 
-				shouldScroll = -1;
-			if (direction == 'down') {
-				if (index == 0) {
-					shouldScroll = 0; 
-				} else if (index > end) {
-					shouldScroll = scrollTop + list[index].offsetHeight;
-				}
-			} else if (direction == 'up') {
-				if (index == list.length - 1) {
-					shouldScroll = list.length * self._liOffsetHeight; 
-				} else if (index < start) {
-					shouldScroll = scrollTop - list[index].offsetHeight; 
-				}
+		this.scrollToSelectedItem = function(self) {
+			var hasScroll = parseInt(self._ul.offsetHeight) < self._ul.scrollHeight;
+			if (!hasScroll) {
+				return;
 			}
-			if (shouldScroll != -1) {
-				self._ul.scrollTop = shouldScroll;
+			var list = self._list,
+				item = self._highlighted,
+				itemPos = calculatePosition(item),
+				listPos = calculatePosition(self._ul);
+
+			var delta = itemPos.top - listPos.top;
+			var scrolled = self._ul.scrollTop;
+			var height = self._ul.offsetHeight;
+
+			// 说明当前元素已经到了顶部以上
+			if (delta < 0) {
+				self._ul.scrollTop = scrolled + delta;
+			}
+			// 说明当前元素已经到达底部以下
+		   	else if (delta > height - item.offsetHeight){
+				self._ul.scrollTop = scrolled + delta - height + item.offsetHeight;
 			}
 		};
 
@@ -283,6 +290,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 		 * 显示数据列表，每一次获取焦点时调用此方法显示数据
 		 */
 		this.showDataList = function(self) {
+			self._shouldNotShow = false;
 			var needRelocate = true;
 			if (!self._container) {
 				needRelocate = false;
@@ -353,7 +361,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 			if (data.length == 0) {
 				self._container.style.display = 'none';
 			} else {
-				self._container.style.display = '';
+				self._container.style.display = 'block';
 				if (!self._liOffsetHeight) {
 					self._liOffsetHeight = self._list[0].offsetHeight;
 				}
@@ -369,7 +377,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 			var ul = self._ul, 
 				inputOffsetWidth = self.input.offsetWidth, 
 				ulOffsetWidth = ul.offsetWidth,
-				listHeight = self._list.length * self._liOffsetHeight,
+				listHeight = ul.offsetHeight,
 				isScrolled = listHeight > self.options.maxHeight;
 
 			// 设置最大高度和最小宽度
@@ -451,7 +459,6 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 			container.delegate('li', 'click', function(e) {
 				self.selectListItem(e.target);
 				self.focusFromContainer = true;
-				self.focusToInput();
 				self.hideDataList();
 			}, events.HOLD);
 		}
@@ -499,6 +506,18 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 		}
 
 		/**
+		 * 处理input click
+		 */
+		this.handleInputClick = function(self) {
+			if (!self.isDataListDisplayed() && !self.focusFromContainer) {
+				self.showDataList();
+			}
+			if (self.focusFromContainer) {
+				self.focusFromContainer = false;
+			}
+		};
+
+		/**
 		 * 处理input的焦点获取
 		 */
 		this.handleInputFocus = function(self) {
@@ -507,7 +526,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 			}
 			if (self.focusFromContainer) {
 				self.focusFromContainer = false;
-			}			
+			}
 		};
 
 		/**
@@ -535,13 +554,11 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 					// 向上则选择上一条
 					e.preventDefault();
 					self.selectPrevListItem();
-					self.focusToInput();
 					break;
 				case KEY.DOWN : 
 					// 向下则选择下一条
 					e.preventDefault();
 					self.selectNextListItem();
-					self.focusToInput();
 					break;
 				case KEY.ENTER : 
 					// 回车则选择当前项，并且隐藏列表
@@ -574,6 +591,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 				case KEY.ESC : 
 					break;
 				default:
+					self._shouldNotShow = false;
 					self._highlighted = null;
 					self.filterListItems();
 					break;
@@ -588,6 +606,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 			var value = li.getAttribute('real_value');
 			self.input.value = value;
 			self.input.fireEvent('datalistItemSelected', {value:value});
+			self._shouldNotShow = true;
 		};
 
 		this.relocate = function(self) {
