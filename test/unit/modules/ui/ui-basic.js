@@ -209,15 +209,22 @@ test('render', function() {
 
 	var TestComponent = new Class(ui.Component, function() {
 
-		this.test = ui.define1('.test', ui.Component, function() {
+		this.test = ui.define1('.test', ui.Component, function(self, make) {
+			var a = make();
+			self._node.appendChild(a._node);
 		});
 
 	});
 
 	var div = document.createElement('div');
 
-	var test = new TestComponent(div);
-	//test.render('hah');
+	var test = new TestComponent(div, {
+		'test.hello': 'fuckyou',
+		'test.template': '<div>{{selector}}</div>'
+	});
+	test.render('test');
+
+	console.log(test._node.outerHTML);
 
 });
 

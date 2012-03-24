@@ -1,7 +1,5 @@
 object.add('ui/ui2.js', 'string, options, dom, events', function(exports, string, options, dom, events) {
 
-// defaultOptions需要记录，用于渲染模板时能够将所有option传递到模板中
-
 var globalid = 0;
 
 /**
@@ -55,7 +53,7 @@ this.define = function(selector, type) {
 /**
  * 定义唯一引用的sub component
  */
-this.define1 = function(selector, type) {
+this.define1 = function(selector, type, renderer) {
 
 	if (!type) type = exports.Component;
 	function fget(self) {
@@ -74,6 +72,8 @@ this.define1 = function(selector, type) {
 	}
 	var prop = property(fget);
 	prop.isComponent = true;
+	prop.type = type;
+	prop.renderer = renderer;
 	return prop;
 };
 
@@ -89,6 +89,7 @@ this.option = function(defaultValue, getter) {
 	var name;
 	// 默认getter是从结构中通过data-前缀获取
 	getter = getter || function(self) {
+		if (!self._node) return undefined;
 		var value = self._node.getData(name.toLowerCase());
 		if (value != undefined) {
 			return ensureTypedValue(value, typeof defaultValue);
@@ -290,6 +291,7 @@ this.component = new Class(type, function() {
 					options.push(name);
 				} else if (member.isComponent) {
 					subs.push(name);
+					dict['render_' + name] = member.renderer;
 				}
 			}
 			else if (!handleparse(name, function(newName, newMember) {
@@ -322,6 +324,7 @@ this.component = new Class(type, function() {
 				cls.get('__options$' + gid).push(name);
 			} else if (member.isComponent) {
 				cls.get('__subs$' + gid).push(name);
+				type.__setattr__(cls, 'render_' + name, member.renderer);
 			}
 			type.__setattr__(cls, name, member);
 		}
@@ -355,13 +358,32 @@ this.Component = new Class(function() {
 
 	this.__metaclass__ = exports.component;
 
+	this.template = exports.option('');
+
+	this.selector = exports.option('');
+
 	/**
 	 * @param node 包装的节点
 	 * @param options 配置
 	 */
 	this.initialize = function(self, node, options) {
-		if (!node) {
-			return;
+		if (!options) options = {};
+		// 保存options，生成sub时用于传递
+		self._options = exports.parseOptions(options);
+
+		if (!node) return;
+
+		self.initRefs(self);
+
+		var template;
+
+		if (!node.nodeType) {
+			template = self.getOption('template')
+			if (template) {
+				node = self.createNode(template, node);
+			} else {
+				return;
+			}
 		}
 
 		self._node = dom.wrap(node);
@@ -374,16 +396,12 @@ this.Component = new Class(function() {
 		self.__nodeMap = {}; // 相应node的uid对应component，用于在需要通过node找到component时使用
 		self.__rendered = {}; // 后来被加入的，而不是首次通过selector选择的node的引用
 
-		if (!options) options = {};
-		// 保存options，生成sub时用于传递
-		self._options = exports.parseOptions(options);
-
 		self.initMembers(self);
 
 		self.init();
 	};
 
-	this.initMembers = classmethod(function(cls, self) {
+	this.initRefs = classmethod(function(cls, self) {
 
 		var gid = cls.get('gid');
 
@@ -412,7 +430,9 @@ this.Component = new Class(function() {
 		self.__options = options;
 		self.__handles = handles;
 		self.__metas = metas;
+	});
 
+	this.initMembers = classmethod(function(cls, self) {
 		self.__subs.forEach(function(name) {
 			self.get(name);
 		});
@@ -440,16 +460,19 @@ this.Component = new Class(function() {
 	/**
 	 * 根据模板和选项生成一个节点
 	 */
-	this.createNode = function(self, template, options) {
-		var node, result, data = {};
-		// 组合options和defaultOption，生成node
-		// 传进来的优先于defaultOption
-		self.__defaultOptions.forEach(function(key) {
-			if (!(key in options)) data[key] = self.get(key);
+	this.createNode = function(self, template, data) {
+		if (!template) {
+			console.error('模板不存在');
+			return null;
+		}
+		var extendData = {};
+		self.__options.forEach(function(name) {
+			extendData[name] = self.get(name);
 		});
-		object.extend(data, options);
-		result = string.substitute(template, data);
-		node = dom.Element.fromString(result);
+		object.extend(data, extendData);
+		var result = string.substitute(template, data);
+		var node = dom.Element.fromString(result);
+
 		return node;
 	};
 
@@ -557,42 +580,16 @@ this.Component = new Class(function() {
 	 * @param data 模板数据/初始化参数
 	 */
 	this.render = function(self, name, data) {
-
-		var sub = self.__properties__[name];
-		var methodName = 'render' + string.capitalize(name);
-		var method2Name = name + 'Render';
-		var nodes;
+		var methodName = 'render_' + name;
 
 		// 如果已经存在结构了，则不用再render了
-		if (!!(sub.single? self[name] && self[name]._node.parentNode : self[name] && self[name][0] && self[name][0]._node.parentNode && self[name][0]._node.parentNode.nodeType != 11)) {
+		if (self.get(name)) {
 			return;
 		}
 
-		if (self[method2Name]) {
-			nodes = self[method2Name](function() {
-				return self.make(name, data);
-			});
-		} else if (self[methodName]) {
-			nodes = self[methodName](data);
-		} else {
-			nodes = self.get(name);
-		}
-
-		// 如果有返回结果，说明没有使用self.make，而是自己生成了需要的普通node元素，则对返回结果进行一次包装
-		if (nodes) {
-			if (sub.single) {
-				if (Array.isArray(nodes) || nodes.constructor === dom.Elements) throw '这是一个唯一引用元素，请不要返回一个数组';
-				addRendered(self, name, nodes);
-			} else {
-				if (!Array.isArray(nodes) && nodes.constructor !== dom.Elements) throw '这是一个多引用元素，请返回一个数组';
-				nodes = new dom.Elements(nodes);
-				nodes.forEach(function(node) {
-					addRendered(self, name, node);
-				});
-			}
-
-			initSub(self, name, nodes);
-		}
+		self[methodName](function() {
+			return self.make(name, data);
+		});
 	};
 
 	/**
@@ -603,28 +600,15 @@ this.Component = new Class(function() {
 	this.make = function(self, name, data) {
 		var sub = self.__properties__[name];
 		var pname = '_' + name;
-		var options = {};
-		var extendOptions = self._options[name];
-		object.extend(options, extendOptions);
 
-		if (data) {
-			Object.keys(data).forEach(function(key) {
-				options[key] = data[key];
-			});
-		}
+		data = data || {};
+		var options = self._options[name];
+		object.extend(data, options, false);
 
-		var node = self.createNode(options.template || sub.template, options);
-		var comp = new sub.type(node, options);
+		var comp = new sub.type(data, options);
 
-		if (sub.single) {
-			self[name] = comp;
-			self[pname] = node;
-		} else {
-			self[name].push(comp);
-			self[pname].push(node);
-		}
-		fillSub(self, name, comp);
-		addRendered(self, name, node);
+		self[name] = comp;
+		self[pname] = comp._node;
 
 		return comp;
 	};
