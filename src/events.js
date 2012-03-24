@@ -56,7 +56,6 @@ IEEvent.prototype.stop = function() {
 this.fireevent = function(arg1) {
 	var name, func, eventDataNames;
 
-	// 千万别给这个function起名字，否则fire出来的事件都叫一个名字
 	var firer = function(self) {
 		// 获取function原生name似乎没什么用
 		// var nativeName = Function.__get_name__(arguments.callee) || arguments.callee.__name__;

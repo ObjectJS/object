@@ -68,6 +68,7 @@ this.define1 = function(selector, type) {
 		}
 		comp = node.component || new type(node);
 		self._set(name, comp);
+		self._set('_' + name, node);
 		return comp;
 	}
 	var prop = property(fget);
@@ -113,10 +114,12 @@ this.option = function(defaultValue, getter) {
 	}
 	function fset(self, value) {
 		var name = prop.__name__;
-		self._options[name] = value;
-		// 重新更新对象上的直接引用值
-		self.get(name);
-		self.fireEvent('__option_change_' + name, {value: value});
+		var oldValue = self.getOption(name);
+		(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
+			self._options[name] = value;
+			// 重新更新对象上的直接引用值
+			self.get(name);
+		}))(self, oldValue, value);
 	}
 	var prop = property(fget, fset);
 	prop.isOption = true;
@@ -155,37 +158,84 @@ this.setOptionTo = function(current, name, value) {
 	current[parts[parts.length - 1]] = value;
 };
 
+function SubEventMeta(sub, eventType, gid) {
+	this.sub = sub;
+	this.eventType = eventType;
+	this.gid = gid;
+}
+
+SubEventMeta.prototype.bind = function(self) {
+	var sub = this.sub;
+	var eventType = this.eventType;
+	var gid = this.gid;
+	var methodName = sub + '_' + eventType + '$' + gid;
+	var fakeEventType;
+
+	// sub component
+	if (typeof self[sub] == 'object') {
+		self[sub]._node.addEvent(eventType, function(event) {
+			var args;
+			// 将event._args pass 到函数后面
+			if (event._args) {
+				args = [event].concat(event._args);
+				self[methodName].apply(self, args);
+			} else {
+				self[methodName](event);
+			}
+		});
+	}
+	// option
+	else {
+		// 注册 option_change 等事件
+		fakeEventType = '__option_' + eventType + '_' + sub;
+
+		self.addEvent(fakeEventType, function(event) {
+			self[methodName](event);
+		});
+	}
+};
+
 function subevent(sub, eventType, gid) {
 	return function(func) {
-		func.meta = {
-			type: 'subEvent',
-			sub: sub,
-			eventType: eventType,
-			gid: gid
-		};
+		func.meta = new SubEventMeta(sub, eventType, gid);
 		return func;
 	}
 }
+
+function OnEventMeta(eventType, gid, methodName) {
+	this.eventType = eventType;
+	this.gid = gid;
+	this.methodName = methodName;
+}
+
+OnEventMeta.prototype.bind = function(self) {
+	var eventType = this.eventType;
+	var methodName = this.methodName;
+	var realEventType; // 正常大小写的名称
+	// 自己身上的on事件不触发，只触发addon上的。
+	if (this.gid != self.gid && self.__handles.some(function(handle) {
+		if (handle.toLowerCase() == eventType) {
+			realEventType = handle;
+			return true;
+		}
+		return false;
+	})) {
+		self.addEvent(realEventType, function(event) {
+			var args;
+			// 将event._args pass 到函数后面
+			if (event._args) {
+				args = [event].concat(event._args);
+				self[methodName].apply(self, args);
+			} else {
+				self[methodName](event);
+			}
+		});
+	}
+};
 
 function onevent(eventType, gid, methodName) {
 	return function(func) {
-		func.meta = {
-			type: 'onEvent',
-			eventType: eventType,
-			methodName: methodName,
-			gid: gid
-		};
-		return func;
-	}
-}
-
-function handle(name, gid) {
-	return function(func) {
-		func.meta = {
-			type: 'handle',
-			name: name,
-			gid: gid
-		}
+		func.meta = new OnEventMeta(eventType, gid, methodName);
 		return func;
 	}
 }
@@ -264,6 +314,7 @@ this.component = new Class(type, function() {
 			}
 		});
 	};
+
 });
 
 /**
@@ -292,11 +343,11 @@ this.Component = new Class(function() {
 		self.__nodeMap = {}; // 相应node的uid对应component，用于在需要通过node找到component时使用
 		self.__rendered = {}; // 后来被加入的，而不是首次通过selector选择的node的引用
 
-		self.initMembers(self);
+		if (!options) options = {};
+		// 保存options，生成sub时用于传递
+		self._options = exports.parseOptions(options);
 
-		//initOptions(self, options);
-		//initSubs(self);
-		//initEvents(self);
+		self.initMembers(self);
 
 		self.init();
 	};
@@ -311,40 +362,22 @@ this.Component = new Class(function() {
 			else if (typeof member == 'function') {
 				meta = member.im_func.meta;
 				if (meta) {
-					if (meta.type == 'onEvent') {
-						self.handleOnEvent(meta);
-					}
+					meta.bind(self);
 				}
 			}
 		});
 	});
 
-	this.handleOnEvent = function(self, meta) {
-		var eventType = meta.eventType;
-		var methodName = meta.methodName;
-		var realEventType; // 正常大小写的名称
-		// 自己身上的on事件不触发，只触发addon上的。
-		if (meta.gid != self.gid && self.__handles.some(function(handle) {
-			if (handle.toLowerCase() == eventType) {
-				realEventType = handle;
-				return true;
-			}
-			return false;
-		})) {
-			self.addEvent(realEventType, function(event) {
-				// 将event._args pass 到函数后面
-				var args = [event].concat(event._args);
-				self[methodName].apply(self, args)
-			});
-		}
+	this.fireEvent = function(self) {
+		return self._node.fireEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
 	};
 
-	this.fireEvent = function(self, type) {
-		return self._node.fireEvent(type);
-	}
+	this.addEvent = function(self) {
+		return self._node.addEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
+	};
 
-	this.addEvent = function(self, type, func, p) {
-		return self._node.addEvent(type, func, p);
+	this.removeEvent = function(self) {
+		return self._node.removeEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
 	};
 
 	/**
@@ -558,46 +591,6 @@ this.Component = new Class(function() {
 	this.getNode = function(self) {
 		return self._node;
 	};
-
-	function initOptions(self, options) {
-		if (!options) options = {};
-		// 保存options，生成sub时用于传递
-		self._options = exports.parseOptions(options);
-		return;
-
-		self.__defaultOptions.forEach(function(name) {
-			// 从options参数获取配置到self[name]
-			self.get(name);
-
-			// 注册 option_change 等事件
-			var bindEvents = function(events, cls) {
-				if (events) {
-					events.forEach(function(eventType) {
-						var fakeEventType = '__option_' + eventType + '_' + name;
-						var methodName = name + '_' + eventType;
-						self.addEvent(fakeEventType, function(event) {
-							// 注意这个self是调用了此addon的类的实例，而不是addon的实例，其__this__并不是addon的；
-							// 必须通过cls调用addon上的方法，在相应方法中才能获取到正确的__this__；
-							// if (cls) cls.prototype[methodName].call(self, event.value);
-							// 上面这种调用方法由于获取的self.__this__，不正确。
-							// 改成下面这种
-							if (cls) cls.get(methodName).call(cls, self, event.value);
-							// 调用自己的
-							else self[methodName](event.value);
-						});
-					});
-				}
-			};
-
-			bindEvents(self.__subEvents[name]);
-			if (self.addons) {
-				self.addons.forEach(function(addon) {
-					bindEvents(addon.prototype.__subEvents[name], addon);
-				});
-			}
-
-		});
-	}
 
 	function initEvents(self) {
 		self.__onEvents.forEach(function(meta) {

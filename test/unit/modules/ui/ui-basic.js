@@ -13,18 +13,54 @@ test('sub property.', function() {
 	div.innerHTML = '<div class="test">test</div>';
 
 	var test = new TestComponent(div);
+	var testComp = test.test;
+	var testNode = test.test.getNode();
+
 	// 初始化时会获取所有sub
 	equals(test.test.getNode().className, 'test', 'define1 component right when init.');
 
+	// 下环线形式获取节点
+	equals(test._test, testNode, 'define1 component right when init.');
+
 	// 两个引用相同，返回相同一个component引用
-	var testComp = test.test;
-	ok(test.test2 === testComp, 'using one same component when selector same.');
-	ok(test.test3 === testComp, 'component defined after class created.');
+	equals(test.test2, testComp, 'using one same component when selector same.');
+	equals(test.test3, testComp, 'component defined after class created.');
+
+	// 直接获取节点方式
+	equals(test._test2, testNode, 'using one same node when selector same.');
+	equals(test._test3, testNode, 'component defined after class created.');
 
 	// TODO mutiple define
 });
 
-test('handle method.', function() {
+test('option property', function() {
+	optionChangeFired = 0;
+	var TestComponent = new Class(ui.Component, function() {
+		this.test = ui.option(1);
+
+		this.test_change = function(self, event) {
+			equal(event.oldValue, 1, '');
+			equal(event.value, 2, '');
+			optionChangeFired++;
+		};
+	});
+
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="test">test</div>';
+
+	var test = new TestComponent(div);
+
+	equals(test.test, 1, 'default option value ok.');
+
+	// 普通设置
+	test.set('test', 2);
+	equals(test.test, 2, 'set option value ok.');
+
+	// 设置会触发事件
+	equals(optionChangeFired, 1, 'set option fired change event.');
+});
+
+test('handle method', function() {
 	var methodCalled = 0;
 	var eventFired = 0;
 	var TestComponent = new Class(ui.Component, function() {
@@ -98,11 +134,35 @@ test('on event method.', function() {
 });
 
 test('sub event method.', function() {
+
+	var clickEventCalled = 0;
+	var customEventCalled = 0;
+
+	var Test2Component = new Class(ui.Component, function() {
+		this._test = function(self, a) {
+		}
+	});
+
 	var TestComponent = new Class(ui.Component, function() {
 
-		this.test = ui.define1('.test');
+		this.test = ui.define1('.test', Test2Component);
 
-		this.test_click = function() {
+		this.test_click = function(self, event) {
+			// 传递的是正确的事件
+			equals(event.type, 'click', 'arguments pass ok.');
+			// 从event上能够找到触发此事件的component信息。
+			equals(event.target.component, self.test, 'component arguments pass ok with click event.');
+
+			clickEventCalled++;
+		};
+
+		this.test_test = function(self, event, a) {
+			// 从event上能够找到触发此事件的component信息。
+			equals(event.target.component, self.test, 'component arguments pass ok with custom event.');
+			// 自定义事件传递的参数可以获取
+			equals(a, 'test', 'custom arguments pass ok with custom event.');
+
+			customEventCalled++;
 		};
 
 	});
@@ -111,6 +171,11 @@ test('sub event method.', function() {
 	div.innerHTML = '<div class="test">test</div>';
 
 	var test = new TestComponent(div);
+	test.test.getNode().click();
+	test.test.test('test');
+
+	equals(clickEventCalled, 1, 'sub click event called.');
+	equals(customEventCalled, 1, 'sub custom event called.');
 });
 
 });
