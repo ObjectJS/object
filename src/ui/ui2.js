@@ -1,7 +1,6 @@
 object.add('ui/ui2.js', 'string, options, dom, events', function(exports, string, options, dom, events) {
 
 // defaultOptions需要记录，用于渲染模板时能够将所有option传递到模板中
-// defaultOptions需要记录，用于注册option_change事件
 
 var globalid = 0;
 
@@ -74,6 +73,7 @@ this.define1 = function(selector, type) {
 		return comp;
 	}
 	var prop = property(fget);
+	prop.isComponent = true;
 	return prop;
 };
 
@@ -274,9 +274,10 @@ this.component = new Class(type, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 		var gid = dict.gid = globalid++;
-		dict.__options = [];
-		dict.__handles = [];
-		dict.__onEvents = [];
+		var subs = dict['__subs$' + gid] = [];
+		var options = dict['__options$' + gid] = [];
+		var handles = dict['__handles$' + gid] = [];
+		var metas = dict['__metas$' + gid] = [];
 
 		Object.keys(dict).forEach(function(name) {
 			var member = dict[name];
@@ -286,20 +287,23 @@ this.component = new Class(type, function() {
 
 			if (member.__class__ == property) {
 				if (member.isOption) {
-					dict.__options.push(name);
+					options.push(name);
+				} else if (member.isComponent) {
+					subs.push(name);
 				}
 			}
 			else if (!handleparse(name, function(newName, newMember) {
 				dict[newName] = newMember;
-				dict.__handles.push(newName);
+				handles.push(newName);
 			})) {
 				SubEventMeta.parse(name, gid, member, function(newName, newMember) {
 					dict[newName] = newMember;
 					delete dict[name];
+					metas.push(newName);
 				}) || OnEventMeta.parse(name, gid, member, function(newName, newMember) {
 					dict[newName] = newMember;
 					delete dict[name];
-					dict.__onEvents.push(newName);
+					metas.push(newName);
 				});
 			}
 		});
@@ -307,11 +311,22 @@ this.component = new Class(type, function() {
 		return type.__new__(cls, name, base, dict);
 	};
 
+	this.initialize = function(cls, name, base, dict) {
+	};
+
 	this.__setattr__ = function(cls, name, member) {
 		var gid = cls.get('gid');
 
-		if (handleparse(name, function(newName, newMember) {
-			cls.get('__handles').push(newName);
+		if (member.__class__ == property) {
+			if (member.isOption) {
+				cls.get('__options$' + gid).push(name);
+			} else if (member.isComponent) {
+				cls.get('__subs$' + gid).push(name);
+			}
+			type.__setattr__(cls, name, member);
+		}
+		else if (handleparse(name, function(newName, newMember) {
+			cls.get('__handles$' + gid).push(newName);
 			type.__setattr__(cls, newName, newMember);
 			type.__setattr__(cls, name, member);
 		})) {
@@ -319,32 +334,16 @@ this.component = new Class(type, function() {
 		}
 		else if (SubEventMeta.parse(name, gid, member, function(newName, newMember) {
 			type.__setattr__(cls, newName, newMember);
+			cls.get('__metas$' + gid).push(newName);
 		}) || OnEventMeta.parse(name, gid, member, function(newName, newMember) {
 			type.__setattr__(cls, newName, newMember);
-			cls.get('__onEvents').push(newName);
+			cls.get('__metas$' + gid).push(newName);
 		})) {
 			return;
 		}
 		else {
 			type.__setattr__(cls, name, member);
 		}
-	};
-
-	this.initialize = function(cls, name, base, dict) {
-		;(cls.__mixins__ || []).forEach(function(mixin) {
-			var handles = mixin.get('__handles');
-			if (handles) {
-				dict.__handles.push.apply(dict.__handles, handles);
-			}
-			var options = mixin.get('__options');
-			if (options) {
-				dict.__options.push.apply(dict.__options, options);
-			}
-			var onEvents = mixin.get('__onEvents');
-			if (onEvents) {
-				dict.__onEvents.push.apply(dict.__onEvents, onEvents);
-			}
-		});
 	};
 
 });
@@ -385,21 +384,44 @@ this.Component = new Class(function() {
 	};
 
 	this.initMembers = classmethod(function(cls, self) {
-		self.__onEvents.forEach(function(name) {
-			console.log(self[name].im_func.meta);
+
+		var gid = cls.get('gid');
+
+		var subs = cls.get('__subs$' + gid).slice();
+		var options = cls.get('__options$' + gid).slice();
+		var handles = cls.get('__handles$' + gid).slice();
+		var metas = cls.get('__metas$' + gid).slice();
+
+		;(cls.__mixins__ || []).forEach(function(mixin) {
+			var gid = mixin.get('gid');
+			mixin.get('__subs$' + gid).forEach(function(item) {
+				if (subs.indexOf(item) == -1) subs.push(item);
+			});
+			mixin.get('__options$' + gid).forEach(function(item) {
+				if (options.indexOf(item) == -1) options.push(item);
+			});
+			mixin.get('__handles$' + gid).forEach(function(item) {
+				if (handles.indexOf(item) == -1) handles.push(item);
+			});
+			mixin.get('__metas$' + gid).forEach(function(item) {
+				if (metas.indexOf(item) == -1) metas.push(item);
+			});
 		});
-		Class.keys(cls).forEach(function(name) {
+
+		self.__subs = subs;
+		self.__options = options;
+		self.__handles = handles;
+		self.__metas = metas;
+
+		self.__subs.forEach(function(name) {
+			self.get(name);
+		});
+		self.__options.forEach(function(name) {
+			self.get(name);
+		});
+		self.__metas.forEach(function(name) {
 			var member = cls.get(name);
-			var meta;
-			if (member.__class__ == property) {
-				self.get(name);
-			}
-			else if (typeof member == 'function') {
-				meta = member.im_func.meta;
-				if (meta) {
-					meta.bind(self, name);
-				}
-			}
+			member.im_func.meta.bind(self, name);
 		});
 	});
 
