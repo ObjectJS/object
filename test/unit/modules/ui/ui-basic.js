@@ -2,7 +2,7 @@ object.use('ui/ui2.js', function(ui) {
 
 module('basic');
 
-test('sub property.', function() {
+test('sub property', function() {
 	var TestComponent = new Class(ui.Component, function() {
 		this.test = ui.define1('.test');
 		this.test2 = ui.define1('.test');
@@ -34,22 +34,39 @@ test('sub property.', function() {
 });
 
 test('option property', function() {
+
 	optionChangeFired = 0;
+
 	var TestComponent = new Class(ui.Component, function() {
+
 		this.test = ui.option(1);
+
+		this.test2 = ui.option('string');
+
+		this.test3 = ui.option(true);
+
+		this.test4 = ui.option(false, function(self) {
+			return self.getNode().innerHTML;
+		});
 
 		this.test_change = function(self, event) {
 			equal(event.oldValue, 1, '');
 			equal(event.value, 2, '');
 			optionChangeFired++;
 		};
+
+		this.test2_change = function(self, event) {
+			event.preventDefault();
+		};
 	});
 
 	var div = document.createElement('div');
-	div.innerHTML = '<div class="test">test</div>';
+	div.setAttribute('data-test3', '');
+	div.innerHTML = 'custom-value';
 
 	var test = new TestComponent(div);
 
+	// 默认属性
 	equals(test.test, 1, 'default option value ok.');
 
 	// 普通设置
@@ -58,6 +75,16 @@ test('option property', function() {
 
 	// 设置会触发事件
 	equals(optionChangeFired, 1, 'set option fired change event.');
+
+	// 阻止option设置
+	test.set('test2', 'xxx');
+	equals(test.test2, 'string', 'set option prevented.');
+
+	// 从属性获取option
+	equals(test.test3, false, 'get option from node.');
+
+	// 自定义属性getter取代从属性获取
+	equals(test.test4, 'custom-value', 'get option from custom getter.');
 });
 
 test('handle method', function() {
@@ -90,7 +117,7 @@ test('handle method', function() {
 	equals(eventFired, 1, 'event fired.');
 });
 
-test('on event method.', function() {
+test('on event method', function() {
 
 	var eventFired = 0;
 	var onEventCalled = 0;
@@ -133,7 +160,7 @@ test('on event method.', function() {
 	equal(onEventCalled, 1, 'on event called.');
 });
 
-test('sub event method.', function() {
+test('sub event method', function() {
 
 	var clickEventCalled = 0;
 	var customEventCalled = 0;
@@ -176,6 +203,22 @@ test('sub event method.', function() {
 
 	equals(clickEventCalled, 1, 'sub click event called.');
 	equals(customEventCalled, 1, 'sub custom event called.');
+});
+
+test('render', function() {
+
+	var TestComponent = new Class(ui.Component, function() {
+
+		this.test = ui.define1('.test', ui.Component, function() {
+		});
+
+	});
+
+	var div = document.createElement('div');
+
+	var test = new TestComponent(div);
+	//test.render('hah');
+
 });
 
 });

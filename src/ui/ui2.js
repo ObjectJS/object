@@ -3,7 +3,7 @@ object.add('ui/ui2.js', 'string, options, dom, events', function(exports, string
 // defaultOptions需要记录，用于渲染模板时能够将所有option传递到模板中
 // defaultOptions需要记录，用于注册option_change事件
 
-var gid = 0;
+var globalid = 0;
 
 /**
  * 用于承载options的空对象
@@ -57,6 +57,7 @@ this.define = function(selector, type) {
  * 定义唯一引用的sub component
  */
 this.define1 = function(selector, type) {
+
 	if (!type) type = exports.Component;
 	function fget(self) {
 		var name = prop.__name__;
@@ -66,6 +67,7 @@ this.define1 = function(selector, type) {
 		} else {
 			node = self._node.getElement(selector);
 		}
+		if (!node) return null;
 		comp = node.component || new type(node);
 		self._set(name, comp);
 		self._set('_' + name, node);
@@ -84,8 +86,9 @@ this.define1 = function(selector, type) {
  * 这样MyComponent实例的myConfig属性值即为默认值1，可通过 set 方法修改
  */
 this.option = function(defaultValue, getter) {
+	var name;
 	// 默认getter是从结构中通过data-前缀获取
-	if (!getter) getter = function(self, name) {
+	getter = getter || function(self) {
 		var value = self._node.getData(name.toLowerCase());
 		if (value != undefined) {
 			return ensureTypedValue(value, typeof defaultValue);
@@ -93,7 +96,7 @@ this.option = function(defaultValue, getter) {
 	};
 	function fget(self) {
 		// 三个获取级别，优先级：结构>用户设置>默认
-		var name = prop.__name__;
+		name = prop.__name__;
 		var value;
 		var getterValue = getter(self, name);
 		// 优先从结构中获取
@@ -113,7 +116,7 @@ this.option = function(defaultValue, getter) {
 		return value;
 	}
 	function fset(self, value) {
-		var name = prop.__name__;
+		name = prop.__name__;
 		var oldValue = self.getOption(name);
 		(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
 			self._options[name] = value;
@@ -164,15 +167,31 @@ function SubEventMeta(sub, eventType, gid) {
 	this.gid = gid;
 }
 
-SubEventMeta.prototype.bind = function(self) {
+SubEventMeta.parse = function(name, gid, member, after) {
+	var newName = name + '$' + gid;
+	if (name.match(/^(_?\w+)_(\w+)$/)) {
+		after(newName, subevent(RegExp.$1, RegExp.$2, gid)(member));
+		return true;
+	}
+};
+
+SubEventMeta.prototype.bind = function(self, methodName) {
 	var sub = this.sub;
 	var eventType = this.eventType;
 	var gid = this.gid;
-	var methodName = sub + '_' + eventType + '$' + gid;
 	var fakeEventType;
 
+	// options
+	if (self.__options.indexOf(sub) != -1) {
+		// 注册 option_change 等事件
+		fakeEventType = '__option_' + eventType + '_' + sub;
+
+		self.addEvent(fakeEventType, function(event) {
+			self[methodName](event);
+		});
+	}
 	// sub component
-	if (typeof self[sub] == 'object') {
+	else {
 		self[sub]._node.addEvent(eventType, function(event) {
 			var args;
 			// 将event._args pass 到函数后面
@@ -184,33 +203,23 @@ SubEventMeta.prototype.bind = function(self) {
 			}
 		});
 	}
-	// option
-	else {
-		// 注册 option_change 等事件
-		fakeEventType = '__option_' + eventType + '_' + sub;
+};
 
-		self.addEvent(fakeEventType, function(event) {
-			self[methodName](event);
-		});
+function OnEventMeta(eventType, gid) {
+	this.eventType = eventType;
+	this.gid = gid;
+}
+
+OnEventMeta.parse = function(name, gid, member, after) {
+	var newName = name + '$' + gid;
+	if (name.match(/^on(\w+)$/)) {
+		after(newName, onevent(RegExp.$1, gid)(member));
+		return true;
 	}
 };
 
-function subevent(sub, eventType, gid) {
-	return function(func) {
-		func.meta = new SubEventMeta(sub, eventType, gid);
-		return func;
-	}
-}
-
-function OnEventMeta(eventType, gid, methodName) {
-	this.eventType = eventType;
-	this.gid = gid;
-	this.methodName = methodName;
-}
-
-OnEventMeta.prototype.bind = function(self) {
+OnEventMeta.prototype.bind = function(self, methodName) {
 	var eventType = this.eventType;
-	var methodName = this.methodName;
 	var realEventType; // 正常大小写的名称
 	// 自己身上的on事件不触发，只触发addon上的。
 	if (this.gid != self.gid && self.__handles.some(function(handle) {
@@ -233,9 +242,29 @@ OnEventMeta.prototype.bind = function(self) {
 	}
 };
 
-function onevent(eventType, gid, methodName) {
+function handleparse(name, after) {
+	var newName = name.slice(1);
+	if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
+		member = events.fireevent(function(self) {
+			if (self[name]) {
+				return self[name].apply(self, Array.prototype.slice.call(arguments, 1));
+			}
+		});
+		after(newName, member);
+		return true;
+	}
+}
+
+function subevent(sub, eventType, gid) {
 	return function(func) {
-		func.meta = new OnEventMeta(eventType, gid, methodName);
+		func.meta = new SubEventMeta(sub, eventType, gid);
+		return func;
+	}
+}
+
+function onevent(eventType, gid) {
+	return function(func) {
+		func.meta = new OnEventMeta(eventType, gid);
 		return func;
 	}
 }
@@ -244,33 +273,34 @@ function onevent(eventType, gid, methodName) {
 this.component = new Class(type, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
-		dict.gid = gid++;
+		var gid = dict.gid = globalid++;
+		dict.__options = [];
 		dict.__handles = [];
+		dict.__onEvents = [];
 
 		Object.keys(dict).forEach(function(name) {
 			var member = dict[name];
-			var newName = name + '$' + dict.gid;
-			if (name == 'initialize' || name.indexOf('__') == 0 || member == null) return;
-			if (typeof member == 'function') {
-				if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
-					dict[newName] = subevent(RegExp.$1, RegExp.$2, dict.gid)(member);
-					delete dict[name];
+			if (name == 'initialize' || name.indexOf('__') == 0 || member == null) {
+				return;
+			}
 
-				} else if (name.match(/^on([a-zA-Z]+)$/)) {
-					dict[newName] = onevent(RegExp.$1, dict.gid, newName)(member);
-					delete dict[name];
-
-				} else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
-					newName = name.slice(1);
-					dict[newName] = events.fireevent(function(self) {
-						if (self[name]) {
-							return self[name].apply(self, Array.prototype.slice.call(arguments, 1));
-						}
-					});
-					dict.__handles.push(newName);
-
+			if (member.__class__ == property) {
+				if (member.isOption) {
+					dict.__options.push(name);
 				}
-
+			}
+			else if (!handleparse(name, function(newName, newMember) {
+				dict[newName] = newMember;
+				dict.__handles.push(newName);
+			})) {
+				SubEventMeta.parse(name, gid, member, function(newName, newMember) {
+					dict[newName] = newMember;
+					delete dict[name];
+				}) || OnEventMeta.parse(name, gid, member, function(newName, newMember) {
+					dict[newName] = newMember;
+					delete dict[name];
+					dict.__onEvents.push(newName);
+				});
 			}
 		});
 
@@ -278,28 +308,22 @@ this.component = new Class(type, function() {
 	};
 
 	this.__setattr__ = function(cls, name, member) {
-		var newName;
 		var gid = cls.get('gid');
-		if (name.match(/^(_?[a-zA-Z]+)_([a-zA-Z]+)$/)) {
-			newName = name + '$' + gid;
-			cls.set(newName, subevent(RegExp.$1, RegExp.$2, gid)(member));
 
-		}
-		else if (name.match(/^on([a-zA-Z]+)$/)) {
-			newName = name + '$' + gid;
-			cls.set(newName, onevent(RegExp.$1, gid, newName)(member));
-
-		}
-		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') { // _xxx but not __xxx
-			newName = name.slice(1);
-			type.__setattr__(cls, newName, events.fireevent(function(self) {
-				if (self[name]) {
-					return self[name].apply(self, Array.prototype.slice.call(arguments, 1));
-				}
-			}));
+		if (handleparse(name, function(newName, newMember) {
 			cls.get('__handles').push(newName);
+			type.__setattr__(cls, newName, newMember);
 			type.__setattr__(cls, name, member);
-
+		})) {
+			return;
+		}
+		else if (SubEventMeta.parse(name, gid, member, function(newName, newMember) {
+			type.__setattr__(cls, newName, newMember);
+		}) || OnEventMeta.parse(name, gid, member, function(newName, newMember) {
+			type.__setattr__(cls, newName, newMember);
+			cls.get('__onEvents').push(newName);
+		})) {
+			return;
 		}
 		else {
 			type.__setattr__(cls, name, member);
@@ -311,6 +335,14 @@ this.component = new Class(type, function() {
 			var handles = mixin.get('__handles');
 			if (handles) {
 				dict.__handles.push.apply(dict.__handles, handles);
+			}
+			var options = mixin.get('__options');
+			if (options) {
+				dict.__options.push.apply(dict.__options, options);
+			}
+			var onEvents = mixin.get('__onEvents');
+			if (onEvents) {
+				dict.__onEvents.push.apply(dict.__onEvents, onEvents);
 			}
 		});
 	};
@@ -353,6 +385,9 @@ this.Component = new Class(function() {
 	};
 
 	this.initMembers = classmethod(function(cls, self) {
+		self.__onEvents.forEach(function(name) {
+			console.log(self[name].im_func.meta);
+		});
 		Class.keys(cls).forEach(function(name) {
 			var member = cls.get(name);
 			var meta;
@@ -362,7 +397,7 @@ this.Component = new Class(function() {
 			else if (typeof member == 'function') {
 				meta = member.im_func.meta;
 				if (meta) {
-					meta.bind(self);
+					meta.bind(self, name);
 				}
 			}
 		});
@@ -394,12 +429,6 @@ this.Component = new Class(function() {
 		result = string.substitute(template, data);
 		node = dom.Element.fromString(result);
 		return node;
-	};
-
-	function addNodeMap(self, name, id, comp) {
-		var nodeMap = self.__nodeMap;
-		if (!nodeMap[name]) nodeMap[name] = {};
-		nodeMap[name][id] = comp;
 	};
 
 	this._init = function(self) {
@@ -592,122 +621,17 @@ this.Component = new Class(function() {
 		return self._node;
 	};
 
-	function initEvents(self) {
-		self.__onEvents.forEach(function(meta) {
-			var trueEventType; // 正常大小写的名称
-			if (self.__handles.some(function(handle) {
-				if (handle.name.toLowerCase() == meta.eventType) {
-					trueEventType = handle.name;
-					return true;
-				}
-				return false;
-			})) {
-				self.addEvent(trueEventType, function(event) {
-					// 将event._args pass 到函数后面
-					var args = [self, event].concat(event._args);
-					addon.get('on' + meta.eventType).apply(addon, args);
-				});
-			}
-		});
-	}
-
-	function initSubs(self) {
-		console.log(self.__subEvents)
-			return;
-		// TODO 这里修改了__properties__中的成员，导致如果某一个组件实例修改了类，后面的组件就都变化了。
-		self.__subs.forEach(function(name) {
-			var sub = self.__properties__[name];
-
-			var options = self._options[name];
-			// 从options获取子元素的扩展信息
-			if (options && options.addons) {
-				sub.type = new Class(sub.type, function() {
-					options.addons.forEach(function(addon) {
-						exports.addon(this, addon);
-					}, this);
-				});
-			}
-
-			initSub(self, name, self.get(name));
-		});
-	}
-
-	/**
-	 * 将一个comp的信息注册到__subs上
-	 */
-	function fillSub(self, name, comp) {
-		var sub = self.__properties__[name];
-		var node = comp._node;
-		addNodeMap(self, name, String(node.uid), comp);
-		comp = self.__nodeMap[name][String(node.uid)];
-
-		// 注册 option_change 等事件
-		var bindEvents = function(events, cls) {
-			if (events) {
-				events.forEach(function(eventType) {
-					var methodName = name + '_' + eventType;
-					node.addEvent(eventType, function(event) {
-						// 调用addon上的
-						// 注意这个self是调用了此addon的类的实例，而不是addon的实例，其__this__并不是addon的；
-						// 必须通过cls调用addon上的方法，在相应方法中才能获取到正确的__this__；
-						// if (cls) cls.prototype[methodName].apply(self, [event, comp].concat(event._args));
-						// 上面这种调用方法由于获取的self.__this__，不正确。
-						// 改成下面这种
-						if (cls) cls.get(methodName).apply(cls, [self, event, comp].concat(event._args));
-						// 调用自己的
-						else self[methodName].apply(self, [event, comp].concat(event._args));
-					});
-				});
-			}
-		};
-
-		bindEvents(self.__subEvents[name]);
-		if (self.addons) {
-			self.addons.forEach(function(addon) {
-				bindEvents(addon.prototype.__subEvents[name], addon);
-			});
-		}
-	};
-
 	function addRendered(self, name, node) {
 		var rendered = self.__rendered;
 		if (!rendered[name]) rendered[name] = [];
 		rendered[name].push(node);
 	};
 
-	/**
-	 * 根据sub的定义获取component的引用
-	 */
-	function initSub(self, name, nodes) {
-		if (!self._node) return null;
-
-		var sub = self.__properties__[name];
-		var comps;
-		var options = self._options[name];
-
-		if (sub.single) {
-			if (nodes) {
-				comps = new sub.type(nodes, options);
-				fillSub(self, name, comps);
-			}
-		} else {
-			if (nodes) {
-				//comps = new exports.Components(nodes, sub.type, options);
-				//comps.forEach(function(comp) {
-					//self.__fillSub(name, comp);
-				//});
-			} else {
-				// 没有的也留下一个空的Components
-				//comps = new exports.Components([], sub.type);
-			}
-		}
-
-		self['_' + name] = nodes;
-		self._set(name, comps);
-
-		return comps;
+	function addNodeMap(self, name, id, comp) {
+		var nodeMap = self.__nodeMap;
+		if (!nodeMap[name]) nodeMap[name] = {};
+		nodeMap[name][id] = comp;
 	};
-
 
 });
 
