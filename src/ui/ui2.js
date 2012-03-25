@@ -218,15 +218,10 @@ SubEventMeta.prototype.bindSubEvent = function() {
 };
 
 SubEventMeta.prototype.bindOptionEvent = function() {
-	var sub = this.sub;
-	var eventType = this.eventType;
 	var methodName = this.methodName;
-	var gid = this.gid;
 	var comp = this.comp;
-	var fakeEventType;
-
 	// 注册 option_change 等事件
-	fakeEventType = '__option_' + eventType + '_' + sub;
+	var fakeEventType = '__option_' + this.eventType + '_' + this.sub;
 
 	comp.addEvent(fakeEventType, function(event) {
 		comp[methodName](event);
