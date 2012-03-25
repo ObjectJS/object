@@ -159,6 +159,13 @@ this.option = function(defaultValue, getter) {
 	return prop;
 };
 
+this.addon = function(dict, addon) {
+	if (!dict.__mixins__) {
+		dict.__mixins__ = [];
+	}
+	dict.__mixins__.push(addon);
+};
+
 /**
  * {'a.b.c': 1, b: 2} ==> {a: {b: {c:1}}, b: 2}
  */
@@ -373,6 +380,7 @@ this.component = new Class(type, function() {
 		});
 
 		// 生成meta方法
+		// 在initialize中创建而不是__new__中目的是避免Components中出现无用的方法
 		var info = dict['__info$' + gid];
 		info.metas.forEach(function(item) {
 			type.__setattr__(cls, item.name, item.member);
@@ -463,7 +471,7 @@ this.Component = new Class(function() {
 		}
 
 		self._node = dom.wrap(node);
-		if (node.compoment) {
+		if (node.component) {
 			console.error('一个元素只可以作为一个组件');
 			return;
 		}
@@ -546,6 +554,14 @@ this.Component = new Class(function() {
 
 	this.removeEvent = function(self) {
 		return self._node.removeEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
+	};
+
+	this.show = function(self) {
+		return self._node.show();
+	};
+
+	this.hide = function(self) {
+		return self._node.hide();
 	};
 
 	/**

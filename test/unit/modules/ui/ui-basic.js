@@ -172,11 +172,20 @@ test('on event method', function() {
 
 	});
 
+	var TestComponent2 = new Class(TestComponent, function() {
+	});
+
 	var div = document.createElement('div');
 	var test = new TestComponent(div);
 	test.test();
 	equal(eventFired, 1, 'event fired.');
 	equal(onEventCalled, 1, 'on event called.');
+
+	var div2 = document.createElement('div');
+	var test2 = new TestComponent2(div2);
+	test2.test();
+	equal(eventFired, 2, 'event fired with extend.');
+	equal(onEventCalled, 2, 'on event called with extend.');
 });
 
 test('sub event method', function() {
