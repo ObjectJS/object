@@ -584,8 +584,7 @@ Class.keys = function(cls) {
 	keys = keys.filter(function(name) {
 		// 这3个需要过滤掉，是为了支持property加入的内置成员
 		// initialize也需要过滤，当mixin多个class的时候，initialize默认为最后一个，这种行为没意义
-		// 过滤掉双下划线命名的系统成员和私有成员
-		return !(['get', 'set', '_set', 'initialize', 'constructor'].indexOf(name) !== -1 || name.indexOf('__') == 0);
+		return !(['get', 'set', '_set', 'initialize', 'constructor'].indexOf(name) !== -1);
 	});
 	return keys;
 };
