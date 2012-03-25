@@ -17,20 +17,35 @@ var Publisher = new Class(ui.Component, function() {
 
 });
 
-var PublisherPhotoAddon = new Class(ui.Component, function() {
-	this.photo = ui.define1('#publisher-photo-box');
-	this.photoTrigger = ui.define1('#publisher-photo-trigger');
+var PublisherPlugin = new Class(function() {
 
-	this.photoTrigger_click = function(self, event) {
-		self.open(self.photo);
+	this.toAddon = function(plugin) {
+		var Addon = new Class(ui.Component, function() {
+			this[plugin.name] = plugin.__class__.get('ref');
+			this[plugin.name + 'Trigger'] = plugin.__class__.get('trigger');
+
+			this[plugin.name + 'Trigger_click'] = function(self, event) {
+				self.open(self[plugin.name]);
+			}
+
+			this.onopen = function(self, event, addon) {
+				if (addon != self[plugin.name]) {
+					self[plugin.name].hide();
+				}
+			};
+		});
+		return Addon;
 	};
 
-	this.onopen = function(self, event, addon) {
-		if (addon != self.photo) {
-			self.photo.hide();
-		}
-	};
 });
+
+var PublisherPhotoAddon2 = new Class(PublisherPlugin, function() {
+	this.name = 'photo';
+	this.ref = ui.define1('#publisher-photo-box');
+	this.trigger = ui.define1('#publisher-photo-trigger');
+});
+
+var PublisherPhotoAddon = new PublisherPhotoAddon2().toAddon();
 
 var PublisherVideoAddon = new Class(ui.Component, function() {
 	this.video = ui.define1('#publisher-video-box');
