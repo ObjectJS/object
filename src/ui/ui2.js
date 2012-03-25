@@ -324,42 +324,70 @@ function onevent(eventType, gid) {
 	}
 }
 
+
+var OptionMember = new Class(function() {
+	this.check = function(name, member) {
+		return (member.__class__ == property && member.isOption);
+	}
+});
+
+var SubMember = new Class(function() {
+	this.check = function(name, member) {
+		return (member.__class__ == property && member.isComponent);
+	};
+});
+
 // metaclass
 this.component = new Class(type, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
+
 		var gid = dict.gid = globalid++;
-		var subs = dict['__subs$' + gid] = [];
-		var options = dict['__options$' + gid] = [];
-		var handles = dict['__handles$' + gid] = [];
-		var metas = dict['__metas$' + gid] = [];
+		var info = dict['__info$' + gid] = {};
+
+		var subs = info.subs = [];
+		var options = info.options = [];
+		var handles = info.handles = [];
+		var metas = info.metas = [];
 
 		Object.keys(dict).forEach(function(name) {
 			var member = dict[name];
+			var newName;
+
 			if (name == 'initialize' || name.indexOf('__') == 0 || member == null) {
 				return;
 			}
 
-			if (member.__class__ == property) {
-				if (member.isOption) {
-					options.push(name);
-				} else if (member.isComponent) {
-					subs.push(name);
-					dict['render_' + name] = member.renderer;
-				}
+			if (member.__class__ == property && member.isOption) {
+				options.push(name);
 			}
-			else if (!handleparse(name, function(newName, newMember) {
-				dict[newName] = newMember;
+			else if (member.__class__ == property && member.isComponent) {
+				subs.push(name);
+				dict['render_' + name] = member.renderer;
+			}
+			else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
+				newName = name.slice(1);
+				dict[newName] = events.fireevent(function(self) {
+					if (self[name]) {
+						return self[name].apply(self, Array.prototype.slice.call(arguments, 1));
+					}
+				});
 				handles.push(newName);
-			})) {
-				SubEventMeta.parse(name, gid, member, function(newName, newMember) {
-					dict[newName] = newMember;
-					delete dict[name];
-					metas.push(newName);
-				}) || OnEventMeta.parse(name, gid, member, function(newName, newMember) {
-					dict[newName] = newMember;
-					delete dict[name];
-					metas.push(newName);
+			}
+			else if (name.match(/^(_?\w+)_(\w+)$/)) {
+				delete dict[name];
+				newName = name + '$' + gid;
+				metas.push({
+					name: newName,
+					member: subevent(RegExp.$1, RegExp.$2, gid)(member)
+				});
+			}
+			else if (name.match(/^on(\w+)$/)) {
+				delete dict[name];
+				newName = name + '$' + gid;
+				metas.push({
+					name: newName,
+					member: onevent(RegExp.$1, gid)(member)
 				});
 			}
 		});
@@ -368,6 +396,7 @@ this.component = new Class(type, function() {
 	};
 
 	this.initialize = function(cls, name, base, dict) {
+		var gid = dict.gid;
 
 		// Component则是Array，其他则是父类上的Components
 		var base = dict.__metaclass__? Array : cls.__base__.Components;
@@ -389,35 +418,53 @@ this.component = new Class(type, function() {
 				}
 			}, this);
 		});
+
+		var info = dict['__info$' + gid];
+		info.metas.forEach(function(item) {
+			type.__setattr__(cls, item.name, item.member);
+		});
 	};
 
 	this.__setattr__ = function(cls, name, member) {
 		var gid = cls.get('gid');
+		var info = cls.get('__info$' + gid);
 
-		if (member.__class__ == property) {
-			if (member.isOption) {
-				cls.get('__options$' + gid).push(name);
-			} else if (member.isComponent) {
-				cls.get('__subs$' + gid).push(name);
-				type.__setattr__(cls, 'render_' + name, member.renderer);
-			}
+		if (member.__class__ == property && member.isOption) {
+			info.options.push(name);
 			type.__setattr__(cls, name, member);
 		}
-		else if (handleparse(name, function(newName, newMember) {
-			cls.get('__handles$' + gid).push(newName);
-			type.__setattr__(cls, newName, newMember);
+		else if (member.__class__ == property && member.isComponent) {
+			info.subs.push(name);
+			type.__setattr__(cls, 'render_' + name, member.renderer);
 			type.__setattr__(cls, name, member);
-		})) {
-			return;
 		}
-		else if (SubEventMeta.parse(name, gid, member, function(newName, newMember) {
+		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
+			var newName = name.slice(1);
+			info.handles.push(newName);
+			type.__setattr__(cls, newName, events.fireevent(function(self) {
+				if (self[name]) {
+					return self[name].apply(self, Array.prototype.slice.call(arguments, 1));
+				}
+			}));
+			type.__setattr__(cls, name, member);
+		}
+		else if (name.match(/^(_?\w+)_(\w+)$/)) {
+			var newName = name + '$' + gid;
+			var newMember = subevent(RegExp.$1, RegExp.$2, gid)(member);
+			info.metas.push({
+				name: newName,
+				member: newMember
+			});
 			type.__setattr__(cls, newName, newMember);
-			cls.get('__metas$' + gid).push(newName);
-		}) || OnEventMeta.parse(name, gid, member, function(newName, newMember) {
+		}
+		else if (name.match(/^on(\w+)$/)) {
+			var newName = name + '$' + gid;
+			var newMember = onevent(RegExp.$1, gid)(member);
+			info.metas.push({
+				name: newName,
+				member: newMember
+			});
 			type.__setattr__(cls, newName, newMember);
-			cls.get('__metas$' + gid).push(newName);
-		})) {
-			return;
 		}
 		else {
 			type.__setattr__(cls, name, member);
@@ -479,25 +526,31 @@ this.Component = new Class(function() {
 	this.__init = classmethod(function(cls, self) {
 
 		var gid = cls.get('gid');
+		var info = cls.get('__info$' + gid);
 
-		var subs = cls.get('__subs$' + gid).slice();
-		var options = cls.get('__options$' + gid).slice();
-		var handles = cls.get('__handles$' + gid).slice();
-		var metas = cls.get('__metas$' + gid).slice();
+		var subs = info.subs.slice();
+		var options = info.options.slice();
+		var handles = info.handles.slice();
+		var metas = info.metas.slice();
 
 		;(cls.__mixins__ || []).forEach(function(mixin) {
 			var gid = mixin.get('gid');
-			mixin.get('__subs$' + gid).forEach(function(item) {
+			var mixinInfo = mixin.get('__info$' + gid);
+			mixinInfo.subs.forEach(function(item) {
 				if (subs.indexOf(item) == -1) subs.push(item);
 			});
-			mixin.get('__options$' + gid).forEach(function(item) {
+			mixinInfo.options.forEach(function(item) {
 				if (options.indexOf(item) == -1) options.push(item);
 			});
-			mixin.get('__handles$' + gid).forEach(function(item) {
+			mixinInfo.handles.forEach(function(item) {
 				if (handles.indexOf(item) == -1) handles.push(item);
 			});
-			mixin.get('__metas$' + gid).forEach(function(item) {
-				if (metas.indexOf(item) == -1) metas.push(item);
+			mixinInfo.metas.forEach(function(item) {
+				if (!metas.some(function(i) {
+					return i.name == item.name;
+				})) {
+					metas.push(item);
+				};
 			});
 		});
 
@@ -520,9 +573,9 @@ this.Component = new Class(function() {
 		self.__options.forEach(function(name) {
 			self.get(name);
 		});
-		self.__metas.forEach(function(name) {
-			var member = cls.get(name);
-			member.im_func.meta.bind(self, name);
+		self.__metas.forEach(function(item) {
+			var member = cls.get(item.name);
+			member.im_func.meta.bind(self, item.name);
 		});
 	});
 
