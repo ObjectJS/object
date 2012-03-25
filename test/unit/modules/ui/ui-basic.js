@@ -199,7 +199,7 @@ test('on event method in extend', function() {
 	var test = new TestComponent2(div);
 	test.test();
 
-	//equal(onEventCalled, 1, 'on event called in extend.');
+	equal(onEventCalled, 1, 'on event called in extend.');
 });
 
 test('sub event method', function() {

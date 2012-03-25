@@ -308,6 +308,7 @@ this.component = new Class(type, function() {
 			options: [],
 			handles: [],
 			onEvents: [],
+			mixinOnEvents: [],
 			subEvents: []
 		};
 
@@ -363,9 +364,9 @@ this.component = new Class(type, function() {
 		var gid = dict.gid;
 
 		// Component则是Array，其他则是父类上的Components
-		var base = dict.__metaclass__? Array : cls.__base__.Components;
+		var compsBase = dict.__metaclass__? Array : cls.__base__.Components;
 
-		cls.Components = new Class(base, function() {
+		cls.Components = new Class(compsBase, function() {
 
 			this.initialize = function(self, node) {
 				self._node = node;
@@ -397,6 +398,58 @@ this.component = new Class(type, function() {
 		});
 		type.__setattr__(cls, '__onEvents', undefined);
 		type.__setattr__(cls, '__subEvents', undefined);
+
+		if (base != object) {
+			var bgid = base.get('gid');
+			var baseMeta = cls.get('__meta$' + bgid);
+			baseMeta.subs.forEach(function(name) {
+				if (meta.subs.indexOf(name) == -1) meta.subs.push(name);
+			});
+			baseMeta.options.forEach(function(name) {
+				if (meta.options.indexOf(name) == -1) meta.options.push(name);
+			});
+			baseMeta.handles.forEach(function(name) {
+				if (meta.handles.indexOf(name) == -1) meta.handles.push(name);
+			});
+			// 对于继承来说，父类的onEvents和mixinOnEvents被放到对应的位置
+			baseMeta.onEvents.forEach(function(name) {
+				if (meta.onEvents.indexOf(name) == -1) meta.onEvents.push(name);
+			});
+			baseMeta.mixinOnEvents.forEach(function(name) {
+				if (meta.mixinOnEvents.indexOf(name) == -1) meta.mixinOnEvents.push(name);
+			});
+			baseMeta.subEvents.forEach(function(name) {
+				if (meta.subEvents.indexOf(name) == -1) meta.subEvents.push(name);
+			});
+		}
+
+		// 合并meta
+		var mixes = (cls.__mixins__ || []);
+		mixes.forEach(function(mix) {
+			var gid = mix.get('gid');
+			var mixMeta = cls.get('__meta$' + gid);
+			mixMeta.subs.forEach(function(name) {
+				if (meta.subs.indexOf(name) == -1) meta.subs.push(name);
+			});
+			mixMeta.options.forEach(function(name) {
+				if (meta.options.indexOf(name) == -1) meta.options.push(name);
+			});
+			mixMeta.handles.forEach(function(name) {
+				if (meta.handles.indexOf(name) == -1) meta.handles.push(name);
+			});
+			// 对于mixin来说，mixin的onEvents和mixinOnEvents都意味着需要被执行，都放到mixinOnEvents中
+			mixMeta.mixinOnEvents.forEach(function(name) {
+				if (meta.mixinOnEvents.indexOf(name) == -1) meta.mixinOnEvents.push(name);
+			});
+			mixMeta.onEvents.forEach(function(name) {
+				if (meta.mixinOnEvents.indexOf(name) == -1) meta.mixinOnEvents.push(name);
+			});
+			mixMeta.subEvents.forEach(function(name) {
+				if (meta.subEvents.indexOf(name) == -1) meta.subEvents.push(name);
+			});
+		});
+
+		cls.set('meta', meta);
 	};
 
 	this.__setattr__ = function(cls, name, member) {
@@ -467,13 +520,19 @@ this.Component = new Class(function() {
 	 * @param options 配置
 	 */
 	this.initialize = function(self, node, options) {
-		self.__init(self);
 
 		if (!options) options = {};
 		// 保存options，生成sub时用于传递
 		self._options = exports.parseOptions(options);
 
 		if (!node) return;
+
+		// 存储dispose事件的注册情况
+		self.__disposes = [];
+		// 存储make的新元素
+		self.__rendered = []; // 后来被加入的，而不是首次通过selector选择的node的引用
+		// 存储subEvents，用于render时获取信息
+		self.__subEventsMap = {};
 
 		var template;
 
@@ -493,72 +552,25 @@ this.Component = new Class(function() {
 		}
 		self._node.component = self;
 
-		self.initMembers(self);
-
-		self.init();
-	};
-
-	/**
-	 * 整合信息，初始化必要成员
-	 */
-	this.__init = classmethod(function(cls, self) {
-
-		var gid = cls.get('gid');
-		var meta = cls.get('__meta$' + gid);
-
-		self.meta = {
-			subs : meta.subs.slice(),
-			options : meta.options.slice(),
-			handles : meta.handles.slice(),
-			onEvents : [],
-			subEvents : meta.subEvents.slice()
-		};
-
-		var mixes = (cls.__mixins__ || []);
-		mixes.forEach(function(mix) {
-			var gid = mix.get('gid');
-			var mixInfo = cls.get('__meta$' + gid);
-			mixInfo.subs.forEach(function(name) {
-				if (self.meta.subs.indexOf(name) == -1) self.meta.subs.push(name);
-			});
-			mixInfo.options.forEach(function(name) {
-				if (self.meta.options.indexOf(name) == -1) self.meta.options.push(name);
-			});
-			mixInfo.handles.forEach(function(name) {
-				if (self.meta.handles.indexOf(name) == -1) self.meta.handles.push(name);
-			});
-			mixInfo.onEvents.forEach(function(name) {
-				if (self.meta.onEvents.indexOf(name) == -1) self.meta.onEvents.push(name);
-			});
-			mixInfo.subEvents.forEach(function(name) {
-				if (self.meta.subEvents.indexOf(name) == -1) self.meta.subEvents.push(name);
-			});
-		});
-
-		// 存储dispose事件的注册情况
-		self.__disposes = [];
-		// 存储make的新元素
-		self.__rendered = []; // 后来被加入的，而不是首次通过selector选择的node的引用
-		// 存储subEvents，用于render时获取信息
-		self.__subEventsMap = {};
-	});
-
-	this.initMembers = classmethod(function(cls, self) {
+		// 初始化subs
 		self.meta.subs.forEach(function(name) {
 			self.get(name);
 		});
+		// 初始化options
 		self.meta.options.forEach(function(name) {
 			self.get(name);
 		});
-		self.meta.onEvents.forEach(function(name) {
-			var member = cls.get(name);
-			member.im_func.meta.bind(self, name);
+		// 初始化onEvents
+		self.meta.mixinOnEvents.forEach(function(name) {
+			self[name].im_func.meta.bind(self, name);
 		});
+		// 初始化subEvents
 		self.meta.subEvents.forEach(function(name) {
-			var member = cls.get(name);
-			member.im_func.meta.bind(self, name);
+			self[name].im_func.meta.bind(self, name);
 		});
-	});
+
+		self.init();
+	};
 
 	this.fireEvent = function(self) {
 		return self._node.fireEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
