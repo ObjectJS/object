@@ -241,16 +241,16 @@ SubEventMeta.prototype.bind = function(comp, methodName) {
 	this.methodName = methodName;
 
 	// options
-	if (comp.__options.indexOf(sub) != -1) {
+	if (comp.meta.options.indexOf(sub) != -1) {
 		this.bindOptionEvent();
 	}
 	// sub component
-	else if (comp.__subs.indexOf(sub) != -1) {
+	else if (comp.meta.subs.indexOf(sub) != -1) {
 		this.bindSubEvent();
-		if (!(sub in comp.__subEvents)) {
-			comp.__subEvents[sub] = [];
+		if (!(sub in comp.__subEventsMap)) {
+			comp.__subEventsMap[sub] = [];
 		}
-		comp.__subEvents[sub].push(this);
+		comp.__subEventsMap[sub].push(this);
 	}
 };
 
@@ -263,7 +263,7 @@ OnEventMeta.prototype.bind = function(self, methodName) {
 	var eventType = this.eventType;
 	var realEventType; // 正常大小写的名称
 	// 自己身上的on事件不触发，只触发addon上的。
-	if (this.gid != self.gid && self.__handles.some(function(handle) {
+	if (this.gid != self.gid && self.meta.handles.some(function(handle) {
 		if (handle.toLowerCase() == eventType) {
 			realEventType = handle;
 			return true;
@@ -303,12 +303,16 @@ this.component = new Class(type, function() {
 	this.__new__ = function(cls, name, base, dict) {
 
 		var gid = dict.gid = globalid++;
-		var info = dict['__info$' + gid] = {};
+		var meta = dict['__meta$' + gid] = {
+			subs: [],
+			options: [],
+			handles: [],
+			onEvents: [],
+			subEvents: []
+		};
 
-		var subs = info.subs = [];
-		var options = info.options = [];
-		var handles = info.handles = [];
-		var metas = info.metas = [];
+		dict.__onEvents = [];
+		dict.__subEvents = [];
 
 		Object.keys(dict).forEach(function(name) {
 			var member = dict[name];
@@ -319,10 +323,10 @@ this.component = new Class(type, function() {
 			}
 
 			if (member.__class__ == property && member.isOption) {
-				options.push(name);
+				meta.options.push(name);
 			}
 			else if (member.__class__ == property && member.isComponent) {
-				subs.push(name);
+				meta.subs.push(name);
 				dict['render_' + name] = member.renderer;
 			}
 			else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
@@ -332,12 +336,12 @@ this.component = new Class(type, function() {
 						return self[name].apply(self, Array.prototype.slice.call(arguments, 1));
 					}
 				});
-				handles.push(newName);
+				meta.handles.push(newName);
 			}
 			else if (name.match(/^(_?\w+)_(\w+)$/)) {
 				delete dict[name];
 				newName = name + '$' + gid;
-				metas.push({
+				dict.__subEvents.push({
 					name: newName,
 					member: subevent(RegExp.$1, RegExp.$2, gid)(member)
 				});
@@ -345,7 +349,7 @@ this.component = new Class(type, function() {
 			else if (name.match(/^on(\w+)$/)) {
 				delete dict[name];
 				newName = name + '$' + gid;
-				metas.push({
+				dict.__onEvents.push({
 					name: newName,
 					member: onevent(RegExp.$1, gid)(member)
 				});
@@ -379,30 +383,44 @@ this.component = new Class(type, function() {
 			}, this);
 		});
 
+		var meta = cls.get('__meta$' + cls.get('gid'));
+
 		// 生成meta方法
 		// 在initialize中创建而不是__new__中目的是避免Components中出现无用的方法
-		var info = dict['__info$' + gid];
-		info.metas.forEach(function(item) {
+		cls.get('__onEvents').forEach(function(item) {
+			meta.onEvents.push(item.name);
 			type.__setattr__(cls, item.name, item.member);
 		});
+		cls.get('__subEvents').forEach(function(item) {
+			meta.subEvents.push(item.name);
+			type.__setattr__(cls, item.name, item.member);
+		});
+		type.__setattr__(cls, '__onEvents', undefined);
+		type.__setattr__(cls, '__subEvents', undefined);
 	};
 
 	this.__setattr__ = function(cls, name, member) {
 		var gid = cls.get('gid');
-		var info = cls.get('__info$' + gid);
+		var meta = cls.get('__meta$' + gid);
 
 		if (member.__class__ == property && member.isOption) {
-			info.options.push(name);
+			if (meta.options.indexOf(name) == -1) {
+				meta.options.push(name);
+			}
 			type.__setattr__(cls, name, member);
 		}
 		else if (member.__class__ == property && member.isComponent) {
-			info.subs.push(name);
+			if (meta.subs.indexOf(name) == -1) {
+				meta.subs.push(name);
+			}
 			type.__setattr__(cls, 'render_' + name, member.renderer);
 			type.__setattr__(cls, name, member);
 		}
 		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
 			var newName = name.slice(1);
-			info.handles.push(newName);
+			if (meta.handles.indexOf(name) == -1) {
+				meta.handles.push(newName);
+			}
 			type.__setattr__(cls, newName, events.fireevent(function(self) {
 				if (self[name]) {
 					return self[name].apply(self, Array.prototype.slice.call(arguments, 1));
@@ -413,19 +431,17 @@ this.component = new Class(type, function() {
 		else if (name.match(/^(_?\w+)_(\w+)$/)) {
 			var newName = name + '$' + gid;
 			var newMember = subevent(RegExp.$1, RegExp.$2, gid)(member);
-			info.metas.push({
-				name: newName,
-				member: newMember
-			});
+			if (meta.subEvents.indexOf(newName) == -1) {
+				meta.subEvents.push(newName);
+			}
 			type.__setattr__(cls, newName, newMember);
 		}
 		else if (name.match(/^on(\w+)$/)) {
 			var newName = name + '$' + gid;
 			var newMember = onevent(RegExp.$1, gid)(member);
-			info.metas.push({
-				name: newName,
-				member: newMember
-			});
+			if (meta.onEvents.indexOf(newName) == -1) {
+				meta.onEvents.push(newName);
+			}
 			type.__setattr__(cls, newName, newMember);
 		}
 		else {
@@ -488,57 +504,57 @@ this.Component = new Class(function() {
 	this.__init = classmethod(function(cls, self) {
 
 		var gid = cls.get('gid');
-		var info = cls.get('__info$' + gid);
+		var meta = cls.get('__meta$' + gid);
 
-		var subs = info.subs.slice();
-		var options = info.options.slice();
-		var handles = info.handles.slice();
-		// 转换成只保存名字的，去掉member信息
-		var metas = info.metas.map(function(item) {
-			return item.name;
+		self.meta = {
+			subs : meta.subs.slice(),
+			options : meta.options.slice(),
+			handles : meta.handles.slice(),
+			onEvents : [],
+			subEvents : meta.subEvents.slice()
+		};
+
+		var mixes = (cls.__mixins__ || []);
+		mixes.forEach(function(mix) {
+			var gid = mix.get('gid');
+			var mixInfo = cls.get('__meta$' + gid);
+			mixInfo.subs.forEach(function(name) {
+				if (self.meta.subs.indexOf(name) == -1) self.meta.subs.push(name);
+			});
+			mixInfo.options.forEach(function(name) {
+				if (self.meta.options.indexOf(name) == -1) self.meta.options.push(name);
+			});
+			mixInfo.handles.forEach(function(name) {
+				if (self.meta.handles.indexOf(name) == -1) self.meta.handles.push(name);
+			});
+			mixInfo.onEvents.forEach(function(name) {
+				if (self.meta.onEvents.indexOf(name) == -1) self.meta.onEvents.push(name);
+			});
+			mixInfo.subEvents.forEach(function(name) {
+				if (self.meta.subEvents.indexOf(name) == -1) self.meta.subEvents.push(name);
+			});
 		});
 
-		;(cls.__mixins__ || []).forEach(function(mixin) {
-			var gid = mixin.get('gid');
-			var mixinInfo = mixin.get('__info$' + gid);
-			mixinInfo.subs.forEach(function(item) {
-				if (subs.indexOf(item) == -1) subs.push(item);
-			});
-			mixinInfo.options.forEach(function(item) {
-				if (options.indexOf(item) == -1) options.push(item);
-			});
-			mixinInfo.handles.forEach(function(item) {
-				if (handles.indexOf(item) == -1) handles.push(item);
-			});
-			mixinInfo.metas.forEach(function(item) {
-				if (!metas.some(function(name) {
-					return name == item.name;
-				})) {
-					metas.push(item.name);
-				};
-			});
-		});
-
-		self.__subs = subs;
-		self.__options = options;
-		self.__handles = handles;
-		self.__metas = metas;
 		// 存储dispose事件的注册情况
 		self.__disposes = [];
 		// 存储make的新元素
 		self.__rendered = []; // 后来被加入的，而不是首次通过selector选择的node的引用
 		// 存储subEvents，用于render时获取信息
-		self.__subEvents = {};
+		self.__subEventsMap = {};
 	});
 
 	this.initMembers = classmethod(function(cls, self) {
-		self.__subs.forEach(function(name) {
+		self.meta.subs.forEach(function(name) {
 			self.get(name);
 		});
-		self.__options.forEach(function(name) {
+		self.meta.options.forEach(function(name) {
 			self.get(name);
 		});
-		self.__metas.forEach(function(name) {
+		self.meta.onEvents.forEach(function(name) {
+			var member = cls.get(name);
+			member.im_func.meta.bind(self, name);
+		});
+		self.meta.subEvents.forEach(function(name) {
 			var member = cls.get(name);
 			member.im_func.meta.bind(self, name);
 		});
@@ -573,7 +589,7 @@ this.Component = new Class(function() {
 			return null;
 		}
 		var extendData = {};
-		self.__options.forEach(function(name) {
+		self.meta.options.forEach(function(name) {
 			extendData[name] = self.get(name);
 		});
 		object.extend(data, extendData);
@@ -686,8 +702,8 @@ this.Component = new Class(function() {
 		// 重建引用
 		self.get(name);
 
-		if (name in self.__subEvents) {
-			self.__subEvents[name].forEach(function(meta) {
+		if (name in self.__subEventsMap) {
+			self.__subEventsMap[name].forEach(function(meta) {
 				meta.bindSubEvent();
 			});
 		}
