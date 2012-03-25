@@ -27,11 +27,12 @@ function ensureTypedValue(value, type) {
  * @param selector 选择器
  * @param type 构造类
  */
-this.define = function(selector, type) {
+this.define = function(selector, type, renderer) {
 	if (!type) type = exports.Component;
+
 	function fget(self) {
 		var name = prop.__name__;
-		var nodes;
+		var nodes = null, comps = null;
 		if (typeof selector == 'function') {
 			nodes = selector(self);
 			// 确保返回的是个dom.Elements
@@ -44,9 +45,27 @@ this.define = function(selector, type) {
 		} else {
 			nodes = self._node.getElements(selector);
 		}
-		self._set(name, nodes);
+
+		if (nodes) {
+			comps = new type.Components(nodes);
+			if (self.__disposes.indexOf(name) == -1) {
+				comps.addEvent('aftercomponentdispose', function(event) {
+					self.get(name);
+				});
+				self.__disposes.push(name);
+			}
+		}
+
+		self._set(name, comps);
+		self._set('_' + name, nodes);
+
+		return comps;
 	}
+
 	var prop = property(fget);
+	prop.isComponent = true;
+	prop.type = type;
+	prop.renderer = renderer;
 	return prop;
 };
 
@@ -54,8 +73,8 @@ this.define = function(selector, type) {
  * 定义唯一引用的sub component
  */
 this.define1 = function(selector, type, renderer) {
-
 	if (!type) type = exports.Component;
+
 	function fget(self) {
 		var name = prop.__name__;
 		var node = null, comp = null;
@@ -68,7 +87,7 @@ this.define1 = function(selector, type, renderer) {
 		if (node) {
 			comp = node.component || new type(node);
 			if (self.__disposes.indexOf(name) == -1) {
-				comp.addEvent('afterdispose', function(event) {
+				comp.addEvent('aftercomponentdispose', function(event) {
 					self.get(name);
 				});
 				self.__disposes.push(name);
@@ -348,6 +367,30 @@ this.component = new Class(type, function() {
 		return type.__new__(cls, name, base, dict);
 	};
 
+	this.initialize = function(cls, name, base, dict) {
+
+		// Component则是Array，其他则是父类上的Components
+		var base = dict.__metaclass__? Array : cls.__base__.Components;
+
+		cls.Components = new Class(base, function() {
+
+			this.initialize = function(self, node) {
+				self._node = node;
+				self._node.component = self;
+			};
+
+			Object.keys(dict).forEach(function(name) {
+				var member = dict[name];
+				if (name == '__metaclass__' || name == 'initialize') {
+					return;
+				}
+				if (typeof member == 'function') {
+					this[name] = member;
+				}
+			}, this);
+		});
+	};
+
 	this.__setattr__ = function(cls, name, member) {
 		var gid = cls.get('gid');
 
@@ -548,7 +591,7 @@ this.Component = new Class(function() {
 	 */
 	this._dispose = function(self) {
 		self._node.dispose();
-		self.fireEvent('afterdispose');
+		self.fireEvent('aftercomponentdispose');
 	};
 
 	/**

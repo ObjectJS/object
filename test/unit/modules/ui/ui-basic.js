@@ -29,8 +29,27 @@ test('sub property', function() {
 	// 直接获取节点方式
 	equals(test._test2, testNode, 'using one same node when selector same.');
 	equals(test._test3, testNode, 'component defined after class created.');
+});
 
-	// TODO mutiple define
+test('mutiple sub property', function() {
+	var TestComponent = new Class(ui.Component, function() {
+		this.test = ui.define('.test');
+		this.test2 = ui.define('.test');
+	});
+	TestComponent.set('test3', ui.define('.test'));
+
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="test">test1</div><div class="test">test2</div><div class="test">test3</div><div class="test">test4</div>';
+
+	var test = new TestComponent(div);
+	var testComp = test.test;
+	var testNode = test.test.getNode();
+
+	// 初始化时会获取所有sub
+	equals(test.test.getNode().length, 4, 'define components node ok.');
+
+	// 下环线形式获取节点
+	equals(test._test, testNode, 'define components right when init.');
 });
 
 test('option property', function() {
