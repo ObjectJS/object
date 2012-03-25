@@ -58,16 +58,26 @@ this.define1 = function(selector, type, renderer) {
 	if (!type) type = exports.Component;
 	function fget(self) {
 		var name = prop.__name__;
-		var node, comp;
+		var node = null, comp = null;
 		if (typeof selector == 'function') {
 			node = dom.wrap(selector(self));
 		} else {
 			node = self._node.getElement(selector);
 		}
-		if (!node) return null;
-		comp = node.component || new type(node);
+
+		if (node) {
+			comp = node.component || new type(node);
+			if (self.__disposes.indexOf(name) == -1) {
+				comp.addEvent('afterdispose', function(event) {
+					self.get(name);
+				});
+				self.__disposes.push(name);
+			}
+		}
+
 		self._set(name, comp);
 		self._set('_' + name, node);
+
 		return comp;
 	}
 	var prop = property(fget);
@@ -176,33 +186,58 @@ SubEventMeta.parse = function(name, gid, member, after) {
 	}
 };
 
-SubEventMeta.prototype.bind = function(self, methodName) {
+SubEventMeta.prototype.bindSubEvent = function() {
 	var sub = this.sub;
 	var eventType = this.eventType;
-	var gid = this.gid;
-	var fakeEventType;
+	var methodName = this.methodName;
+	var comp = this.comp;
 
-	// options
-	if (self.__options.indexOf(sub) != -1) {
-		// 注册 option_change 等事件
-		fakeEventType = '__option_' + eventType + '_' + sub;
-
-		self.addEvent(fakeEventType, function(event) {
-			self[methodName](event);
-		});
-	}
-	// sub component
-	else {
-		self[sub]._node.addEvent(eventType, function(event) {
+	if (comp[sub]) {
+		comp[sub]._node.addEvent(eventType, function(event) {
 			var args;
 			// 将event._args pass 到函数后面
 			if (event._args) {
 				args = [event].concat(event._args);
-				self[methodName].apply(self, args);
+				comp[methodName].apply(comp, args);
 			} else {
-				self[methodName](event);
+				comp[methodName](event);
 			}
 		});
+	}
+};
+
+SubEventMeta.prototype.bindOptionEvent = function() {
+	var sub = this.sub;
+	var eventType = this.eventType;
+	var methodName = this.methodName;
+	var gid = this.gid;
+	var comp = this.comp;
+	var fakeEventType;
+
+	// 注册 option_change 等事件
+	fakeEventType = '__option_' + eventType + '_' + sub;
+
+	comp.addEvent(fakeEventType, function(event) {
+		comp[methodName](event);
+	});
+};
+
+SubEventMeta.prototype.bind = function(comp, methodName) {
+	var sub = this.sub;
+	this.comp = comp;
+	this.methodName = methodName;
+
+	// options
+	if (comp.__options.indexOf(sub) != -1) {
+		this.bindOptionEvent();
+	}
+	// sub component
+	else if (comp.__subs.indexOf(sub) != -1) {
+		this.bindSubEvent();
+		if (!(sub in comp.__subEvents)) {
+			comp.__subEvents[sub] = [];
+		}
+		comp.__subEvents[sub].push(this);
 	}
 };
 
@@ -313,9 +348,6 @@ this.component = new Class(type, function() {
 		return type.__new__(cls, name, base, dict);
 	};
 
-	this.initialize = function(cls, name, base, dict) {
-	};
-
 	this.__setattr__ = function(cls, name, member) {
 		var gid = cls.get('gid');
 
@@ -363,17 +395,17 @@ this.Component = new Class(function() {
 	this.selector = exports.option('');
 
 	/**
-	 * @param node 包装的节点
+	 * @param node 包装的节点 / 模板数据（搭配options.template）
 	 * @param options 配置
 	 */
 	this.initialize = function(self, node, options) {
+		self.__init(self);
+
 		if (!options) options = {};
 		// 保存options，生成sub时用于传递
 		self._options = exports.parseOptions(options);
 
 		if (!node) return;
-
-		self.initRefs(self);
 
 		var template;
 
@@ -393,15 +425,15 @@ this.Component = new Class(function() {
 		}
 		self._node.component = self;
 
-		self.__nodeMap = {}; // 相应node的uid对应component，用于在需要通过node找到component时使用
-		self.__rendered = {}; // 后来被加入的，而不是首次通过selector选择的node的引用
-
 		self.initMembers(self);
 
 		self.init();
 	};
 
-	this.initRefs = classmethod(function(cls, self) {
+	/**
+	 * 整合信息，初始化必要成员
+	 */
+	this.__init = classmethod(function(cls, self) {
 
 		var gid = cls.get('gid');
 
@@ -430,6 +462,12 @@ this.Component = new Class(function() {
 		self.__options = options;
 		self.__handles = handles;
 		self.__metas = metas;
+		// 存储dispose事件的注册情况
+		self.__disposes = [];
+		// 存储make的新元素
+		self.__rendered = []; // 后来被加入的，而不是首次通过selector选择的node的引用
+		// 存储subEvents，用于render时获取信息
+		self.__subEvents = {};
 	});
 
 	this.initMembers = classmethod(function(cls, self) {
@@ -498,34 +536,19 @@ this.Component = new Class(function() {
 	/**
 	 * 重置一个component，回到初始状态，删除所有render的元素。
 	 */
-	this._destory = function(self, methodName) {
-		if (!methodName) methodName = 'destory'; // 兼容revert, reset方法名
-
-		// 清空所有render进来的新元素
-		self.__subs.forEach(function(name) {
-			var sub = self.__properties__[name];
-			var pname = '_' + name;
-			if (self.__rendered[name]) {
-				self.__rendered[name].forEach(function(node) {
-					var comp = self.__nodeMap[name][node.uid];
-					delete self.__nodeMap[name][node.uid];
-					node.dispose();
-					if (sub.single) {
-						self[name] = self[pname] = null;
-					} else {
-						self[name].splice(self[name].indexOf(comp), 1); // 去掉
-						self[pname].splice(self[pname].indexOf(node), 1); // 去掉
-					}
-				});
-			}
-			if (!sub.single) {
-				self[name].forEach(function(comp) {
-					comp[methodName]();
-				});
-			} else if (self[name]) {
-				self[name][methodName]();
-			}
+	this._destory = function(self) {
+		self.__rendered.forEach(function(comp) {
+			comp.dispose();
 		});
+		self.__rendered = [];
+	};
+
+	/**
+	 * 清空自身节点
+	 */
+	this._dispose = function(self) {
+		self._node.dispose();
+		self.fireEvent('afterdispose');
 	};
 
 	/**
@@ -590,6 +613,15 @@ this.Component = new Class(function() {
 		self[methodName](function() {
 			return self.make(name, data);
 		});
+
+		// 重建引用
+		self.get(name);
+
+		if (name in self.__subEvents) {
+			self.__subEvents[name].forEach(function(meta) {
+				meta.bindSubEvent();
+			});
+		}
 	};
 
 	/**
@@ -607,8 +639,7 @@ this.Component = new Class(function() {
 
 		var comp = new sub.type(data, options);
 
-		self[name] = comp;
-		self[pname] = comp._node;
+		self.__rendered.push(comp);
 
 		return comp;
 	};
@@ -625,18 +656,6 @@ this.Component = new Class(function() {
 	 */
 	this.getNode = function(self) {
 		return self._node;
-	};
-
-	function addRendered(self, name, node) {
-		var rendered = self.__rendered;
-		if (!rendered[name]) rendered[name] = [];
-		rendered[name].push(node);
-	};
-
-	function addNodeMap(self, name, id, comp) {
-		var nodeMap = self.__nodeMap;
-		if (!nodeMap[name]) nodeMap[name] = {};
-		nodeMap[name][id] = comp;
 	};
 
 });

@@ -198,14 +198,17 @@ test('sub event method', function() {
 	div.innerHTML = '<div class="test">test</div>';
 
 	var test = new TestComponent(div);
-	test.test.getNode().click();
-	test.test.test('test');
 
+	test.test.getNode().click();
 	equals(clickEventCalled, 1, 'sub click event called.');
+
+	test.test.test('test');
 	equals(customEventCalled, 1, 'sub custom event called.');
 });
 
 test('render', function() {
+
+	var renderedEventCalled = 0;
 
 	var TestComponent = new Class(ui.Component, function() {
 
@@ -214,17 +217,30 @@ test('render', function() {
 			self._node.appendChild(a._node);
 		});
 
+		this.test_click = function(self) {
+			renderedEventCalled++;
+		}
+
 	});
 
 	var div = document.createElement('div');
 
 	var test = new TestComponent(div, {
-		'test.hello': 'fuckyou',
-		'test.template': '<div>{{selector}}</div>'
+		'test.hello': 'test',
+		'test.template': '<div class="test">{{hello}}</div>'
 	});
-	test.render('test');
 
-	console.log(test._node.outerHTML);
+	// 渲染
+	test.render('test');
+	equal(test.getNode().outerHTML, '<div><div class="test">test</div></div>', 'template render ok.');
+
+	// 事件
+	test.test.getNode().click();
+	equal(renderedEventCalled, 1, 'rendered component event called.');
+
+	// 删除
+	test.test.dispose();
+	equal(test.test, null, 'dispose ok.');
 
 });
 
