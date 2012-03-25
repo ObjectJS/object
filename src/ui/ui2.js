@@ -197,14 +197,6 @@ function SubEventMeta(sub, eventType, gid) {
 	this.gid = gid;
 }
 
-SubEventMeta.parse = function(name, gid, member, after) {
-	var newName = name + '$' + gid;
-	if (name.match(/^(_?\w+)_(\w+)$/)) {
-		after(newName, subevent(RegExp.$1, RegExp.$2, gid)(member));
-		return true;
-	}
-};
-
 SubEventMeta.prototype.bindSubEvent = function() {
 	var sub = this.sub;
 	var eventType = this.eventType;
@@ -265,14 +257,6 @@ function OnEventMeta(eventType, gid) {
 	this.gid = gid;
 }
 
-OnEventMeta.parse = function(name, gid, member, after) {
-	var newName = name + '$' + gid;
-	if (name.match(/^on(\w+)$/)) {
-		after(newName, onevent(RegExp.$1, gid)(member));
-		return true;
-	}
-};
-
 OnEventMeta.prototype.bind = function(self, methodName) {
 	var eventType = this.eventType;
 	var realEventType; // 正常大小写的名称
@@ -297,19 +281,6 @@ OnEventMeta.prototype.bind = function(self, methodName) {
 	}
 };
 
-function handleparse(name, after) {
-	var newName = name.slice(1);
-	if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
-		member = events.fireevent(function(self) {
-			if (self[name]) {
-				return self[name].apply(self, Array.prototype.slice.call(arguments, 1));
-			}
-		});
-		after(newName, member);
-		return true;
-	}
-}
-
 function subevent(sub, eventType, gid) {
 	return function(func) {
 		func.meta = new SubEventMeta(sub, eventType, gid);
@@ -323,19 +294,6 @@ function onevent(eventType, gid) {
 		return func;
 	}
 }
-
-
-var OptionMember = new Class(function() {
-	this.check = function(name, member) {
-		return (member.__class__ == property && member.isOption);
-	}
-});
-
-var SubMember = new Class(function() {
-	this.check = function(name, member) {
-		return (member.__class__ == property && member.isComponent);
-	};
-});
 
 // metaclass
 this.component = new Class(type, function() {
@@ -419,6 +377,7 @@ this.component = new Class(type, function() {
 			}, this);
 		});
 
+		// 生成meta方法
 		var info = dict['__info$' + gid];
 		info.metas.forEach(function(item) {
 			type.__setattr__(cls, item.name, item.member);
@@ -531,7 +490,10 @@ this.Component = new Class(function() {
 		var subs = info.subs.slice();
 		var options = info.options.slice();
 		var handles = info.handles.slice();
-		var metas = info.metas.slice();
+		// 转换成只保存名字的，去掉member信息
+		var metas = info.metas.map(function(item) {
+			return item.name;
+		});
 
 		;(cls.__mixins__ || []).forEach(function(mixin) {
 			var gid = mixin.get('gid');
@@ -546,10 +508,10 @@ this.Component = new Class(function() {
 				if (handles.indexOf(item) == -1) handles.push(item);
 			});
 			mixinInfo.metas.forEach(function(item) {
-				if (!metas.some(function(i) {
-					return i.name == item.name;
+				if (!metas.some(function(name) {
+					return name == item.name;
 				})) {
-					metas.push(item);
+					metas.push(item.name);
 				};
 			});
 		});
@@ -573,9 +535,9 @@ this.Component = new Class(function() {
 		self.__options.forEach(function(name) {
 			self.get(name);
 		});
-		self.__metas.forEach(function(item) {
-			var member = cls.get(item.name);
-			member.im_func.meta.bind(self, item.name);
+		self.__metas.forEach(function(name) {
+			var member = cls.get(name);
+			member.im_func.meta.bind(self, name);
 		});
 	});
 
