@@ -215,8 +215,9 @@ if (!Function.prototype.bind || Function.prototype.bind === window.__hualuOldBin
 	 */
 	Function.prototype.bind = function(object) {
 		var method = this;
+		var args = Array.prototype.slice.call(arguments, 1);
 		return function() {
-			method.apply(object, arguments); 
+			method.apply(object, args.concat(Array.prototype.slice.call(arguments)));
 		};
 	};
 }

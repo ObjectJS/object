@@ -5,9 +5,10 @@
 /**@class Array*/
 /**@class String*/
 /**@class Function*/
-var object = new (function(globalHost) {
+var object = (function(globalHost) {
 
-var object = this;
+var object = function() {
+};
 
 // 获取function的name
 // 判断function TEST() 是否能取到name属性来选择不同的算法函数
@@ -36,7 +37,7 @@ else {
  * @param properties 目标
  * @param ov 是否覆盖，默认true
  */
-this.extend = function(obj, properties, ov) {
+object.extend = function(obj, properties, ov) {
 	if (typeof ov !== 'function') {
 		if (ov !== false) ov = true;
 		ov = function(dest, src, prop) {return ov};
@@ -58,7 +59,7 @@ this.extend = function(obj, properties, ov) {
  * 浅拷贝
  * @name object.clone
  */
-this.clone = function(obj) {
+object.clone = function(obj) {
 	var clone = {};
 	for (var key in obj) clone[key] = obj[key];
 	return clone;
@@ -68,10 +69,12 @@ this.clone = function(obj) {
  * 将成员引用放到window上
  * @name object.bind
  */
-this.bind = function(host) {
+object.bind = function(host) {
 	object.extend(host, object);
 };
 
-this._loader = null;
+object._loader = null;
+
+return object;
 
 })(window);
