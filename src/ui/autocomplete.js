@@ -659,10 +659,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 		}
 
 		function calculatePosition(ele){
-			var leftTop = getDOMLeftTop(ele);
-			leftTop.left = leftTop.left - getScrollLeft(ele);
-			leftTop.top = leftTop.top - getScrollTop(ele);
-			return leftTop;
+			return getDOMLeftTop(ele);
 		};
 
 		// 参考mootools
@@ -710,18 +707,18 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 		}
 
 		function getScrollTop(ele) {
-			if (document.compatMode == "BackCompat"){
-				return document.body.scrollTop;
-			} else {
+			if(document.documentElement && document.documentElement.scrollTop) {
 				return document.documentElement.scrollTop;
+			} else {
+				return document.body.scrollTop;
 			}
 		}
 
 		function getScrollLeft(ele) {
-			if (document.compatMode == "BackCompat"){
-				return document.body.scrollLeft;
-			} else {
+			if(document.documentElement && document.documentElement.scrollLeft) {
 				return document.documentElement.scrollLeft;
+			} else {
+				return document.body.scrollLeft;
 			}
 		}
 
