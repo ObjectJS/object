@@ -106,12 +106,12 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
     // 模板引擎使用的模板
 	var TEMPLATES = {
 		// 列表模板，每一次刷新列表都会渲染一次
-		LIST : '<ul style="list-style:none;margin:0;padding:0;z-index:2004;position:relative;overflow:auto;zoom:1;">' + 
+		LIST : '<ul style="list-style:none;margin:0;padding:0;z-index:1998;position:relative;overflow:auto;zoom:1;">' + 
 					'{{#data}}<li style="padding:2px 4px;font-size:12px;font-family:inherit;" real_value="{{value}}">{{text}}</li>{{/data}}' + 
 			   '</ul>',
 		// HTML模板，第一次新建div时渲染一次
 		CONTAINER : 
-			'<div id="datalistContainer{{index}}" style="border:1px solid gray;position:absolute;top:{{top}}px;left:{{left}}px;z-index:2003;background:#fff;font-size:small;zoom:1;">' +
+			'<div id="datalistContainer{{index}}" style="border:1px solid gray;position:absolute;top:{{top}}px;left:{{left}}px;z-index:1998;background:#fff;font-size:small;zoom:1;">' +
 				// ie6使用iframe遮挡select
 				// 遇到的问题：只有一条记录的时候会出现滚动条 https://github.com/brandonaaron/bgiframe/blob/master/jquery.bgiframe.js
 				'{{#ie6}}<iframe id="datalist_iframe" frameBorder="0" style="position:absolute;z-index:2;top:0px;left:0px;overflow:hidden;display:block;filter:Alpha(Opacity=0);" src="javascript:false;"></iframe>{{/ie6}}' + 
@@ -659,10 +659,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 		}
 
 		function calculatePosition(ele){
-			var leftTop = getDOMLeftTop(ele);
-			leftTop.left = leftTop.left - getScrollLeft(ele);
-			leftTop.top = leftTop.top - getScrollTop(ele);
-			return leftTop;
+			return getDOMLeftTop(ele);
 		};
 
 		// 参考mootools
@@ -710,18 +707,18 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 		}
 
 		function getScrollTop(ele) {
-			if (document.compatMode == "BackCompat"){
-				return document.body.scrollTop;
-			} else {
+			if(document.documentElement && document.documentElement.scrollTop) {
 				return document.documentElement.scrollTop;
+			} else {
+				return document.body.scrollTop;
 			}
 		}
 
 		function getScrollLeft(ele) {
-			if (document.compatMode == "BackCompat"){
-				return document.body.scrollLeft;
-			} else {
+			if(document.documentElement && document.documentElement.scrollLeft) {
 				return document.documentElement.scrollLeft;
+			} else {
+				return document.body.scrollLeft;
 			}
 		}
 
