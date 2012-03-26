@@ -17,35 +17,37 @@ var Publisher = new Class(ui.Component, function() {
 
 });
 
-var PublisherPlugin = new Class(function() {
+var PublisherAddonFactory = new Class(type, function() {
 
-	this.toAddon = function(plugin) {
-		var Addon = new Class(ui.Component, function() {
-			this[plugin.name] = plugin.__class__.get('ref');
-			this[plugin.name + 'Trigger'] = plugin.__class__.get('trigger');
+	this.__new__ = function(cls, name, base, dict) {
+		dict.__metaclass__ = ui.Component;
+	};
 
-			this[plugin.name + 'Trigger_click'] = function(self, event) {
-				self.open(self[plugin.name]);
-			}
+	//this['{{name}}'] = ui.copy('ref');
 
-			this.onopen = function(self, event, addon) {
-				if (addon != self[plugin.name]) {
-					self[plugin.name].hide();
-				}
-			};
-		});
-		return Addon;
+	//this['{{name}}Trigger'] = ui.copy('trigger');
+
+	this.onopen = function(self, comp, event, addon) {
+		if (addon != comp[self.name]) {
+			comp[self.name].hide();
+		}
+	};
+
+	this['{{name}}Trigger_click'] = function(self, comp, event) {
+		comp.open(comp[self.name]);
 	};
 
 });
 
-var PublisherPhotoAddon2 = new Class(PublisherPlugin, function() {
+var PublisherPhotoAddonFactory = new Class(PublisherAddonFactory, function() {
 	this.name = 'photo';
-	this.ref = ui.define1('#publisher-photo-box');
-	this.trigger = ui.define1('#publisher-photo-trigger');
 });
 
-var PublisherPhotoAddon = new PublisherPhotoAddon2().toAddon();
+var PublisherPhotoAddon = new Class(function() {
+
+	this.__metaclass__ = PublisherPhotoAddonFactory;
+
+});
 
 var PublisherVideoAddon = new Class(ui.Component, function() {
 	this.video = ui.define1('#publisher-video-box');
