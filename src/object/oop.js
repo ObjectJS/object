@@ -154,9 +154,6 @@ var ArrayClass, StringClass;
 var type = this.type = function() {
 };
 
-type.has = memberchecker;
-type.set = membersetter;
-
 type.__class__ = type;
 
 /**
