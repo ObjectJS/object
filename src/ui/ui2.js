@@ -77,6 +77,7 @@ this.define1 = function(selector, type, renderer) {
 
 	function fget(self) {
 		var name = prop.__name__;
+		console.log(name)
 		var node = null, comp = null;
 		if (typeof selector == 'function') {
 			node = dom.wrap(selector(self));
@@ -449,6 +450,7 @@ this.component = new Class(type, function() {
 			});
 		});
 
+		//console.log(cls.__metaclass__ === exports.component, cls.__metaclass__.get('__setattr__'));
 		cls.set('meta', meta);
 	};
 
@@ -503,6 +505,7 @@ this.component = new Class(type, function() {
 	};
 
 });
+alert(this.component.__setattr__)
 
 /**
  * UI模块基类，所有UI组件的基本类

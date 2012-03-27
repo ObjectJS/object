@@ -1,4 +1,4 @@
-object.use('dom, ui/ui2', function(exports, dom, ui) {
+object.use('dom, ui/ui2, string', function(exports, dom, ui, string) {
 
 var Publisher = new Class(ui.Component, function() {
 
@@ -17,20 +17,91 @@ var Publisher = new Class(ui.Component, function() {
 
 });
 
-var AddonFactory = new Class(type, function() {
+// metaclass 的 metaclass
+var addonfactory = new Class(type, function() {
 	this.__new__ = function(cls, name, base, dict) {
-		Class.keys(cls).forEach(function() {
+
+		var members = (base.get('__members') || []).slice();
+		var variables = {};
+		// 将base的值复制过来
+		object.extend(variables, base.get('__variables'));
+
+		Object.keys(dict).forEach(function(name) {
+			if (name.indexOf('__') == 0) {
+				return;
+			}
+			else if (name.indexOf('$') == 0) {
+				variables[name.slice(1)] = dict[name];
+				delete dict[name];
+			}
+			else {
+				members.push({
+					name: name,
+					member: dict[name]
+				});
+				delete dict[name];
+			}
 		});
-		base = ui.Component;
+		dict.__variables = variables;
+		dict.__members = members;
 		return type.__new__(cls, name, base, dict);
 	};
 });
 
+var B = new Class(type, function() {
+	this.__new__ = function(cls, name, base, dict) {
+		var members = (base.get('__members') || []).slice();
+		var variables = {};
+		// 将base的值复制过来
+		object.extend(variables, base.get('__variables'));
+
+		Object.keys(dict).forEach(function(name) {
+			if (name.indexOf('__') == 0) {
+				return;
+			}
+			else if (name.indexOf('$') == 0) {
+				variables[name.slice(1)] = dict[name];
+				delete dict[name];
+			}
+			else {
+				members.push({
+					name: name,
+					member: dict[name]
+				});
+				delete dict[name];
+			}
+		});
+		dict.__variables = variables;
+		dict.__members = members;
+		return type.__new__(cls, name, base, dict);
+	};
+});
+
+var AddonFactory = new Class(ui.component, function() {
+
+	this.__metaclass__ = addonfactory;
+
+	// 这里的cls获取的是最后被当作metaclass的那个继承后的类——PublisherPhotoAddonFactory
+	this.__new__ = function(cls, name, base, dict) {
+		var members = cls.get('__members');
+		var variables = cls.get('__variables');
+		members.forEach(function(item) {
+			var name = string.substitute(item.name, variables);
+			dict[name] = item.member;
+		});
+
+		// base是Component
+		if (base !== ui.Component) {
+			base = ui.Component;
+		}
+		return ui.component.__new__(cls, name, base, dict);
+		//return type.__new__(cls, name, base, dict);
+	};
+});
+
+alert(AddonFactory.__setattr__);
+
 var PublisherAddonFactory = new Class(AddonFactory, function() {
-
-	//this['{{name}}'] = ui.copy('ref');
-
-	//this['{{name}}Trigger'] = ui.copy('trigger');
 
 	this.onopen = function(self, comp, event, addon) {
 		if (addon != comp[self.name]) {
@@ -45,15 +116,14 @@ var PublisherAddonFactory = new Class(AddonFactory, function() {
 });
 
 var PublisherPhotoAddonFactory = new Class(PublisherAddonFactory, function() {
-	this.name = 'photo';
+	this.$name = 'photo';
+	this['{{name}}'] = ui.define1('#publisher-photo-box');
+	this['{{name}}Trigger'] = ui.define1('#publisher-photo-trigger');
 });
 
 var PublisherPhotoAddon = new Class(function() {
 	this.__metaclass__ = PublisherPhotoAddonFactory;
 });
-
-console.log(Class.keys(PublisherPhotoAddonFactory))
-console.log(Class.keys(PublisherPhotoAddon))
 
 var PublisherVideoAddon = new Class(ui.Component, function() {
 	this.video = ui.define1('#publisher-video-box');
