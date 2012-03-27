@@ -9,12 +9,116 @@ function Options() {
 }
 
 /**
+ * 向current这个对象的name成员设置value值
+ * @param current 需要被设置的对象
+ * @param name 一个通过.分开各个部分的名称
+ * @param value 需要设置的值
+ */
+function setOptionTo(current, name, value) {
+	var parts = Array.isArray(name)? name : name.split('.');
+	// 生成前缀对象
+	for (var i = 0, part; i < parts.length - 1; i++) {
+		part = parts[i];
+		if (current[part] === undefined) {
+			current[part] = new Options();
+		}
+		current = current[part];
+	}
+	current[parts[parts.length - 1]] = value;
+};
+
+/**
  * 将value转换成需要的type
  */
 function ensureTypedValue(value, type) {
 	if (type === 'number') return Number(value);
 	else if (type === 'string') return String(value);
 	else if (type === 'boolean') return Boolean(value);
+};
+
+function SubEventMeta(sub, eventType, gid) {
+	this.sub = sub;
+	this.eventType = eventType;
+	this.gid = gid;
+}
+
+SubEventMeta.prototype.bindSubEvent = function() {
+	var sub = this.sub;
+	var eventType = this.eventType;
+	var methodName = this.methodName;
+	var comp = this.comp;
+
+	if (comp[sub]) {
+		comp[sub]._node.addEvent(eventType, function(event) {
+			var args;
+			// 将event._args pass 到函数后面
+			if (event._args) {
+				args = [event].concat(event._args);
+				comp[methodName].apply(comp, args);
+			} else {
+				comp[methodName](event);
+			}
+		});
+	}
+};
+
+SubEventMeta.prototype.bindOptionEvent = function() {
+	var methodName = this.methodName;
+	var comp = this.comp;
+	// 注册 option_change 等事件
+	var fakeEventType = '__option_' + this.eventType + '_' + this.sub;
+
+	comp.addEvent(fakeEventType, function(event) {
+		comp[methodName](event);
+	});
+};
+
+SubEventMeta.prototype.bind = function(comp, methodName) {
+	var sub = this.sub;
+	this.comp = comp;
+	this.methodName = methodName;
+
+	// options
+	if (comp.meta.options.indexOf(sub) != -1) {
+		this.bindOptionEvent();
+	}
+	// sub component
+	else if (comp.meta.subs.indexOf(sub) != -1) {
+		this.bindSubEvent();
+		if (!(sub in comp.__subEventsMap)) {
+			comp.__subEventsMap[sub] = [];
+		}
+		comp.__subEventsMap[sub].push(this);
+	}
+};
+
+function OnEventMeta(eventType, gid) {
+	this.eventType = eventType;
+	this.gid = gid;
+}
+
+OnEventMeta.prototype.bind = function(self, methodName) {
+	var eventType = this.eventType;
+	var realEventType; // 正常大小写的名称
+	// 自己身上的on事件不触发，只触发addon上的。
+	if (this.gid != self.gid && self.meta.handles.some(function(handle) {
+		if (handle.toLowerCase() == eventType) {
+			realEventType = handle;
+			return true;
+		}
+		return false;
+	})) {
+		self.addEvent(realEventType, function(event) {
+			var args;
+			// 将event._args pass 到函数后面
+			if (event._args) {
+				args = [event].concat(event._args);
+				self[methodName].apply(self, args);
+			} else {
+				self[methodName](event);
+			}
+		});
+	}
 };
 
 /**
@@ -159,6 +263,33 @@ this.option = function(defaultValue, getter) {
 	return prop;
 };
 
+/**
+ * 定义一个向子元素注册事件的方法
+ * @decorator
+ * @param sub 子成员名称
+ * @param eventType
+ * @param gid
+ */
+this.subevent = function(sub, eventType, gid) {
+	return function(func) {
+		func.meta = new SubEventMeta(sub, eventType, gid);
+		return func;
+	}
+};
+
+/**
+ * 定义一个扩展向宿主元素定义事件的方法
+ * @decorator
+ * @param eventType
+ * @param gid
+ */
+this.onevent = function(eventType, gid) {
+	return function(func) {
+		func.meta = new OnEventMeta(eventType, gid);
+		return func;
+	}
+};
+
 this.addon = function(dict, addon) {
 	if (!dict.__mixins__) {
 		dict.__mixins__ = [];
@@ -174,131 +305,13 @@ this.parseOptions = function(options) {
 
 	var parsed = new Options();
 	Object.keys(options).forEach(function(name) {
-		exports.setOptionTo(parsed, name, options[name]);
+		setOptionTo(parsed, name, options[name]);
 	});
 	return parsed;
 };
 
-/**
- * 向current这个对象的name成员设置value值
- * @param current 需要被设置的对象
- * @param name 一个通过.分开各个部分的名称
- * @param value 需要设置的值
- */
-this.setOptionTo = function(current, name, value) {
-	var parts = Array.isArray(name)? name : name.split('.');
-	// 生成前缀对象
-	for (var i = 0, part; i < parts.length - 1; i++) {
-		part = parts[i];
-		if (current[part] === undefined) {
-			current[part] = new Options();
-		}
-		current = current[part];
-	}
-	current[parts[parts.length - 1]] = value;
-};
-
-function SubEventMeta(sub, eventType, gid) {
-	this.sub = sub;
-	this.eventType = eventType;
-	this.gid = gid;
-}
-
-SubEventMeta.prototype.bindSubEvent = function() {
-	var sub = this.sub;
-	var eventType = this.eventType;
-	var methodName = this.methodName;
-	var comp = this.comp;
-
-	if (comp[sub]) {
-		comp[sub]._node.addEvent(eventType, function(event) {
-			var args;
-			// 将event._args pass 到函数后面
-			if (event._args) {
-				args = [event].concat(event._args);
-				comp[methodName].apply(comp, args);
-			} else {
-				comp[methodName](event);
-			}
-		});
-	}
-};
-
-SubEventMeta.prototype.bindOptionEvent = function() {
-	var methodName = this.methodName;
-	var comp = this.comp;
-	// 注册 option_change 等事件
-	var fakeEventType = '__option_' + this.eventType + '_' + this.sub;
-
-	comp.addEvent(fakeEventType, function(event) {
-		comp[methodName](event);
-	});
-};
-
-SubEventMeta.prototype.bind = function(comp, methodName) {
-	var sub = this.sub;
-	this.comp = comp;
-	this.methodName = methodName;
-
-	// options
-	if (comp.meta.options.indexOf(sub) != -1) {
-		this.bindOptionEvent();
-	}
-	// sub component
-	else if (comp.meta.subs.indexOf(sub) != -1) {
-		this.bindSubEvent();
-		if (!(sub in comp.__subEventsMap)) {
-			comp.__subEventsMap[sub] = [];
-		}
-		comp.__subEventsMap[sub].push(this);
-	}
-};
-
-function OnEventMeta(eventType, gid) {
-	this.eventType = eventType;
-	this.gid = gid;
-}
-
-OnEventMeta.prototype.bind = function(self, methodName) {
-	var eventType = this.eventType;
-	var realEventType; // 正常大小写的名称
-	// 自己身上的on事件不触发，只触发addon上的。
-	if (this.gid != self.gid && self.meta.handles.some(function(handle) {
-		if (handle.toLowerCase() == eventType) {
-			realEventType = handle;
-			return true;
-		}
-		return false;
-	})) {
-		self.addEvent(realEventType, function(event) {
-			var args;
-			// 将event._args pass 到函数后面
-			if (event._args) {
-				args = [event].concat(event._args);
-				self[methodName].apply(self, args);
-			} else {
-				self[methodName](event);
-			}
-		});
-	}
-};
-
-function subevent(sub, eventType, gid) {
-	return function(func) {
-		func.meta = new SubEventMeta(sub, eventType, gid);
-		return func;
-	}
-}
-
-function onevent(eventType, gid) {
-	return function(func) {
-		func.meta = new OnEventMeta(eventType, gid);
-		return func;
-	}
-}
-
 // metaclass
-this.component = new Class(type, function() {
+this.ComponentFactory = new Class(type, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 
@@ -344,7 +357,7 @@ this.component = new Class(type, function() {
 				newName = name + '$' + gid;
 				dict.__subEvents.push({
 					name: newName,
-					member: subevent(RegExp.$1, RegExp.$2, gid)(member)
+					member: exports.subevent(RegExp.$1, RegExp.$2, gid)(member)
 				});
 			}
 			else if (name.match(/^on(\w+)$/)) {
@@ -352,7 +365,7 @@ this.component = new Class(type, function() {
 				newName = name + '$' + gid;
 				dict.__onEvents.push({
 					name: newName,
-					member: onevent(RegExp.$1, gid)(member)
+					member: exports.onevent(RegExp.$1, gid)(member)
 				});
 			}
 		});
@@ -483,7 +496,7 @@ this.component = new Class(type, function() {
 		}
 		else if (name.match(/^(_?\w+)_(\w+)$/)) {
 			var newName = name + '$' + gid;
-			var newMember = subevent(RegExp.$1, RegExp.$2, gid)(member);
+			var newMember = exports.subevent(RegExp.$1, RegExp.$2, gid)(member);
 			if (meta.subEvents.indexOf(newName) == -1) {
 				meta.subEvents.push(newName);
 			}
@@ -491,7 +504,7 @@ this.component = new Class(type, function() {
 		}
 		else if (name.match(/^on(\w+)$/)) {
 			var newName = name + '$' + gid;
-			var newMember = onevent(RegExp.$1, gid)(member);
+			var newMember = exports.onevent(RegExp.$1, gid)(member);
 			if (meta.onEvents.indexOf(newName) == -1) {
 				meta.onEvents.push(newName);
 			}
@@ -509,7 +522,7 @@ this.component = new Class(type, function() {
  */
 this.Component = new Class(function() {
 
-	this.__metaclass__ = exports.component;
+	this.__metaclass__ = exports.ComponentFactory;
 
 	this.template = exports.option('');
 
@@ -680,7 +693,7 @@ this.Component = new Class(function() {
 		(function(self, name, value) {
 			var parts = Array.isArray(name)? name : name.split('.');
 
-			exports.setOptionTo(self._options, parts, value);
+			setOptionTo(self._options, parts, value);
 
 			// 子引用已经建立，为子引用设置option
 			if (self[parts[0]]) {
@@ -758,7 +771,8 @@ this.Component = new Class(function() {
 });
 
 // metaclass 的 metaclass
-var addonfactory = new Class(type, function() {
+this.AddonFactoryFactory = new Class(type, function() {
+
 	this.__new__ = function(cls, name, base, dict) {
 
 		var members = (base.get('members') || []).slice();
@@ -789,12 +803,12 @@ var addonfactory = new Class(type, function() {
 });
 
 // 继承于 component
-exports.AddonFactory = new Class(exports.component, function() {
+this.AddonFactory = new Class(exports.ComponentFactory, function() {
 
-	this.__metaclass__ = addonfactory;
+	this.__metaclass__ = exports.AddonFactoryFactory;
 
-	// 这里的cls获取的是最后被当作metaclass的那个继承后的类——PublisherPhotoAddonFactory
 	this.__new__ = function(cls, name, base, dict) {
+		// 这里的cls获取的是最后被当作metaclass的那个继承后的类
 		var members = cls.get('members');
 		var variables = cls.get('variables');
 		members.forEach(function(item) {
@@ -816,7 +830,7 @@ exports.AddonFactory = new Class(exports.component, function() {
 		if (base !== exports.Component) {
 			base = exports.Component;
 		}
-		return exports.component.__new__(cls, name, base, dict);
+		return exports.ComponentFactory.__new__(cls, name, base, dict);
 	};
 });
 
