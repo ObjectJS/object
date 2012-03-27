@@ -805,10 +805,16 @@ this.AddonFactory = new Class(exports.ComponentFactory, function() {
 		// 这里的cls获取的是最后被当作metaclass的那个继承后的类
 		var members = cls.get('__members');
 		var variables = cls.get('__variables');
+
 		var vars = {};
 		variables.forEach(function(name) {
 			vars[name.slice(1)] = cls.get(name);
 		});
+		// 变量递归，支持变量中引用变量
+		variables.forEach(function(name) {
+			vars[name.slice(1)] = string.substitute(cls.get(name), vars);
+		});
+
 		members.forEach(function(nameTpl) {
 			var name = string.substitute(nameTpl, vars);
 			var member = cls.get(nameTpl);

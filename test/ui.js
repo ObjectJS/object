@@ -19,6 +19,8 @@ var Publisher = new Class(ui.Component, function() {
 
 var PublisherAddonFactory = new Class(ui.AddonFactory, function() {
 
+	this.$trigger = '{{name}}Trigger';
+
 	this.onopen = function(cls, self, event, addon) {
 		var vars = cls.get('__vars');
 		if (addon != self[vars.name]) {
@@ -26,7 +28,7 @@ var PublisherAddonFactory = new Class(ui.AddonFactory, function() {
 		}
 	};
 
-	this['{{name}}Trigger_click'] = function(cls, self, event) {
+	this['{{trigger}}_click'] = function(cls, self, event) {
 		self.open(self[cls.get('$name')]);
 	};
 
@@ -35,20 +37,20 @@ var PublisherAddonFactory = new Class(ui.AddonFactory, function() {
 var PublisherPhotoAddonFactory = new Class(PublisherAddonFactory, function() {
 	this.$name = 'photo';
 	this['{{name}}'] = ui.define1('#publisher-photo-box');
-	this['{{name}}Trigger'] = ui.define1('#publisher-photo-trigger');
+	this['{{trigger}}'] = ui.define1('#publisher-photo-trigger');
 });
 console.log(Class.keys(PublisherPhotoAddonFactory))
 
 var PublisherShareAddonFactory = new Class(PublisherAddonFactory, function() {
 	this.$name = 'share';
 	this['{{name}}'] = ui.define1('#publisher-share-box');
-	this['{{name}}Trigger'] = ui.define1('#publisher-share-trigger');
+	this['{{trigger}}'] = ui.define1('#publisher-share-trigger');
 });
 
 var PublisherVideoAddonFactory = new Class(PublisherAddonFactory, function() {
 	this.$name = 'video';
 	this['{{name}}'] = ui.define1('#publisher-video-box');
-	this['{{name}}Trigger'] = ui.define1('#publisher-video-trigger');
+	this['{{trigger}}'] = ui.define1('#publisher-video-trigger');
 });
 
 var PublisherPhotoAddon = new Class(function() {
