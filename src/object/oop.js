@@ -122,12 +122,12 @@ var memberchecker = function(name) {
  */
 var membersetter = overloadSetter(function(name, member) {
 	// 类创建过程中不触发__setattr__
-	if (this.__constructing__) {
+	if (this.__constructing__ || !this.__metaclass__) {
 		type.__setattr__(this, name, member);
 	}
 	// 从metaclass中获得__setattr__
 	else {
-		this.__class__.get('__setattr__')(this, name, member);
+		this.__metaclass__.get('__setattr__')(this, name, member);
 	}
 });
 
@@ -200,8 +200,8 @@ type.__new__ = function(metaclass, name, base, dict) {
 			}
 		}
 	}
-	cls.__new__ = metaclass.__new__;
-	cls.__setattr__ = metaclass.__setattr__;
+	cls.__new__ = base.__new__;
+	cls.__setattr__ = base.__setattr__;
 	// 支持在类上调用metaclass中的成员
 	Class.keys(metaclass).forEach(function(name) {
 		cls[name] = function() {

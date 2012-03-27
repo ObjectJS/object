@@ -148,7 +148,7 @@ test('set special property : __mixins__', function() {
 });
 
 test('set special property : __metaclass__', function() {
-	var meta = new Class(function() {
+	var meta = new Class(type, function() {
 		this.initialize = function(cls, name, base, dict) {};
 		this.__new__ = function(cls, name, base, dict) {
 			return type.__new__(cls, name, base, dict);
