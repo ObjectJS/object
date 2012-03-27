@@ -122,12 +122,13 @@ var memberchecker = function(name) {
  */
 var membersetter = overloadSetter(function(name, member) {
 	// 类创建过程中不触发__setattr__
-	if (this.__constructing__ || !this.__metaclass__) {
-		type.__setattr__(this, name, member);
-	}
 	// 从metaclass中获得__setattr__
-	else {
+	if ('__metaclass__' in this && !this.__constructing__) {
 		this.__metaclass__.get('__setattr__')(this, name, member);
+	}
+	// 未设置metaclass则默认为type
+	else {
+		type.__setattr__(this, name, member);
 	}
 });
 
@@ -200,18 +201,22 @@ type.__new__ = function(metaclass, name, base, dict) {
 			}
 		}
 	}
+	// 只有__metaclass__和__class__是指向metaclass的，其他成员都是从base继承而来。
+	cls.__metaclass__ = metaclass;
+	cls.__class__ = metaclass;
+	// 从base继承而来
 	cls.__new__ = base.__new__;
 	cls.__setattr__ = base.__setattr__;
 	// 支持在类上调用metaclass中的成员
-	Class.keys(metaclass).forEach(function(name) {
-		cls[name] = function() {
-			var args = Array.prototype.slice.call(arguments, 0);
-			args.unshift(cls);
-			return metaclass.prototype[name].im_func.apply(cls, args);
-		};
-	});
-	cls.__metaclass__ = metaclass;
-	cls.__class__ = metaclass;
+	// 可能会造成性能问题，由于目前没有需求，暂时不做
+	//Class.keys(metaclass).forEach(function(name) {
+		//cls[name] = function() {
+			//var args = Array.prototype.slice.call(arguments, 0);
+			//args.unshift(cls);
+			//return metaclass.prototype[name].im_func.apply(cls, args);
+		//};
+	//});
+
 	cls.set('__base__', base);
 	// 支持 this.parent 调用父级同名方法
 	cls.set('__this__', {
