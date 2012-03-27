@@ -111,10 +111,9 @@ var memberchecker = function(name) {
  * 子类不会被覆盖
  */
 var membersetter = overloadSetter(function(name, member) {
-	// 类创建过程中不触发__setattr__
 	// 从metaclass中获得__setattr__
-	if ('__metaclass__' in this && !this.__constructing__) {
-		this.__metaclass__.get('__setattr__')(this, name, member);
+	if ('__metaclass__' in this) {
+		type.__getattribute__(this.__metaclass__, '__setattr__')(this, name, member);
 	}
 	// 未设置metaclass则默认为type
 	else {
@@ -154,10 +153,6 @@ var ArrayClass, StringClass;
 
 var type = this.type = function() {
 };
-
-type.get = membergetter;
-type.has = memberchecker;
-type.set = membersetter;
 
 type.__class__ = type;
 
@@ -207,9 +202,9 @@ type.__new__ = function(metaclass, name, base, dict) {
 		//};
 	//});
 
-	cls.set('__base__', base);
+	type.__setattr__(cls, '__base__', base);
 	// 支持 this.parent 调用父级同名方法
-	cls.set('__this__', {
+	type.__setattr__(cls, '__this__', {
 		base: base,
 		parent: function() {
 			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
@@ -236,14 +231,14 @@ type.__new__ = function(metaclass, name, base, dict) {
 			// 先从base中找同名func
 			if (base && base.get && base.has(name)) {
 				owner = base;
-				member = base.get(name);
+				member = type.__getattribute__(base, name);
 			}
 			// 再从mixins中找同名func
 			else if (mixins && mixins.length && mixins.some(function(mixin) {
 				owner = mixin;
 				return mixin.has(name);
 			})) {
-				member = owner.get(name);
+				member = type.__getattribute__(owner, name);
 			}
 
 			if (!member || typeof member != 'function') {
@@ -255,7 +250,9 @@ type.__new__ = function(metaclass, name, base, dict) {
 	});
 
 	// Dict
-	cls.set(dict);
+	for (var k in dict) {
+		type.__setattr__(cls, k, dict[k]);
+	}
 
 	// Mixin
 	var mixins = cls.__mixins__;
@@ -264,12 +261,12 @@ type.__new__ = function(metaclass, name, base, dict) {
 			Class.keys(mixin).forEach(function(name) {
 				if (cls.has(name)) return; // 不要覆盖自定义的
 
-				var member = mixin.get(name);
+				var member = type.__getattribute__(mixin, name);
 
 				if (typeof member == 'function' && member.__class__ === instancemethod) {
-					cls.set(name, member.im_func);
+					type.__setattr__(cls, name, member.im_func);
 				} else {
-					cls.set(name, member);
+					type.__setattr__(cls, name, member);
 				}
 			});
 		});
@@ -354,10 +351,13 @@ type.__setattr__ = function(cls, name, member) {
 	}
 
 	// 所有子类cls上加入
+	// 在constructing时肯定没有子类，做个标记直接返回
 	if (!constructing && name in cls && subs) {
 		subs.forEach(function(sub) {
 			// !(name in sub) 与 !name in sub 得到的结果不一样
-			if (!(name in sub)) sub.set(name, member);
+			if (!(name in sub)) {
+				type.__setattr__(sub, name, member);
+			}
 		});
 	}
 };
