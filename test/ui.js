@@ -19,10 +19,16 @@ var Publisher = new Class(ui.Component, function() {
 
 var PublisherAddonFactory = new Class(ui.AddonFactory, function() {
 
+	// 无法获取到$trigger
+	this.$trigger1 = '{{trigger}}1';
+	// 注意这里也有变量定义顺序哦
 	this.$trigger = '{{name}}Trigger';
+	// 可以获取到$trigger
+	this.$trigger2 = '{{trigger}}2';
 
 	this.onopen = function(cls, self, event, addon) {
 		var vars = cls.get('__vars');
+		console.log(vars)
 		if (addon != self[vars.name]) {
 			self[vars.name].hide();
 		}
@@ -39,7 +45,6 @@ var PublisherPhotoAddonFactory = new Class(PublisherAddonFactory, function() {
 	this['{{name}}'] = ui.define1('#publisher-photo-box');
 	this['{{trigger}}'] = ui.define1('#publisher-photo-trigger');
 });
-console.log(Class.keys(PublisherPhotoAddonFactory))
 
 var PublisherShareAddonFactory = new Class(PublisherAddonFactory, function() {
 	this.$name = 'share';
