@@ -99,8 +99,6 @@ var AddonFactory = new Class(ui.component, function() {
 	};
 });
 
-alert(AddonFactory.__setattr__);
-
 var PublisherAddonFactory = new Class(AddonFactory, function() {
 
 	this.onopen = function(self, comp, event, addon) {
