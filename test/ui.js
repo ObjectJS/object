@@ -17,11 +17,16 @@ var Publisher = new Class(ui.Component, function() {
 
 });
 
-var PublisherAddonFactory = new Class(type, function() {
-
+var AddonFactory = new Class(type, function() {
 	this.__new__ = function(cls, name, base, dict) {
-		dict.__metaclass__ = ui.Component;
+		Class.keys(cls).forEach(function() {
+		});
+		base = ui.Component;
+		return type.__new__(cls, name, base, dict);
 	};
+});
+
+var PublisherAddonFactory = new Class(AddonFactory, function() {
 
 	//this['{{name}}'] = ui.copy('ref');
 
@@ -44,10 +49,11 @@ var PublisherPhotoAddonFactory = new Class(PublisherAddonFactory, function() {
 });
 
 var PublisherPhotoAddon = new Class(function() {
-
 	this.__metaclass__ = PublisherPhotoAddonFactory;
-
 });
+
+console.log(Class.keys(PublisherPhotoAddonFactory))
+console.log(Class.keys(PublisherPhotoAddon))
 
 var PublisherVideoAddon = new Class(ui.Component, function() {
 	this.video = ui.define1('#publisher-video-box');
