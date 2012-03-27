@@ -806,8 +806,8 @@ exports.AddonFactory = new Class(exports.component, function() {
 			else if (typeof member == 'function') {
 				dict[name] = function() {
 					var args = Array.prototype.slice.call(arguments, 0);
-					args.unshift(variables);
-					member.apply(null, args);
+					args.unshift(cls);
+					member.apply(cls.__this__, args);
 				};
 			}
 		});

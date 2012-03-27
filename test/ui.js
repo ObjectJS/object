@@ -19,14 +19,16 @@ var Publisher = new Class(ui.Component, function() {
 
 var PublisherAddonFactory = new Class(ui.AddonFactory, function() {
 
-	this.onopen = function(self, comp, event, addon) {
-		if (addon != comp[self.name]) {
-			comp[self.name].hide();
+	this.onopen = function(cls, self, event, addon) {
+		var vars = cls.get('__variables');
+		if (addon != self[vars.name]) {
+			self[vars.name].hide();
 		}
 	};
 
-	this['{{name}}Trigger_click'] = function(self, comp, event) {
-		comp.open(comp[self.name]);
+	this['{{name}}Trigger_click'] = function(cls, self, event) {
+		var vars = cls.get('__variables');
+		self.open(self[vars.name]);
 	};
 
 });
