@@ -351,6 +351,7 @@ type.__setattr__ = function(cls, name, member) {
 	}
 
 	// 所有子类cls上加入
+	// 在constructing时肯定没有子类，做个标记直接返回
 	if (!constructing && name in cls && subs) {
 		subs.forEach(function(sub) {
 			// !(name in sub) 与 !name in sub 得到的结果不一样
