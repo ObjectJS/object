@@ -757,4 +757,67 @@ this.Component = new Class(function() {
 
 });
 
+// metaclass 的 metaclass
+var addonfactory = new Class(type, function() {
+	this.__new__ = function(cls, name, base, dict) {
+
+		var members = (base.get('__members') || []).slice();
+		var variables = {};
+		// 将base的值复制过来
+		object.extend(variables, base.get('__variables'));
+
+		Object.keys(dict).forEach(function(name) {
+			if (name.indexOf('__') == 0) {
+				return;
+			}
+			else if (name.indexOf('$') == 0) {
+				variables[name.slice(1)] = dict[name];
+				delete dict[name];
+			}
+			else {
+				members.push({
+					name: name,
+					member: dict[name]
+				});
+				delete dict[name];
+			}
+		});
+		dict.__variables = variables;
+		dict.__members = members;
+		return type.__new__(cls, name, base, dict);
+	};
+});
+
+// 继承于 component
+exports.AddonFactory = new Class(exports.component, function() {
+
+	this.__metaclass__ = addonfactory;
+
+	// 这里的cls获取的是最后被当作metaclass的那个继承后的类——PublisherPhotoAddonFactory
+	this.__new__ = function(cls, name, base, dict) {
+		var members = cls.get('__members');
+		var variables = cls.get('__variables');
+		members.forEach(function(item) {
+			var name = string.substitute(item.name, variables);
+			var member = item.member;
+			if (member.__class__ == property) {
+				dict[name] = item.member;
+			}
+			else if (typeof member == 'function') {
+				dict[name] = function() {
+					var args = Array.prototype.slice.call(arguments, 0);
+					args.unshift(variables);
+					member.apply(null, args);
+				};
+			}
+		});
+
+		// base是Component
+		if (base !== exports.Component) {
+			base = exports.Component;
+		}
+		return exports.component.__new__(cls, name, base, dict);
+	};
+});
+
 });
