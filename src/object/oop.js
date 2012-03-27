@@ -90,17 +90,7 @@ object.__setattr__ = function(obj, prop, value) {
  * 会被放到cls.get
  */
 var membergetter = function(name) {
-	if (name == '@mixins') name = '__mixins__';
-	var cls = this;
-	var proto = this.prototype;
-	var properties = proto.__properties__;
-	if (name in cls) return cls[name];
-	if (properties && name in properties) return properties[name];
-	if (!name in proto) throw new Error('no member named ' + name + '.');
-	var member = proto[name];
-	if (!member) return member;
-	if (member.__class__ == instancemethod) return instancemethod(member.im_func, this);
-	return member;
+	return type.__getattribute__(this, name);
 };
 
 /**
@@ -206,7 +196,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 	cls.__class__ = metaclass;
 	// 从base继承而来
 	cls.__new__ = base.__new__;
-	cls.__setattr__ = base.__setattr__;
+	cls.__setattr__ = type.__getattribute__(base, '__setattr__');
 	// 支持在类上调用metaclass中的成员
 	// 可能会造成性能问题，由于目前没有需求，暂时不做
 	//Class.keys(metaclass).forEach(function(name) {
@@ -370,6 +360,19 @@ type.__setattr__ = function(cls, name, member) {
 			if (!(name in sub)) sub.set(name, member);
 		});
 	}
+};
+
+type.__getattribute__ = function(cls, name) {
+	if (name == '@mixins') name = '__mixins__';
+	var proto = cls.prototype;
+	var properties = proto.__properties__;
+	if (name in cls) return cls[name];
+	if (properties && name in properties) return properties[name];
+	if (!name in proto) throw new Error('no member named ' + name + '.');
+	var member = proto[name];
+	if (!member) return member;
+	if (member.__class__ == instancemethod) return instancemethod(member.im_func, cls);
+	return member;
 };
 
 type.initialize = function() {
