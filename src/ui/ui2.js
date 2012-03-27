@@ -761,10 +761,10 @@ this.Component = new Class(function() {
 var addonfactory = new Class(type, function() {
 	this.__new__ = function(cls, name, base, dict) {
 
-		var members = (base.get('__members') || []).slice();
+		var members = (base.get('members') || []).slice();
 		var variables = {};
 		// 将base的值复制过来
-		object.extend(variables, base.get('__variables'));
+		object.extend(variables, base.get('variables'));
 
 		Object.keys(dict).forEach(function(name) {
 			if (name.indexOf('__') == 0) {
@@ -782,8 +782,8 @@ var addonfactory = new Class(type, function() {
 				delete dict[name];
 			}
 		});
-		dict.__variables = variables;
-		dict.__members = members;
+		dict.variables = variables;
+		dict.members = members;
 		return type.__new__(cls, name, base, dict);
 	};
 });
@@ -795,8 +795,8 @@ exports.AddonFactory = new Class(exports.component, function() {
 
 	// 这里的cls获取的是最后被当作metaclass的那个继承后的类——PublisherPhotoAddonFactory
 	this.__new__ = function(cls, name, base, dict) {
-		var members = cls.get('__members');
-		var variables = cls.get('__variables');
+		var members = cls.get('members');
+		var variables = cls.get('variables');
 		members.forEach(function(item) {
 			var name = string.substitute(item.name, variables);
 			var member = item.member;
