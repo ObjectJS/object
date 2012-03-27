@@ -775,29 +775,23 @@ this.AddonFactoryFactory = new Class(type, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 
-		var members = (base.get('members') || []).slice();
-		var variables = {};
-		// 将base的值复制过来
-		object.extend(variables, base.get('variables'));
+		var members = (base.get('__members') || []).slice();
+		var variables = (base.get('__variables') || []).slice();
 
 		Object.keys(dict).forEach(function(name) {
 			if (name.indexOf('__') == 0) {
 				return;
 			}
 			else if (name.indexOf('$') == 0) {
-				variables[name.slice(1)] = dict[name];
-				delete dict[name];
+				variables.push(name);
 			}
 			else {
-				members.push({
-					name: name,
-					member: dict[name]
-				});
-				delete dict[name];
+				members.push(name);
 			}
 		});
-		dict.variables = variables;
-		dict.members = members;
+		// 如果不带下划线，就有可能覆盖掉自定义的方法，也就意味着开发者不能定义这些名字的成员
+		dict.__variables = variables;
+		dict.__members = members;
 		return type.__new__(cls, name, base, dict);
 	};
 });
@@ -809,13 +803,17 @@ this.AddonFactory = new Class(exports.ComponentFactory, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 		// 这里的cls获取的是最后被当作metaclass的那个继承后的类
-		var members = cls.get('members');
-		var variables = cls.get('variables');
-		members.forEach(function(item) {
-			var name = string.substitute(item.name, variables);
-			var member = item.member;
+		var members = cls.get('__members');
+		var variables = cls.get('__variables');
+		var vars = {};
+		variables.forEach(function(name) {
+			vars[name.slice(1)] = cls.get(name);
+		});
+		members.forEach(function(nameTpl) {
+			var name = string.substitute(nameTpl, vars);
+			var member = cls.get(nameTpl);
 			if (member.__class__ == property) {
-				dict[name] = item.member;
+				dict[name] = member;
 			}
 			else if (typeof member == 'function') {
 				dict[name] = function() {
@@ -825,6 +823,7 @@ this.AddonFactory = new Class(exports.ComponentFactory, function() {
 				};
 			}
 		});
+		cls.set('__vars', vars);
 
 		// base是Component
 		if (base !== exports.Component) {

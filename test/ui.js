@@ -20,15 +20,14 @@ var Publisher = new Class(ui.Component, function() {
 var PublisherAddonFactory = new Class(ui.AddonFactory, function() {
 
 	this.onopen = function(cls, self, event, addon) {
-		var vars = cls.get('variables');
+		var vars = cls.get('__vars');
 		if (addon != self[vars.name]) {
 			self[vars.name].hide();
 		}
 	};
 
 	this['{{name}}Trigger_click'] = function(cls, self, event) {
-		var vars = cls.get('variables');
-		self.open(self[vars.name]);
+		self.open(self[cls.get('$name')]);
 	};
 
 });
@@ -38,6 +37,7 @@ var PublisherPhotoAddonFactory = new Class(PublisherAddonFactory, function() {
 	this['{{name}}'] = ui.define1('#publisher-photo-box');
 	this['{{name}}Trigger'] = ui.define1('#publisher-photo-trigger');
 });
+console.log(Class.keys(PublisherPhotoAddonFactory))
 
 var PublisherShareAddonFactory = new Class(PublisherAddonFactory, function() {
 	this.$name = 'share';
