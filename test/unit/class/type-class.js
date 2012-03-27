@@ -13,7 +13,6 @@ test('base', function() {
 		}
 
 		this.initialize = function(cls, name, base, dict) {
-			cls.a('haha');
 		};
 	});
 
