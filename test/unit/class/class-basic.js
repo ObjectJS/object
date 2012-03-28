@@ -102,12 +102,14 @@ test('__getattr__/__setattr__ in class', function() {
 		this.__metaclass__ = M;
 	});
 
+	var AA = new M(function() {
+	});
+
 	A.set('test', 1);
 	equal(A.get('test'), 1, 'value setted.');
 
 	// 在类的创建过程中是不会调用自定义的__setattr__的，因此只调用1次
 	equal(setattrCalled, 1, 'setattr called times ok.')
-
 });
 
 test('set to null/0/""/undefined/NaN', function() {

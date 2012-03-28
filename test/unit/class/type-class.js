@@ -1,10 +1,14 @@
 module('type-class');
 
 test('general', function() {
+	var newCalled = 0;
+	var initCalled = 0;
 
 	var M = new Class(type, function() {
 		this.__new__ = function(cls, name, base, dict) {
+			newCalled++;
 			ok(cls.get('a'), 'type-class member get.');
+			dict.a = 1;
 			return type.__new__(cls, name, base, dict);
 		};
 
@@ -12,19 +16,24 @@ test('general', function() {
 		};
 
 		this.initialize = function(cls) {
+			initCalled++;
+		};
+
+		this.__setattr__ = function(cls, name, member) {
 		};
 	});
 
-	//var A = new Class(object, function() {
-		//this.__metaclass__ = M;
-	//});
-
-	var B = new M(function() {
+	var A = new M(function() {
 	});
+
+	equal(A.get('a'), 1, 'new a metaclass create a class.');
+	equal(newCalled, 1, '__new__ in metaclass called.');
+	equal(initCalled, 1, 'initialize in metaclass called.');
 });
 
 test('base', function() {
 	baseNewCalled = 0;
+	baseInitCalled = 0;
 
 	var M = new Class(type, function() {
 		this.__new__ = function(cls, name, base, dict) {
@@ -37,6 +46,7 @@ test('base', function() {
 		}
 
 		this.initialize = function(cls, name, base, dict) {
+			baseInitCalled++;
 		};
 	});
 
@@ -48,5 +58,6 @@ test('base', function() {
 	});
 
 	// 确保继承关系在metaclass中也有效
-	equal(baseNewCalled, 1, '__new__ method in base called.')
+	equal(baseNewCalled, 1, '__new__ method in base called.');
+	equal(baseInitCalled, 1, 'initialize method in base called.');
 });
