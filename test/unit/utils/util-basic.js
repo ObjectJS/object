@@ -264,6 +264,7 @@ test('Function.__get_name__', function() {
 });
 
 module("util-basic-Class");
+
 test('Class.initMixins', function() {
 	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {

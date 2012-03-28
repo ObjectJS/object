@@ -1,4 +1,4 @@
-object.add('mvc', 'events', function(exports, events) {
+object.add('./mvc.js', 'events', function(exports, events) {
 
 
 /**

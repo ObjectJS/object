@@ -1,4 +1,4 @@
-object.add('ui.decorators', 'events', function(exports, events) {
+object.add('ui/decorators.js', 'events', function(exports, events) {
 
 	/**
 	 * @deprecated

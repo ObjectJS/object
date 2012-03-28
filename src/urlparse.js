@@ -1,4 +1,4 @@
-object.add('urlparse', function(exports) {
+object.add('./urlparse.js', function(exports) {
 
 /**
  * 解析一个url为 scheme / netloc / path / params / query / fragment 六个部分
