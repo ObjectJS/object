@@ -27,7 +27,6 @@ module("loader-basic-buildFileLib", {
 				if (document.head) document.head.removeChild(scripts[i]);
 			}
 		}
-		loader.clear();
 	}
 });
 

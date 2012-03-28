@@ -4,9 +4,22 @@
 	loader.wait = function() {
 		return loader;
 	};
-	loader.script = function(src) {
+	loader.script = function(src, callback) {
 		var script = basicScript.cloneNode(true);
 		script.src = src;
+		script.async = false;
+		script.defer = true;
+		script.type = 'text/javascript';
+		if (callback) {
+			if (script.addEventListener) {
+				script.addEventListener('load', callback, false);
+				script.addEventListener('error', callback, false);
+			} else {
+				script.attachEvent('onreadystatechange', function() {
+					var rs = script.readyState; if (rs === 'loaded' || rs === 'complete') { callback(); }
+				});
+			}
+		}
 		document.body.appendChild(script);
 		return loader;
 	}
@@ -106,3 +119,4 @@ if (isJsTestDriverRunning) {
 	} catch (e) {}
 	$UNIT_TEST_CONFIG.needPath = true;
 }
+

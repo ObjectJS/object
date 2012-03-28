@@ -290,14 +290,14 @@ test('many urls pointing to the same file', function() {
 		return;
 	}
 	Loader.loadScript(emptyJS, function() {}, true);
-	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, 'one file added');
+	equal(Object.keys(Loader._urlNodeMap).length, 1, 'one file added');
 	Loader.loadScript('../unit/' + emptyJS, function() {}, true);
-	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, '../unit/xxx.js is the same dir with xxx.js, will not load again');
+	equal(Object.keys(Loader._urlNodeMap).length, 1, '../unit/xxx.js is the same dir with xxx.js, will not load again');
 	Loader.loadScript('..//unit/' + emptyJS, function() {}, true);
-	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, '..//unit/xxx.js is the same dir with xxx.js, will not load again');
+	equal(Object.keys(Loader._urlNodeMap).length, 1, '..//unit/xxx.js is the same dir with xxx.js, will not load again');
 	Loader.loadScript('../../test/unit/' + emptyJS, function() {}, true);
-	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, '../../test/unit/xxx.js is the same dir with xxx.js, will not load again');
+	equal(Object.keys(Loader._urlNodeMap).length, 1, '../../test/unit/xxx.js is the same dir with xxx.js, will not load again');
 	Loader.loadScript('../../test/unit/' + emptyJS + '#', function() {}, true);
-	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, '../../test/unit/xxx.js# is the same dir with xxx.js, will not load again');
+	equal(Object.keys(Loader._urlNodeMap).length, 1, '../../test/unit/xxx.js# is the same dir with xxx.js, will not load again');
 	recoverEnv();
 });
