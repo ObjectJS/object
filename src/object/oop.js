@@ -241,6 +241,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 	// 从base继承而来
 	cls.__new__ = base.__new__;
 	cls.__setattr__ = base.__setattr__;
+	cls.initialize = base.initialize;
 	cls.__dict__ = dict;
 
 	// 继承于type的类才有__constructs__
@@ -452,7 +453,7 @@ type.__constructs__ = function(args) {
 	var name = null;
 
 	// base
-	var base = length > 1? args[0] : this;
+	var base = length > 1? args[0] : object;
 	if (typeof base != 'function' && typeof base != 'object') {
 		throw new Error('base is not function or object');
 	}
