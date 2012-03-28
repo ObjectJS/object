@@ -69,22 +69,6 @@ var setter = overloadSetter(function(prop, value) {
 	}
 });
 
-object.__setattr__ = function(obj, prop, value) {
-	var property = obj.__properties__[prop];
-	// 此prop不是property，直接赋值即可。
-	if (!property) {
-		obj[prop] = value;
-	}
-	// 有fset
-	else if (property.fset) {
-		property.fset.call(obj.__this__, obj, value);
-	}
-	// 未设置fset，不允许set
-	else {
-		throw 'set not allowed property ' + prop;
-	}
-}
-
 /**
  * 从类上获取成员
  * 会被放到cls.get
@@ -151,6 +135,32 @@ var _nativeExtendable = (function() {
 
 var ArrayClass, StringClass;
 
+/**
+ * 设置一个对象的成员
+ */
+object.__setattr__ = function(obj, prop, value) {
+	var property = obj.__properties__[prop];
+	// 此prop不是property，直接赋值即可。
+	if (!property) {
+		obj[prop] = value;
+	}
+	// 有fset
+	else if (property.fset) {
+		property.fset.call(obj.__this__, obj, value);
+	}
+	// 未设置fset，不允许set
+	else {
+		throw 'set not allowed property ' + prop;
+	}
+};
+
+/**
+ * 当生成一个对象时，获取该对象的metaclass
+ */
+object.__getmetaclass__ = function(base, dict) {
+	return dict.__metaclass__ || base.__metaclass__ || type;
+};
+
 var type = this.type = function() {
 };
 
@@ -160,7 +170,22 @@ type.__class__ = type;
  * 创建一个类的核心过程
  */
 type.__new__ = function(metaclass, name, base, dict) {
-	var cls = ClassCreate(type);
+	var cls = function() {
+		// 通过Class.getInstance获取一个空实例
+		if (cls.__prototyping__) return this;
+
+		// new OneMetaClass
+		if (cls.__new__) {
+			return cls.__constructs__(arguments);
+		}
+		// new OneClass
+		else {
+			this.__class__ = cls;
+			Class.initMixins(cls, this);
+			var value = this.initialize? this.initialize.apply(this, arguments) : null;
+			return value;
+		}
+	};
 	cls.__subclassesarray__ = [];
 	cls.__subclasses__ = subclassesgetter;
 	cls.__mixin__ = cls.set = membersetter;
@@ -197,8 +222,10 @@ type.__new__ = function(metaclass, name, base, dict) {
 	// 从base继承而来
 	cls.__new__ = base.__new__;
 	cls.__setattr__ = type.__getattribute__(base, '__setattr__');
+	cls.__constructs__ = type.__getattribute__(base, '__constructs__');
+	cls.__getmetaclass__ = type.__getattribute__(base, '__getmetaclass__');
 	// 支持在类上调用metaclass中的成员
-	// 可能会造成性能问题，由于目前没有需求，暂时不做
+	// 可能会造成性能问题，由于目前没有需求，暂时不做，用cls.get即可
 	//Class.keys(metaclass).forEach(function(name) {
 		//cls[name] = function() {
 			//var args = Array.prototype.slice.call(arguments, 0);
@@ -380,79 +407,18 @@ type.__getattribute__ = function(cls, name) {
 	return member;
 };
 
-type.initialize = function() {
-};
-
-ClassCreate = function(defaultBase) {
-	var cls = function() {
-		var func = arguments.callee;
-		var cls, metaclass;
-		if (func.__prototyping__) return this;
-		if (func.__new__) {
-			metaclass = func;
-		} else {
-			cls = func;
-		}
-
-		// new了一个metaclass
-		if (metaclass) {
-			var cs = Class.getConstructs(arguments, defaultBase);
-			var name = cs[0];
-			var base = cs[1];
-			var dict = cs[2];
-
-			cls = metaclass.__new__(metaclass, name, base, dict);
-
-			if (!cls || typeof cls != 'function') {
-				throw new Error('__new__ method should return cls');
-			}
-			if (metaclass.initialize) {
-				metaclass.initialize(cls, name, base, dict);
-			}
-			return cls;
-		}
-		// 普通class
-		else {
-			this.__class__ = cls;
-			Class.initMixins(cls, this);
-			var value = this.initialize? this.initialize.apply(this, arguments) : null;
-			return value;
-		}
-	};
-	return cls;
-};
-
 /**
- * 类的定义
- * @namespace Class
+ * new Class 或 new OneMetaClass 的入口调用函数
  */
-//var Class = this.Class = ClassCreate(object);
-//Class.__new__ = type.__new__;
-
-var Class = this.Class = function() {
-	var cs = Class.getConstructs(arguments, object);
-	var name = cs[0];
-	var base = cs[1];
-	var dict = cs[2];
-	// metaclass
-	var metaclass = dict.__metaclass__ || base.__metaclass__ || type;
-
-	var cls = metaclass.__new__(metaclass, name, base, dict);
-
-	if (!cls || typeof cls != 'function') {
-		throw new Error('__new__ method should return cls');
-	}
-	if (metaclass.initialize) {
-		metaclass.initialize(cls, name, base, dict);
-	}
-	return cls;
-};
-
-Class.getConstructs = function(args, defaultBase) {
+type.__constructs__ = object.__constructs__ = function(args) {
 	var length = args.length;
 	if (length < 1) throw new Error('bad arguments');
-	// 父类
-	var base = length > 1? args[0] : defaultBase;
+
+	// name
+	var name = null;
+
+	// base
+	var base = length > 1? args[0] : this;
 	if (typeof base != 'function' && typeof base != 'object') {
 		throw new Error('base is not function or object');
 	}
@@ -467,18 +433,44 @@ Class.getConstructs = function(args, defaultBase) {
 		}
 	}
 
-	// 构造器
-	var dict = args[length - 1];
+	// dict
+	var dict = args[length - 1], factory;
 	if (typeof dict != 'function' && typeof dict != 'object') {
 		throw new Error('constructor is not function or object');
 	}
 	if (dict instanceof Function) {
-		var f = dict;
+		factory = dict;
 		dict = {};
-		f.call(dict);
+		factory.call(dict);
 	}
 
-	return [null, base, dict];
+	var metaclass = this.__getmetaclass__(base, dict);
+
+	// 创建&初始化
+	var cls = metaclass.__new__(metaclass, name, base, dict);
+
+	if (!cls || typeof cls != 'function') {
+		throw new Error('__new__ method should return cls');
+	}
+	if (metaclass.initialize) {
+		metaclass.initialize(cls, name, base, dict);
+	}
+	return cls;
+};
+
+type.initialize = function() {
+};
+
+type.__getmetaclass__ = function(base, dict) {
+	return this;
+};
+
+/**
+ * 类的定义
+ * @namespace Class
+ */
+var Class = this.Class = function() {
+	return object.__constructs__(arguments);
 };
 
 /**
@@ -573,7 +565,9 @@ Class.inject = function(cls, host, args, filter) {
 	var p = Class.getInstance(cls);
 	object.extend(host, p, filter);
 	Class.initMixins(cls, host);
-	if (typeof cls.prototype.initialize == 'function') cls.prototype.initialize.apply(host, args);
+	if (typeof cls.prototype.initialize == 'function') {
+		cls.prototype.initialize.apply(host, args);
+	}
 };
 
 /**
