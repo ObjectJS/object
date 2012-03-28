@@ -164,8 +164,8 @@ test('circular dependency - extra : a->b->a', function() {
 		equal(a.__name__, 'a', 'module a is ok in circular dependency');
 		equal(a.a, 1, 'a.a is ok in circular dependency');
 	});
-	delete object._loader.lib['a'];
-	delete object._loader.lib['b'];
+	object.remove('a');
+	object.remove('b');
 });
 
 test('circular dependency - extra : c1->c2->c3->c1', function() {
@@ -279,14 +279,14 @@ test('object.add relative __name__', function() {
 
 test('object.execute auto call exports.main', function() {
 	expect(1);
-	object.add('test', function(exports) {
+	object.add('test_add', function(exports) {
 		exports.main = function() {
 			ok(true, 'main called with object.add.');
 		}
 	});
 
-	object.execute('test');
-	object.remove('test');
+	object.execute('test_add');
+	object.remove('test_add');
 });
 
 test('object.add a full url module', function() {
