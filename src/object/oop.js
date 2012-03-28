@@ -247,18 +247,17 @@ type.__new__ = function(metaclass, name, base, dict) {
 		cls.__constructs__ = constructs;
 	}
 
-	// 将base上的成员放到cls上
-	// 上面基本已经考虑到了所有的成员情况，就不遍历了
-	// object有其他成员了，略过
-	//if (base !== object && base !== type) {
-		//for (var property in base) {
-			//// 过滤双下划线开头结尾的系统成员
-			//// 过滤已存在成员
-			//if (property.indexOf('__') != 0 && property.slice(-2) != '__' && !(property in cls)) {
-				//cls[property] = base[property];
-			//}
-		//}
-	//}
+	// 将base上的classmethod、staticmethod成员放到cls上
+	// object和type上没有任何classmethod、staticmethod，且object上有无关成员，无需处理
+	if (base !== object && base !== type) {
+		for (var property in base) {
+			// 过滤双下划线开头结尾的系统成员
+			// 过滤已存在成员
+			if (property.indexOf('__') != 0 && property.slice(-2) != '__' && !(property in cls)) {
+				cls[property] = base[property];
+			}
+		}
+	}
 
 	cls.__constructing__ = true;
 
