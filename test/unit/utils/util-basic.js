@@ -263,16 +263,31 @@ test('Function.__get_name__', function() {
 	equal(D(), 2, 'second D overwrite the fist D');
 });
 
+var a = undefined;
+
+// opera下，delete undefined['name']不报错
+var undefinedOperationFlag = (function() {
+	var flag = false;
+	try {
+		delete a['a'];
+		flag = true;
+	} catch (e) {
+		flag = false;
+	}
+	return flag;
+})();
+
 module("util-basic-Class");
 test('Class.create', function() {
 	var C = Class.create();
 	try {
+		// opera下，properties为undefined，调用delete properties[name]竟然不报错~
 		C.__mixin__('d', 1);
 	} catch (e) {
 		ok(true, '__mixin__ can not be called : ' + e);
 	}
 
-	equals(C.get('d'), undefined, 'get can be called.');
+	equals(C.get('d'), undefinedOperationFlag ? 1 : undefined, 'get can be called.');
 	
 	equal(C.__subclasses__().length, 0, 'no subclass, __subclasses__ is ok');
 	equal(typeof C, 'function', 'class created is also a function');
