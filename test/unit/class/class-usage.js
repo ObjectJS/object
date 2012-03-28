@@ -66,6 +66,7 @@ test('A complete Class', function() {
 	});
 	var metaclass = new Class(type, function() {
 		this.initialize = function(cls, name, base, dict) {
+			console.log(arguments)
 			cls.metaclassed = function(self) {
 				return 1;
 			};

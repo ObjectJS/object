@@ -97,7 +97,7 @@ var memberchecker = function(name) {
 var membersetter = overloadSetter(function(name, member) {
 	// 从metaclass中获得__setattr__
 	if ('__metaclass__' in this) {
-		type.__getattribute__(this.__metaclass__, '__setattr__')(this, name, member);
+		type.__getattribute__(this.__metaclass__, '__setattr__').call(this.__metaclass__, this, name, member);
 	}
 	// 未设置metaclass则默认为type
 	else {
@@ -159,7 +159,7 @@ var parent = function(cls, name, args) {
 	if (!member || typeof member != 'function') {
 		throw new Error('no such method in parent : \'' + name + '\'');
 	} else {
-		return member.apply(base, args);
+		return member.apply(owner, args);
 	}
 };
 
@@ -383,7 +383,7 @@ type.__setattr__ = function(cls, name, member) {
 		proto[name].__name__ = name;
 		// 初始化方法放在cls上，metaclass会从cls上进行调用
 		if (name == 'initialize') {
-			cls[name] = instancemethod(member, cls);
+			cls[name] = proto[name];
 		}
 	}
 	// this.a = property(function fget() {}, function fset() {})
@@ -396,7 +396,7 @@ type.__setattr__ = function(cls, name, member) {
 	// 在继承的时候，有可能直接把instancemethod传进来，比如__setattr__
 	else if (member.__class__ === instancemethod) {
 		// 需要重新包装，因为有可能是绑定了cls的instancemethod
-		proto[name] = instancemethod(member.im_func);
+		proto[name] = member;
 	}
 	// this.a = classmethod(function() {})
 	else if (member.__class__ === classmethod) {
@@ -439,12 +439,7 @@ type.__getattribute__ = function(cls, name) {
 	if (name in cls) return cls[name];
 	if (properties && name in properties) return properties[name];
 	if (!name in proto) throw new Error('no member named ' + name + '.');
-	var member = proto[name];
-	if (!member) return member;
-	if (member.__class__ == instancemethod) {
-		return instancemethod(member.im_func, cls);
-	}
-	return member;
+	return proto[name];
 };
 
 /**
@@ -502,7 +497,7 @@ type.__constructs__ = function(args) {
 	if (!cls || typeof cls != 'function') {
 		throw new Error('__new__ method should return cls');
 	}
-	type.__getattribute__(metaclass, 'initialize')(cls, name, base, dict);
+	type.__getattribute__(metaclass, 'initialize').call(metaclass, cls, name, base, dict);
 	return cls;
 };
 
@@ -682,13 +677,15 @@ Class.keys = function(cls) {
 	return keys;
 };
 
-var instancemethod = function(func, cls) {
-	var wrapper = cls? function() {
-		return cls.prototype[func.__name__].im_func.apply(cls.__this__, arguments);
-	} : function() {
-		var args = [].slice.call(arguments, 0);
-		args.unshift(this);
-		return func.apply(this.__this__, args);
+var instancemethod = function(func) {
+	var wrapper = function() {
+		if (typeof this === 'function') {
+			return this.prototype[func.__name__].im_func.apply(this.__this__, arguments);
+		} else {
+			var args = [].slice.call(arguments, 0);
+			args.unshift(this);
+			return func.apply(this.__this__, args);
+		}
 	};
 	wrapper.__class__ = arguments.callee;
 	wrapper.im_func = func;
