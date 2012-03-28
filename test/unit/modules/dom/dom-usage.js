@@ -851,22 +851,25 @@ object.use('ua', function(exports, ua) {
 	ie = ua.ua.ie;
 });
 
-// 特性检测：检测在输入域第一次获取focus时，光标是停留在第一位，还是最后一位
-var autoGotoEnd = (function() {
-	var formItem = document.createElement('input');
-	document.body.appendChild(formItem);
-	formItem.value = '1234';
-	formItem.focus();
-	var autoEnd = false;
-	try {
-		autoEnd = formItem.selectionStart == 4;
-	} catch (e) {
-	}
-	document.body.removeChild(formItem);
-	return autoEnd;
-})()
+
 
 test('dom.FormItemElement - selectionStart/selectionEnd', function() {
+
+	// 特性检测：检测在输入域第一次获取focus时，光标是停留在第一位，还是最后一位
+	var autoGotoEnd = (function() {
+		var formItem = document.createElement('input');
+		document.body.appendChild(formItem);
+		formItem.value = '1234';
+		formItem.focus();
+		var autoEnd = false;
+		try {
+			autoEnd = formItem.selectionStart == 4;
+		} catch (e) {
+		}
+		document.body.removeChild(formItem);
+		return autoEnd;
+	})();
+
 	object.use('dom', function(exports, dom) {
 		var formItem = dom.wrap(document.createElement('input'));
 		document.body.appendChild(formItem);

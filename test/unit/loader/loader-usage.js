@@ -24,13 +24,8 @@ function recoverEnv() {
 	}
 }
 
-if (isJsTestDriverRunning) {
-	var loc = window['location'];
-	var pageUrl = loc.protocol + '//' + loc.host;
-	var path = pageUrl + '/test/test/unit/loader/';
-} else {
-	var path = ($UNIT_TEST_CONFIG.needPath ? 'loader/': '');
-}
+var path = transTestDir('loader/');
+
 function emptyCallback() {};
 var emptyJS = path + 'empty.js';
 var module1JS_seperate = path + 'module1.js';
@@ -61,7 +56,6 @@ var supportOnError = true;
 object.use('ua', function(exports, ua) {
 	supportOnError = !ua.ua.webkit || ua.ua.webkit > 525;
 });
-
 test('add script as module', function() {
 	recoverEnv();
 	addModuleScriptToHead('module1', module1JS_seperate);
@@ -83,21 +77,25 @@ test('add script as module', function() {
 	});
 });
 
-test('add script as module, but is another module', function() {
-	recoverEnv();
-	addModuleScriptToHead('module1', module2JS_seperate);
-	loader.buildFileLib();
-	stop();
-	// for global error throwed in callback of executeModule
-	var oldError = window.onerror;
-	window.onerror = function(a, b, c) {
-		start();
-		ok(true, 'error occurred when data-module is module1, data-src file is about module2');
-		window.onerror = oldError;
-		return true;
-	};
-	loader.use('module1', function(module1) {});
-});
+if (!isJsTestDriverRunning) {
+	// 在jsTestDriver中不会有global的异常抛出，导致window.onerror没有执行，测试用例超时
+	test('add script as module, but is another module', function() {
+		recoverEnv();
+		addModuleScriptToHead('module1', module2JS_seperate);
+		var loader = object._loader;
+		loader.buildFileLib();
+		stop();
+		// for global error throwed in callback of executeModule
+		var oldError = window.onerror;
+		window.onerror = function(a, b, c) {
+			start();
+			ok(true, 'error occurred when data-module is module1, data-src file is about module2');
+			window.onerror = oldError;
+			return true;
+		};
+		loader.use('module1', function(module1) {});
+	});
+}
 
 test('file module1 depends on file module2', function() {
 	recoverEnv();
@@ -245,7 +243,7 @@ test('file module1 is used by an existing module', function() {
 	object.add('use_module1', 'module1', function(exports, module1) {
 		exports.a = 1;
 		equal(module1.test, 1, 'use module1 in object.add');
-	})
+	});
 	loader.use('use_module1', function(use_module1) {
 		start();
 		equal(use_module1.a, 1, 'use_module1.a is ok');

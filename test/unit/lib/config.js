@@ -107,6 +107,7 @@
 
 window.Loader = object.Loader;
 
+$UNIT_TEST_CONFIG.pageTestDir = '';
 window.isJsTestDriverRunning = typeof jstestdriver != 'undefined';
 if (isJsTestDriverRunning) {
 	try {
@@ -118,5 +119,15 @@ if (isJsTestDriverRunning) {
 		//console.error = function() { jstestdriver.console.error.apply(jstestdriver.console, arguments); };
 	} catch (e) {}
 	$UNIT_TEST_CONFIG.needPath = true;
-}
 
+	try {
+		var loc = window['location'];
+		var pageUrl = loc.protocol + '//' + loc.host;
+		$UNIT_TEST_CONFIG.pageTestDir = pageUrl + '/test/test/unit/';
+	} catch (e){}
+};
+
+window.transTestDir = function transTestDir(dir) {
+	dir = dir || '';
+	return $UNIT_TEST_CONFIG.pageTestDir + ($UNIT_TEST_CONFIG.needPath ? dir : '');
+};

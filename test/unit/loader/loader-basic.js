@@ -5,15 +5,7 @@ var Loader = loader.constructor;
 (function() {
 
 function emptyCallback() {};
-
-if (isJsTestDriverRunning) {
-	var loc = window['location'];
-	var pageUrl = loc.protocol + '//' + loc.host;
-	var path = pageUrl + '/test/test/unit/loader/';
-} else {
-	var path = ($UNIT_TEST_CONFIG.needPath ? 'loader/': '');
-}
-
+var path = transTestDir('loader/');
 var emptyJS = path + 'empty.js';
 
 var head = document.getElementsByTagName('head')[0];
@@ -273,15 +265,6 @@ test('loadScript basic test', function() {
 
 // normal qunit testcases
 test('loadScript with url', function() {
-	// null/''
-	// Loader.loadScript('',emptyCallback); will case error;
-	//ok(false, 'can not loadScript with null url, which will cause empty script tag');
-	//ok(false, 'can not loadScript with empty url, which will cause empty script tag');
-	//ok(false, 'can not loadScript with an non-javascript url');
-	//ok(false, 'can not loadScript with html/jsp/asp...');
-	//raises(function() {
-	//	loader.loadScript('not-exists-url', emptyCallback);
-	//}, 'can not loadScript with not exists url');
 	var oldOnError = window.onerror;
 	window.onerror = function() {
 		ok(true, 'not-exists-url.js is not exist');
@@ -289,24 +272,19 @@ test('loadScript with url', function() {
 		return true;
 	};
 	Loader.loadScript('not-exists-url.js', emptyCallback);
-	//equal(Sizzle('script[src=not-exists-url.js]').length, 0, 'not exists url, script tag should be deleted');
 	stop();
-	// is js, and exists
 	Loader.loadScript(emptyJS, function() {
 		start();
 		ok(true, 'callback is called');
 	});
 });
 
-asyncTest('loadScript with/without callback', function() {
-	//ok(false, 'callback can not be null');
+test('loadScript with/without callback', function() {
+	stop();
 	Loader.loadScript(emptyJS, function() {
 		start();
 		ok(true, 'callback is called');
 	});
-	//loader.loadScript('not-exists-url', function() {
-	//		ok(false, 'callback is called when not-exists-url loaded');
-	//});
 });
 
 test('loadScript with/without cache', function() {
