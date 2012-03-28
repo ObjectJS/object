@@ -19,7 +19,7 @@ function recoverEnv() {
 	}
 	for (var prop in object._loader.lib) {
 		if (/module/.test(prop)) {
-			delete object.remove(prop);
+			object.remove(prop);
 		}
 	}
 }
