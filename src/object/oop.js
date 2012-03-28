@@ -160,7 +160,12 @@ type.__class__ = type;
  * 创建一个类的核心过程
  */
 type.__new__ = function(metaclass, name, base, dict) {
-	var cls = Class.create();
+	var cls = ClassCreate(type);
+	cls.__subclassesarray__ = [];
+	cls.__subclasses__ = subclassesgetter;
+	cls.__mixin__ = cls.set = membersetter;
+	cls.get = membergetter;
+	cls.has = memberchecker;
 
 	cls.__constructing__ = true;
 
@@ -378,16 +383,76 @@ type.__getattribute__ = function(cls, name) {
 type.initialize = function() {
 };
 
+ClassCreate = function(defaultBase) {
+	var cls = function() {
+		var func = arguments.callee;
+		var cls, metaclass;
+		if (func.__prototyping__) return this;
+		if (func.__new__) {
+			metaclass = func;
+		} else {
+			cls = func;
+		}
+
+		// new了一个metaclass
+		if (metaclass) {
+			var cs = Class.getConstructs(arguments, defaultBase);
+			var name = cs[0];
+			var base = cs[1];
+			var dict = cs[2];
+
+			cls = metaclass.__new__(metaclass, name, base, dict);
+
+			if (!cls || typeof cls != 'function') {
+				throw new Error('__new__ method should return cls');
+			}
+			if (metaclass.initialize) {
+				metaclass.initialize(cls, name, base, dict);
+			}
+			return cls;
+		}
+		// 普通class
+		else {
+			this.__class__ = cls;
+			Class.initMixins(cls, this);
+			var value = this.initialize? this.initialize.apply(this, arguments) : null;
+			return value;
+		}
+	};
+	return cls;
+};
+
 /**
  * 类的定义
  * @namespace Class
  */
-var Class = this.Class = function() {
+//var Class = this.Class = ClassCreate(object);
+//Class.__new__ = type.__new__;
 
-	var length = arguments.length;
+var Class = this.Class = function() {
+	var cs = Class.getConstructs(arguments, object);
+	var name = cs[0];
+	var base = cs[1];
+	var dict = cs[2];
+	// metaclass
+	var metaclass = dict.__metaclass__ || base.__metaclass__ || type;
+
+	var cls = metaclass.__new__(metaclass, name, base, dict);
+
+	if (!cls || typeof cls != 'function') {
+		throw new Error('__new__ method should return cls');
+	}
+	if (metaclass.initialize) {
+		metaclass.initialize(cls, name, base, dict);
+	}
+	return cls;
+};
+
+Class.getConstructs = function(args, defaultBase) {
+	var length = args.length;
 	if (length < 1) throw new Error('bad arguments');
 	// 父类
-	var base = length > 1? arguments[0] : object;
+	var base = length > 1? args[0] : defaultBase;
 	if (typeof base != 'function' && typeof base != 'object') {
 		throw new Error('base is not function or object');
 	}
@@ -403,7 +468,7 @@ var Class = this.Class = function() {
 	}
 
 	// 构造器
-	var dict = arguments[length - 1];
+	var dict = args[length - 1];
 	if (typeof dict != 'function' && typeof dict != 'object') {
 		throw new Error('constructor is not function or object');
 	}
@@ -413,34 +478,7 @@ var Class = this.Class = function() {
 		f.call(dict);
 	}
 
-	// metaclass
-	var metaclass = dict.__metaclass__ || base.__metaclass__ || type;
-
-	var cls = metaclass.__new__(metaclass, null, base, dict);
-	if (!cls || typeof cls != 'function') {
-		throw new Error('__new__ method should return cls');
-	}
-	if (metaclass.initialize) {
-		metaclass.initialize(cls, null, base, dict);
-	}
-
-	return cls;
-};
-
-Class.create = function() {
-	var cls = function() {
-		if (cls.__prototyping__) return this;
-		this.__class__ = cls;
-		Class.initMixins(cls, this);
-		var value = this.initialize? this.initialize.apply(this, arguments) : null;
-		return value;
-	};
-	cls.__subclassesarray__ = [];
-	cls.__subclasses__ = subclassesgetter;
-	cls.__mixin__ = cls.set = membersetter;
-	cls.get = membergetter;
-	cls.has = memberchecker;
-	return cls;
+	return [null, base, dict];
 };
 
 /**
