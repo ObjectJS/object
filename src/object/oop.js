@@ -90,17 +90,7 @@ object.__setattr__ = function(obj, prop, value) {
  * 会被放到cls.get
  */
 var membergetter = function(name) {
-	if (name == '@mixins') name = '__mixins__';
-	var cls = this;
-	var proto = this.prototype;
-	var properties = proto.__properties__;
-	if (name in cls) return cls[name];
-	if (properties && name in properties) return properties[name];
-	if (!name in proto) throw new Error('no member named ' + name + '.');
-	var member = proto[name];
-	if (!member) return member;
-	if (member.__class__ == instancemethod) return instancemethod(member.im_func, this);
-	return member;
+	return type.__getattribute__(this, name);
 };
 
 /**
@@ -121,13 +111,13 @@ var memberchecker = function(name) {
  * 子类不会被覆盖
  */
 var membersetter = overloadSetter(function(name, member) {
-	// 类创建过程中不触发__setattr__
-	if (this.__constructing__) {
-		type.__setattr__(this, name, member);
-	}
 	// 从metaclass中获得__setattr__
+	if ('__metaclass__' in this) {
+		type.__getattribute__(this.__metaclass__, '__setattr__')(this, name, member);
+	}
+	// 未设置metaclass则默认为type
 	else {
-		this.__class__.get('__setattr__')(this, name, member);
+		type.__setattr__(this, name, member);
 	}
 });
 
@@ -164,10 +154,6 @@ var ArrayClass, StringClass;
 var type = this.type = function() {
 };
 
-type.get = membergetter;
-type.has = memberchecker;
-type.set = membersetter;
-
 type.__class__ = type;
 
 /**
@@ -200,13 +186,25 @@ type.__new__ = function(metaclass, name, base, dict) {
 			}
 		}
 	}
-	cls.__new__ = metaclass.__new__;
-	cls.__setattr__ = metaclass.__setattr__;
+	// 只有__metaclass__和__class__是指向metaclass的，其他成员都是从base继承而来。
 	cls.__metaclass__ = metaclass;
 	cls.__class__ = metaclass;
-	cls.set('__base__', base);
+	// 从base继承而来
+	cls.__new__ = base.__new__;
+	cls.__setattr__ = type.__getattribute__(base, '__setattr__');
+	// 支持在类上调用metaclass中的成员
+	// 可能会造成性能问题，由于目前没有需求，暂时不做
+	//Class.keys(metaclass).forEach(function(name) {
+		//cls[name] = function() {
+			//var args = Array.prototype.slice.call(arguments, 0);
+			//args.unshift(cls);
+			//return metaclass.prototype[name].im_func.apply(cls, args);
+		//};
+	//});
+
+	type.__setattr__(cls, '__base__', base);
 	// 支持 this.parent 调用父级同名方法
-	cls.set('__this__', {
+	type.__setattr__(cls, '__this__', {
 		base: base,
 		parent: function() {
 			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
@@ -233,14 +231,14 @@ type.__new__ = function(metaclass, name, base, dict) {
 			// 先从base中找同名func
 			if (base && base.get && base.has(name)) {
 				owner = base;
-				member = base.get(name);
+				member = type.__getattribute__(base, name);
 			}
 			// 再从mixins中找同名func
 			else if (mixins && mixins.length && mixins.some(function(mixin) {
 				owner = mixin;
 				return mixin.has(name);
 			})) {
-				member = owner.get(name);
+				member = type.__getattribute__(owner, name);
 			}
 
 			if (!member || typeof member != 'function') {
@@ -252,7 +250,9 @@ type.__new__ = function(metaclass, name, base, dict) {
 	});
 
 	// Dict
-	cls.set(dict);
+	for (var k in dict) {
+		type.__setattr__(cls, k, dict[k]);
+	}
 
 	// Mixin
 	var mixins = cls.__mixins__;
@@ -261,12 +261,12 @@ type.__new__ = function(metaclass, name, base, dict) {
 			Class.keys(mixin).forEach(function(name) {
 				if (cls.has(name)) return; // 不要覆盖自定义的
 
-				var member = mixin.get(name);
+				var member = type.__getattribute__(mixin, name);
 
 				if (typeof member == 'function' && member.__class__ === instancemethod) {
-					cls.set(name, member.im_func);
+					type.__setattr__(cls, name, member.im_func);
 				} else {
-					cls.set(name, member);
+					type.__setattr__(cls, name, member);
 				}
 			});
 		});
@@ -351,12 +351,28 @@ type.__setattr__ = function(cls, name, member) {
 	}
 
 	// 所有子类cls上加入
+	// 在constructing时肯定没有子类，做个标记直接返回
 	if (!constructing && name in cls && subs) {
 		subs.forEach(function(sub) {
 			// !(name in sub) 与 !name in sub 得到的结果不一样
-			if (!(name in sub)) sub.set(name, member);
+			if (!(name in sub)) {
+				type.__setattr__(sub, name, member);
+			}
 		});
 	}
+};
+
+type.__getattribute__ = function(cls, name) {
+	if (name == '@mixins') name = '__mixins__';
+	var proto = cls.prototype;
+	var properties = proto.__properties__;
+	if (name in cls) return cls[name];
+	if (properties && name in properties) return properties[name];
+	if (!name in proto) throw new Error('no member named ' + name + '.');
+	var member = proto[name];
+	if (!member) return member;
+	if (member.__class__ == instancemethod) return instancemethod(member.im_func, cls);
+	return member;
 };
 
 type.initialize = function() {

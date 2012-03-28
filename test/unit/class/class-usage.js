@@ -64,7 +64,7 @@ test('A complete Class', function() {
 		this.extended = function() { return 1; };
 		this.same = function(self) {return 'Parent'};
 	});
-	var metaclass = new Class(function() {
+	var metaclass = new Class(type, function() {
 		this.initialize = function(cls, name, base, dict) {
 			cls.metaclassed = function(self) {
 				return 1;
