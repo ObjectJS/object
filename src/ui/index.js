@@ -1,4 +1,4 @@
-object.add('ui', 'string, options, dom, events', function(exports, string, options, dom, events) {
+object.add('ui/index.js', 'string, options, dom, events', function(exports, string, options, dom, events) {
 
 /**
  * Element
@@ -312,6 +312,9 @@ this.Component = new Class(function() {
 			}
 			var str = string.substitute(node.template, tdata);
 			node = dom.Element.fromString(str);
+			if (!node) {
+				throw new Error('render component error with template.');
+			}
 		}
 
 		self.__nodeMap = {}; // 相应node的uid对应component，用于在需要通过node找到component时使用
@@ -622,18 +625,28 @@ this.Component = new Class(function() {
 	 * @param value value
 	 */
 	this.setOption = options.overloadsetter(function(self, name, value) {
+
+		function setToComponent(comp) {
+			comp.__setOption(name, value);
+			comp.fireEvent('__option_change_' + name, {value: value});
+		}
+
 		// 由于overloadsetter是通过name是否为string来判断传递形式是name-value还是{name:value}的
 		// 在回调中为了性能需要直接传的parts，类型为数组，而不是字符串，因此无法通过回调用overloadsetter包装后的方法进行回调
 		(function(self, name, value) {
 			var parts = Array.isArray(name)? name : name.split('.');
+			var ref = self[parts[0]]; // 如果是已经创建好的组件，除了存储到_options，还要更新组件的option
 			if (parts.length > 1) {
 				exports.setOptionTo(self._options, parts, value);
-				if (self[parts[0]]) {
-					arguments.callee(self[parts[0]], parts.slice(1), value);
+				if (ref) {
+					arguments.callee(ref, parts.slice(1), value);
 				}
 			} else {
-				self.__setOption(name, value);
-				self.fireEvent('__option_change_' + name, {value: value});
+				if (self.constructor == exports.Components) {
+					self.forEach(setToComponent);
+				} else {
+					setToComponent(self);
+				}
 			}
 		})(self, name, value);
 	});
@@ -651,7 +664,7 @@ this.Component = new Class(function() {
 		var nodes;
 
 		// 如果已经存在结构了，则不用再render了
-		if (!!(sub.single? self[name] : self[name].length)) {
+		if (!!(sub.single? self[name] && self[name]._node.parentNode : self[name] && self[name][0] && self[name][0]._node.parentNode && self[name][0]._node.parentNode.nodeType != 11)) {
 			return;
 		}
 
@@ -680,6 +693,10 @@ this.Component = new Class(function() {
 
 			self.__initSub(name, nodes);
 		}
+	};
+
+	this.dispose = function(self) {
+		self._node.dispose();
 	};
 
 	/**
@@ -723,10 +740,8 @@ this.Component = new Class(function() {
 	 * 设置subcomponent的template
 	 */
 	this.setTemplate = function(self, name, template, section) {
-		if (!self._options[name]) self._options[name] = {};
-		var options = self._options[name];
-		options.template = template;
-		options.templateSection = section;
+		self.setOption(name + '.template', template);
+		self.setOption(name + '.templateSection', section);
 	};
 
 	/**

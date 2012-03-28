@@ -1,3 +1,3 @@
-object.add('module1', 'ua', function(exports) {
+object.add('module1', function(exports) {
 	exports.a = 1;
 });
