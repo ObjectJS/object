@@ -149,6 +149,25 @@ test('extend class', function() {
 	}
 });
 
+test('staticmethod/classmethod extend', function() {
+	var A = new Class(function() {
+		this.a = classmethod(function() {
+		});
+
+		this.b = staticmethod(function() {
+		});
+	});
+	A.c = function() {
+	};
+
+	var B = new Class(A, function() {
+	});
+
+	ok(B.a, 'classmethod extended.');
+	ok(B.b, 'staticmethod extended.');
+	ok(B.c == undefined, 'none-maintain method not extended.');
+});
+
 test('do not overwrite exists member in subclass', function() {
 	var A = new Class(function() {
 		this.a = 1;

@@ -253,7 +253,9 @@ type.__new__ = function(metaclass, name, base, dict) {
 		for (var property in base) {
 			// 过滤双下划线开头结尾的系统成员
 			// 过滤已存在成员
-			if (property.indexOf('__') != 0 && property.slice(-2) != '__' && !(property in cls)) {
+			// classmethod/staticmethod在cls和cls.prototype上都存在，用作判断是否需要赋值的标记
+			// 无法判断是否是staticmethod，因为cls和cls.prototype上放的都不是覆盖方法
+			if (property.indexOf('__') != 0 && property.slice(-2) != '__' && !(property in cls) && base.prototype[property]) {
 				cls[property] = base[property];
 			}
 		}
