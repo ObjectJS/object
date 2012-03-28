@@ -63,7 +63,7 @@ var getter = function(prop) {
  */
 var setter = overloadSetter(function(prop, value) {
 	if ('__setattr__' in this) {
-		this.__setattr__.call(this, prop, value);
+		this.__setattr__(prop, value);
 	} else {
 		object.__setattr__(this, prop, value);
 	}
@@ -240,8 +240,6 @@ type.__new__ = function(metaclass, name, base, dict) {
 	cls.__class__ = metaclass;
 	// 从base继承而来
 	cls.__new__ = base.__new__;
-	cls.__setattr__ = base.__setattr__;
-	cls.initialize = base.initialize;
 	cls.__dict__ = dict;
 
 	// 继承于type的类才有__constructs__
@@ -279,6 +277,8 @@ type.__new__ = function(metaclass, name, base, dict) {
 	/*
 	 * 同时设置cls和其prototype上的成员
 	 */
+	type.__setattr__(cls, 'initialize', type.__getattribute__(base, 'initialize'));
+	type.__setattr__(cls, '__setattr__', type.__getattribute__(base, '__setattr__'));
 	type.__setattr__(cls, '__base__', base);
 	// 支持 this.parent 调用父级同名方法
 	type.__setattr__(cls, '__this__', {
@@ -367,7 +367,7 @@ type.__setattr__ = function(cls, name, member) {
 		}
 	}
 	// 
-	else if (['__this__', '__base__', '__setattr__'].indexOf(name) != -1) {
+	else if (['__this__', '__base__'].indexOf(name) != -1) {
 		cls[name] = proto[name] = member;
 	}
 	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;
@@ -392,6 +392,11 @@ type.__setattr__ = function(cls, name, member) {
 		properties[name] = member;
 		// 当prototype覆盖instancemethod/classmethod/staticmethod时，需要去除prototype上的属性
 		proto[name] = undefined;
+	}
+	// 在继承的时候，有可能直接把instancemethod传进来，比如__setattr__
+	else if (member.__class__ === instancemethod) {
+		// 需要重新包装，因为有可能是绑定了cls的instancemethod
+		proto[name] = instancemethod(member.im_func);
 	}
 	// this.a = classmethod(function() {})
 	else if (member.__class__ === classmethod) {
@@ -436,7 +441,9 @@ type.__getattribute__ = function(cls, name) {
 	if (!name in proto) throw new Error('no member named ' + name + '.');
 	var member = proto[name];
 	if (!member) return member;
-	if (member.__class__ == instancemethod) return instancemethod(member.im_func, cls);
+	if (member.__class__ == instancemethod) {
+		return instancemethod(member.im_func, cls);
+	}
 	return member;
 };
 
@@ -495,9 +502,7 @@ type.__constructs__ = function(args) {
 	if (!cls || typeof cls != 'function') {
 		throw new Error('__new__ method should return cls');
 	}
-	if (metaclass.initialize) {
-		metaclass.initialize(cls, name, base, dict);
-	}
+	type.__getattribute__(metaclass, 'initialize')(cls, name, base, dict);
 	return cls;
 };
 
