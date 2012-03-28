@@ -12,35 +12,105 @@
 
 ;(function(object) {
 
+scheme_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-.';
+function find_until(url, target, remainFirst) {
+	var len = url.length;
+	for(var i=0; i<url.length; i++) {
+		if (target.indexOf(url.charAt(i)) != -1) {
+			if (i < len) {
+				len = i;
+				break;
+			}
+		}
+	}
+	return {
+		got: url.substring(0, len),
+		remained: (remainFirst? url.substring(len) : url.substring(len + 1))
+	}
+}
 /**
  * 解析一个url为 scheme / netloc / path / params / query / fragment 六个部分
  * @see http://docs.python.org/library/urlparse.html
  */
+//http://www.renren.com:8080/home/home2;32131?id=31321321&a=1#//music/?from=homeleft#fdalfdjal
+//<scheme>://<netloc>/<path>;<params>?<query>#<fragment>
 function urlparse(url, scheme) {
-	var reg, parts;
 	if (typeof url != 'string') {
-		return null;
-	}
-	url = url.trim();
-	
-	if (url.indexOf('file') == 0) {
-		// file:///F:/works/workspace/objectjs.org/object/test/unit/modules/urlparse/index.html
-		reg = /^(file)\:\/\/()([^\?]*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(.*))?$/i
-	} else {
-		// http://www.renren.com:8080/home;32131?id=31321321&a=1#//music/?from=homeleft#fdalfdjal
-		reg = /^(?:(\w+?)\:\/(?:\/)?([\w-_.]+(?::\w+)?))?([^\?]*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(.*))?$/i;
-	}
-	if (reg.test(url)) {
-		parts = url.match(reg).slice(1);
-		if (!parts[0] && scheme) parts[0] = scheme;
-		for (var i = 0; i < parts.length; i++) {
-			if (!parts[i]) parts[i] = '';
-		}
-		return parts;
-	} else {
 		return ['', '', '', '', '', ''];
 	}
+	var netloc='', path = '', params = '', query = '', fragment = '', i = 0;
+	i = url.indexOf(':');
+	if (i > 0) {
+		if (url.substring(0, i) == 'http') {
+			scheme = url.substring(0, i).toLowerCase();
+			url = url.substring(i+1);
+
+			if (url.substring(0, 2) == '//') {
+				url = url.substring(2);
+				tmp = find_until(url, '/?#', true);
+				netloc = tmp.got;
+				url = tmp.remained;
+			}
+			
+			if (url.indexOf('#') != -1) {
+				tmp = find_until(url, '#');
+				url = tmp.got;
+				fragment = tmp.remained;
+			}
+			if (url.indexOf('?') != -1) {
+				tmp = find_until(url, '?');
+				url = tmp.got;
+				query = tmp.remained;
+			}
+			if (url.indexOf(';') != -1) {
+				tmp = find_until(url, ';');
+				path = tmp.got;
+				params = tmp.remained;
+			}
+
+			if (!path) {
+				path = url;
+			}
+
+			return [scheme, netloc, path, params, query, fragment];
+		} else {
+			for(var i=0; i<url.length; i++) {
+				if (scheme_chars.indexOf(url.charAt(i)) == -1) {
+					break;
+				}
+			}
+			scheme = url.substring(0, i);
+			url = url.substring(i + 1);
+		}
+	}
+	if (url.substring(0, 2) == '//') {
+		tmp = find_until(url.substring(2), '/?#', true);
+		netloc = tmp.got;
+		url = tmp.remained;
+	}
+
+	if (url.indexOf('#') != -1) {
+		tmp = find_until(url, '#');
+		url = tmp.got;
+		fragment = tmp.remained;
+	}
+	if (url.indexOf('?') != -1) {
+		tmp = find_until(url, '?');
+		url = tmp.got;
+		query = tmp.remained;
+	}
+	if (url.indexOf(';') != -1) {
+		tmp = find_until(url, ';');
+		path = tmp.got;
+		params = tmp.remained;
+	}
+	
+	if (!path) {
+		path = url;
+	}
+	return [scheme, netloc, path, params, query, fragment];
 };
+
 
 /**
 * 将兼容urlparse结果的url部分合并成url
