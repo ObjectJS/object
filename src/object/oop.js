@@ -230,6 +230,8 @@ type.__new__ = function(metaclass, name, base, dict) {
 	 */
 	cls.__subclassesarray__ = [];
 	cls.__subclasses__ = subclassesgetter;
+	// 存储此类上的classmethod和staticmethod的名字，方便继承时赋值
+	cls.__classbasedmethods__ = [];
 	cls.__mixin__ = cls.set = membersetter;
 	cls.get = membergetter;
 	cls.has = memberchecker;
@@ -250,15 +252,9 @@ type.__new__ = function(metaclass, name, base, dict) {
 	// 将base上的classmethod、staticmethod成员放到cls上
 	// object和type上没有任何classmethod、staticmethod，且object上有无关成员，无需处理
 	if (base !== object && base !== type) {
-		for (var property in base) {
-			// 过滤双下划线开头结尾的系统成员
-			// 过滤已存在成员
-			// classmethod/staticmethod在cls和cls.prototype上都存在，用作判断是否需要赋值的标记
-			// 无法判断是否是staticmethod，因为cls和cls.prototype上放的都不是覆盖方法
-			if (property.indexOf('__') != 0 && property.slice(-2) != '__' && !(property in cls) && base.prototype[property]) {
-				cls[property] = base[property];
-			}
-		}
+		(base.__classbasedmethods__ || []).forEach(function(name) {
+			cls[name] = base[name];
+		});
 	}
 
 	cls.__constructing__ = true;
@@ -401,12 +397,14 @@ type.__setattr__ = function(cls, name, member) {
 		member.im_func.__name__ = name;
 		member.__name__ = name;
 		cls[name] = proto[name] = member;
+		cls.__classbasedmethods__.push(name);
 	}
 	// this.a = staticmethod(function() {})
 	else if (member.__class__ === staticmethod) {
 		member.im_func.__name__ = name;
 		member.__name__ = name;
 		cls[name] = proto[name] = member.im_func;
+		cls.__classbasedmethods__.push(name);
 	}
 	// this.a = someObject
 	else {
