@@ -678,6 +678,10 @@ Class.keys = function(cls) {
 
 var instancemethod = function(func) {
 	var _instancemethod = function() {
+		// 通过这个方法可以方便查找在类上get了一个成员没有绑定就使用的情况
+		//if (this === window) {
+			//console.log(arguments.callee.caller, func.__name__);
+		//}
 		if (typeof this === 'function') {
 			return this.prototype[func.__name__].im_func.apply(this.__this__, arguments);
 		} else {

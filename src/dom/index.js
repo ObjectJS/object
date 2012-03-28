@@ -535,7 +535,7 @@ this.Element = new Class(function() {
 		function wrapper(e) {
 			var ele = e.srcElement || e.target;
 			do {
-				if (ele && exports.Element.get('matchesSelector')(ele, selector)) fn.call(wrap(ele), e);
+				if (ele && exports.Element.get('matchesSelector').bind(exports.Element)(ele, selector)) fn.call(wrap(ele), e);
 			} while((ele = ele.parentNode));
 		}
 
@@ -667,7 +667,7 @@ this.Element = new Class(function() {
 	 * @param selector css选择符
 	 */
 	this.getPrevious = function(self, selector) {
-		var matchesSelector = selector ? exports.Element.get('matchesSelector') : null;
+		var matchesSelector = selector ? exports.Element.get('matchesSelector').bind(exports.Element) : null;
 		var element = self;
 		while(element = element.previousSibling) {
 			// 注释节点
@@ -687,7 +687,7 @@ this.Element = new Class(function() {
 	 * @param selector css选择符
 	 */
 	this.getAllPrevious = function(self, selector) {
-		var matchesSelector = selector ? exports.Element.get('matchesSelector') : null;
+		var matchesSelector = selector ? exports.Element.get('matchesSelector').bind(exports.Element) : null;
 		var result = [];
 		var element = self;
 		while(element = element.previousSibling) {
@@ -708,7 +708,7 @@ this.Element = new Class(function() {
 	 * @param selector css选择符
 	 */
 	this.getNext = function(self, selector) {
-		var matchesSelector = selector ? exports.Element.get('matchesSelector') : null;
+		var matchesSelector = selector ? exports.Element.get('matchesSelector').bind(exports.Element) : null;
 		var element = self;
 		while(element = element.nextSibling) {
 			// 注释节点
@@ -728,7 +728,7 @@ this.Element = new Class(function() {
 	 * @param selector css选择符
 	 */
 	this.getAllNext = function(self, selector) {
-		var matchesSelector = selector ? exports.Element.get('matchesSelector') : null;
+		var matchesSelector = selector ? exports.Element.get('matchesSelector').bind(exports.Element) : null;
 		var result = [];
 		var element = self;
 		while(element = element.nextSibling) {
@@ -749,7 +749,7 @@ this.Element = new Class(function() {
 	 * @param selector css选择符
 	 */
 	this.getFirst = function(self, selector) {
-		var matchesSelector = selector ? exports.Element.get('matchesSelector') : null;
+		var matchesSelector = selector ? exports.Element.get('matchesSelector').bind(exports.Element) : null;
 		var childrens = self.childNodes, l = childrens.length;
 		for (var i = 0, element; i < l; i++) {
 			element = childrens[i];
@@ -769,7 +769,7 @@ this.Element = new Class(function() {
 	 * @param selector css选择符
 	 */
 	this.getLast = function(self, selector) {
-		var matchesSelector = selector ? exports.Element.get('matchesSelector') : null;
+		var matchesSelector = selector ? exports.Element.get('matchesSelector').bind(exports.Element) : null;
 		var childrens = self.childNodes, l = childrens.length;
 		for (var i = l - 1, element; i >= 0 ; i--) {
 			element = childrens[i];
@@ -805,7 +805,7 @@ this.Element = new Class(function() {
 	 * @param selector css选择符
 	 */
 	this.getParents = function(self, selector) {
-		var matchesSelector = selector ? exports.Element.get('matchesSelector') : null;
+		var matchesSelector = selector ? exports.Element.get('matchesSelector').bind(exports.Element) : null;
 		var result = [];
 		var element = self;
 		while(element = element.parentNode) {
@@ -833,7 +833,7 @@ this.Element = new Class(function() {
 	 * @param selector css选择符
 	 */
 	this.getChildren = function(self, selector) {
-		var matchesSelector = selector ? exports.Element.get('matchesSelector') : null;
+		var matchesSelector = selector ? exports.Element.get('matchesSelector').bind(exports.Element) : null;
 		var childrens = self.childNodes, l = childrens.length, result = [];
 		for (var i = 0, element; i < l ; i++) {
 			element = childrens[i];
