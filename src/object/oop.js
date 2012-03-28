@@ -340,6 +340,9 @@ type.__new__ = function(metaclass, name, base, dict) {
 	return cls;
 };
 
+/**
+ * 设置属性到类
+ */
 type.__setattr__ = function(cls, name, member) {
 	if (name == '@mixins') name = '__mixins__';
 
@@ -421,6 +424,9 @@ type.__setattr__ = function(cls, name, member) {
 	}
 };
 
+/**
+ * 从类上获取属性
+ */
 type.__getattribute__ = function(cls, name) {
 	if (name == '@mixins') name = '__mixins__';
 	var proto = cls.prototype;
