@@ -211,9 +211,8 @@ type.__new__ = function(metaclass, name, base, dict) {
 		if (cls.__prototyping__) return this;
 
 		// new OneMetaClass
-		// 用cls.__new__判断此类是否是MetaClass并不严谨（python的object也有__new__）
-		// 应该用Class.getChain判断跟是否是type，但性能不高
-		if (cls.__new__) {
+		// __constructs__是type才有的，继承于object的类没有
+		if ('__constructs__' in cls) {
 			return cls.__constructs__(arguments);
 		}
 		// new OneClass
@@ -227,6 +226,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 
 	/*
 	 * 初始化成员
+	 * 注意这里从base获取成员的时候，base有可能是object系的，也有可能是type系的
 	 */
 	cls.__subclassesarray__ = [];
 	cls.__subclasses__ = subclassesgetter;
@@ -238,9 +238,27 @@ type.__new__ = function(metaclass, name, base, dict) {
 	cls.__class__ = metaclass;
 	// 从base继承而来
 	cls.__new__ = base.__new__;
-	cls.__setattr__ = type.__getattribute__(base, '__setattr__');
-	cls.__constructs__ = type.__getattribute__(base, '__constructs__');
+	cls.__setattr__ = base.__setattr__;
 	cls.__dict__ = dict;
+
+	// 继承于type的类才有__constructs__
+	var constructs = base.__constructs__;
+	if (constructs) {
+		cls.__constructs__ = constructs;
+	}
+
+	// 将base上的成员放到cls上
+	// 上面基本已经考虑到了所有的成员情况，就不遍历了
+	// object有其他成员了，略过
+	//if (base !== object && base !== type) {
+		//for (var property in base) {
+			//// 过滤双下划线开头结尾的系统成员
+			//// 过滤已存在成员
+			//if (property.indexOf('__') != 0 && property.slice(-2) != '__' && !(property in cls)) {
+				//cls[property] = base[property];
+			//}
+		//}
+	//}
 
 	cls.__constructing__ = true;
 
@@ -272,18 +290,6 @@ type.__new__ = function(metaclass, name, base, dict) {
 			return parent(cls, arguments.callee.caller.__name__, arguments);
 		}
 	});
-
-	// 将base上的成员放到cls上
-	// object有其他成员了，略过
-	//if (base !== object && base !== type) {
-		//for (var property in base) {
-			//// 过滤双下划线开头结尾的系统成员
-			//// 过滤已存在成员
-			//if (property.indexOf('__') != 0 && property.slice(-2) != '__' && !(property in cls)) {
-				//cls[property] = base[property];
-			//}
-		//}
-	//}
 
 	// 支持在类上调用metaclass中的成员
 	// 可能会造成性能问题，由于目前没有需求，暂时不做，用cls.get即可
@@ -430,8 +436,10 @@ type.__getattribute__ = function(cls, name) {
 
 /**
  * new Class 或 new OneMetaClass 的入口调用函数
+ * 此方法只放在type上，可用于判断一个类是object系的还是type系的
+ * object要用的时候用type.__constructs__.call(object, arguments)调用即可
  */
-type.__constructs__ = object.__constructs__ = function(args) {
+type.__constructs__ = function(args) {
 	var length = args.length;
 	if (length < 1) throw new Error('bad arguments');
 
@@ -466,7 +474,7 @@ type.__constructs__ = object.__constructs__ = function(args) {
 	}
 
 	var metaclass;
-	// new OneClass，用class生成一个object
+	// new Class()，用class生成一个object
 	if (this === object) {
 		metaclass = dict.__metaclass__ || base.__metaclass__ || type;
 	}
@@ -495,7 +503,8 @@ type.initialize = function() {
  * @namespace Class
  */
 var Class = this.Class = function() {
-	return object.__constructs__(arguments);
+	// 通过object调用__constructs__，获取metaclass的途径不同
+	return type.__constructs__.call(object, arguments);
 };
 
 /**
