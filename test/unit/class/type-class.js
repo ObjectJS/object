@@ -34,10 +34,8 @@ test('general', function() {
 
 	ok(BM.__new__, 'default __new__ exists.');
 	ok(BM.initialize, 'default initialize exists.');
-	ok(BM.__setattr__, 'default __setattr__ exists.');
 	ok(M.__new__, 'custom __new__ exists.');
 	ok(M.initialize, 'custom initialize exists.');
-	ok(M.__setattr__, 'custom __setattr__ exists.');
 	equal(A.get('a'), 1, 'new a metaclass create a class.');
 	equal(newCalled, 1, '__new__ in metaclass called.');
 	equal(initCalled, 1, 'initialize in metaclass called.');
