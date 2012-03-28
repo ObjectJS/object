@@ -395,7 +395,6 @@ type.__setattr__ = function(cls, name, member) {
 	}
 	// 在继承的时候，有可能直接把instancemethod传进来，比如__setattr__
 	else if (member.__class__ === instancemethod) {
-		// 需要重新包装，因为有可能是绑定了cls的instancemethod
 		proto[name] = member;
 	}
 	// this.a = classmethod(function() {})
@@ -678,7 +677,7 @@ Class.keys = function(cls) {
 };
 
 var instancemethod = function(func) {
-	var wrapper = function() {
+	var _instancemethod = function() {
 		if (typeof this === 'function') {
 			return this.prototype[func.__name__].im_func.apply(this.__this__, arguments);
 		} else {
@@ -687,20 +686,20 @@ var instancemethod = function(func) {
 			return func.apply(this.__this__, args);
 		}
 	};
-	wrapper.__class__ = arguments.callee;
-	wrapper.im_func = func;
-	return wrapper;
+	_instancemethod.__class__ = arguments.callee;
+	_instancemethod.im_func = func;
+	return _instancemethod;
 };
 
 var staticmethod = this.staticmethod = function(func) {
-	var wrapper = function() {};
-	wrapper.__class__ = arguments.callee;
-	wrapper.im_func = func;
-	return wrapper;
+	var _staticmethod = function() {};
+	_staticmethod.__class__ = arguments.callee;
+	_staticmethod.im_func = func;
+	return _staticmethod;
 };
 
 var classmethod = this.classmethod = function(func) {
-	var wrapper = function() {
+	var _classmethod = function() {
 		var args = [].slice.call(arguments, 0);
 		var cls;
 		if (typeof this == 'function') {
@@ -712,9 +711,9 @@ var classmethod = this.classmethod = function(func) {
 			return func.apply(cls.__this__, args);
 		}
 	};
-	wrapper.__class__ = arguments.callee;
-	wrapper.im_func = func;
-	return wrapper;
+	_classmethod.__class__ = arguments.callee;
+	_classmethod.im_func = func;
+	return _classmethod;
 };
 
 var property = this.property = function(fget, fset) {

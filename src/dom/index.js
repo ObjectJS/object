@@ -791,7 +791,7 @@ this.Element = new Class(function() {
 	this.getParent = function(self, selector) {
 		if (!selector) return wrap(self.parentNode);
 
-		var matchesSelector = exports.Element.get('matchesSelector');
+		var matchesSelector = exports.Element.get('matchesSelector').bind(exports.Element);
 		var element = self;
 		do {
 			if (matchesSelector(element, selector)) return wrap(element);
