@@ -240,6 +240,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 	cls.__new__ = base.__new__;
 	cls.__setattr__ = type.__getattribute__(base, '__setattr__');
 	cls.__constructs__ = type.__getattribute__(base, '__constructs__');
+	cls.__dict__ = dict;
 
 	cls.__constructing__ = true;
 
@@ -258,6 +259,19 @@ type.__new__ = function(metaclass, name, base, dict) {
 	// 有可能已经继承了base的__properties__了
 	var baseProperties = proto.__properties__ || {};
 	proto.__properties__ = object.extend({}, baseProperties);
+
+	/*
+	 * 同时设置cls和其prototype上的成员
+	 */
+	type.__setattr__(cls, '__base__', base);
+	// 支持 this.parent 调用父级同名方法
+	type.__setattr__(cls, '__this__', {
+		base: base,
+		parent: function() {
+			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
+			return parent(cls, arguments.callee.caller.__name__, arguments);
+		}
+	});
 
 	// 将base上的成员放到cls上
 	// object有其他成员了，略过
@@ -280,16 +294,6 @@ type.__new__ = function(metaclass, name, base, dict) {
 			//return metaclass.prototype[name].im_func.apply(cls, args);
 		//};
 	//});
-
-	type.__setattr__(cls, '__base__', base);
-	// 支持 this.parent 调用父级同名方法
-	type.__setattr__(cls, '__this__', {
-		base: base,
-		parent: function() {
-			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
-			return parent(cls, arguments.callee.caller.__name__, arguments);
-		}
-	});
 
 	/*
 	 * Dict
@@ -318,12 +322,14 @@ type.__new__ = function(metaclass, name, base, dict) {
 		});
 	}
 
-	delete cls.__constructing__;
-
-	cls.__dict__ = dict;
+	/*
+	 * 默认成员，若之前有定义也强制覆盖掉
+	 */
 	cls.prototype.get = getter;
 	cls.prototype.set = setter;
 	cls.prototype._set = nativesetter;
+
+	delete cls.__constructing__;
 
 	return cls;
 };
