@@ -367,7 +367,7 @@ type.__setattr__ = function(cls, name, member) {
 		}
 	}
 	// 
-	else if (['__this__', '__base__'].indexOf(name) != -1) {
+	else if (['__this__', '__base__', '__setattr__'].indexOf(name) != -1) {
 		cls[name] = proto[name] = member;
 	}
 	// 有可能为空，比如 this.test = null 或 this.test = undefined 这种写法;

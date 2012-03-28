@@ -4,6 +4,9 @@ test('general', function() {
 	var newCalled = 0;
 	var initCalled = 0;
 
+	var BM = new Class(type, function() {
+	});
+
 	var M = new Class(type, function() {
 		this.__new__ = function(cls, name, base, dict) {
 			newCalled++;
@@ -21,11 +24,20 @@ test('general', function() {
 
 		this.__setattr__ = function(cls, name, member) {
 		};
+
+		this.__getattr__ = function(cls, name, member) {
+		};
 	});
 
 	var A = new M(function() {
 	});
 
+	ok(BM.__new__, 'default __new__ exists.');
+	ok(BM.initialize, 'default initialize exists.');
+	ok(BM.__setattr__, 'default __setattr__ exists.');
+	ok(M.__new__, 'custom __new__ exists.');
+	ok(M.initialize, 'custom initialize exists.');
+	ok(M.__setattr__, 'custom __setattr__ exists.');
 	equal(A.get('a'), 1, 'new a metaclass create a class.');
 	equal(newCalled, 1, '__new__ in metaclass called.');
 	equal(initCalled, 1, 'initialize in metaclass called.');
