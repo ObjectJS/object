@@ -72,9 +72,16 @@ var setter = overloadSetter(function(prop, value) {
 /**
  * 从类上获取成员
  * 会被放到cls.get
+ * @param name 需要获取的成员
+ * @param bind 如果目标成员是个函数，则使用bind进行绑定后返回，非函数忽略此参数
  */
-var membergetter = function(name) {
-	return type.__getattribute__(this, name);
+var membergetter = function(name, bind) {
+	var member = type.__getattribute__(this, name);
+	if (typeof member == 'function') {
+		bind = bind || this;
+		return member.bind(bind);
+	}
+	return member;
 };
 
 /**
@@ -383,7 +390,7 @@ type.__setattr__ = function(cls, name, member) {
 		proto[name].__name__ = name;
 		// 初始化方法放在cls上，metaclass会从cls上进行调用
 		if (name == 'initialize') {
-			cls[name] = proto[name];
+			cls[name] = instancemethod(member, true);
 		}
 	}
 	// this.a = property(function fget() {}, function fset() {})
@@ -395,7 +402,8 @@ type.__setattr__ = function(cls, name, member) {
 	}
 	// 在继承的时候，有可能直接把instancemethod传进来，比如__setattr__
 	else if (member.__class__ === instancemethod) {
-		proto[name] = member;
+		// 重新绑定
+		proto[name] = instancemethod(member.im_func);
 	}
 	// this.a = classmethod(function() {})
 	else if (member.__class__ === classmethod) {
@@ -438,6 +446,10 @@ type.__getattribute__ = function(cls, name) {
 	if (name in cls) return cls[name];
 	if (properties && name in properties) return properties[name];
 	if (!name in proto) throw new Error('no member named ' + name + '.');
+	// cls_func
+	if (proto[name] && proto[name].cls_func) {
+		return proto[name].cls_func;
+	}
 	return proto[name];
 };
 
@@ -676,20 +688,21 @@ Class.keys = function(cls) {
 	return keys;
 };
 
-var instancemethod = function(func) {
-	var _instancemethod = function() {
-		// 通过这个方法可以方便查找在类上get了一个成员没有绑定就使用的情况
-		//if (this === window) {
-			//console.log(arguments.callee.caller, func.__name__);
-		//}
-		if (typeof this === 'function') {
+var instancemethod = function(func, cls) {
+	// 区分两种方法，用typeof为function判定并不严谨
+	var _instancemethod;
+	if (cls) {
+		_instancemethod = function() {
 			return this.prototype[func.__name__].im_func.apply(this.__this__, arguments);
-		} else {
+		}
+	} else {
+		_instancemethod = function() {
 			var args = [].slice.call(arguments, 0);
 			args.unshift(this);
 			return func.apply(this.__this__, args);
-		}
-	};
+		};
+		_instancemethod.cls_func = instancemethod(func, true)
+	}
 	_instancemethod.__class__ = arguments.callee;
 	_instancemethod.im_func = func;
 	return _instancemethod;

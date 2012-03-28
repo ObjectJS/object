@@ -475,11 +475,18 @@ test('instancemethod', function() {
 			}
 			return 1;
 		};
+		this.b = function(self, value) {
+			console.log(arguments);
+		};
 	});
 	var a = new A();
 	ok(a.a.__class__ != null, 'the __class__ of instancemethod is not null, actually it is instancemethod');
 	equal(a.a(), 1, 'instancemethod return correct value');	
 	equal(A.a, undefined, 'instancemethod can not be retrieved by Class A.a');
+	// A.get('a')获取到一个绑定的方法
+	notEqual(A.get('b'), a.b, 'A.b != a.b.');
+	A.tt = 1;
+	A.get('b')({a: 1}, 1);
 });
 
 test('classmethod', function() {
