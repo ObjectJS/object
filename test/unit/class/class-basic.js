@@ -95,7 +95,11 @@ test('__getattr__/__setattr__ in class', function() {
 			}
 			setattrCalled++;
 			type.__setattr__(self, name, value);
-		}
+		};
+		this.initialize = function(cls) {
+			// 这里的set就会触发__setattr__了
+			cls.set('test2', 1);
+		};
 	});
 
 	var A = new Class(function() {
@@ -108,8 +112,8 @@ test('__getattr__/__setattr__ in class', function() {
 	A.set('test', 1);
 	equal(A.get('test'), 1, 'value setted.');
 
-	// 在类的创建过程中是不会调用自定义的__setattr__的，因此只调用1次
-	equal(setattrCalled, 1, 'setattr called times ok.')
+	// 在类的创建过程中是不会调用自定义的__setattr__的，在initialize中手工调用了2此，因此只调用3次
+	equal(setattrCalled, 3, 'setattr called times ok.')
 });
 
 test('set to null/0/""/undefined/NaN', function() {
