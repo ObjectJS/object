@@ -15,7 +15,9 @@ test('general', function() {
 			return type.__new__(cls, name, base, dict);
 		};
 
-		this.a = function(cls) {
+		this.a = function(cls, value) {
+			console.log(arguments)
+			return value;
 		};
 
 		this.initialize = function(cls) {
@@ -41,6 +43,7 @@ test('general', function() {
 	equal(initCalled, 1, 'initialize in metaclass called.');
 	ok(M.get('a'), 'get custom member in type-based class.');
 	ok(A.get('a'), 'get metaclass\'s custom member in class.');
+	equal(A.get('a')('ok'), 'ok', 'metaclass\'s custom method called in class return value ok.');
 });
 
 test('base', function() {

@@ -472,7 +472,8 @@ type.__getattribute__ = function(cls, name) {
 	// 去其metaclass中找
 	// 大部分类的metaclass都是type，为确保性能，直接忽略type
 	if (metaclass && metaclass !== type && type.__getattribute__(metaclass, name)) {
-		return type.__getattribute__(metaclass, name);
+		// 这里有些复杂，需要将metaclass上的成员重新包装后放到cls上，需要把cls当成一个instance
+		return bindMetaclassMemberToCls(cls, name, type.__getattribute__(metaclass, name));
 	}
 	// 没找到
 	if (!name in proto) throw new Error('no member named ' + name + '.');
@@ -647,6 +648,16 @@ Class.inject = function(cls, host, args, filter) {
 		cls.prototype.initialize.apply(host, args);
 	}
 };
+
+// TODO
+// 暂时只处理instancemethod
+function bindMetaclassMemberToCls(cls, name, member) {
+	if (member.__class__ === instancemethod) {
+		// 这里把cls当成一个instance了（metaclass的instance），因此这里绑定intancemethod时不传第二个参数
+		cls[name] = instancemethod(member.im_func);
+	}
+	return cls[name];
+}
 
 // 判断成员是否是一个type类型的
 // TODO 整理至 Class
