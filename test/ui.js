@@ -58,14 +58,11 @@ var PublisherVideoAddonFactory = new Class(PublisherAddonFactory, function() {
 	this['{{trigger}}'] = ui.define1('#publisher-video-trigger');
 });
 
-var PublisherPhotoAddon = new Class(function() {
-	this.__metaclass__ = PublisherPhotoAddonFactory;
+var PublisherPhotoAddon = new PublisherPhotoAddonFactory(function() {
 });
-var PublisherVideoAddon = new Class(function() {
-	this.__metaclass__ = PublisherVideoAddonFactory;
+var PublisherVideoAddon = new PublisherVideoAddonFactory(function() {
 });
-var PublisherShareAddon = new Class(function() {
-	this.__metaclass__ = PublisherShareAddonFactory;
+var PublisherShareAddon = new PublisherShareAddonFactory(function() {
 });
 
 var DefaultPublisher = new Class(Publisher, function() {
