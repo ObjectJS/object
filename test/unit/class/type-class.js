@@ -11,7 +11,7 @@ test('general', function() {
 		this.__new__ = function(cls, name, base, dict) {
 			newCalled++;
 			ok(cls.get('a'), 'type-class member get.');
-			dict.a = 1;
+			dict.b = 1;
 			return type.__new__(cls, name, base, dict);
 		};
 
@@ -36,9 +36,11 @@ test('general', function() {
 	ok(BM.initialize, 'default initialize exists.');
 	ok(M.__new__, 'custom __new__ exists.');
 	ok(M.initialize, 'custom initialize exists.');
-	equal(A.get('a'), 1, 'new a metaclass create a class.');
+	equal(A.get('b'), 1, 'new a metaclass create a class.');
 	equal(newCalled, 1, '__new__ in metaclass called.');
 	equal(initCalled, 1, 'initialize in metaclass called.');
+	ok(M.get('a'), 'get custom member in type-based class.');
+	ok(A.get('a'), 'get metaclass\'s custom member in class.');
 });
 
 test('base', function() {
