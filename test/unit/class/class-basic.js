@@ -569,6 +569,54 @@ test('property', function() {
 	equal(a.get('a'), 2, 'property get and set successfully');
 });
 
+test('class member in class', function() {
+
+	var A = new Class({});
+	var B = new Class(object, {});
+	var C = new Class(B, {});
+
+	var D = new Class(type, {});
+	var E = new Class(D, {});
+	var F = new E(D, {});
+	var G = new F({});
+
+	var H = new D({});
+	var I = new Class({
+		__metaclass__: E
+	});
+
+	var Test = new Class({
+		A: A,
+		B: B,
+		C: C,
+		D: D,
+		E: E,
+		F: F,
+		G: G,
+		H: H,
+		I: I,
+	});
+	var test = new Test();
+	ok(Test.A, 'general class in class.');
+	ok(Test.B, 'object-based class in class.');
+	ok(Test.C, 'extended class in class.');
+	ok(Test.D, 'type-based class in class.');
+	ok(Test.E, 'extended type-based class in class.');
+	ok(Test.F, 'type-based class created by new metaclass in class.');
+	ok(Test.G, 'class created by new type-based metaclass in class.');
+	ok(Test.H, 'class created by new metaclass in class.');
+	ok(Test.I, 'class created by __metaclass__ in class.');
+	ok(test.A, 'general class in instance.');
+	ok(test.B, 'object-based class in instance.');
+	ok(test.C, 'extended class in instance.');
+	ok(test.D, 'type-based class in instance.');
+	ok(test.E, 'extended type-based class in instance.');
+	ok(test.F, 'type-based class created by new metaclass in instance.');
+	ok(test.G, 'class created by new type-based metaclass in instance.');
+	ok(test.H, 'class created by new metaclass in instance.');
+	ok(test.I, 'class created by __metaclass__ in instance.');
+});
+
 //set : name/constructor/prototype...
 test('name/constructor/prototype as member of class', function() {
 	//this.name == ...

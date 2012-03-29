@@ -419,6 +419,10 @@ type.__setattr__ = function(cls, name, member) {
 		cls[name] = proto[name] = member.im_func;
 		cls.__classbasedmethods__.push(name);
 	}
+	// this.a = new Class({})
+	else if (instanceOf(member, type)) {
+		cls[name] = proto[name] = member;
+	}
 	// this.a = someObject
 	else {
 		proto[name] = member;
@@ -621,6 +625,16 @@ Class.inject = function(cls, host, args, filter) {
 		cls.prototype.initialize.apply(host, args);
 	}
 };
+
+// 判断成员是否是一个type类型的
+// TODO 整理至 Class
+function instanceOf(item, type) {
+	var cls;
+	while (cls = item.__class__) {
+		if (cls === type) return true;
+		item = item.__class__;
+	}
+}
 
 /**
  * 获取一个class的继承链
