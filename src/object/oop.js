@@ -296,8 +296,16 @@ type.__new__ = function(metaclass, name, base, dict) {
 		}
 	});
 
-	// 支持在类上调用metaclass中的成员
-	// 可能会造成性能问题，由于目前没有需求，暂时不做，用cls.get即可
+	// 正常来讲，cls是有metaclass的实例，即 OneClass = new MetaClass，class上面应该有metaclass的成员
+	// 但由于js的语言特性，是无法真正的“new”出一个function的（继承于Function没用），其没有原型链
+	// 因此只能考虑通过遍历将metaclass中的成员赋值到cls上，影响性能，且此类需求只在metaclass的制作过程中有，并没太大必要，比如：
+	// var M = new Class(type, {
+	//   a: function() {},
+	//   __new__(cls) {}, // 这个cls是M，可以通过get获取到a
+	//   initialize(cls) {} // 这个cls就是生成的cls了，此是无法通过get获取到a，而python是可以的
+	// });
+	// 另外一个考虑，通过修改membergetter使一个class会去其metaclass中寻找成员。
+	// 下面的代码是用遍历的方法使其支持的代码
 	//Class.keys(metaclass).forEach(function(name) {
 		//cls[name] = function() {
 			//var args = Array.prototype.slice.call(arguments, 0);
@@ -441,20 +449,34 @@ type.__setattr__ = function(cls, name, member) {
 };
 
 /**
- * 从类上获取属性
+ * 从类上获取成员
  */
 type.__getattribute__ = function(cls, name) {
 	if (name == '@mixins') name = '__mixins__';
 	var proto = cls.prototype;
 	var properties = proto.__properties__;
+	var metaclass = cls.__metaclass__;
+	// 直接在自己身上找
 	if (name in cls) return cls[name];
-	if (properties && name in properties) return properties[name];
-	if (!name in proto) throw new Error('no member named ' + name + '.');
-	// 对于instancemethod，需要返回重新bind的方法，为保证每次都能取到相同的成员，保存在cls[name]上
+	// 找property
+	if (properties && name in properties) {
+		return properties[name];
+	}
+	// 找到instancemethod
 	if (proto[name] && proto[name].__class__ == instancemethod) {
+		// 对于instancemethod，需要返回重新bind的方法
+		// 为保证每次都能取到相同的成员，保存在cls[name]上，下次直接就在cls上找到了
 		cls[name] = instancemethod(proto[name].im_func, true);
 		return cls[name];
 	}
+	// 去其metaclass中找
+	// 大部分类的metaclass都是type，为确保性能，直接忽略type
+	if (metaclass && metaclass !== type && type.__getattribute__(metaclass, name)) {
+		return type.__getattribute__(metaclass, name);
+	}
+	// 没找到
+	if (!name in proto) throw new Error('no member named ' + name + '.');
+	// 找到普通成员
 	return proto[name];
 };
 
