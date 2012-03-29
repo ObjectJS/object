@@ -446,8 +446,10 @@ type.__getattribute__ = function(cls, name) {
 	if (name in cls) return cls[name];
 	if (properties && name in properties) return properties[name];
 	if (!name in proto) throw new Error('no member named ' + name + '.');
+	// 对于instancemethod，需要返回重新bind的方法，为保证每次都能取到相同的成员，保存在cls[name]上
 	if (proto[name] && proto[name].__class__ == instancemethod) {
-		return instancemethod(proto[name].im_func, true);
+		cls[name] = instancemethod(proto[name].im_func, true);
+		return cls[name];
 	}
 	return proto[name];
 };
@@ -688,7 +690,7 @@ Class.keys = function(cls) {
 };
 
 var instancemethod = function(func, cls) {
-	// 区分两种方法，用typeof为function判定并不严谨
+	// 区分两种方法，用typeof为function判定并不严谨，function也可能是一个实例
 	var _instancemethod;
 	if (cls) {
 		_instancemethod = function() {
