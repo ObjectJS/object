@@ -446,9 +446,8 @@ type.__getattribute__ = function(cls, name) {
 	if (name in cls) return cls[name];
 	if (properties && name in properties) return properties[name];
 	if (!name in proto) throw new Error('no member named ' + name + '.');
-	// cls_func
-	if (proto[name] && proto[name].cls_func) {
-		return proto[name].cls_func;
+	if (proto[name] && proto[name].__class__ == instancemethod) {
+		return instancemethod(proto[name].im_func, true);
 	}
 	return proto[name];
 };
@@ -701,7 +700,6 @@ var instancemethod = function(func, cls) {
 			args.unshift(this);
 			return func.apply(this.__this__, args);
 		};
-		_instancemethod.cls_func = instancemethod(func, true)
 	}
 	_instancemethod.__class__ = arguments.callee;
 	_instancemethod.im_func = func;

@@ -332,7 +332,7 @@ this.Component = new Class(function() {
 	this.__initAddons = function(self) {
 		if (!self.addons) return;
 		self.addons.forEach(function(addon) {
-			addon.get('init').call(addon, self);
+			addon.get('init')(self);
 		});
 	};
 
