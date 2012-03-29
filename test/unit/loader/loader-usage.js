@@ -141,8 +141,19 @@ test('one module file, many modules', function() {
 // 一个script通过data-module定义多个module
 test('one module file, many modules in one script tag definition', function() {
 	recoverEnv();
-	addModuleScriptToHead('module1 module2 module3', module_manyModules);
+
+	// 测试对换行、空白的兼容性
+	addModuleScriptToHead(' \n \
+		\n\
+		module1\n\
+		\n\
+		module2 module3\
+		 \n ', module_manyModules);
+
+	var moduleCount = Object.keys(loader.lib).length;
 	loader.buildFileLib();
+	equals(Object.keys(loader.lib).length - moduleCount, 3, 'data-module define ok with whitespaces.');
+
 	window.oneFileManyModules_load_times = 0;
 	stop();
 	loader.use('module1', function(module1) {

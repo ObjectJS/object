@@ -72,9 +72,16 @@ var setter = overloadSetter(function(prop, value) {
 /**
  * 从类上获取成员
  * 会被放到cls.get
+ * @param name 需要获取的成员
+ * @param bind 如果目标成员是个函数，则使用bind进行绑定后返回，非函数忽略此参数
  */
-var membergetter = function(name) {
-	return type.__getattribute__(this, name);
+var membergetter = function(name, bind) {
+	var member = type.__getattribute__(this, name);
+	if (typeof member == 'function') {
+		bind = bind || this;
+		return member.bind(bind);
+	}
+	return member;
 };
 
 /**
@@ -97,7 +104,7 @@ var memberchecker = function(name) {
 var membersetter = overloadSetter(function(name, member) {
 	// 从metaclass中获得__setattr__
 	if ('__metaclass__' in this) {
-		type.__getattribute__(this.__metaclass__, '__setattr__')(this, name, member);
+		type.__getattribute__(this.__metaclass__, '__setattr__').call(this.__metaclass__, this, name, member);
 	}
 	// 未设置metaclass则默认为type
 	else {
@@ -159,7 +166,7 @@ var parent = function(cls, name, args) {
 	if (!member || typeof member != 'function') {
 		throw new Error('no such method in parent : \'' + name + '\'');
 	} else {
-		return member.apply(base, args);
+		return member.apply(owner, args);
 	}
 };
 
@@ -383,7 +390,7 @@ type.__setattr__ = function(cls, name, member) {
 		proto[name].__name__ = name;
 		// 初始化方法放在cls上，metaclass会从cls上进行调用
 		if (name == 'initialize') {
-			cls[name] = instancemethod(member, cls);
+			cls[name] = instancemethod(member, true);
 		}
 	}
 	// this.a = property(function fget() {}, function fset() {})
@@ -395,7 +402,7 @@ type.__setattr__ = function(cls, name, member) {
 	}
 	// 在继承的时候，有可能直接把instancemethod传进来，比如__setattr__
 	else if (member.__class__ === instancemethod) {
-		// 需要重新包装，因为有可能是绑定了cls的instancemethod
+		// 重新绑定
 		proto[name] = instancemethod(member.im_func);
 	}
 	// this.a = classmethod(function() {})
@@ -439,12 +446,12 @@ type.__getattribute__ = function(cls, name) {
 	if (name in cls) return cls[name];
 	if (properties && name in properties) return properties[name];
 	if (!name in proto) throw new Error('no member named ' + name + '.');
-	var member = proto[name];
-	if (!member) return member;
-	if (member.__class__ == instancemethod) {
-		return instancemethod(member.im_func, cls);
+	// 对于instancemethod，需要返回重新bind的方法，为保证每次都能取到相同的成员，保存在cls[name]上
+	if (proto[name] && proto[name].__class__ == instancemethod) {
+		cls[name] = instancemethod(proto[name].im_func, true);
+		return cls[name];
 	}
-	return member;
+	return proto[name];
 };
 
 /**
@@ -502,7 +509,7 @@ type.__constructs__ = function(args) {
 	if (!cls || typeof cls != 'function') {
 		throw new Error('__new__ method should return cls');
 	}
-	type.__getattribute__(metaclass, 'initialize')(cls, name, base, dict);
+	type.__getattribute__(metaclass, 'initialize').call(metaclass, cls, name, base, dict);
 	return cls;
 };
 
@@ -683,27 +690,33 @@ Class.keys = function(cls) {
 };
 
 var instancemethod = function(func, cls) {
-	var wrapper = cls? function() {
-		return cls.prototype[func.__name__].im_func.apply(cls.__this__, arguments);
-	} : function() {
-		var args = [].slice.call(arguments, 0);
-		args.unshift(this);
-		return func.apply(this.__this__, args);
-	};
-	wrapper.__class__ = arguments.callee;
-	wrapper.im_func = func;
-	return wrapper;
+	// 区分两种方法，用typeof为function判定并不严谨，function也可能是一个实例
+	var _instancemethod;
+	if (cls) {
+		_instancemethod = function() {
+			return this.prototype[func.__name__].im_func.apply(this.__this__, arguments);
+		}
+	} else {
+		_instancemethod = function() {
+			var args = [].slice.call(arguments, 0);
+			args.unshift(this);
+			return func.apply(this.__this__, args);
+		};
+	}
+	_instancemethod.__class__ = arguments.callee;
+	_instancemethod.im_func = func;
+	return _instancemethod;
 };
 
 var staticmethod = this.staticmethod = function(func) {
-	var wrapper = function() {};
-	wrapper.__class__ = arguments.callee;
-	wrapper.im_func = func;
-	return wrapper;
+	var _staticmethod = function() {};
+	_staticmethod.__class__ = arguments.callee;
+	_staticmethod.im_func = func;
+	return _staticmethod;
 };
 
 var classmethod = this.classmethod = function(func) {
-	var wrapper = function() {
+	var _classmethod = function() {
 		var args = [].slice.call(arguments, 0);
 		var cls;
 		if (typeof this == 'function') {
@@ -715,9 +728,9 @@ var classmethod = this.classmethod = function(func) {
 			return func.apply(cls.__this__, args);
 		}
 	};
-	wrapper.__class__ = arguments.callee;
-	wrapper.im_func = func;
-	return wrapper;
+	_classmethod.__class__ = arguments.callee;
+	_classmethod.im_func = func;
+	return _classmethod;
 };
 
 var property = this.property = function(fget, fset) {
@@ -747,3 +760,4 @@ ArrayClass.prototype.length = 0;
 StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "indexOf", "lastIndexOf", "match", "replace", "search", "slice", "split", "substr", "substring", "toLowerCase", "toUpperCase", "valueOf", "trim"]);
 StringClass.prototype.length = 0;
 })(object);
+
