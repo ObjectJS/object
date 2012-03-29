@@ -412,6 +412,7 @@ this.ComponentFactory = new Class(type, function() {
 		type.__setattr__(cls, '__onEvents', undefined);
 		type.__setattr__(cls, '__subEvents', undefined);
 
+		// 合并base的meta
 		if (base != object) {
 			var bgid = base.get('gid');
 			var baseMeta = base.get('meta');
@@ -436,7 +437,7 @@ this.ComponentFactory = new Class(type, function() {
 			});
 		}
 
-		// 合并meta
+		// 合并mixin的meta
 		var mixes = (cls.__mixins__ || []);
 		mixes.forEach(function(mix) {
 			var gid = mix.get('gid');
