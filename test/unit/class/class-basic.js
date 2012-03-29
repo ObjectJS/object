@@ -463,7 +463,8 @@ test('set after extended by many classes', function() {
 });
 
 test('instancemethod', function() {
-	ok(typeof instancemethod == 'undefined', 'instancemethod is not public');
+	customBinderMethodCalled = 0;
+
 	var A = new Class(function() {
 		this.a = function(self) {
 			ok(self != this, 'self != this in instancemethod, self is the instance, "this" is an simple Object{base, parent}');
@@ -476,17 +477,45 @@ test('instancemethod', function() {
 			return 1;
 		};
 		this.b = function(self, value) {
-			console.log(arguments);
+			return arguments;
 		};
 	});
+
+	var B = new Class(function() {
+		this.b = function(self, value) {
+			customBinderMethodCalled++;
+			return arguments;
+		};
+	});
+
+	ok(typeof instancemethod == 'undefined', 'instancemethod is not public');
+
 	var a = new A();
 	ok(a.a.__class__ != null, 'the __class__ of instancemethod is not null, actually it is instancemethod');
 	equal(a.a(), 1, 'instancemethod return correct value');	
 	equal(A.a, undefined, 'instancemethod can not be retrieved by Class A.a');
+
 	// A.get('a')获取到一个绑定的方法
 	notEqual(A.get('b'), a.b, 'A.b != a.b.');
 	A.tt = 1;
-	A.get('b')({a: 1}, 1);
+	// 传递绑定，为默认
+	var arg1 = {a:1};
+	var arg2 = 1;
+	var result = A.get('b', A)(arg1, arg2);
+	equal(result[0], arg1, 'set default bind method return value ok.');
+
+	// cls.get 却绑定一个对象，由于没有prototype，会报错
+	try {
+		var result = A.get('b', {})(arg1, arg2);
+		ok(false, 'cls.get bind a object throw a error.')
+	} catch(e) {
+		ok(true, 'cls.get bind a object throw a error.')
+	}
+
+	var result = A.get('b', B)(arg1, arg2);
+	equal(customBinderMethodCalled, 1, 'set custom bind method called ok.');
+	equal(result[0], arg1, 'set custom bind method return value ok.');
+
 });
 
 test('classmethod', function() {
