@@ -373,13 +373,14 @@ this.ComponentFactory = new Class(type, function() {
 		return type.__new__(cls, name, base, dict);
 	};
 
-	this.initialize = function(cls, name, base, dict) {
-		var gid = dict.gid;
-
+	/**
+	 * 生成Components
+	 */
+	this.makeComponents = function(cls, name, base, dict) {
 		// Component则是Array，其他则是父类上的Components
-		var compsBase = dict.__metaclass__? Array : cls.__base__.Components;
+		var compsBase = cls.__metaclass__? Array : base.Components;
 
-		cls.Components = new Class(compsBase, function() {
+		cls.set('Components', new Class(compsBase, function() {
 
 			this.initialize = function(self, node) {
 				self._node = node;
@@ -395,7 +396,13 @@ this.ComponentFactory = new Class(type, function() {
 					this[name] = member;
 				}
 			}, this);
-		});
+		}));
+	};
+
+	this.initialize = function(cls, name, base, dict) {
+		var gid = dict.gid;
+
+		cls.get('makeComponents')(name, base, dict);
 
 		var meta = cls.get('meta');
 
