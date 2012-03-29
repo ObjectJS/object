@@ -316,7 +316,7 @@ this.ComponentFactory = new Class(type, function() {
 	this.__new__ = function(cls, name, base, dict) {
 
 		var gid = dict.gid = globalid++;
-		var meta = dict['__meta$' + gid] = {
+		var meta = dict.meta = {
 			subs: [],
 			options: [],
 			handles: [],
@@ -397,7 +397,7 @@ this.ComponentFactory = new Class(type, function() {
 			}, this);
 		});
 
-		var meta = cls.get('__meta$' + cls.get('gid'));
+		var meta = cls.get('meta');
 
 		// 生成meta方法
 		// 在initialize中创建而不是__new__中目的是避免Components中出现无用的方法
@@ -414,7 +414,7 @@ this.ComponentFactory = new Class(type, function() {
 
 		if (base != object) {
 			var bgid = base.get('gid');
-			var baseMeta = cls.get('__meta$' + bgid);
+			var baseMeta = base.get('meta');
 			baseMeta.subs.forEach(function(name) {
 				if (meta.subs.indexOf(name) == -1) meta.subs.push(name);
 			});
@@ -440,7 +440,7 @@ this.ComponentFactory = new Class(type, function() {
 		var mixes = (cls.__mixins__ || []);
 		mixes.forEach(function(mix) {
 			var gid = mix.get('gid');
-			var mixMeta = cls.get('__meta$' + gid);
+			var mixMeta = mix.get('meta');
 			mixMeta.subs.forEach(function(name) {
 				if (meta.subs.indexOf(name) == -1) meta.subs.push(name);
 			});
@@ -467,7 +467,7 @@ this.ComponentFactory = new Class(type, function() {
 
 	this.__setattr__ = function(cls, name, member) {
 		var gid = cls.get('gid');
-		var meta = cls.get('__meta$' + gid);
+		var meta = cls.get('meta');
 
 		if (member.__class__ == property && member.isOption) {
 			if (meta.options.indexOf(name) == -1) {
