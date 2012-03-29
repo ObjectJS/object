@@ -12,69 +12,53 @@
 
 ;(function(object) {
 
-scheme_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-.';
-function find_until(url, target, remainFirst) {
-	var len = url.length;
-	for(var i=0; i<url.length; i++) {
+// 可以用于scheme的字符
+var scheme_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-.';
+
+/**
+ * 在字符串url中查找target字符后，利用result对象，返回截断后的前、后字符串
+ * @param {Object} result 重复利用的用于返回结果的对象（避免太多内存垃圾产生）
+ * @param {String} url 需要截取的url
+ * @param {String} target 截断的字符组成的字符串
+ * @param {Boolean} remainFirst 是否要保留匹配的字符
+ *
+ * @return {Object} 形如 {got:'', remained:''}的结果对象
+ */
+function splitUntil(result, url, target, remainFirst) {
+	var min = url.length;
+	for(var i=0, len = url.length; i < len; i++) {
 		if (target.indexOf(url.charAt(i)) != -1) {
-			if (i < len) {
-				len = i;
+			if (i < min) {
+				min = i;
 				break;
 			}
 		}
 	}
-	return {
-		got: url.substring(0, len),
-		remained: (remainFirst? url.substring(len) : url.substring(len + 1))
-	}
+	result.got = url.substring(0, min);
+	result.remained = (remainFirst? url.substring(min) : url.substring(min + 1));
+	return result;
 }
+
 /**
  * 解析一个url为 scheme / netloc / path / params / query / fragment 六个部分
  * @see http://docs.python.org/library/urlparse.html
+ * @example 
+ * http://www.renren.com:8080/home/home2;32131?id=31321321&a=1#//music/?from=homeleft#fdalfdjal
+ * --> 
+ * [http, www.renren.com:8080, /home/home2, 32131, id=31321321&a=1, //music/?from=homeleft#fdalfdjal]
  */
-//http://www.renren.com:8080/home/home2;32131?id=31321321&a=1#//music/?from=homeleft#fdalfdjal
-//<scheme>://<netloc>/<path>;<params>?<query>#<fragment>
-function urlparse(url, scheme) {
+function urlparse(url, default_scheme) {
 	if (typeof url != 'string') {
 		return ['', '', '', '', '', ''];
 	}
-	var netloc='', path = '', params = '', query = '', fragment = '', i = 0;
+	var scheme = '', netloc='', path = '', params = '', query = '', fragment = '', i = 0;
 	i = url.indexOf(':');
 	if (i > 0) {
 		if (url.substring(0, i) == 'http') {
 			scheme = url.substring(0, i).toLowerCase();
 			url = url.substring(i+1);
-
-			if (url.substring(0, 2) == '//') {
-				url = url.substring(2);
-				tmp = find_until(url, '/?#', true);
-				netloc = tmp.got;
-				url = tmp.remained;
-			}
-			
-			if (url.indexOf('#') != -1) {
-				tmp = find_until(url, '#');
-				url = tmp.got;
-				fragment = tmp.remained;
-			}
-			if (url.indexOf('?') != -1) {
-				tmp = find_until(url, '?');
-				url = tmp.got;
-				query = tmp.remained;
-			}
-			if (url.indexOf(';') != -1) {
-				tmp = find_until(url, ';');
-				path = tmp.got;
-				params = tmp.remained;
-			}
-
-			if (!path) {
-				path = url;
-			}
-
-			return [scheme, netloc, path, params, query, fragment];
 		} else {
-			for(var i=0; i<url.length; i++) {
+			for(var i=0, len = url.length; i < len; i++) {
 				if (scheme_chars.indexOf(url.charAt(i)) == -1) {
 					break;
 				}
@@ -83,26 +67,30 @@ function urlparse(url, scheme) {
 			url = url.substring(i + 1);
 		}
 	}
+	if (!scheme && default_scheme) {
+		scheme = default_scheme;
+	}
+	var splited = {};
 	if (url.substring(0, 2) == '//') {
-		tmp = find_until(url.substring(2), '/?#', true);
-		netloc = tmp.got;
-		url = tmp.remained;
+		splitUntil(splited, url.substring(2), '/?#', true);
+		netloc = splited.got;
+		url = splited.remained;
 	}
 
 	if (url.indexOf('#') != -1) {
-		tmp = find_until(url, '#');
-		url = tmp.got;
-		fragment = tmp.remained;
+		splitUntil(splited, url, '#');
+		url = splited.got;
+		fragment = splited.remained;
 	}
 	if (url.indexOf('?') != -1) {
-		tmp = find_until(url, '?');
-		url = tmp.got;
-		query = tmp.remained;
+		splitUntil(splited, url, '?');
+		url = splited.got;
+		query = splited.remained;
 	}
 	if (url.indexOf(';') != -1) {
-		tmp = find_until(url, ';');
-		path = tmp.got;
-		params = tmp.remained;
+		splitUntil(splited, url, ';');
+		path = splited.got;
+		params = splited.remained;
 	}
 	
 	if (!path) {
@@ -110,7 +98,6 @@ function urlparse(url, scheme) {
 	}
 	return [scheme, netloc, path, params, query, fragment];
 };
-
 
 /**
 * 将兼容urlparse结果的url部分合并成url
