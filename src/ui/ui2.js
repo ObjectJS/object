@@ -328,6 +328,7 @@ this.ComponentFactory = new Class(type, function() {
 		dict.__onEvents = [];
 		dict.__subEvents = [];
 
+		// 这里选择在dict阶段就放置到类成员的，一个原因是Components是通过遍历dict生成的
 		Object.keys(dict).forEach(function(name) {
 			var member = dict[name];
 			var newName;
@@ -449,6 +450,7 @@ this.ComponentFactory = new Class(type, function() {
 				if (name == '__metaclass__' || name == 'initialize') {
 					return;
 				}
+				// 只放方法
 				if (typeof member == 'function') {
 					this[name] = member;
 				}
