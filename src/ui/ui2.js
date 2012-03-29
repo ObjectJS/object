@@ -374,51 +374,10 @@ this.ComponentFactory = new Class(type, function() {
 	};
 
 	/**
-	 * 生成Components
+	 * 将base和mixins中的meta信息合并之cls.meta
 	 */
-	this.makeComponents = function(cls, name, base, dict) {
-		// Component则是Array，其他则是父类上的Components
-		var compsBase = cls.__metaclass__? Array : base.Components;
-
-		cls.set('Components', new Class(compsBase, function() {
-
-			this.initialize = function(self, node) {
-				self._node = node;
-				self._node.component = self;
-			};
-
-			Object.keys(dict).forEach(function(name) {
-				var member = dict[name];
-				if (name == '__metaclass__' || name == 'initialize') {
-					return;
-				}
-				if (typeof member == 'function') {
-					this[name] = member;
-				}
-			}, this);
-		}));
-	};
-
-	this.initialize = function(cls, name, base, dict) {
-		var gid = dict.gid;
-
-		cls.get('makeComponents')(name, base, dict);
-
+	this.mixMeta = function(cls, name, base, dict) {
 		var meta = cls.get('meta');
-
-		// 生成meta方法
-		// 在initialize中创建而不是__new__中目的是避免Components中出现无用的方法
-		cls.get('__onEvents').forEach(function(item) {
-			meta.onEvents.push(item.name);
-			type.__setattr__(cls, item.name, item.member);
-		});
-		cls.get('__subEvents').forEach(function(item) {
-			meta.subEvents.push(item.name);
-			type.__setattr__(cls, item.name, item.member);
-		});
-		type.__setattr__(cls, '__onEvents', undefined);
-		type.__setattr__(cls, '__subEvents', undefined);
-
 		// 合并base的meta
 		if (base != object) {
 			var bgid = base.get('gid');
@@ -469,8 +428,58 @@ this.ComponentFactory = new Class(type, function() {
 				if (meta.subEvents.indexOf(name) == -1) meta.subEvents.push(name);
 			});
 		});
+	};
 
-		cls.set('meta', meta);
+	/**
+	 * 生成Components
+	 */
+	this.makeComponents = function(cls, name, base, dict) {
+		// Component则是Array，其他则是父类上的Components
+		var compsBase = cls.__metaclass__? Array : base.Components;
+
+		cls.set('Components', new Class(compsBase, function() {
+
+			this.initialize = function(self, node) {
+				self._node = node;
+				self._node.component = self;
+			};
+
+			Object.keys(dict).forEach(function(name) {
+				var member = dict[name];
+				if (name == '__metaclass__' || name == 'initialize') {
+					return;
+				}
+				if (typeof member == 'function') {
+					this[name] = member;
+				}
+			}, this);
+		}));
+	};
+
+	this.initialize = function(cls, name, base, dict) {
+		var gid = dict.gid;
+
+		var meta = cls.get('meta');
+
+		// 生成meta方法
+		// 在initialize中创建而不是__new__中目的是避免Components中出现无用的方法
+		cls.get('__onEvents').forEach(function(item) {
+			meta.onEvents.push(item.name);
+			type.__setattr__(cls, item.name, item.member);
+		});
+		cls.get('__subEvents').forEach(function(item) {
+			meta.subEvents.push(item.name);
+			type.__setattr__(cls, item.name, item.member);
+		});
+		// 清除这两个变量
+		type.__delattr__(cls, '__onEvents');
+		type.__delattr__(cls, '__subEvents');
+
+		// 合并meta
+		cls.get('mixMeta')(name, base, dict);
+
+		// 生成Component
+		cls.get('makeComponents')(name, base, dict);
 	};
 
 	this.__setattr__ = function(cls, name, member) {
