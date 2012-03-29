@@ -449,6 +449,15 @@ type.__setattr__ = function(cls, name, member) {
 };
 
 /**
+ * 删除类成员
+ */
+type.__delattr__ = function(cls, name) {
+	delete cls[name];
+	delete cls.prototype[name];
+	delete cls.prototype.__properties__[name];
+};
+
+/**
  * 从类上获取成员
  */
 type.__getattribute__ = function(cls, name) {
