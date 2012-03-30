@@ -56,7 +56,13 @@ test('option property', function() {
 
 	optionChangeFired = 0;
 
+	var SubComponent = new Class(ui.Component, function() {
+		this.test = ui.option(false);
+	});
+
 	var TestComponent = new Class(ui.Component, function() {
+
+		this.sub = ui.define1('.test', SubComponent);
 
 		this.test = ui.option(1);
 
@@ -65,7 +71,7 @@ test('option property', function() {
 		this.test3 = ui.option(true);
 
 		this.test4 = ui.option(false, function(self) {
-			return self.getNode().innerHTML;
+			return self.getNode().getAttribute('custom-attr');
 		});
 
 		this.test_change = function(self, event) {
@@ -81,9 +87,12 @@ test('option property', function() {
 
 	var div = document.createElement('div');
 	div.setAttribute('data-test3', '');
-	div.innerHTML = 'custom-value';
+	div.setAttribute('custom-attr', 'custom-value');
+	div.innerHTML = '<div class="test"></div>';
 
-	var test = new TestComponent(div);
+	var test = new TestComponent(div, {
+		'sub.test': true
+	});
 
 	// 默认属性
 	equals(test.test, 1, 'default option value ok.');
@@ -104,6 +113,9 @@ test('option property', function() {
 
 	// 自定义属性getter取代从属性获取
 	equals(test.test4, 'custom-value', 'get option from custom getter.');
+
+	// option传递
+	equals(test.sub.test, true, 'option pass to sub.')
 });
 
 test('handle method', function() {
