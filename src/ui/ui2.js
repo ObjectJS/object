@@ -290,13 +290,6 @@ this.onevent = function(eventType, gid) {
 	}
 };
 
-this.addon = function(dict, addon) {
-	if (!dict.__mixins__) {
-		dict.__mixins__ = [];
-	}
-	dict.__mixins__.push(addon);
-};
-
 /**
  * {'a.b.c': 1, b: 2} ==> {a: {b: {c:1}}, b: 2}
  */
@@ -436,7 +429,7 @@ this.ComponentFactory = new Class(type, function() {
 	 */
 	this.makeComponents = function(cls, name, base, dict) {
 		// Component则是Array，其他则是父类上的Components
-		var compsBase = cls.__metaclass__? Array : base.Components;
+		var compsBase = base.Components || Array;
 
 		cls.set('Components', new Class(compsBase, function() {
 
@@ -456,6 +449,7 @@ this.ComponentFactory = new Class(type, function() {
 				}
 			}, this);
 		}));
+
 	};
 
 	this.initialize = function(cls, name, base, dict) {
@@ -557,7 +551,10 @@ this.Component = new Class(function() {
 		// 保存options，生成sub时用于传递
 		self._options = exports.parseOptions(options);
 
-		if (!node) return;
+		// 可能是mixin addon
+		if (!node) {
+			return;
+		}
 
 		// 存储dispose事件的注册情况
 		self.__disposes = [];
