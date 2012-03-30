@@ -264,9 +264,13 @@ test('render', function() {
 
 	var renderedEventCalled = 0;
 
+	var SubComponent = new Class(ui.Component, function() {
+		this.test = ui.option(false);
+	});
+
 	var TestComponent = new Class(ui.Component, function() {
 
-		this.test = ui.define1('.test', ui.Component, function(self, make) {
+		this.test = ui.define1('.test', SubComponent, function(self, make) {
 			var a = make();
 			self._node.appendChild(a._node);
 		});
@@ -280,6 +284,7 @@ test('render', function() {
 	var div = document.createElement('div');
 
 	var test = new TestComponent(div, {
+		'test.test': true,
 		'test.hello': 'test',
 		'test.template': '<div class="test">{{hello}}</div>'
 	});
@@ -287,6 +292,9 @@ test('render', function() {
 	// 渲染
 	test.render('test');
 	equal(test.getNode().outerHTML, '<div><div class="test">test</div></div>', 'template render ok.');
+
+	// option传递
+	equal(test.test.test, true, 'option pass to sub.');
 
 	// 事件
 	test.test.getNode().click();
