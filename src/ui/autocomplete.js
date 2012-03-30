@@ -141,6 +141,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 			self.bindDOMNodeInsertEvent();
 
 			self.relocateBinded = self.relocate.bind(self);
+			self.hideBinded = self.hideDataList.bind(self);
 		};
 
 		/**
@@ -316,6 +317,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 			}
 
 			window.addEvent('resize', self.relocateBinded, events.HOLD);
+			window.addEvent('scroll', self.hideBinded, events.HOLD);
 		}
 
 		/**
@@ -624,6 +626,7 @@ object.add('ui.autocomplete', 'dom, ua, events, string, sys', function(exports, 
 				self._highlighted = null;
 			}
 			window.removeEvent('resize', self.relocateBinded, events.HOLD);
+			window.removeEvent('scroll', self.hideBinded, events.HOLD);
 		}
 
 		/**

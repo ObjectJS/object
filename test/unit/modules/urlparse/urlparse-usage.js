@@ -1,7 +1,5 @@
 module('urlparse-usage');
 
-var isRegexpWorksFine = /^(?:(\w+?)\:\/(?:\/)?([\w-_.]+(?::\w+)?))?([^\?]*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(.*))?$/i.test('http://www.renren.com/test.html');
-
 //python : scheme-netloc-path-params-query-fragment
 var urlResultMap = {
 	'http' : '[,,http,,,]',
@@ -49,9 +47,6 @@ var urlResultMap = {
 		'[,,www.renren.com/home,,id=31321321,//music/?from=homeleft]'
 };
 test('urlparse.urlparse : usage', function() {
-	if (!isRegexpWorksFine) {
-		return;
-	}
 	object.use('urlparse', function(exports, urlparse) {
 		for(var prop in urlResultMap) {
 			var parts = urlparse.urlparse(prop);
@@ -61,9 +56,6 @@ test('urlparse.urlparse : usage', function() {
 });
 
 test('urlparse.urlunparse : usage', function() {
-	if (!isRegexpWorksFine) {
-		return;
-	}
 	object.use('urlparse', function(exports, urlparse) {
 		for(var prop in urlResultMap) {
 			if (prop == 'http:/') continue;
@@ -77,9 +69,6 @@ test('urlparse.urlunparse : usage', function() {
 });
 
 test('urlparse.urljoin : usage', function() {
-	if (!isRegexpWorksFine) {
-		return;
-	}
 	object.use('urlparse', function(exports, urlparse) {
 		//var bases = [
 		//	'http://www.renren.com',
