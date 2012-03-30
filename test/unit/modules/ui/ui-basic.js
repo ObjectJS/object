@@ -260,6 +260,29 @@ test('sub event method', function() {
 	equals(customEventCalled, 1, 'sub custom event called.');
 });
 
+test('addons', function() {
+	addonInitCalled = 0;
+	initCalled = 0;
+	var A = new Class(ui.Component, function() {
+		this._init = function(self) {
+			addonInitCalled++;
+		};
+	});
+
+	var Test = new Class(ui.Component, function() {
+		this.__mixins__ = [A];
+
+		this._init = function(self) {
+			initCalled++;
+		};
+	});
+
+	var test = new Test(document.createElement('div'));
+
+	equal(addonInitCalled, 1, 'addon init method called.');
+	equal(initCalled, 1, 'init method called.');
+});
+
 test('render', function() {
 
 	var renderedEventCalled = 0;

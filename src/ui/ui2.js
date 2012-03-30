@@ -320,6 +320,7 @@ this.ComponentFactory = new Class(type, function() {
 
 		dict.__onEvents = [];
 		dict.__subEvents = [];
+		dict.__handles = [];
 
 		// 这里选择在dict阶段就放置到类成员的，一个原因是Components是通过遍历dict生成的
 		Object.keys(dict).forEach(function(name) {
@@ -338,33 +339,120 @@ this.ComponentFactory = new Class(type, function() {
 				dict['render_' + name] = member.renderer;
 			}
 			else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
-				newName = name.slice(1);
-				dict[newName] = events.fireevent(function(self) {
-					if (self[name]) {
-						return self[name].apply(self, Array.prototype.slice.call(arguments, 1));
-					}
+				dict.__handles.push({
+					name: name,
+					member: member
 				});
-				meta.handles.push(newName);
 			}
 			else if (name.match(/^(_?\w+)_(\w+)$/)) {
 				delete dict[name];
-				newName = name + '$' + gid;
 				dict.__subEvents.push({
-					name: newName,
-					member: exports.subevent(RegExp.$1, RegExp.$2, gid)(member)
+					name: name,
+					sub: RegExp.$1,
+					eventType: RegExp.$2,
+					member: member
 				});
 			}
 			else if (name.match(/^on(\w+)$/)) {
 				delete dict[name];
-				newName = name + '$' + gid;
 				dict.__onEvents.push({
-					name: newName,
-					member: exports.onevent(RegExp.$1, gid)(member)
+					name: name,
+					eventType: RegExp.$1,
+					member: member
 				});
 			}
 		});
 
 		return type.__new__(cls, name, base, dict);
+	};
+
+	this.initialize = function(cls, name, base, dict) {
+		var gid = dict.gid;
+
+		var meta = cls.get('meta');
+
+		// 生成meta方法
+		// 在initialize中创建而不是__new__中目的是避免Components中出现无用的方法
+		cls.get('__onEvents').forEach(function(item) {
+			var newName = item.name + '$' + gid;
+			meta.onEvents.push(newName);
+			type.__setattr__(cls, newName, exports.onevent(item.eventType, gid)(item.member));
+		});
+		cls.get('__subEvents').forEach(function(item) {
+			var newName = item.name + '$' + gid;
+			meta.subEvents.push(newName);
+			type.__setattr__(cls, newName, exports.subevent(item.sub, item.eventType, gid)(item.member));
+		});
+		// 只有在initialize阶段生成handle方法才能确保mixin时能够获取到正确的cls
+		cls.get('__handles').forEach(function(item) {
+			var newName = item.name.slice(1);
+			meta.handles.push(newName);
+			type.__setattr__(cls, newName, events.fireevent(function(self) {
+				if (cls.get(item.name)) {
+					return cls.get(item.name)(self, Array.prototype.slice.call(arguments, 1));
+				}
+			}));
+		});
+		// 清除这两个变量
+		type.__delattr__(cls, '__onEvents');
+		type.__delattr__(cls, '__subEvents');
+		type.__delattr__(cls, '__handles');
+
+		// 合并meta
+		cls.get('mixMeta')(name, base, dict);
+
+		// 生成Component
+		cls.get('makeComponents')(name, base, dict);
+	};
+
+	this.__setattr__ = function(cls, name, member) {
+		var gid = cls.get('gid');
+		var meta = cls.get('meta');
+
+		if (member.__class__ == property && member.isOption) {
+			if (meta.options.indexOf(name) == -1) {
+				meta.options.push(name);
+			}
+			type.__setattr__(cls, name, member);
+		}
+		else if (member.__class__ == property && member.isComponent) {
+			if (meta.subs.indexOf(name) == -1) {
+				meta.subs.push(name);
+			}
+			type.__setattr__(cls, 'render_' + name, member.renderer);
+			type.__setattr__(cls, name, member);
+		}
+		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
+			var newName = name.slice(1);
+			if (meta.handles.indexOf(name) == -1) {
+				meta.handles.push(newName);
+			}
+			type.__setattr__(cls, newName, events.fireevent(function(self) {
+				if (self[name]) {
+					return self[name].apply(self, Array.prototype.slice.call(arguments, 1));
+				}
+			}));
+			type.__setattr__(cls, name, member);
+		}
+		else if (name.match(/^(_?\w+)_(\w+)$/)) {
+			var newName = name + '$' + gid;
+			var newMember = exports.subevent(RegExp.$1, RegExp.$2, gid)(member);
+			if (meta.subEvents.indexOf(newName) == -1) {
+				meta.subEvents.push(newName);
+			}
+			type.__setattr__(cls, newName, newMember);
+		}
+		else if (name.match(/^on(\w+)$/)) {
+			var newName = name + '$' + gid;
+			var newMember = exports.onevent(RegExp.$1, gid)(member);
+			if (meta.onEvents.indexOf(newName) == -1) {
+				meta.onEvents.push(newName);
+			}
+			type.__setattr__(cls, newName, newMember);
+		}
+		else {
+			type.__setattr__(cls, name, member);
+		}
 	};
 
 	/**
@@ -452,82 +540,6 @@ this.ComponentFactory = new Class(type, function() {
 
 	};
 
-	this.initialize = function(cls, name, base, dict) {
-		var gid = dict.gid;
-
-		var meta = cls.get('meta');
-
-		// 生成meta方法
-		// 在initialize中创建而不是__new__中目的是避免Components中出现无用的方法
-		cls.get('__onEvents').forEach(function(item) {
-			meta.onEvents.push(item.name);
-			type.__setattr__(cls, item.name, item.member);
-		});
-		cls.get('__subEvents').forEach(function(item) {
-			meta.subEvents.push(item.name);
-			type.__setattr__(cls, item.name, item.member);
-		});
-		// 清除这两个变量
-		type.__delattr__(cls, '__onEvents');
-		type.__delattr__(cls, '__subEvents');
-
-		// 合并meta
-		cls.get('mixMeta')(name, base, dict);
-
-		// 生成Component
-		cls.get('makeComponents')(name, base, dict);
-	};
-
-	this.__setattr__ = function(cls, name, member) {
-		var gid = cls.get('gid');
-		var meta = cls.get('meta');
-
-		if (member.__class__ == property && member.isOption) {
-			if (meta.options.indexOf(name) == -1) {
-				meta.options.push(name);
-			}
-			type.__setattr__(cls, name, member);
-		}
-		else if (member.__class__ == property && member.isComponent) {
-			if (meta.subs.indexOf(name) == -1) {
-				meta.subs.push(name);
-			}
-			type.__setattr__(cls, 'render_' + name, member.renderer);
-			type.__setattr__(cls, name, member);
-		}
-		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
-			var newName = name.slice(1);
-			if (meta.handles.indexOf(name) == -1) {
-				meta.handles.push(newName);
-			}
-			type.__setattr__(cls, newName, events.fireevent(function(self) {
-				if (self[name]) {
-					return self[name].apply(self, Array.prototype.slice.call(arguments, 1));
-				}
-			}));
-			type.__setattr__(cls, name, member);
-		}
-		else if (name.match(/^(_?\w+)_(\w+)$/)) {
-			var newName = name + '$' + gid;
-			var newMember = exports.subevent(RegExp.$1, RegExp.$2, gid)(member);
-			if (meta.subEvents.indexOf(newName) == -1) {
-				meta.subEvents.push(newName);
-			}
-			type.__setattr__(cls, newName, newMember);
-		}
-		else if (name.match(/^on(\w+)$/)) {
-			var newName = name + '$' + gid;
-			var newMember = exports.onevent(RegExp.$1, gid)(member);
-			if (meta.onEvents.indexOf(newName) == -1) {
-				meta.onEvents.push(newName);
-			}
-			type.__setattr__(cls, newName, newMember);
-		}
-		else {
-			type.__setattr__(cls, name, member);
-		}
-	};
-
 });
 
 /**
@@ -546,7 +558,6 @@ this.Component = new Class(function() {
 	 * @param options 配置
 	 */
 	this.initialize = function(self, node, options) {
-
 		// 可能是mixin addon
 		if (!node) {
 			return;
@@ -598,6 +609,7 @@ this.Component = new Class(function() {
 			self[name].im_func.meta.bind(self, name);
 		});
 
+		self.initAddons(self);
 		self.init();
 	};
 
@@ -639,6 +651,15 @@ this.Component = new Class(function() {
 
 		return node;
 	};
+
+	this.initAddons = classmethod(function(cls, self) {
+		var mixins = cls.get('__mixins__');
+		if (mixins) {
+			mixins.forEach(function(mixin) {
+				mixin.get('init')(self);
+			}); 
+		}
+	});
 
 	this._init = function(self) {
 	};
