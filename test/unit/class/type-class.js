@@ -16,7 +16,6 @@ test('general', function() {
 		};
 
 		this.a = function(cls, value) {
-			console.log(arguments)
 			return value;
 		};
 
