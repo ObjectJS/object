@@ -28,7 +28,6 @@ var PublisherAddonFactory = new Class(ui.AddonFactory, function() {
 
 	this.onopen = function(cls, self, event, addon) {
 		var vars = cls.get('__vars');
-		console.log(vars)
 		if (addon != self[vars.name]) {
 			self[vars.name].hide();
 		}
