@@ -189,7 +189,7 @@ this.define1 = function(selector, type, renderer) {
 		}
 
 		if (node) {
-			comp = node.component || new type(node);
+			comp = node.component || new type(node, self._options[name]);
 			if (self.__disposes.indexOf(name) == -1) {
 				comp.addEvent('aftercomponentdispose', function(event) {
 					self.get(name);
@@ -547,14 +547,14 @@ this.Component = new Class(function() {
 	 */
 	this.initialize = function(self, node, options) {
 
-		if (!options) options = {};
-		// 保存options，生成sub时用于传递
-		self._options = exports.parseOptions(options);
-
 		// 可能是mixin addon
 		if (!node) {
 			return;
 		}
+
+		if (!options) options = {};
+		// 保存options，生成sub时用于传递
+		self._options = exports.parseOptions(options);
 
 		// 存储dispose事件的注册情况
 		self.__disposes = [];
