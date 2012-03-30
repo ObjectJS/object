@@ -215,6 +215,7 @@ this.Events = new Class(function() {
 					try {
 						func.call(self, event);
 					} catch(e) {
+						handleEventErrorForIE(e);
 					}
 				});
 				funcs = null;
@@ -354,6 +355,30 @@ this.Events = new Class(function() {
 					delete boss['__on' + type];
 				} catch (e) {}
 			}
+		}
+	}
+
+	// 判断是否有console.error
+	var hasConsoleError = typeof console != 'undefined' && console.error;
+
+	// 用于存储错误详细信息，每次使用前清空，避免产生过多的内存垃圾
+	var detail = [];
+
+	/**
+	 * 处理IE下事件处理函数中的错误，在有console.error的情况下将错误信息打印至控制台
+	 * @param {Error} e 错误对象
+	 */
+	function handleEventErrorForIE(e) {
+		if (hasConsoleError) {
+			detail.length = 0;
+			for(var prop in e) {
+				detail.push(prop + ":" + e[prop]);
+				detail.push(", ");
+			}
+			if (detail.length > 0) {
+				detail.pop();
+			}
+			console.error(e, detail.join(""));
 		}
 	}
 
@@ -575,6 +600,7 @@ this.Events = new Class(function() {
 
 		// 火狐下通过dispatchEvent触发事件，在事件监听函数中抛出的异常都不会在控制台给出
 		// see https://bugzilla.mozilla.org/show_bug.cgi?id=503244
+		// see http://code.google.com/p/fbug/issues/detail?id=3016
 		boss.dispatchEvent(event);
 		return event;
 	} : function(self, type, eventData) {
@@ -625,6 +651,7 @@ this.Events = new Class(function() {
 					try {
 						funcs[i].call(self, event, true);
 					} catch(e) {
+						handleEventErrorForIE(e);
 					}
 				}
 			}
