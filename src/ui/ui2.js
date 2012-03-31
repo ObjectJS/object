@@ -210,6 +210,34 @@ this.define1 = function(selector, type, renderer) {
 	return prop;
 };
 
+this.parent = function(type) {
+	if (!type) {
+		throw new Error('arguments error.');
+	}
+
+	function fget(self) {
+		var name = prop.__name__;
+		var node = self._node;
+		var comp = null;
+
+		while (node = node.parentNode) {
+			if (node.component.__class__ === type()) {
+				comp = node.component;
+				break;
+			}
+		}
+
+		self._set(name, comp);
+		self._set('_' + name, node);
+
+		return comp;
+	}
+	var prop = property(fget);
+	prop.isComponent = true;
+	prop.type = type;
+	return prop;
+};
+
 /**
  * 声明一个option
  * 用法：
@@ -550,8 +578,6 @@ this.Component = new Class(function() {
 	this.__metaclass__ = exports.ComponentFactory;
 
 	this.template = exports.option('');
-
-	this.selector = exports.option('');
 
 	/**
 	 * @param node 包装的节点 / 模板数据（搭配options.template）

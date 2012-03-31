@@ -52,6 +52,25 @@ test('mutiple sub property', function() {
 	equals(test._test, testNode, 'define components right when init.');
 });
 
+test('parent property', function() {
+
+	var TestComponent = new Class(ui.Component, function() {
+		this.parent = ui.parent(function() {
+			return ParentComponent;
+		});
+	});
+
+	var ParentComponent = new Class(ui.Component, function() {
+		this.test = ui.define1('.test', TestComponent);
+	});
+
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="test"></div>';
+	var test = new ParentComponent(div);
+
+	ok(test.test.parent === test, 'parent component ok.');
+});
+
 test('option property', function() {
 
 	optionChangeFired = 0;
