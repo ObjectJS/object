@@ -65,7 +65,7 @@ var setter = overloadSetter(function(prop, value) {
 	if ('__setattr__' in this) {
 		this.__setattr__(prop, value);
 	} else {
-		object.__setattr__(this, prop, value);
+		Object.__setattr__(this, prop, value);
 	}
 });
 
@@ -76,7 +76,7 @@ var setter = overloadSetter(function(prop, value) {
  * @param bind 如果目标成员是个函数，则使用bind进行绑定后返回，非函数忽略此参数
  */
 var membergetter = function(name, bind) {
-	var member = type.__getattribute__(this, name);
+	var member = Type.__getattribute__(this, name);
 	if (typeof member == 'function') {
 		bind = bind || this;
 		return member.bind(bind);
@@ -104,11 +104,11 @@ var memberchecker = function(name) {
 var membersetter = overloadSetter(function(name, member) {
 	// 从metaclass中获得__setattr__
 	if ('__metaclass__' in this) {
-		type.__getattribute__(this.__metaclass__, '__setattr__').call(this.__metaclass__, this, name, member);
+		Type.__getattribute__(this.__metaclass__, '__setattr__').call(this.__metaclass__, this, name, member);
 	}
-	// 未设置metaclass则默认为type
+	// 未设置metaclass则默认为Type
 	else {
-		type.__setattr__(this, name, member);
+		Type.__setattr__(this, name, member);
 	}
 });
 
@@ -153,14 +153,14 @@ var parent = function(cls, name, args) {
 	// 先从base中找同名func
 	if (base && base.get && base.has(name)) {
 		owner = base;
-		member = type.__getattribute__(base, name);
+		member = Type.__getattribute__(base, name);
 	}
 	// 再从mixins中找同名func
 	else if (mixins && mixins.length && mixins.some(function(mixin) {
 		owner = mixin;
 		return mixin.has(name);
 	})) {
-		member = type.__getattribute__(owner, name);
+		member = Type.__getattribute__(owner, name);
 	}
 
 	if (!member || typeof member != 'function') {
@@ -187,8 +187,9 @@ var ArrayClass, StringClass;
 
 /**
  * 设置一个对象的成员
+ * object.__setattr__ 为兼容处理
  */
-object.__setattr__ = function(obj, prop, value) {
+Object.__setattr__ = object.__setattr__ = function(obj, prop, value) {
 	var property = obj.__properties__[prop];
 	// 此prop不是property，直接赋值即可。
 	if (!property) {
@@ -204,21 +205,22 @@ object.__setattr__ = function(obj, prop, value) {
 	}
 };
 
-var type = this.type = function() {
+// this.type 为兼容处理
+var Type = this.Type = this.type = function() {
 };
 
-type.__class__ = type;
+Type.__class__ = Type;
 
 /**
  * 创建一个类的核心过程
  */
-type.__new__ = function(metaclass, name, base, dict) {
+Type.__new__ = function(metaclass, name, base, dict) {
 	var cls = function() {
 		// 通过Class.getInstance获取一个空实例
 		if (cls.__prototyping__) return this;
 
 		// new OneMetaClass
-		// __constructs__是type才有的，继承于object的类没有
+		// __constructs__是Type才有的，继承于object的类没有
 		if ('__constructs__' in cls) {
 			return cls.__constructs__(arguments);
 		}
@@ -233,7 +235,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 
 	/*
 	 * 初始化成员
-	 * 注意这里从base获取成员的时候，base有可能是object系的，也有可能是type系的
+	 * 注意这里从base获取成员的时候，base有可能是object系的，也有可能是Type系的
 	 */
 	cls.__subclassesarray__ = [];
 	cls.__subclasses__ = subclassesgetter;
@@ -249,15 +251,15 @@ type.__new__ = function(metaclass, name, base, dict) {
 	cls.__new__ = base.__new__;
 	cls.__dict__ = dict;
 
-	// 继承于type的类才有__constructs__
+	// 继承于Type的类才有__constructs__
 	var constructs = base.__constructs__;
 	if (constructs) {
 		cls.__constructs__ = constructs;
 	}
 
 	// 将base上的classmethod、staticmethod成员放到cls上
-	// object和type上没有任何classmethod、staticmethod，且object上有无关成员，无需处理
-	if (base !== object && base !== type) {
+	// object和Type上没有任何classmethod、staticmethod，且object上有无关成员，无需处理
+	if (base !== Object && base !== Type) {
 		(base.__classbasedmethods__ || []).forEach(function(name) {
 			cls[name] = base[name];
 		});
@@ -284,11 +286,11 @@ type.__new__ = function(metaclass, name, base, dict) {
 	/*
 	 * 同时设置cls和其prototype上的成员
 	 */
-	type.__setattr__(cls, 'initialize', type.__getattribute__(base, 'initialize'));
-	type.__setattr__(cls, '__setattr__', type.__getattribute__(base, '__setattr__'));
-	type.__setattr__(cls, '__base__', base);
+	Type.__setattr__(cls, 'initialize', Type.__getattribute__(base, 'initialize'));
+	Type.__setattr__(cls, '__setattr__', Type.__getattribute__(base, '__setattr__'));
+	Type.__setattr__(cls, '__base__', base);
 	// 支持 this.parent 调用父级同名方法
-	type.__setattr__(cls, '__this__', {
+	Type.__setattr__(cls, '__this__', {
 		base: base,
 		parent: function() {
 			// 一定是在继承者函数中调用，因此调用时一定有 __name__ 属性
@@ -299,7 +301,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 	// 正常来讲，cls是有metaclass的实例，即 OneClass = new MetaClass，class上面应该有metaclass的成员
 	// 但由于js的语言特性，是无法真正的“new”出一个function的（继承于Function没用），其没有原型链
 	// 因此只能考虑通过遍历将metaclass中的成员赋值到cls上，影响性能，且此类需求只在metaclass的制作过程中有，并没太大必要，比如：
-	// var M = new Class(type, {
+	// var M = new Class(Type, {
 	//   a: function() {},
 	//   __new__(cls) {}, // 这个cls是M，可以通过get获取到a
 	//   initialize(cls) {} // 这个cls就是生成的cls了，此是无法通过get获取到a，而python是可以的
@@ -318,7 +320,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 	 * Dict
 	 */
 	for (var k in dict) {
-		type.__setattr__(cls, k, dict[k]);
+		Type.__setattr__(cls, k, dict[k]);
 	}
 
 	/*
@@ -330,12 +332,12 @@ type.__new__ = function(metaclass, name, base, dict) {
 			Class.keys(mixin).forEach(function(name) {
 				if (cls.has(name)) return; // 不要覆盖自定义的
 
-				var member = type.__getattribute__(mixin, name);
+				var member = Type.__getattribute__(mixin, name);
 
 				if (typeof member == 'function' && member.__class__ === instancemethod) {
-					type.__setattr__(cls, name, member.im_func);
+					Type.__setattr__(cls, name, member.im_func);
 				} else {
-					type.__setattr__(cls, name, member);
+					Type.__setattr__(cls, name, member);
 				}
 			});
 		});
@@ -356,7 +358,7 @@ type.__new__ = function(metaclass, name, base, dict) {
 /**
  * 设置属性到类
  */
-type.__setattr__ = function(cls, name, member) {
+Type.__setattr__ = function(cls, name, member) {
 	if (name == '@mixins') name = '__mixins__';
 
 	var proto = cls.prototype;
@@ -428,7 +430,7 @@ type.__setattr__ = function(cls, name, member) {
 		cls.__classbasedmethods__.push(name);
 	}
 	// this.a = new Class({})
-	else if (instanceOf(member, type)) {
+	else if (Class.instanceOf(member, Type)) {
 		cls[name] = proto[name] = member;
 	}
 	// this.a = someObject
@@ -442,7 +444,7 @@ type.__setattr__ = function(cls, name, member) {
 		subs.forEach(function(sub) {
 			// !(name in sub) 与 !name in sub 得到的结果不一样
 			if (!(name in sub)) {
-				type.__setattr__(sub, name, member);
+				Type.__setattr__(sub, name, member);
 			}
 		});
 	}
@@ -451,7 +453,7 @@ type.__setattr__ = function(cls, name, member) {
 /**
  * 删除类成员
  */
-type.__delattr__ = function(cls, name) {
+Type.__delattr__ = function(cls, name) {
 	delete cls[name];
 	delete cls.prototype[name];
 	delete cls.prototype.__properties__[name];
@@ -460,7 +462,7 @@ type.__delattr__ = function(cls, name) {
 /**
  * 从类上获取成员
  */
-type.__getattribute__ = function(cls, name) {
+Type.__getattribute__ = function(cls, name) {
 	if (name == '@mixins') name = '__mixins__';
 	var proto = cls.prototype;
 	var properties = proto.__properties__;
@@ -479,10 +481,10 @@ type.__getattribute__ = function(cls, name) {
 		return cls[name];
 	}
 	// 去其metaclass中找
-	// 大部分类的metaclass都是type，为确保性能，直接忽略type
-	if (metaclass && metaclass !== type && type.__getattribute__(metaclass, name)) {
+	// 大部分类的metaclass都是Type，为确保性能，直接忽略Type
+	if (metaclass && metaclass !== Type && Type.__getattribute__(metaclass, name)) {
 		// 这里有些复杂，需要将metaclass上的成员重新包装后放到cls上，需要把cls当成一个instance
-		return bindMetaclassMemberToCls(cls, name, type.__getattribute__(metaclass, name));
+		return bindMetaclassMemberToCls(cls, name, Type.__getattribute__(metaclass, name));
 	}
 	// 没找到
 	if (!name in proto) throw new Error('no member named ' + name + '.');
@@ -492,10 +494,10 @@ type.__getattribute__ = function(cls, name) {
 
 /**
  * new Class 或 new OneMetaClass 的入口调用函数
- * 此方法只放在type上，可用于判断一个类是object系的还是type系的
- * object要用的时候用type.__constructs__.call(object, arguments)调用即可
+ * 此方法只放在Type上，可用于判断一个类是Object系的还是Type系的
+ * Object要用的时候用Type.__constructs__.call(Object, arguments)调用即可
  */
-type.__constructs__ = function(args) {
+Type.__constructs__ = function(args) {
 	var length = args.length;
 	if (length < 1) throw new Error('bad arguments');
 
@@ -503,7 +505,7 @@ type.__constructs__ = function(args) {
 	var name = null;
 
 	// base
-	var base = length > 1? args[0] : object;
+	var base = length > 1? args[0] : Object;
 	if (typeof base != 'function' && typeof base != 'object') {
 		throw new Error('base is not function or object');
 	}
@@ -530,9 +532,9 @@ type.__constructs__ = function(args) {
 	}
 
 	var metaclass;
-	// new Class()，用class生成一个object
-	if (this === object) {
-		metaclass = dict.__metaclass__ || base.__metaclass__ || type;
+	// new Class()，用class生成一个Object
+	if (this === Object) {
+		metaclass = dict.__metaclass__ || base.__metaclass__ || Type;
 	}
 	// new OneMetaClass，用this生成一个class
 	else {
@@ -545,11 +547,11 @@ type.__constructs__ = function(args) {
 	if (!cls || typeof cls != 'function') {
 		throw new Error('__new__ method should return cls');
 	}
-	type.__getattribute__(metaclass, 'initialize').call(metaclass, cls, name, base, dict);
+	Type.__getattribute__(metaclass, 'initialize').call(metaclass, cls, name, base, dict);
 	return cls;
 };
 
-type.initialize = function() {
+Type.initialize = function() {
 };
 
 /**
@@ -557,8 +559,8 @@ type.initialize = function() {
  * @namespace Class
  */
 var Class = this.Class = function() {
-	// 通过object调用__constructs__，获取metaclass的途径不同
-	return type.__constructs__.call(object, arguments);
+	// 通过Object调用__constructs__，获取metaclass的途径不同
+	return Type.__constructs__.call(Object, arguments);
 };
 
 /**
@@ -669,14 +671,28 @@ function bindMetaclassMemberToCls(cls, name, member) {
 }
 
 // 判断成员是否是一个type类型的
-// TODO 整理至 Class
-function instanceOf(item, type) {
-	var cls;
-	while (cls = item.__class__) {
-		if (cls === type) return true;
-		item = item.__class__;
+Class.instanceOf = function(obj, func) {
+	if (typeof func != 'function') {
+		throw new Error('bad arguments.');
 	}
-}
+
+	var cls;
+
+	// 查询一个func的constructor，js中的function是没有原型继承的，只能通过递归查询。
+	// 一般来说就是Type
+	if (typeof obj == 'function') {
+		// 遍历实例的创建者继承链，找是否与func相同
+		cls = obj.__class__;
+		do {
+			if (cls === func) return true;
+		} while (cls = cls.__base__);
+	}
+	// 查询普通对象的constructor，可直接使用instanceof
+	else {
+		return obj instanceof func;
+	}
+	return false;
+};
 
 /**
  * 获取一个class的继承链

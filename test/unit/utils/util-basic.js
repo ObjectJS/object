@@ -279,6 +279,47 @@ var undefinedOperationFlag = (function() {
 
 module("util-basic-Class");
 
+test('Class.instanceOf', function() {
+	// 继承于Object
+	var A = new Class(Object, {});
+	var B = new Class(A, {});
+
+	// 继承与Type
+	var AA = new Class(Type, {});
+	var BB = new Class(AA, {});
+
+	// 继承于Object，创建于metaclass
+	var CC = new BB(B, {});
+
+	var b = new B();
+	var bb = new BB({});
+	var cc = new CC();
+
+	// Object
+	equals(b instanceof Object, true, '');
+	equals(Class.instanceOf(b, Object), true, '');
+	equals(b instanceof A, true, '');
+	equals(Class.instanceOf(b, A), true, '');
+	equals(b instanceof B, true, '');
+	equals(Class.instanceOf(b, B), true, '');
+
+	// Type
+	equals(bb instanceof Type, false, '');
+	equals(Class.instanceOf(bb, Type), true, '');
+	equals(bb instanceof AA, false, '');
+	equals(Class.instanceOf(bb, AA), true, '');
+	equals(bb instanceof BB, false, '');
+	equals(Class.instanceOf(bb, BB), true, '');
+
+	// 继承于Object，创建于Type
+	equals(cc instanceof Object, true, '');
+	equals(Class.instanceOf(cc, Object), true, '');
+	equals(cc instanceof A, true, '');
+	equals(Class.instanceOf(cc, A), true, '');
+	equals(cc instanceof B, true, '');
+	equals(Class.instanceOf(cc, B), true, '');
+});
+
 test('Class.initMixins', function() {
 	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
