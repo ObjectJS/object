@@ -669,14 +669,24 @@ function bindMetaclassMemberToCls(cls, name, member) {
 }
 
 // 判断成员是否是一个type类型的
-// TODO 整理至 Class
-function instanceOf(item, type) {
-	var cls;
-	while (cls = item.__class__) {
-		if (cls === type) return true;
-		item = item.__class__;
+Class.instanceOf = function(obj, func) {
+	if (typeof func != 'function') {
+		throw new Error('bad arguments.');
 	}
-}
+
+	// 查询一个func的constructor，js中的function是没有原型继承的，只能通过递归查询。
+	if (typeof obj == 'function') {
+		var cls = obj.__class__;
+		do {
+			if (cls === func) return true;
+		} while (cls = cls.__base__);
+	}
+	// 查询普通对象的constructor，可直接借用instanceof
+	else {
+		return obj instanceof func;
+	}
+	return false;
+};
 
 /**
  * 获取一个class的继承链
