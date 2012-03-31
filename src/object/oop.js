@@ -187,8 +187,9 @@ var ArrayClass, StringClass;
 
 /**
  * 设置一个对象的成员
+ * object.__setattr__ 为兼容处理
  */
-object.__setattr__ = Object.__setattr__ = function(obj, prop, value) {
+Object.__setattr__ = object.__setattr__ = function(obj, prop, value) {
 	var property = obj.__properties__[prop];
 	// 此prop不是property，直接赋值即可。
 	if (!property) {
@@ -204,6 +205,7 @@ object.__setattr__ = Object.__setattr__ = function(obj, prop, value) {
 	}
 };
 
+// this.type 为兼容处理
 var Type = this.Type = this.type = function() {
 };
 
