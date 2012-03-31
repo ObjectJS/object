@@ -205,6 +205,15 @@ Object.__setattr__ = object.__setattr__ = function(obj, prop, value) {
 	}
 };
 
+// 获取父类的实例，用于 cls.prototype = new parent
+Object.__new__ = function(cls) {
+	if (cls === Array || cls === String) return new cls;
+	cls.__prototyping__ = true;
+	var instance = new cls();
+	delete cls.__prototyping__;
+	return instance;
+};
+
 // this.type 为兼容处理
 var Type = this.Type = this.type = function() {
 };
@@ -216,7 +225,7 @@ Type.__class__ = Type;
  */
 Type.__new__ = function(metaclass, name, base, dict) {
 	var cls = function() {
-		// 通过Class.getInstance获取一个空实例
+		// 通过Object.__new__获取一个空实例
 		if (cls.__prototyping__) return this;
 
 		// new OneMetaClass
@@ -256,7 +265,7 @@ Type.__new__ = function(metaclass, name, base, dict) {
 	cls.__constructs__ = base.__constructs__ || null;
 
 	// 将base上的classmethod、staticmethod成员放到cls上
-	// object和Type上没有任何classmethod、staticmethod，且object上有无关成员，无需处理
+	// Object和Type上没有任何classmethod、staticmethod，无需处理
 	if (base !== Object && base !== Type) {
 		(base.__classbasedmethods__ || []).forEach(function(name) {
 			cls[name] = base[name];
@@ -268,7 +277,7 @@ Type.__new__ = function(metaclass, name, base, dict) {
 	/*
 	 * 实现继承
 	 */
-	cls.prototype = Class.getInstance(base);
+	cls.prototype = Object.__new__(base);
 	cls.prototype.constructor = cls;
 	// Array / String 没有 subclass，需要先判断一下是否存在 subclassesarray
 	if (base.__subclassesarray__) base.__subclassesarray__.push(cls);
@@ -650,7 +659,7 @@ Class.inject = function(cls, host, args, filter) {
 
 	host.__class__ = cls;
 	host.__properties__ = cls.prototype.__properties__;
-	var p = Class.getInstance(cls);
+	var p = Object.__new__(cls);
 	object.extend(host, p, filter);
 	Class.initMixins(cls, host);
 	if (typeof cls.prototype.initialize == 'function') {
@@ -705,15 +714,6 @@ Class.getChain = function(cls) {
 		cls = cls.__base__;
 	}
 	return result;
-};
-
-// 获取父类的实例，用于 cls.prototype = new parent
-Class.getInstance = function(cls) {
-	if (cls === Array || cls === String) return new cls;
-	cls.__prototyping__ = true;
-	var instance = new cls();
-	delete cls.__prototyping__;
-	return instance;
 };
 
 /**
