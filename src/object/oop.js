@@ -428,7 +428,7 @@ type.__setattr__ = function(cls, name, member) {
 		cls.__classbasedmethods__.push(name);
 	}
 	// this.a = new Class({})
-	else if (instanceOf(member, type)) {
+	else if (Class.instanceOf(member, type)) {
 		cls[name] = proto[name] = member;
 	}
 	// this.a = someObject
