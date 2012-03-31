@@ -278,23 +278,6 @@ var undefinedOperationFlag = (function() {
 })();
 
 module("util-basic-Class");
-test('Class.create', function() {
-	var C = Class.create();
-	try {
-		// opera下，properties为undefined，调用delete properties[name]竟然不报错~
-		C.__mixin__('d', 1);
-	} catch (e) {
-		ok(true, '__mixin__ can not be called : ' + e);
-	}
-
-	equals(C.get('d'), undefinedOperationFlag ? 1 : undefined, 'get can be called.');
-	
-	equal(C.__subclasses__().length, 0, 'no subclass, __subclasses__ is ok');
-	equal(typeof C, 'function', 'class created is also a function');
-
-	var c = new C();
-	equal(c.__class__, C, '__class__ reference the init Class');
-});
 
 test('Class.initMixins', function() {
 	var values = $UNIT_TEST_CONFIG.testEdges;
