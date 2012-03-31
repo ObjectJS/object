@@ -60,26 +60,28 @@ test('getter/setter basic', function() {
 });
 
 test('__getattr__/__setattr__', function() {
-	expect(5);
 	var A = new Class(function() {
 		this.__getattr__ = function(self, name) {
 			if (name == 'a') {
 				ok(false, 'get an exists attr, __getattr__ will not called.');
+				return self.a;
 			}
 			if (name == 'b') {
 				ok(true, 'get an unexists attr, __getattr__ will called.');
+				return 'b';
 			}
 		};
 		this.__setattr__ = function(self, name, value) {
 			ok(true, 'set an attr will always call __setattr__.');
-			object.__setattr__(self, name, value);
+			Object.__setattr__(self, name, value);
 		};
 		this.a = 1;
 	});
 
 	var a = new A();
-	a.get('a'); // will not call
-	a.get('b'); // will call
+	equal(a.get('a'), 1, 'get exists value ok.'); // will not call
+	equal(a.get('b'), 'b', 'get not exists custome value ok.'); // will call
+	equal(a.get('c'), undefined, 'get not exists value ok.'); // will call
 	a.set('a', 1) // will call
 	a.set('b', 1) // will call
 	equals(a.a, 1, 'ok')

@@ -31,29 +31,13 @@ var overloadSetter = function(func, usePlural) {
  * obj.get(prop_name)
  * 会被放到 cls.prototype.get
  */
-var getter = function(prop) {
-	var property = this.__properties__[prop];
-	// property
-	if (property) {
-		if (property.fget) {
-			return property.fget.call(this.__this__, this);
-		}
-		else {
-			throw new Error('get not allowed property ' + prop);
-		}
+var getter = function(name) {
+	var value = Object.__getattribute__(this, name);
+	if (typeof value == 'function') {
+		bind = bind || this;
+		return value.bind(bind);
 	}
-	// 已存在此成员
-	else if (this[prop]) {
-		return this[prop];
-	}
-	// 调用getattr
-	else if (this.__getattr__) {
-		this.__getattr__.call(this, prop);
-	}
-	// 无此成员，报错
-	else {
-		throw new Error('member not found ' + prop);
-	}
+	return value;
 };
 
 /**
@@ -184,6 +168,34 @@ var _nativeExtendable = (function() {
 })();
 
 var ArrayClass, StringClass;
+
+/**
+ * 从一个object上获取成员
+ */
+Object.__getattribute__ = function(obj, name) {
+	var property = obj.__properties__[name];
+	// property
+	if (property) {
+		if (property.fget) {
+			return property.fget.call(obj.__this__, obj);
+		}
+		else {
+			throw new Error('get not allowed property ' + name);
+		}
+	}
+	// 已存在此成员
+	else if (name in obj) {
+		return obj[name];
+	}
+	// 调用getattr
+	else if (obj.__getattr__) {
+		return obj.__getattr__.call(obj, name);
+	}
+	// 无此成员，返回
+	else {
+		return undefined;
+	}
+};
 
 /**
  * 设置一个对象的成员
