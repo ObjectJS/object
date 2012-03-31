@@ -676,14 +676,18 @@ Class.instanceOf = function(obj, func) {
 		throw new Error('bad arguments.');
 	}
 
+	var cls;
+
 	// 查询一个func的constructor，js中的function是没有原型继承的，只能通过递归查询。
+	// 一般来说就是Type
 	if (typeof obj == 'function') {
-		var cls = obj.__class__;
+		// 遍历实例的创建者继承链，找是否与func相同
+		cls = obj.__class__;
 		do {
 			if (cls === func) return true;
 		} while (cls = cls.__base__);
 	}
-	// 查询普通对象的constructor，可直接借用instanceof
+	// 查询普通对象的constructor，可直接使用instanceof
 	else {
 		return obj instanceof func;
 	}
