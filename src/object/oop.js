@@ -638,10 +638,11 @@ Class.getPropertyNames = function(obj) {
  * @param cls 被注射的class
  * @param host 注射进去的对象
  * @param args 构造的参数
+ * @param filter 过滤器，实现选择性注射
  */
 Class.inject = function(cls, host, args, filter) {
 	if (typeof cls != 'function') {
-		throw new Error('cls should be function');
+		throw new Error('bad arguments.');
 	};
 	var argsLen = arguments.length;
 	if (argsLen === 2) {
