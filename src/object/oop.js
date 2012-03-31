@@ -221,7 +221,7 @@ Type.__new__ = function(metaclass, name, base, dict) {
 
 		// new OneMetaClass
 		// __constructs__是Type才有的，继承于object的类没有
-		if ('__constructs__' in cls) {
+		if (cls.__constructs__) {
 			return cls.__constructs__(arguments);
 		}
 		// new OneClass
@@ -241,7 +241,8 @@ Type.__new__ = function(metaclass, name, base, dict) {
 	cls.__subclasses__ = subclassesgetter;
 	// 存储此类上的classmethod和staticmethod的名字，方便继承时赋值
 	cls.__classbasedmethods__ = [];
-	cls.__mixin__ = cls.set = membersetter;
+	// cls.__mixin__ 为兼容
+	cls.set = cls.__mixin__ = membersetter;
 	cls.get = membergetter;
 	cls.has = memberchecker;
 	// 只有__metaclass__和__class__是指向metaclass的，其他成员都是从base继承而来。
@@ -252,10 +253,7 @@ Type.__new__ = function(metaclass, name, base, dict) {
 	cls.__dict__ = dict;
 
 	// 继承于Type的类才有__constructs__
-	var constructs = base.__constructs__;
-	if (constructs) {
-		cls.__constructs__ = constructs;
-	}
+	cls.__constructs__ = base.__constructs__ || null;
 
 	// 将base上的classmethod、staticmethod成员放到cls上
 	// object和Type上没有任何classmethod、staticmethod，且object上有无关成员，无需处理
