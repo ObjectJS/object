@@ -30,6 +30,8 @@ var overloadSetter = function(func, usePlural) {
  * propery 特性支持getter函数，用法：
  * obj.get(prop_name)
  * 会被放到 cls.prototype.get
+ * @param name 需要获取的成员
+ * @param bind 如果目标成员是个函数，则使用bind进行绑定后返回，非函数忽略此参数
  */
 var getter = function(name) {
 	var value = Object.__getattribute__(this, name);
