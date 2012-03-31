@@ -27,6 +27,12 @@ test('getter/setter basic', function() {
 		}, function(self, a) {
 			self.a = a;
 		});
+
+		this.value = 1;
+
+		this.m = function(self) {
+			return self.value;
+		};
 	});
 	A.b = 2;
 
@@ -57,6 +63,13 @@ test('getter/setter basic', function() {
 		'd': 1
 	});
 	ok(a.get('c') == 1 && a.get('d') == 1, 'mutiple set ok.');
+
+	// method bind
+	equal(a.m(), 1, 'method called.');
+	var m = a.get('m');
+	equal(m(), 1, 'self bind method called ok.');
+	m = a.get('m', {value: 2});
+	equal(m(), 2, 'custome bine method call ok.');
 });
 
 test('__getattr__/__setattr__', function() {

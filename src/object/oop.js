@@ -33,7 +33,7 @@ var overloadSetter = function(func, usePlural) {
  * @param name 需要获取的成员
  * @param bind 如果目标成员是个函数，则使用bind进行绑定后返回，非函数忽略此参数
  */
-var getter = function(name) {
+var getter = function(name, bind) {
 	var value = Object.__getattribute__(this, name);
 	if (typeof value == 'function') {
 		bind = bind || this;
