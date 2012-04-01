@@ -333,7 +333,7 @@ test('render', function() {
 
 	// 渲染
 	test.render('test');
-	equal(test.getNode().outerHTML, '<div><div class="test">test</div></div>', 'template render ok.');
+	equal(test.getNode().innerHTML, '<div class="test">test</div>', 'template render ok.');
 
 	// option传递
 	equal(test.test.test, true, 'option pass to sub.');
