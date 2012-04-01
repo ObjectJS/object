@@ -35,7 +35,7 @@ var overloadSetter = function(func, usePlural) {
  */
 var getter = function(name, bind) {
 	var value = Object.__getattribute__(this, name);
-	if (typeof value == 'function') {
+	if (Class.isMethod(value)) {
 		bind = bind || this;
 		return value.bind(bind);
 	}
@@ -63,7 +63,7 @@ var setter = overloadSetter(function(prop, value) {
  */
 var membergetter = function(name, bind) {
 	var member = Type.__getattribute__(this, name);
-	if (typeof member == 'function') {
+	if (Class.isMethod(member)) {
 		bind = bind || this;
 		return member.bind(bind);
 	}
@@ -637,6 +637,22 @@ Class.hasProperty = function(obj, name) {
 Class.hasMember = function(cls, name) {
 	if (!cls) return false;
 	if (name in cls.prototype) return true;
+	return false;
+};
+
+/**
+ * 是否是方法
+ */
+Class.isMethod = function(member) {
+	if (typeof member == 'function') {
+		if (!member.__class__
+				|| member.__class__ == instancemethod
+				|| member.__class__ == staticmethod
+				|| member.__class__ == classmethod
+		   ) {
+			return true;
+		}
+	}
 	return false;
 };
 

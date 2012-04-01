@@ -21,6 +21,7 @@ test('modify global variable in initialize method', function() {
 });
 
 test('getter/setter basic', function() {
+	var C = new Class({});
 	var A = new Class(function(){
 		this.a = property(function(self){
 			return self.a;
@@ -33,6 +34,16 @@ test('getter/setter basic', function() {
 		this.m = function(self) {
 			return self.value;
 		};
+
+		this.cm = classmethod(function(cls) {
+			return cls.get('value');
+		});
+
+		this.sm = staticmethod(function() {
+			return this.value;
+		});
+
+		this.cls = C;
 	});
 	A.b = 2;
 
@@ -57,6 +68,10 @@ test('getter/setter basic', function() {
 	A.set('b', 4);
 	equal(A.get('b'), 4, 'A.get(b) should be 4 after A.set(b, 4)');
 
+	// get a class memeber
+	strictEqual(a.get('cls'), C, 'get a class member ok.');
+	strictEqual(A.get('cls'), C, 'get a class member in class ok.');
+
 	// mutiple
 	a.set({
 		'c': 1,
@@ -69,7 +84,21 @@ test('getter/setter basic', function() {
 	var m = a.get('m');
 	equal(m(), 1, 'self bind method called ok.');
 	m = a.get('m', {value: 2});
-	equal(m(), 2, 'custome bine method call ok.');
+	equal(m(), 2, 'custom bine method call ok.');
+
+	equal(a.cm(), 1, 'classmethod called.');
+	var m = a.get('cm');
+	equal(m(), 1, 'self bind classmethod called ok.');
+	// 创建一个新的类的实例用于绑定
+	var m = a.get('cm', new (new Class({value: 2})));
+	equal(m(), 2, 'custom bind classmethod call ok.');
+
+	equal(a.sm(), 1, 'instancemethod called.');
+	var m = a.get('sm');
+	equal(m(), 1, 'self bind instancemethod called ok.');
+	m = a.get('sm', {value: 2});
+	equal(m(), 2, 'custome bine instancemethod call ok.');
+
 });
 
 test('__getattr__/__setattr__', function() {
