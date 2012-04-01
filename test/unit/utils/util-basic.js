@@ -279,6 +279,47 @@ var undefinedOperationFlag = (function() {
 
 module("util-basic-Class");
 
+test('Class.instanceOf', function() {
+	// 继承于Object
+	var A = new Class(Object, {});
+	var B = new Class(A, {});
+
+	// 继承与Type
+	var AA = new Class(Type, {});
+	var BB = new Class(AA, {});
+
+	// 继承于Object，创建于metaclass
+	var CC = new BB(B, {});
+
+	var b = new B();
+	var bb = new BB({});
+	var cc = new CC();
+
+	// Object
+	equals(b instanceof Object, true, '');
+	equals(Class.instanceOf(b, Object), true, '');
+	equals(b instanceof A, true, '');
+	equals(Class.instanceOf(b, A), true, '');
+	equals(b instanceof B, true, '');
+	equals(Class.instanceOf(b, B), true, '');
+
+	// Type
+	equals(bb instanceof Type, false, '');
+	equals(Class.instanceOf(bb, Type), true, '');
+	equals(bb instanceof AA, false, '');
+	equals(Class.instanceOf(bb, AA), true, '');
+	equals(bb instanceof BB, false, '');
+	equals(Class.instanceOf(bb, BB), true, '');
+
+	// 继承于Object，创建于Type
+	equals(cc instanceof Object, true, '');
+	equals(Class.instanceOf(cc, Object), true, '');
+	equals(cc instanceof A, true, '');
+	equals(Class.instanceOf(cc, A), true, '');
+	equals(cc instanceof B, true, '');
+	equals(Class.instanceOf(cc, B), true, '');
+});
+
 test('Class.initMixins', function() {
 	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
@@ -415,24 +456,6 @@ test('Class.getChain', function() {
 	equal(Class.getChain(B).length, 3, 'type,A,B');
 	equal(Class.getChain(C).length, 3, 'type,A,C');
 	equal(Class.getChain(D).length, 4, 'type,A,C,D');
-});
-
-test('Class.getInstance', function() {
-	var values = $UNIT_TEST_CONFIG.testEdges;
-	for(var prop in values) {
-		try {
-			// should not expose
-			// Class.getInstance(values[prop]);
-			ok(true, 'Class.getInstance(' + prop + ') is ok');
-		} catch (e) {
-			ok(false, 'Class.getInstance(' + prop + ') is ok : ' + e);
-		}
-	}
-	var A = new Class(function() {
-		this.a = function(self) { return 1;}
-	});
-	instance = Class.getInstance(A);
-	equal(instance.a(), 1, 'instance created');
 });
 
 test('Class.getAllSubClasses', function() {

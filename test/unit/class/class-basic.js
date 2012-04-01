@@ -21,12 +21,29 @@ test('modify global variable in initialize method', function() {
 });
 
 test('getter/setter basic', function() {
+	var C = new Class({});
 	var A = new Class(function(){
 		this.a = property(function(self){
 			return self.a;
 		}, function(self, a) {
 			self.a = a;
 		});
+
+		this.value = 1;
+
+		this.m = function(self) {
+			return self.value;
+		};
+
+		this.cm = classmethod(function(cls) {
+			return cls.get('value');
+		});
+
+		this.sm = staticmethod(function() {
+			return this.value;
+		});
+
+		this.cls = C;
 	});
 	A.b = 2;
 
@@ -51,35 +68,62 @@ test('getter/setter basic', function() {
 	A.set('b', 4);
 	equal(A.get('b'), 4, 'A.get(b) should be 4 after A.set(b, 4)');
 
+	// get a class memeber
+	strictEqual(a.get('cls'), C, 'get a class member ok.');
+	strictEqual(A.get('cls'), C, 'get a class member in class ok.');
+
 	// mutiple
 	a.set({
 		'c': 1,
 		'd': 1
 	});
 	ok(a.get('c') == 1 && a.get('d') == 1, 'mutiple set ok.');
+
+	// method bind
+	equal(a.m(), 1, 'method called.');
+	var m = a.get('m');
+	equal(m(), 1, 'self bind method called ok.');
+	m = a.get('m', {value: 2});
+	equal(m(), 2, 'custom bine method call ok.');
+
+	equal(a.cm(), 1, 'classmethod called.');
+	var m = a.get('cm');
+	equal(m(), 1, 'self bind classmethod called ok.');
+	// 创建一个新的类的实例用于绑定
+	var m = a.get('cm', new (new Class({value: 2})));
+	equal(m(), 2, 'custom bind classmethod call ok.');
+
+	equal(a.sm(), 1, 'instancemethod called.');
+	var m = a.get('sm');
+	equal(m(), 1, 'self bind instancemethod called ok.');
+	m = a.get('sm', {value: 2});
+	equal(m(), 2, 'custome bine instancemethod call ok.');
+
 });
 
 test('__getattr__/__setattr__', function() {
-	expect(5);
 	var A = new Class(function() {
 		this.__getattr__ = function(self, name) {
 			if (name == 'a') {
 				ok(false, 'get an exists attr, __getattr__ will not called.');
+				return self.a;
 			}
 			if (name == 'b') {
 				ok(true, 'get an unexists attr, __getattr__ will called.');
+				return 'b';
 			}
 		};
 		this.__setattr__ = function(self, name, value) {
 			ok(true, 'set an attr will always call __setattr__.');
-			object.__setattr__(self, name, value);
+			Object.__setattr__(self, name, value);
 		};
 		this.a = 1;
 	});
 
 	var a = new A();
-	a.get('a'); // will not call
-	a.get('b'); // will call
+	equal(a.get('a'), 1, 'get exists value ok.'); // will not call
+	equal(a.get('b'), 'b', 'get not exists custome value ok.'); // will call
+	equal(a.get('c'), undefined, 'get not exists value ok.'); // will call
 	a.set('a', 1) // will call
 	a.set('b', 1) // will call
 	equals(a.a, 1, 'ok')
