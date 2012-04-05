@@ -71,6 +71,26 @@ test('parent property', function() {
 	ok(test.test.parent === test, 'parent component ok.');
 });
 
+test('async load component', function() {
+
+	var script = document.createElement('script');
+	script.setAttribute('data-src', 'async-module.js');
+	script.setAttribute('data-module', 'test.test');
+	document.body.appendChild(script);
+	object._loader.buildFileLib();
+
+	var TestComponent = new Class(ui.Component, function() {
+		this.test = ui.define1('.test', 'test.test.TestComponent');
+	});
+
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="test"></div>';
+
+	var test = new TestComponent(div);
+
+	document.body.removeChild(script);
+});
+
 test('option property', function() {
 
 	optionChangeFired = 0;

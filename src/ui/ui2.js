@@ -1,4 +1,9 @@
-object.add('ui/ui2.js', 'string, options, dom, events', function(exports, string, options, dom, events) {
+object.define('ui/ui2.js', 'string, options, dom, events', function(require, exports) {
+
+var string = require('string');
+var options = require('options');
+var dom = require('dom');
+var events = require('events');
 
 var globalid = 0;
 
@@ -188,20 +193,34 @@ this.define1 = function(selector, type, renderer) {
 			node = self._node.getElement(selector);
 		}
 
-		if (node) {
-			comp = node.component || new type(node, self._options[name]);
-			if (self.__disposes.indexOf(name) == -1) {
-				comp.addEvent('aftercomponentdispose', function(event) {
-					self.get(name);
-				});
-				self.__disposes.push(name);
-			}
+		// async
+		if (typeof type == 'string') {
+			var moduleStr = type.slice(0, type.lastIndexOf('.')).replace(/\./, '/');
+			var typeStr = type.slice(type.lastIndexOf('.') + 1);
+			require.async(moduleStr, function(module) {
+				type = module[typeStr];
+				if (!Class.instanceOf(type, Type)) {
+					throw new Error('fsaf')
+				}
+			});
 		}
+		// sync
+		else {
+			if (node) {
+				comp = node.component || new type(node, self._options[name]);
+				if (self.__disposes.indexOf(name) == -1) {
+					comp.addEvent('aftercomponentdispose', function(event) {
+						self.get(name);
+					});
+					self.__disposes.push(name);
+				}
+			}
 
-		self._set(name, comp);
-		self._set('_' + name, node);
+			self._set(name, comp);
+			self._set('_' + name, node);
 
-		return comp;
+			return comp;
+		}
 	}
 	var prop = property(fget);
 	prop.isComponent = true;
