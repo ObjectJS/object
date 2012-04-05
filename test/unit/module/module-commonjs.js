@@ -116,22 +116,23 @@ test('require.async - setTimeout', function() {
 	loader.execute('a/main');
 });
 
-test('require.async - dynamic', function() {
+// 测试由其他模块发起的require.async
+test('require.async - dynamic cyclic', function() {
 	object.define('a/test', 'a/ui.js', function(require) {
 		var ui = require('a/ui.js');
 		this.c = 1;
 	});
 	object.define('a/ui.js', 'string', function(require) {
 		var string = require('string');
-		this.load = function(name) {
-			require.async(name, function(module) {
+		this.load = function() {
+			require.async('a/test', function(module) {
 				equal(module.c, 1, 'dynamic require.async ok.');
 			});
 		}
 	})
 	object.define('a/main', 'a/ui', function(require) {
 		var ui = require('a/ui');
-		ui.load('a/test');
+		ui.load();
 	});
 	object.execute('a/main');
 	object.remove('a', true);
