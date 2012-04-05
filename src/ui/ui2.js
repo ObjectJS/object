@@ -200,7 +200,7 @@ this.define1 = function(selector, type, renderer) {
 			require.async(moduleStr, function(module) {
 				type = module[typeStr];
 				if (!Class.instanceOf(type, Type)) {
-					throw new Error('fsaf')
+					throw new Error('fsaf');
 				}
 			});
 		}
@@ -508,7 +508,7 @@ this.ComponentFactory = new Class(type, function() {
 	this.mixMeta = function(cls, name, base, dict) {
 		var meta = cls.get('meta');
 		// 合并base的meta
-		if (base != object) {
+		if (base != Object) {
 			var bgid = base.get('gid');
 			var baseMeta = base.get('meta');
 			baseMeta.subs.forEach(function(name) {
