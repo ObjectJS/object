@@ -73,14 +73,11 @@ test('parent property', function() {
 
 test('async load component', function() {
 
-	object.define('test.test', 'ui/ui2.js', function(require, exports, module) {
-
-		var ui = require('ui/ui2.js');
-
-		this.TestComponent = new Class(ui.Component, function() {
-		});
-
-	});
+	var script = document.createElement('script');
+	script.setAttribute('data-src', 'async-module.js');
+	script.setAttribute('data-module', 'test.test');
+	document.body.appendChild(script);
+	object._loader.buildFileLib();
 
 	var TestComponent = new Class(ui.Component, function() {
 		this.test = ui.define1('.test', 'test.test.TestComponent');
@@ -90,6 +87,8 @@ test('async load component', function() {
 	div.innerHTML = '<div class="test"></div>';
 
 	var test = new TestComponent(div);
+
+	document.body.removeChild(script);
 });
 
 test('option property', function() {

@@ -199,13 +199,29 @@ this.define1 = function(selector, type, renderer) {
 			var typeStr = type.slice(type.lastIndexOf('.') + 1);
 			require.async(moduleStr, function(module) {
 				type = module[typeStr];
+
 				if (!Class.instanceOf(type, Type)) {
-					throw new Error('fsaf');
+					throw new Error('type not a class.');
 				}
+				if (node) {
+					comp = node.component || new type(node, self._options[name]);
+					if (self.__disposes.indexOf(name) == -1) {
+						comp.addEvent('aftercomponentdispose', function(event) {
+							self.get(name);
+						});
+						self.__disposes.push(name);
+					}
+				}
+
+				self._set(name, comp);
+				self._set('_' + name, node);
 			});
 		}
 		// sync
 		else {
+			if (!Class.instanceOf(type, Type)) {
+				throw new Error('type not a class.');
+			}
 			if (node) {
 				comp = node.component || new type(node, self._options[name]);
 				if (self.__disposes.indexOf(name) == -1) {
