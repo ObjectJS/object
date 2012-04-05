@@ -8,4 +8,5 @@ $(document).ready(function() {
 		.script(path + 'metaclass.js').wait()
 		.script(path + 'parent.js').wait()
 		.script(path + 'prototype-basic.js').wait()
+		.script(path + 'type-class.js').wait()
 });

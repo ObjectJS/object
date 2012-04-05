@@ -50,6 +50,70 @@ test('getter/setter basic', function() {
 	equal(A.get('b'), 2, 'cls.get is ok, because A.b=2, so A.get(b) is 2');
 	A.set('b', 4);
 	equal(A.get('b'), 4, 'A.get(b) should be 4 after A.set(b, 4)');
+
+	// mutiple
+	a.set({
+		'c': 1,
+		'd': 1
+	});
+	ok(a.get('c') == 1 && a.get('d') == 1, 'mutiple set ok.');
+});
+
+test('__getattr__/__setattr__', function() {
+	expect(5);
+	var A = new Class(function() {
+		this.__getattr__ = function(self, name) {
+			if (name == 'a') {
+				ok(false, 'get an exists attr, __getattr__ will not called.');
+			}
+			if (name == 'b') {
+				ok(true, 'get an unexists attr, __getattr__ will called.');
+			}
+		};
+		this.__setattr__ = function(self, name, value) {
+			ok(true, 'set an attr will always call __setattr__.');
+			object.__setattr__(self, name, value);
+		};
+		this.a = 1;
+	});
+
+	var a = new A();
+	a.get('a'); // will not call
+	a.get('b'); // will call
+	a.set('a', 1) // will call
+	a.set('b', 1) // will call
+	equals(a.a, 1, 'ok')
+	equals(a.b, 1, 'ok')
+});
+
+test('__getattr__/__setattr__ in class', function() {
+	var setattrCalled = 0;
+	var M = new Class(type, function() {
+		this.__setattr__ = function(self, name, value) {
+			if (name == 'test') {
+				ok(true, '__setattr__ called.')
+			}
+			setattrCalled++;
+			type.__setattr__(self, name, value);
+		};
+		this.initialize = function(cls) {
+			// 这里的set就会触发__setattr__了
+			cls.set('test2', 1);
+		};
+	});
+
+	var A = new Class(function() {
+		this.__metaclass__ = M;
+	});
+
+	var AA = new M(function() {
+	});
+
+	A.set('test', 1);
+	equal(A.get('test'), 1, 'value setted.');
+
+	// 在类的创建过程中是不会调用自定义的__setattr__的，在initialize中手工调用了2此，因此只调用3次
+	equal(setattrCalled, 3, 'setattr called times ok.')
 });
 
 test('set to null/0/""/undefined/NaN', function() {
@@ -90,7 +154,7 @@ test('set special property : __mixins__', function() {
 });
 
 test('set special property : __metaclass__', function() {
-	var meta = new Class(function() {
+	var meta = new Class(type, function() {
 		this.initialize = function(cls, name, base, dict) {};
 		this.__new__ = function(cls, name, base, dict) {
 			return type.__new__(cls, name, base, dict);
@@ -101,7 +165,7 @@ test('set special property : __metaclass__', function() {
 	});
 
 	A.set('__metaclass__', 'string');
-	equal(A.get('__metaclass__'), undefined, '__metaclass__ is not changed if set to string');
+	equal(A.get('__metaclass__'), undefined, '__metaclass__ is changed if set to string');
 
 	try {
 		var B = new Class(A, function() {});
@@ -337,7 +401,7 @@ test('set after class instance is created', function() {
 	equal(a.get('e'), 1, 'e is an property, get(e) ok');
 	A.set('e', 2);
 	try {
-		equal(a.get('e'), 1, 'e is an property, get(e) ok');
+		equal(a.get('e'), 2, 'e is an property, get(e) ok');
 	} catch (e) {
 		ok(true, 'A.set changed the behavior of a.get(e), even after instance is created : ' + e);
 	}
@@ -403,7 +467,8 @@ test('set after extended by many classes', function() {
 });
 
 test('instancemethod', function() {
-	ok(typeof instancemethod == 'undefined', 'instancemethod is not public');
+	customBinderMethodCalled = 0;
+
 	var A = new Class(function() {
 		this.a = function(self) {
 			ok(self != this, 'self != this in instancemethod, self is the instance, "this" is an simple Object{base, parent}');
@@ -415,11 +480,46 @@ test('instancemethod', function() {
 			}
 			return 1;
 		};
+		this.b = function(self, value) {
+			return arguments;
+		};
 	});
+
+	var B = new Class(function() {
+		this.b = function(self, value) {
+			customBinderMethodCalled++;
+			return arguments;
+		};
+	});
+
+	ok(typeof instancemethod == 'undefined', 'instancemethod is not public');
+
 	var a = new A();
 	ok(a.a.__class__ != null, 'the __class__ of instancemethod is not null, actually it is instancemethod');
 	equal(a.a(), 1, 'instancemethod return correct value');	
 	equal(A.a, undefined, 'instancemethod can not be retrieved by Class A.a');
+
+	// A.get('a')获取到一个绑定的方法
+	notEqual(A.get('b'), a.b, 'A.b != a.b.');
+	A.tt = 1;
+	// 传递绑定，为默认
+	var arg1 = {a:1};
+	var arg2 = 1;
+	var result = A.get('b', A)(arg1, arg2);
+	equal(result[0], arg1, 'set default bind method return value ok.');
+
+	// cls.get 却绑定一个对象，由于没有prototype，会报错
+	try {
+		var result = A.get('b', {})(arg1, arg2);
+		ok(false, 'cls.get bind a object throw a error.')
+	} catch(e) {
+		ok(true, 'cls.get bind a object throw a error.')
+	}
+
+	var result = A.get('b', B)(arg1, arg2);
+	equal(customBinderMethodCalled, 1, 'set custom bind method called ok.');
+	equal(result[0], arg1, 'set custom bind method return value ok.');
+
 });
 
 test('classmethod', function() {
@@ -471,6 +571,54 @@ test('property', function() {
 	equal(a.get('a'), 1, 'property initialized successfully');
 	a.set('a', 2);
 	equal(a.get('a'), 2, 'property get and set successfully');
+});
+
+test('class member in class', function() {
+
+	var A = new Class({});
+	var B = new Class(object, {});
+	var C = new Class(B, {});
+
+	var D = new Class(type, {});
+	var E = new Class(D, {});
+	var F = new E(D, {});
+	var G = new F({});
+
+	var H = new D({});
+	var I = new Class({
+		__metaclass__: E
+	});
+
+	var Test = new Class({
+		A: A,
+		B: B,
+		C: C,
+		D: D,
+		E: E,
+		F: F,
+		G: G,
+		H: H,
+		I: I
+	});
+	var test = new Test();
+	ok(Test.A, 'general class in class.');
+	ok(Test.B, 'object-based class in class.');
+	ok(Test.C, 'extended class in class.');
+	ok(Test.D, 'type-based class in class.');
+	ok(Test.E, 'extended type-based class in class.');
+	ok(Test.F, 'type-based class created by new metaclass in class.');
+	ok(Test.G, 'class created by new type-based metaclass in class.');
+	ok(Test.H, 'class created by new metaclass in class.');
+	ok(Test.I, 'class created by __metaclass__ in class.');
+	ok(test.A, 'general class in instance.');
+	ok(test.B, 'object-based class in instance.');
+	ok(test.C, 'extended class in instance.');
+	ok(test.D, 'type-based class in instance.');
+	ok(test.E, 'extended type-based class in instance.');
+	ok(test.F, 'type-based class created by new metaclass in instance.');
+	ok(test.G, 'class created by new type-based metaclass in instance.');
+	ok(test.H, 'class created by new metaclass in instance.');
+	ok(test.I, 'class created by __metaclass__ in instance.');
 });
 
 //set : name/constructor/prototype...

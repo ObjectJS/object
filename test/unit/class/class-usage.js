@@ -64,7 +64,7 @@ test('A complete Class', function() {
 		this.extended = function() { return 1; };
 		this.same = function(self) {return 'Parent'};
 	});
-	var metaclass = new Class(function() {
+	var metaclass = new Class(type, function() {
 		this.initialize = function(cls, name, base, dict) {
 			cls.metaclassed = function(self) {
 				return 1;
@@ -147,6 +147,37 @@ test('extend class', function() {
 	} catch (e) {
 	   ok(false, 'static method should be inheritted from parent class : ' + e);
 	}
+});
+
+test('staticmethod/classmethod extend', function() {
+	var A = new Class(function() {
+		this.a = classmethod(function() {
+			return 1;
+		});
+
+		this.b = staticmethod(function() {
+			return 2;
+		});
+	});
+	A.c = function() {
+		return 3;
+	};
+
+	var B = new Class(A, function() {
+	});
+
+	A.set('d', classmethod(function() {
+		return 4;
+	}));
+	A.set('e', staticmethod(function() {
+		return 5;
+	}));
+
+	equal(B.a(), 1, 'classmethod extended.');
+	equal(B.b(), 2, 'staticmethod extended.');
+	ok(B.c == undefined, 'none-maintain method not extended.');
+	equal(B.d(), 4, 'classmethod extended.');
+	equal(B.e(), 5, 'staticmethod extended.');
 });
 
 test('do not overwrite exists member in subclass', function() {

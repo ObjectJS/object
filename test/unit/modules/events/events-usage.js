@@ -170,52 +170,17 @@ test('events.Events: play with the standard - without error', function() {
 	});
 });
 
-// only ok in chrome, other browsers will cause error which will not be caught, this will make testcase fail
-if (isJsTestDriverRunning && chrome) {
-	var AsyncTestCase_throwErrorInHandler = AsyncTestCase('throwErrorInHandler');
-
-	AsyncTestCase_throwErrorInHandler.prototype['testEvents.Events:PlayWithTheStandard-WithError']= function(queue) {
-		expect(chrome ? 4 : 3);
-		queue.call('test', function(callbacks) {
-			var callback = callbacks.add(function(){});
-			var A = new Class(function() {
-				Class.mixin(this, events.Events);
-			});
-			var a = new A();
-
-			// throw error in event handler
-			var counter3 = 0;
-			a.addEvent('fire-error', function() {
-				ok(true, 'fire event fire-error, should not stop the event chain - handler 1');
-				counter3 ++;
-				throw new Error('throw error in handler');
-			}, false);
-			a.addEvent('fire-error', function() {
-				counter3 ++;
-				ok(true, 'fire event fire-error, should not stop the event chain - handler 2');
-			}, false);
-			// can not get the error in this way, because error is throwed from another function
-			var oldError = window.onerror;
-			window.onerror = function(a,b,c) {
-				ok(true, 'should raise error after fireEvent(fire-error), but should not stop the event chain');
-				window.onerror = oldError;
-				callback();
-				return true;
-			};
-			a.fireEvent('fire-error');
-			equal(counter3, 2, 'should not stop the event chain');
-		});
-	};
-} else {
+// window.onerror的方式在jsTestDriver中不行~~
+if (!isJsTestDriverRunning || chrome) {
 test('events.Events: play with the standard - throw error', function() {
 	expect(chrome ? 4 : 3);
+	var oldError = window.onerror;
 	object.use('events, dom', function(exports, events, dom) {
 		var A = new Class(function() {
 			Class.mixin(this, events.Events);
 		});
 		var a = new A();
 
-		// throw error in event handler
 		var counter3 = 0;
 		a.addEvent('fire-error', function() {
 			ok(true, 'fire event fire-error, should not stop the event chain - handler 1');
@@ -226,8 +191,6 @@ test('events.Events: play with the standard - throw error', function() {
 			counter3 ++;
 			ok(true, 'fire event fire-error, should not stop the event chain - handler 2');
 		}, false);
-		// can not get the error in this way, because error is throwed from another function
-        var oldError = window.onerror;
         window.onerror = function(a,b,c) {
 			start();
 			ok(true, 'should raise error after fireEvent(fire-error), but should not stop the event chain');

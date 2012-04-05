@@ -263,22 +263,61 @@ test('Function.__get_name__', function() {
 	equal(D(), 2, 'second D overwrite the fist D');
 });
 
-module("util-basic-Class");
-test('Class.create', function() {
-	var C = Class.create();
-	try { C.__mixin__('d', 1); } catch (e) {
-		ok(true, '__mixin__ can not be called : ' + e); }
-	try { 
-		C.get('d'); 
-		ok(false, 'class is not prepared after Class.create()');
-	} catch (e) {
-		ok(true, 'get can not be called : ' + e); }
-	
-	equal(C.__subclasses__().length, 0, 'no subclass, __subclasses__ is ok');
-	equal(typeof C, 'function', 'class created is also a function');
+var a = undefined;
 
-	var c = new C();
-	equal(c.__class__, C, '__class__ reference the init Class');
+// opera下，delete undefined['name']不报错
+var undefinedOperationFlag = (function() {
+	var flag = false;
+	try {
+		delete a['a'];
+		flag = true;
+	} catch (e) {
+		flag = false;
+	}
+	return flag;
+})();
+
+module("util-basic-Class");
+
+test('Class.instanceOf', function() {
+	// 继承于Object
+	var A = new Class(Object, {});
+	var B = new Class(A, {});
+
+	// 继承与Type
+	var AA = new Class(Type, {});
+	var BB = new Class(AA, {});
+
+	// 继承于Object，创建于metaclass
+	var CC = new BB(B, {});
+
+	var b = new B();
+	var bb = new BB({});
+	var cc = new CC();
+
+	// Object
+	equals(b instanceof Object, true, '');
+	equals(Class.instanceOf(b, Object), true, '');
+	equals(b instanceof A, true, '');
+	equals(Class.instanceOf(b, A), true, '');
+	equals(b instanceof B, true, '');
+	equals(Class.instanceOf(b, B), true, '');
+
+	// Type
+	equals(bb instanceof Type, false, '');
+	equals(Class.instanceOf(bb, Type), true, '');
+	equals(bb instanceof AA, false, '');
+	equals(Class.instanceOf(bb, AA), true, '');
+	equals(bb instanceof BB, false, '');
+	equals(Class.instanceOf(bb, BB), true, '');
+
+	// 继承于Object，创建于Type
+	equals(cc instanceof Object, true, '');
+	equals(Class.instanceOf(cc, Object), true, '');
+	equals(cc instanceof A, true, '');
+	equals(Class.instanceOf(cc, A), true, '');
+	equals(cc instanceof B, true, '');
+	equals(Class.instanceOf(cc, B), true, '');
 });
 
 test('Class.initMixins', function() {

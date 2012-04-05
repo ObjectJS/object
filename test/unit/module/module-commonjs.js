@@ -118,14 +118,14 @@ test('require.async - setTimeout', function() {
 
 test('object.execute auto call exports.main', function() {
 	expect(1);
-	object.define('test', function(require, exports) {
+	object.define('test_define', function(require, exports) {
 		exports.main = function() {
 			ok(true, 'main called with object.define.');
 		}
 	});
 
-	object.execute('test');
-	object.remove('test');
+	object.execute('test_define');
+	object.remove('test_define');
 });
 
 test('objectjs style dependency in object.define', function() {

@@ -331,7 +331,7 @@ var attributeproperty = function(defaultValue, attr) {
 	var prop = property(function(self) {
 		if (!attr) attr = prop.__name__.toLowerCase();
 		var value = self.getAttribute(attr);
-		return value != null? value : defaultValue;
+		return value != null && value !== 'undefined' ? value : defaultValue;
 	}, function(self, value) {
 		if (!attr) attr = prop.__name__.toLowerCase();
 		// Webkit 534.12中，value为null时，属性会被设置成字符串 null
@@ -385,6 +385,11 @@ this.ElementClassList = new Class(Array, function() {
 	 * @param token class
 	 */
 	this.toggle = function(self, token) {
+		if (!token) {
+			throw new Error('token不能为空');
+			return;
+		}
+		if (typeof token != 'string') return;
 		if (self.contains(token)) self.remove(token);
 		else self.add(token);
 	};
@@ -394,6 +399,11 @@ this.ElementClassList = new Class(Array, function() {
 	 * @param token class
 	 */
 	this.add = function(self, token) {
+		if (!token) {
+			throw new Error('token不能为空');
+			return;
+		}
+		if (typeof token != 'string') return;
 		if (!self.contains(token)) {
 			self._ele.className = (self._ele.className + ' ' + token).trim(); // 根据规范，不允许重复添加
 			self._loadClasses();
@@ -405,7 +415,11 @@ this.ElementClassList = new Class(Array, function() {
 	 * @param token class
 	 */
 	this.remove = function(self, token) {
-		if (!token || typeof token != 'string') return;
+		if (!token) {
+			throw new Error('token不能为空');
+			return;
+		}
+		if (typeof token != 'string') return;
 		//为了避免出现classAdded中remove class的情况，增加处理
 		if (!self.contains(token)) return;
 		self._ele.className = self._ele.className.replace(new RegExp(token.trim(), 'i'), '').trim();
@@ -417,6 +431,11 @@ this.ElementClassList = new Class(Array, function() {
 	 * @param token class
 	 */
 	this.contains = function(self, token) {
+		if (!token) {
+			throw new Error('token不能为空');
+			return false;
+		}
+		if (typeof token != 'string') return false;
 		if (self._classes.indexOf(token) != -1) return true;
 		else return false;
 	};
@@ -833,6 +852,9 @@ this.Element = new Class(function() {
 	 * @param name
 	 */
 	this.addClass = function(self, name) {
+		if (!name) {
+			return;
+		}
 		self.classList.add(name);
 	};
 
@@ -841,6 +863,9 @@ this.Element = new Class(function() {
 	 * @param name
 	 */
 	this.removeClass = function(self, name) {
+		if (!name) {
+			return;
+		}
 		self.classList.remove(name);
 	};
 
@@ -849,6 +874,9 @@ this.Element = new Class(function() {
 	 * @param name
 	 */
 	this.toggleClass = function(self, name) {
+		if (!name) {
+			return;
+		}
 		self.classList.toggle(name);
 	};
 
@@ -857,6 +885,9 @@ this.Element = new Class(function() {
 	 * @param name
 	 */
 	this.hasClass = function(self, name) {
+		if (!name) {
+			return false;
+		}
 		return self.classList.contains(name);
 	};
 
@@ -1331,7 +1362,16 @@ this.FormItemElement = new Class(exports.Element, function() {
 		var validity = {
 			// 在firefox3.6.25中，self.getAttribute('required')只能获取到self.setAttribute('required', true)的值
 			// self.required = true设置的值无法获取
-			valueMissing: self.getAttribute('required') && !value? true : false,
+			valueMissing: (function () {
+				// valueMissing: self.getAttribute('required') && (!value ? true : false) 在IE6下有误
+				// 例如：undefined && (1== 1)  在IE6下返回undefined
+				var required = self.getAttribute('required');
+				if (required) {
+					return !value ? true : false;
+				} else {
+					return false;
+				}
+			})(),
 			typeMismatch: (function(type) {
 				if (type == 'url') return !(/^\s*(?:(\w+?)\:\/\/([\w-_.]+(?::\d+)?))(.*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(\w*))?$/i).test(value);
 				if (type == 'tel') return !(/[^\r\n]/i).test(value);
@@ -1339,9 +1379,12 @@ this.FormItemElement = new Class(exports.Element, function() {
 				return false;
 			})(self.getAttribute('type')),
 			patternMismatch: (function() {
-				var pattern = self.getAttribute('pattern');
-				if (pattern) return !(new RegExp('^' + pattern + '$')).test(value);
-				else return false;
+				var pattern = self.get('pattern');
+				if (pattern) {
+					return !(new RegExp('^' + pattern + '$')).test(value);
+				} else {
+					return false;
+				}
 			})(),
 			tooLong: (function() {
 				var maxlength = self.get('maxlength');
