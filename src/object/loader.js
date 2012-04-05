@@ -639,7 +639,7 @@ function CommonJSDependency(name, owner, runtime) {
 	}
 
 	this.id = id;
-	this.context = context;
+	this.context = context || '';
 	this.type = type;
 };
 
@@ -677,7 +677,14 @@ CommonJSDependency.prototype.execute = function(parentName, parentContext) {
 	var runtimeName;
 
 	if (this.type == 'top-level') {
-		runtimeName = this.name;
+		// CommonJSDependency生成的name不能有.js后缀，以保持和ObjectDependency的name兼容
+		// 同时，统一标准才能保证使用不同方法依赖时缓存有效
+		// 比如依赖 ui.js 和 ui，若不删除扩展名会被当成两个模块导致缓存失效
+		if (this.name.slice(-3) == '.js') {
+			runtimeName = this.name.slice(0, -3);
+		} else {
+			runtimeName = this.name;
+		}
 
 	} else if (this.type == 'relative') {
 		runtimeName = this.id.slice(parentContext.length);

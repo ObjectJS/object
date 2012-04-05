@@ -97,27 +97,6 @@ test('require.async - relative', function() {
 	object.remove('a', true);
 });
 
-test('require.async - dynamic', function() {
-	object.define('a/test', 'a/ui', function(require) {
-		var ui = require('a/ui');
-		this.c = 1;
-	});
-	object.define('a/ui', 'string', function(require) {
-		var string = require('string');
-		this.load = function(name) {
-			require.async(name, function(module) {
-				equal(module.c, 1, 'dynamic require.async ok.');
-			});
-		}
-	})
-	object.define('a/main', 'a/ui', function(require) {
-		var ui = require('a/ui');
-		ui.load('a/test');
-	});
-	object.execute('a/main');
-	object.remove('a', true);
-});
-
 test('require.async - setTimeout', function() {
 	expect(1);
 	loader.define('a/b', function() {
@@ -135,6 +114,28 @@ test('require.async - setTimeout', function() {
 		}, 0);
 	});
 	loader.execute('a/main');
+});
+
+// 测试由其他模块发起的require.async
+test('require.async - dynamic cyclic', function() {
+	object.define('a/test', 'a/ui.js', function(require) {
+		var ui = require('a/ui.js');
+		this.c = 1;
+	});
+	object.define('a/ui.js', 'string', function(require) {
+		var string = require('string');
+		this.load = function() {
+			require.async('a/test', function(module) {
+				equal(module.c, 1, 'dynamic require.async ok.');
+			});
+		}
+	})
+	object.define('a/main', 'a/ui', function(require) {
+		var ui = require('a/ui');
+		ui.load();
+	});
+	object.execute('a/main');
+	object.remove('a', true);
 });
 
 test('object.execute auto call exports.main', function() {
