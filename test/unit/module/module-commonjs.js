@@ -118,8 +118,13 @@ test('require.async - setTimeout', function() {
 
 // 测试由其他模块发起的require.async
 test('require.async - dynamic cyclic', function() {
+
+	uiModule = null;
+
 	object.define('a/test', 'a/ui.js', function(require) {
 		var ui = require('a/ui.js');
+		// 依赖时的写法不同，也确保两个ui模块为同一个，一个a/ui.js，一个a/ui。
+		strictEqual(uiModule, ui, 'same module with different dependency write style.');
 		this.c = 1;
 	});
 	object.define('a/ui.js', 'string', function(require) {
@@ -131,7 +136,9 @@ test('require.async - dynamic cyclic', function() {
 		}
 	})
 	object.define('a/main', 'a/ui', function(require) {
+		// 注意不要加.js，用于测试缓存
 		var ui = require('a/ui');
+		uiModule = ui;
 		ui.load();
 	});
 	object.execute('a/main');
