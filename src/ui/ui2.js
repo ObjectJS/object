@@ -1,4 +1,9 @@
-object.add('ui/ui2.js', 'string, options, dom, events', function(exports, string, options, dom, events) {
+object.define('ui/ui2.js', 'string, options, dom, events', function(require, exports) {
+
+var string = require('string');
+var options = require('options');
+var dom = require('dom');
+var events = require('events');
 
 var globalid = 0;
 
@@ -26,6 +31,26 @@ function setOptionTo(current, name, value) {
 	}
 	current[parts[parts.length - 1]] = value;
 };
+
+function getType(type, callback) {
+	// async
+	if (typeof type == 'string') {
+		var moduleStr = type.slice(0, type.lastIndexOf('.')).replace(/\./, '/');
+		var typeStr = type.slice(type.lastIndexOf('.') + 1);
+		require.async(moduleStr, function(module) {
+			type = module[typeStr];
+			callback(type);
+		});
+	}
+	// class
+	else if (Class.instanceOf(type, Type)) {
+		callback(type);
+	}
+	// sync
+	else if (typeof type == 'function') {
+		callback(type());
+	}
+}
 
 /**
  * 将value转换成需要的type
@@ -151,13 +176,10 @@ this.define = function(selector, type, renderer) {
 		}
 
 		if (nodes) {
-			comps = new type.Components(nodes);
-			if (self.__disposes.indexOf(name) == -1) {
-				comps.addEvent('aftercomponentdispose', function(event) {
-					self.get(name);
-				});
-				self.__disposes.push(name);
-			}
+			getType(type, function(type) {
+				comps = new type.Components(nodes);
+				self.setSub(name, comps);
+			});
 		}
 
 		self._set(name, comps);
@@ -189,20 +211,26 @@ this.define1 = function(selector, type, renderer) {
 		}
 
 		if (node) {
-			comp = node.component || new type(node, self._options[name]);
-			if (self.__disposes.indexOf(name) == -1) {
-				comp.addEvent('aftercomponentdispose', function(event) {
-					self.get(name);
+			comp = node.component;
+			if (comp) {
+				self.setSub(name, comp);
+			} else {
+				getType(type, function(type) {
+					if (!Class.instanceOf(type, Type)) {
+						throw new Error('type is not a class.');
+					}
+					comp = new type(node, self._options[name]);
+					self.setSub(name, comp);
 				});
-				self.__disposes.push(name);
 			}
-		}
 
-		self._set(name, comp);
-		self._set('_' + name, node);
+		} else {
+			self.setSub(name, null);
+		}
 
 		return comp;
 	}
+
 	var prop = property(fget);
 	prop.isComponent = true;
 	prop.type = type;
@@ -725,6 +753,24 @@ this.Component = new Class(function() {
 	};
 
 	/**
+	 * 设置获取到的sub component
+	 */
+	this.setSub = function(self, name, comp) {
+		var node = null;
+		if (comp) {
+			node = comp._node;
+			if (self.__disposes.indexOf(name) == -1) {
+				comp.addEvent('aftercomponentdispose', function(event) {
+					self.get(name);
+				});
+				self.__disposes.push(name);
+			}
+		}
+		self._set(name, comp);
+		self._set('_' + name, node);
+	};
+
+	/**
 	 * 获取option的值
 	 * 支持复杂name的查询
 	 * @param name name
@@ -810,7 +856,10 @@ this.Component = new Class(function() {
 		var options = self._options[name];
 		object.extend(data, options, false);
 
-		var comp = new sub.type(data, options);
+		var comp = null;
+		getType(sub.type, function(type) {
+			comp = new type(data, options);
+		});
 
 		self.__rendered.push(comp);
 

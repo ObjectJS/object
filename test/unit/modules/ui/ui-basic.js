@@ -71,6 +71,33 @@ test('parent property', function() {
 	ok(test.test.parent === test, 'parent component ok.');
 });
 
+test('async load component', function() {
+
+	var script = document.createElement('script');
+	script.setAttribute('data-src', 'async-module.js');
+	script.setAttribute('data-module', 'test.test');
+	document.body.appendChild(script);
+	object._loader.buildFileLib();
+
+	var TestComponent = new Class(ui.Component, function() {
+		this.test = ui.define1('.test', 'test.test.TestComponent');
+	});
+
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="test"></div>';
+
+	var test = new TestComponent(div);
+
+	stop();
+	// 这里应该改成在某个事件中验证，200毫秒并不准确
+	setTimeout(function() {
+		start();
+		ok(test.test, 'async load component ok.');
+	}, 200);
+
+	document.body.removeChild(script);
+});
+
 test('option property', function() {
 
 	optionChangeFired = 0;
@@ -344,7 +371,7 @@ test('render', function() {
 
 	// 删除
 	test.test.dispose();
-	equal(test.test, null, 'dispose ok.');
+	ok(test.test === null, 'dispose ok.');
 
 });
 

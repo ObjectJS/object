@@ -56,7 +56,7 @@ test('clone', function() {
 			var result = object.clone(values[prop]);
 			var type = typeof values[prop];
 		} catch (e) {
-			if (values[prop] === undefined || values[prop] == null) {
+			if (values[prop] === undefined || values[prop] == null || values[prop] == RegExp) {
 			} else {
 				ok(false, 'object.clone(' + prop + ') should be considered : ' + e);
 			}
