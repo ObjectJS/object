@@ -364,7 +364,7 @@ test('render', function() {
 
 	// 删除
 	test.test.dispose();
-	equal(test.test, null, 'dispose ok.');
+	ok(test.test === null, 'dispose ok.');
 
 });
 

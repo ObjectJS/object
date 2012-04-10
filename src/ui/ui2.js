@@ -32,6 +32,36 @@ function setOptionTo(current, name, value) {
 	current[parts[parts.length - 1]] = value;
 };
 
+function getType(type, callback) {
+	// async
+	if (typeof type == 'string') {
+		var moduleStr = type.slice(0, type.lastIndexOf('.')).replace(/\./, '/');
+		var typeStr = type.slice(type.lastIndexOf('.') + 1);
+		require.async(moduleStr, function(module) {
+			type = module[typeStr];
+			callback(type);
+		});
+	}
+	// class
+	else if (Class.instanceOf(type, Type)) {
+		callback(type);
+	}
+	// sync
+	else if (typeof type == 'function') {
+		callback(type());
+	}
+}
+
+function registerDispose(self, name, comp) {
+	if (self.__disposes.indexOf(name) == -1) {
+		comp.addEvent('aftercomponentdispose', function(event) {
+			self.get(name);
+		});
+		self.__disposes.push(name);
+	}
+}
+
+
 /**
  * 将value转换成需要的type
  */
@@ -156,13 +186,10 @@ this.define = function(selector, type, renderer) {
 		}
 
 		if (nodes) {
-			comps = new type.Components(nodes);
-			if (self.__disposes.indexOf(name) == -1) {
-				comps.addEvent('aftercomponentdispose', function(event) {
-					self.get(name);
-				});
-				self.__disposes.push(name);
-			}
+			getType(type, function(type) {
+				comps = new type.Components(nodes);
+				registerDispose(self, name, comps);
+			});
 		}
 
 		self._set(name, comps);
@@ -193,51 +220,32 @@ this.define1 = function(selector, type, renderer) {
 			node = self._node.getElement(selector);
 		}
 
-		// async
-		if (typeof type == 'string') {
-			var moduleStr = type.slice(0, type.lastIndexOf('.')).replace(/\./, '/');
-			var typeStr = type.slice(type.lastIndexOf('.') + 1);
-			require.async(moduleStr, function(module) {
-				type = module[typeStr];
-
-				if (!Class.instanceOf(type, Type)) {
-					throw new Error('type not a class.');
-				}
-				if (node) {
-					comp = node.component || new type(node, self._options[name]);
-					if (self.__disposes.indexOf(name) == -1) {
-						comp.addEvent('aftercomponentdispose', function(event) {
-							self.get(name);
-						});
-						self.__disposes.push(name);
-					}
-				}
-
+		if (node) {
+			comp = node.component;
+			if (comp) {
+				registerDispose(self, name, comp);
 				self._set(name, comp);
 				self._set('_' + name, node);
-			});
-		}
-		// sync
-		else {
-			if (!Class.instanceOf(type, Type)) {
-				throw new Error('type not a class.');
-			}
-			if (node) {
-				comp = node.component || new type(node, self._options[name]);
-				if (self.__disposes.indexOf(name) == -1) {
-					comp.addEvent('aftercomponentdispose', function(event) {
-						self.get(name);
-					});
-					self.__disposes.push(name);
-				}
+			} else {
+				getType(type, function(type) {
+					if (!Class.instanceOf(type, Type)) {
+						throw new Error('type is not a class.');
+					}
+					comp = new type(node, self._options[name]);
+					registerDispose(self, name, comp);
+					self._set(name, comp);
+					self._set('_' + name, node);
+				});
 			}
 
+		} else {
 			self._set(name, comp);
 			self._set('_' + name, node);
-
-			return comp;
 		}
+
+		return comp;
 	}
+
 	var prop = property(fget);
 	prop.isComponent = true;
 	prop.type = type;
@@ -845,7 +853,10 @@ this.Component = new Class(function() {
 		var options = self._options[name];
 		object.extend(data, options, false);
 
-		var comp = new sub.type(data, options);
+		var comp = null;
+		getType(sub.type, function(type) {
+			comp = new type(data, options);
+		});
 
 		self.__rendered.push(comp);
 
