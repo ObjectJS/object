@@ -88,6 +88,13 @@ test('async load component', function() {
 
 	var test = new TestComponent(div);
 
+	stop();
+	// 这里应该改成在某个事件中验证，200毫秒并不准确
+	setTimeout(function() {
+		start();
+		ok(test.test, 'async load component ok.');
+	}, 200);
+
 	document.body.removeChild(script);
 });
 
