@@ -52,16 +52,6 @@ function getType(type, callback) {
 	}
 }
 
-function registerDispose(self, name, comp) {
-	if (self.__disposes.indexOf(name) == -1) {
-		comp.addEvent('aftercomponentdispose', function(event) {
-			self.get(name);
-		});
-		self.__disposes.push(name);
-	}
-}
-
-
 /**
  * 将value转换成需要的type
  */
@@ -188,7 +178,7 @@ this.define = function(selector, type, renderer) {
 		if (nodes) {
 			getType(type, function(type) {
 				comps = new type.Components(nodes);
-				registerDispose(self, name, comps);
+				self.setSub(name, comps);
 			});
 		}
 
@@ -223,24 +213,19 @@ this.define1 = function(selector, type, renderer) {
 		if (node) {
 			comp = node.component;
 			if (comp) {
-				registerDispose(self, name, comp);
-				self._set(name, comp);
-				self._set('_' + name, node);
+				self.setSub(name, comp);
 			} else {
 				getType(type, function(type) {
 					if (!Class.instanceOf(type, Type)) {
 						throw new Error('type is not a class.');
 					}
 					comp = new type(node, self._options[name]);
-					registerDispose(self, name, comp);
-					self._set(name, comp);
-					self._set('_' + name, node);
+					self.setSub(name, comp);
 				});
 			}
 
 		} else {
-			self._set(name, comp);
-			self._set('_' + name, node);
+			self.setSub(name, null);
 		}
 
 		return comp;
@@ -765,6 +750,24 @@ this.Component = new Class(function() {
 	this._dispose = function(self) {
 		self._node.dispose();
 		self.fireEvent('aftercomponentdispose');
+	};
+
+	/**
+	 * 设置获取到的sub component
+	 */
+	this.setSub = function(self, name, comp) {
+		var node = null;
+		if (comp) {
+			node = comp._node;
+			if (self.__disposes.indexOf(name) == -1) {
+				comp.addEvent('aftercomponentdispose', function(event) {
+					self.get(name);
+				});
+				self.__disposes.push(name);
+			}
+		}
+		self._set(name, comp);
+		self._set('_' + name, node);
 	};
 
 	/**
