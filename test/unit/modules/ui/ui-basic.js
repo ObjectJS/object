@@ -81,7 +81,8 @@ test('async load component', function() {
 
 	var TestComponent = new Class(ui.Component, function() {
 		this.test = ui.define1('.test', 'test.test.TestComponent');
-		this.test2 = ui.define1('.test2', 'test.test.TestComponent');
+		this.test2 = ui.define1('.test2', 'test.test.TestComponent', function(self) {
+		});
 	});
 
 	var div = document.createElement('div');
@@ -95,6 +96,9 @@ test('async load component', function() {
 		start();
 		ok(test.test, 'async load component ok.');
 	}, 200);
+
+	test.render('test2');
+	console.log(test.test2);
 
 	document.body.removeChild(script);
 });
