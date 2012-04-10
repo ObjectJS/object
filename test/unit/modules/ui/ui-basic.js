@@ -81,10 +81,11 @@ test('async load component', function() {
 
 	var TestComponent = new Class(ui.Component, function() {
 		this.test = ui.define1('.test', 'test.test.TestComponent');
+		this.test2 = ui.define1('.test2', 'test.test.TestComponent');
 	});
 
 	var div = document.createElement('div');
-	div.innerHTML = '<div class="test"></div>';
+	div.innerHTML = '<div class="test"></div><div class="test2"></div>';
 
 	var test = new TestComponent(div);
 

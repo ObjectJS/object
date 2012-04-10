@@ -821,7 +821,7 @@ this.Component = new Class(function() {
 	 * @param name subcomponent名字
 	 * @param data 模板数据/初始化参数
 	 */
-	this.render = function(self, name, data) {
+	this.render = function(self, name, data, callback) {
 		var methodName = 'render_' + name;
 
 		// 如果已经存在结构了，则不用再render了
@@ -848,7 +848,7 @@ this.Component = new Class(function() {
 	 * @param name
 	 * @param data 模板数据
 	 */
-	this.make = function(self, name, data) {
+	this.make = function(self, name, data, callback) {
 		var sub = self.__properties__[name];
 		var pname = '_' + name;
 
@@ -857,11 +857,12 @@ this.Component = new Class(function() {
 		object.extend(data, options, false);
 
 		var comp = null;
+
 		getType(sub.type, function(type) {
 			comp = new type(data, options);
+			self.__rendered.push(comp);
+			if (callback) callback(comp);
 		});
-
-		self.__rendered.push(comp);
 
 		return comp;
 	};
