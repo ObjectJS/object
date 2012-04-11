@@ -458,24 +458,6 @@ test('Class.getChain', function() {
 	equal(Class.getChain(D).length, 4, 'type,A,C,D');
 });
 
-test('Class.getInstance', function() {
-	var values = $UNIT_TEST_CONFIG.testEdges;
-	for(var prop in values) {
-		try {
-			// should not expose
-			// Class.getInstance(values[prop]);
-			ok(true, 'Class.getInstance(' + prop + ') is ok');
-		} catch (e) {
-			ok(false, 'Class.getInstance(' + prop + ') is ok : ' + e);
-		}
-	}
-	var A = new Class(function() {
-		this.a = function(self) { return 1;}
-	});
-	instance = Class.getInstance(A);
-	equal(instance.a(), 1, 'instance created');
-});
-
 test('Class.getAllSubClasses', function() {
 	var values = $UNIT_TEST_CONFIG.testEdges;
 	for(var prop in values) {
