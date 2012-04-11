@@ -263,6 +263,20 @@ test('Function.__get_name__', function() {
 	equal(D(), 2, 'second D overwrite the fist D');
 });
 
+var a = undefined;
+
+// opera下，delete undefined['name']不报错
+var undefinedOperationFlag = (function() {
+	var flag = false;
+	try {
+		delete a['a'];
+		flag = true;
+	} catch (e) {
+		flag = false;
+	}
+	return flag;
+})();
+
 module("util-basic-Class");
 
 test('Class.instanceOf', function() {

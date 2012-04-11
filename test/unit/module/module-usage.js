@@ -143,27 +143,34 @@ test('relative module - use', function() {
 	object.execute('foo');
 });
 
-test('circular dependency - extra', function() {
-	expect(11);
+if (!isJsTestDriverRunning) {
+test('circular dependency - extra : a->b->a', function() {
+	expect(5);
 	object.add('a', 'b', function(exports, b) {
 		exports.a = 1;
 	});
+	var outA = null;
 	object.add('b', 'a', function(exports, a) {
+		outA = a;
 		equal(a.__name__, 'a', 'module a is ok in circular dependency');
 		equal(a.a, undefined, 'a.a is undefined in b, not prepared yet');
 		stop();
 		setTimeout(function() {
 			start();
-			equal(a.a, 1, 'a.a is ok in b, after 100 ms');
+			equal(outA.a, 1, 'a.a is ok in b, after 100 ms');
 		}, 100);
 	});
-	object.use('a', function(a) {
+	object.use('a', function(exports, a) {
 		equal(a.__name__, 'a', 'module a is ok in circular dependency');
 		equal(a.a, 1, 'a.a is ok in circular dependency');
 	});
 	object.remove('a');
 	object.remove('b');
+});
 
+test('circular dependency - extra : c1->c2->c3->c1', function() {
+	expect(6);
+	var outC2 = null;
 	object.add('c1', 'c2', function(exports, c2) {
 		exports.c1 = 1;
 	});
@@ -172,15 +179,16 @@ test('circular dependency - extra', function() {
 		exports.c2 = 1;
 	});
 	object.add('c3', 'c2', function(exports, c2) {
+		outC2 = c2;
 		equal(c2.c2, undefined, 'c2.c2 is not prepared when use in c3');
 		stop();
 		setTimeout(function() {
 			start();
-			equal(c2.c2, 1, 'c2.c2 is prepared, after 100ms');
+			equal(outC2.c2, 1, 'c2.c2 is prepared, after 100ms');
 		}, 100);
 		exports.c3 = 1;
 	});
-	object.use('c1, c2, c3', function(c1, c2, c3) {
+	object.use('c1, c2, c3', function(exports, c1, c2, c3) {
 		equal(c1.c1, 1, 'c1.c1 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
 		equal(c2.c2, 1, 'c2.c2 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
 		equal(c3.c3, 1, 'c3.c3 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
@@ -189,6 +197,7 @@ test('circular dependency - extra', function() {
 	object.remove('c2');
 	object.remove('c3');
 });
+}
 
 test('circular dependency', function() {
 	expect(3);
@@ -270,14 +279,14 @@ test('object.add relative __name__', function() {
 
 test('object.execute auto call exports.main', function() {
 	expect(1);
-	object.add('test', function(exports) {
+	object.add('test_add', function(exports) {
 		exports.main = function() {
 			ok(true, 'main called with object.add.');
 		}
 	});
 
-	object.execute('test');
-	object.remove('test');
+	object.execute('test_add');
+	object.remove('test_add');
 });
 
 test('object.add a full url module', function() {

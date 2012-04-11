@@ -12,34 +12,91 @@
 
 ;(function(object) {
 
+// 可以用于scheme的字符
+var scheme_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-.';
+
+/**
+ * 在字符串url中查找target字符后，利用result对象，返回截断后的前、后字符串
+ * @param {Object} result 重复利用的用于返回结果的对象（避免太多内存垃圾产生）
+ * @param {String} url 需要截取的url
+ * @param {String} target 截断的字符组成的字符串
+ * @param {Boolean} remainFirst 是否要保留匹配的字符
+ *
+ * @return {Object} 形如 {got:'', remained:''}的结果对象
+ */
+function splitUntil(result, url, target, remainFirst) {
+	var min = url.length;
+	for(var i=0, len = url.length; i < len; i++) {
+		if (target.indexOf(url.charAt(i)) != -1) {
+			if (i < min) {
+				min = i;
+				break;
+			}
+		}
+	}
+	result.got = url.substring(0, min);
+	result.remained = (remainFirst? url.substring(min) : url.substring(min + 1));
+	return result;
+}
+
 /**
  * 解析一个url为 scheme / netloc / path / params / query / fragment 六个部分
  * @see http://docs.python.org/library/urlparse.html
+ * @example 
+ * http://www.renren.com:8080/home/home2;32131?id=31321321&a=1#//music/?from=homeleft#fdalfdjal
+ * --> 
+ * [http, www.renren.com:8080, /home/home2, 32131, id=31321321&a=1, //music/?from=homeleft#fdalfdjal]
  */
-function urlparse(url, scheme) {
-	var reg, parts;
+function urlparse(url, default_scheme) {
 	if (typeof url != 'string') {
-		return null;
-	}
-	url = url.trim();
-	
-	if (url.indexOf('file') == 0) {
-		// file:///F:/works/workspace/objectjs.org/object/test/unit/modules/urlparse/index.html
-		reg = /^(file)\:\/\/()([^\?]*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(.*))?$/i
-	} else {
-		// http://www.renren.com:8080/home;32131?id=31321321&a=1#//music/?from=homeleft#fdalfdjal
-		reg = /^(?:(\w+?)\:\/(?:\/)?([\w-_.]+(?::\w+)?))?([^\?]*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(.*))?$/i;
-	}
-	if (reg.test(url)) {
-		parts = url.match(reg).slice(1);
-		if (!parts[0] && scheme) parts[0] = scheme;
-		for (var i = 0; i < parts.length; i++) {
-			if (!parts[i]) parts[i] = '';
-		}
-		return parts;
-	} else {
 		return ['', '', '', '', '', ''];
 	}
+	var scheme = '', netloc='', path = '', params = '', query = '', fragment = '', i = 0;
+	i = url.indexOf(':');
+	if (i > 0) {
+		if (url.substring(0, i) == 'http') {
+			scheme = url.substring(0, i).toLowerCase();
+			url = url.substring(i+1);
+		} else {
+			for(var i=0, len = url.length; i < len; i++) {
+				if (scheme_chars.indexOf(url.charAt(i)) == -1) {
+					break;
+				}
+			}
+			scheme = url.substring(0, i);
+			url = url.substring(i + 1);
+		}
+	}
+	if (!scheme && default_scheme) {
+		scheme = default_scheme;
+	}
+	var splited = {};
+	if (url.substring(0, 2) == '//') {
+		splitUntil(splited, url.substring(2), '/?#', true);
+		netloc = splited.got;
+		url = splited.remained;
+	}
+
+	if (url.indexOf('#') != -1) {
+		splitUntil(splited, url, '#');
+		url = splited.got;
+		fragment = splited.remained;
+	}
+	if (url.indexOf('?') != -1) {
+		splitUntil(splited, url, '?');
+		url = splited.got;
+		query = splited.remained;
+	}
+	if (url.indexOf(';') != -1) {
+		splitUntil(splited, url, ';');
+		path = splited.got;
+		params = splited.remained;
+	}
+	
+	if (!path) {
+		path = url;
+	}
+	return [scheme, netloc, path, params, query, fragment];
 };
 
 /**

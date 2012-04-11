@@ -243,7 +243,7 @@ this.component = new Class(type, function() {
 			});
 		}
 
-		if (base && base !== object) {
+		if (base && base !== Object) {
 			baseProto.__defaultOptions.forEach(function(name) {
 				var defaultOptions = proto.__defaultOptions;
 				if (defaultOptions.indexOf(name) == -1) defaultOptions.push(name);
