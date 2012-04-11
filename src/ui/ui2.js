@@ -129,6 +129,9 @@ SingleComponentMeta.prototype.select = function(self, name) {
 	return comp;
 };
 
+function OptionMeta() {
+}
+
 function ParentComponentMeta(type) {
 	this.type = type;
 }
@@ -289,6 +292,7 @@ this.parent = function(type) {
  */
 this.option = function(defaultValue, getter) {
 	var name;
+	var meta = new OptionMeta();
 	// 默认getter是从结构中通过data-前缀获取
 	getter = getter || function(self) {
 		if (!self._node) return undefined;
@@ -328,7 +332,7 @@ this.option = function(defaultValue, getter) {
 		}))(self, oldValue, value);
 	}
 	var prop = property(fget, fset);
-	prop.isOption = true;
+	prop.meta = meta;
 	return prop;
 };
 
@@ -400,7 +404,7 @@ this.ComponentFactory = new Class(type, function() {
 				return;
 			}
 
-			if (member.__class__ == property && member.isOption) {
+			if (member.__class__ == property && member.meta instanceof OptionMeta) {
 				meta.options.push(name);
 			}
 			else if (member.__class__ == property && member.meta instanceof ComponentMeta) {
@@ -478,7 +482,7 @@ this.ComponentFactory = new Class(type, function() {
 		var gid = cls.get('gid');
 		var meta = cls.get('meta');
 
-		if (member.__class__ == property && member.isOption) {
+		if (member.__class__ == property && member.meta instanceof OptionMeta) {
 			if (meta.options.indexOf(name) == -1) {
 				meta.options.push(name);
 			}
