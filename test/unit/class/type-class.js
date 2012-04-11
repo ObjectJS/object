@@ -4,15 +4,18 @@ test('general', function() {
 	var newCalled = 0;
 	var initCalled = 0;
 
-	var BM = new Class(type, function() {
+	var BM = new Class(Type, function() {
 	});
 
-	var M = new Class(type, function() {
+	var BMM = new Class(BM, function() {
+	});
+
+	var M = new Class(Type, function() {
 		this.__new__ = function(cls, name, base, dict) {
 			newCalled++;
 			ok(cls.get('a'), 'type-class member get.');
 			dict.b = 1;
-			return type.__new__(cls, name, base, dict);
+			return Type.__new__(cls, name, base, dict);
 		};
 
 		this.a = function(cls, value) {
@@ -33,10 +36,11 @@ test('general', function() {
 	var A = new M(function() {
 	});
 
-	ok(BM.__new__, 'default __new__ exists.');
+	ok(BM.get('__new__'), 'default __new__ exists.');
 	ok(BM.get('initialize'), 'default initialize exists.');
-	ok(M.__new__, 'custom __new__ exists.');
-	ok(M.initialize, 'custom initialize exists.');
+	ok(BMM.get('initialize'), 'default initialize exists in extend.');
+	ok(M.get('__new__'), 'custom __new__ exists.');
+	ok(M.get('initialize'), 'custom initialize exists.');
 	equal(A.get('b'), 1, 'new a metaclass create a class.');
 	equal(newCalled, 1, '__new__ in metaclass called.');
 	equal(initCalled, 1, 'initialize in metaclass called.');
@@ -49,11 +53,11 @@ test('base', function() {
 	baseNewCalled = 0;
 	baseInitCalled = 0;
 
-	var M = new Class(type, function() {
+	var M = new Class(Type, function() {
 		this.__new__ = function(cls, name, base, dict) {
 			baseNewCalled++;
 			//ok(cls.get('a'), 'type-class member get.');
-			return type.__new__(cls, name, base, dict);
+			return Type.__new__(cls, name, base, dict);
 		};
 
 		this.a = function(cls) {
