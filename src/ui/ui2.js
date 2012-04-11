@@ -147,20 +147,20 @@ ParentComponentMeta.prototype.select = function(self, name) {
 	return comp;
 };
 
-function ComponentEventMeta(name, eventType, gid) {
-	this.name = name;
+function SubEventMeta(sub, eventType, gid) {
+	this.sub = sub;
 	this.eventType = eventType;
 	this.gid = gid;
 }
 
-ComponentEventMeta.prototype.bindComponentEvent = function() {
-	var name = this.name;
+SubEventMeta.prototype.bindComponentEvent = function() {
+	var sub = this.sub;
 	var eventType = this.eventType;
 	var methodName = this.methodName;
 	var comp = this.comp;
 
-	if (comp[name]) {
-		comp[name]._node.addEvent(eventType, function(event) {
+	if (comp[sub]) {
+		comp[sub]._node.addEvent(eventType, function(event) {
 			var args;
 			// 将event._args pass 到函数后面
 			if (event._args) {
@@ -173,33 +173,33 @@ ComponentEventMeta.prototype.bindComponentEvent = function() {
 	}
 };
 
-ComponentEventMeta.prototype.bindOptionEvent = function() {
+SubEventMeta.prototype.bindOptionEvent = function() {
 	var methodName = this.methodName;
 	var comp = this.comp;
 	// 注册 option_change 等事件
-	var fakeEventType = '__option_' + this.eventType + '_' + this.name;
+	var fakeEventType = '__option_' + this.eventType + '_' + this.sub;
 
 	comp.addEvent(fakeEventType, function(event) {
 		comp[methodName](event);
 	});
 };
 
-ComponentEventMeta.prototype.bind = function(comp, methodName) {
-	var name = this.name;
+SubEventMeta.prototype.bind = function(comp, methodName) {
+	var sub = this.sub;
 	this.comp = comp;
 	this.methodName = methodName;
 
 	// options
-	if (comp.meta.options.indexOf(name) != -1) {
+	if (comp.meta.options.indexOf(sub) != -1) {
 		this.bindOptionEvent();
 	}
 	// component
-	else if (comp.meta.components.indexOf(name) != -1) {
+	else if (comp.meta.components.indexOf(sub) != -1) {
 		this.bindComponentEvent();
-		if (!(name in comp.__componentEventsMap)) {
-			comp.__componentEventsMap[name] = [];
+		if (!(sub in comp.__subEventsMap)) {
+			comp.__subEventsMap[sub] = [];
 		}
-		comp.__componentEventsMap[name].push(this);
+		comp.__subEventsMap[sub].push(this);
 	}
 };
 
@@ -335,13 +335,13 @@ this.option = function(defaultValue, getter) {
 /**
  * 定义一个向子元素注册事件的方法
  * @decorator
- * @param name 子成员名称
+ * @param sub 子成员名称
  * @param eventType
  * @param gid
  */
-this.componentevent = function(name, eventType, gid) {
+this.subevent = function(sub, eventType, gid) {
 	return function(func) {
-		func.meta = new ComponentEventMeta(name, eventType, gid);
+		func.meta = new SubEventMeta(sub, eventType, gid);
 		return func;
 	}
 };
@@ -384,11 +384,11 @@ this.ComponentFactory = new Class(type, function() {
 			handles: [],
 			onEvents: [],
 			mixinOnEvents: [],
-			componentEvents: []
+			subEvents: []
 		};
 
 		dict.__onEvents = [];
-		dict.__componentEvents = [];
+		dict.__subEvents = [];
 		dict.__handles = [];
 
 		// 这里选择在dict阶段就放置到类成员的，一个原因是Components是通过遍历dict生成的
@@ -415,9 +415,9 @@ this.ComponentFactory = new Class(type, function() {
 			}
 			else if (name.match(/^(_?\w+)_(\w+)$/)) {
 				delete dict[name];
-				dict.__componentEvents.push({
+				dict.__subEvents.push({
 					name: name,
-					component: RegExp.$1,
+					sub: RegExp.$1,
 					eventType: RegExp.$2,
 					member: member
 				});
@@ -447,10 +447,10 @@ this.ComponentFactory = new Class(type, function() {
 			meta.onEvents.push(newName);
 			type.__setattr__(cls, newName, exports.onevent(item.eventType, gid)(item.member));
 		});
-		cls.get('__componentEvents').forEach(function(item) {
+		cls.get('__subEvents').forEach(function(item) {
 			var newName = item.name + '$' + gid;
-			meta.componentEvents.push(newName);
-			type.__setattr__(cls, newName, exports.componentevent(item.component, item.eventType, gid)(item.member));
+			meta.subEvents.push(newName);
+			type.__setattr__(cls, newName, exports.subevent(item.sub, item.eventType, gid)(item.member));
 		});
 		// 只有在initialize阶段生成handle方法才能确保mixin时能够获取到正确的cls
 		cls.get('__handles').forEach(function(item) {
@@ -464,7 +464,7 @@ this.ComponentFactory = new Class(type, function() {
 		});
 		// 清除这两个变量
 		type.__delattr__(cls, '__onEvents');
-		type.__delattr__(cls, '__componentEvents');
+		type.__delattr__(cls, '__subEvents');
 		type.__delattr__(cls, '__handles');
 
 		// 合并meta
@@ -505,9 +505,9 @@ this.ComponentFactory = new Class(type, function() {
 		}
 		else if (name.match(/^(_?\w+)_(\w+)$/)) {
 			var newName = name + '$' + gid;
-			var newMember = exports.componentevent(RegExp.$1, RegExp.$2, gid)(member);
-			if (meta.componentEvents.indexOf(newName) == -1) {
-				meta.componentEvents.push(newName);
+			var newMember = exports.subevent(RegExp.$1, RegExp.$2, gid)(member);
+			if (meta.subEvents.indexOf(newName) == -1) {
+				meta.subEvents.push(newName);
 			}
 			type.__setattr__(cls, newName, newMember);
 		}
@@ -549,8 +549,8 @@ this.ComponentFactory = new Class(type, function() {
 			baseMeta.mixinOnEvents.forEach(function(name) {
 				if (meta.mixinOnEvents.indexOf(name) == -1) meta.mixinOnEvents.push(name);
 			});
-			baseMeta.componentEvents.forEach(function(name) {
-				if (meta.componentEvents.indexOf(name) == -1) meta.componentEvents.push(name);
+			baseMeta.subEvents.forEach(function(name) {
+				if (meta.subEvents.indexOf(name) == -1) meta.subEvents.push(name);
 			});
 		}
 
@@ -575,8 +575,8 @@ this.ComponentFactory = new Class(type, function() {
 			mixMeta.onEvents.forEach(function(name) {
 				if (meta.mixinOnEvents.indexOf(name) == -1) meta.mixinOnEvents.push(name);
 			});
-			mixMeta.componentEvents.forEach(function(name) {
-				if (meta.componentEvents.indexOf(name) == -1) meta.componentEvents.push(name);
+			mixMeta.subEvents.forEach(function(name) {
+				if (meta.subEvents.indexOf(name) == -1) meta.subEvents.push(name);
 			});
 		});
 	};
@@ -638,8 +638,8 @@ this.Component = new Class(function() {
 		self.__disposes = [];
 		// 存储make的新元素
 		self.__rendered = []; // 后来被加入的，而不是首次通过selector选择的node的引用
-		// 存储componentEvents，用于render时获取信息
-		self.__componentEventsMap = {};
+		// 存储subEvents，用于render时获取信息
+		self.__subEventsMap = {};
 
 		var template;
 
@@ -671,8 +671,8 @@ this.Component = new Class(function() {
 		self.meta.mixinOnEvents.forEach(function(name) {
 			self[name].im_func.meta.bind(self, name);
 		});
-		// 初始化componentEvents
-		self.meta.componentEvents.forEach(function(name) {
+		// 初始化subEvents
+		self.meta.subEvents.forEach(function(name) {
 			self[name].im_func.meta.bind(self, name);
 		});
 
@@ -861,8 +861,8 @@ this.Component = new Class(function() {
 			// 重建引用
 			self.get(name);
 
-			if (name in self.__componentEventsMap) {
-				self.__componentEventsMap[name].forEach(function(meta) {
+			if (name in self.__subEventsMap) {
+				self.__subEventsMap[name].forEach(function(meta) {
 					meta.bindComponentEvent();
 				});
 			}
