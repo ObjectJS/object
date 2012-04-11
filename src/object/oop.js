@@ -286,7 +286,9 @@ Type.__new__ = function(metaclass, name, base, dict) {
 	/*
 	 * 同时设置cls和其prototype上的成员
 	 */
-	Type.__setattr__(cls, 'initialize', Type.__getattribute__(base, 'initialize'));
+	if (base === Type) {
+		Type.__setattr__(cls, 'initialize', Type.__getattribute__(base, 'initialize'));
+	}
 	Type.__setattr__(cls, '__setattr__', Type.__getattribute__(base, '__setattr__'));
 	Type.__setattr__(cls, '__base__', base);
 	// 支持 this.parent 调用父级同名方法
