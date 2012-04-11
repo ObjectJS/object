@@ -116,16 +116,45 @@ test('require.async - setTimeout', function() {
 	loader.execute('a/main');
 });
 
+// 测试由其他模块发起的require.async
+test('require.async - dynamic cyclic', function() {
+
+	uiModule = null;
+
+	object.define('a/test', 'a/ui.js', function(require) {
+		var ui = require('a/ui.js');
+		// 依赖时的写法不同，也确保两个ui模块为同一个，一个a/ui.js，一个a/ui。
+		strictEqual(uiModule, ui, 'same module with different dependency write style.');
+		this.c = 1;
+	});
+	object.define('a/ui.js', 'string', function(require) {
+		var string = require('string');
+		this.load = function() {
+			require.async('a/test', function(module) {
+				equal(module.c, 1, 'dynamic require.async ok.');
+			});
+		}
+	})
+	object.define('a/main', 'a/ui', function(require) {
+		// 注意不要加.js，用于测试缓存
+		var ui = require('a/ui');
+		uiModule = ui;
+		ui.load();
+	});
+	object.execute('a/main');
+	object.remove('a', true);
+});
+
 test('object.execute auto call exports.main', function() {
 	expect(1);
-	object.define('test', function(require, exports) {
+	object.define('test_define', function(require, exports) {
 		exports.main = function() {
 			ok(true, 'main called with object.define.');
 		}
 	});
 
-	object.execute('test');
-	object.remove('test');
+	object.execute('test_define');
+	object.remove('test_define');
 });
 
 test('objectjs style dependency in object.define', function() {

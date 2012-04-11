@@ -12,34 +12,91 @@
 
 ;(function(object) {
 
+// 可以用于scheme的字符
+var scheme_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-.';
+
+/**
+ * 在字符串url中查找target字符后，利用result对象，返回截断后的前、后字符串
+ * @param {Object} result 重复利用的用于返回结果的对象（避免太多内存垃圾产生）
+ * @param {String} url 需要截取的url
+ * @param {String} target 截断的字符组成的字符串
+ * @param {Boolean} remainFirst 是否要保留匹配的字符
+ *
+ * @return {Object} 形如 {got:'', remained:''}的结果对象
+ */
+function splitUntil(result, url, target, remainFirst) {
+	var min = url.length;
+	for(var i=0, len = url.length; i < len; i++) {
+		if (target.indexOf(url.charAt(i)) != -1) {
+			if (i < min) {
+				min = i;
+				break;
+			}
+		}
+	}
+	result.got = url.substring(0, min);
+	result.remained = (remainFirst? url.substring(min) : url.substring(min + 1));
+	return result;
+}
+
 /**
  * 解析一个url为 scheme / netloc / path / params / query / fragment 六个部分
  * @see http://docs.python.org/library/urlparse.html
+ * @example 
+ * http://www.renren.com:8080/home/home2;32131?id=31321321&a=1#//music/?from=homeleft#fdalfdjal
+ * --> 
+ * [http, www.renren.com:8080, /home/home2, 32131, id=31321321&a=1, //music/?from=homeleft#fdalfdjal]
  */
-function urlparse(url, scheme) {
-	var reg, parts;
+function urlparse(url, default_scheme) {
 	if (typeof url != 'string') {
-		return null;
-	}
-	url = url.trim();
-	
-	if (url.indexOf('file') == 0) {
-		// file:///F:/works/workspace/objectjs.org/object/test/unit/modules/urlparse/index.html
-		reg = /^(file)\:\/\/()([^\?]*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(.*))?$/i
-	} else {
-		// http://www.renren.com:8080/home;32131?id=31321321&a=1#//music/?from=homeleft#fdalfdjal
-		reg = /^(?:(\w+?)\:\/(?:\/)?([\w-_.]+(?::\w+)?))?([^\?]*?)?(?:;(.*?))?(?:\?(.*?))?(?:\#(.*))?$/i;
-	}
-	if (reg.test(url)) {
-		parts = url.match(reg).slice(1);
-		if (!parts[0] && scheme) parts[0] = scheme;
-		for (var i = 0; i < parts.length; i++) {
-			if (!parts[i]) parts[i] = '';
-		}
-		return parts;
-	} else {
 		return ['', '', '', '', '', ''];
 	}
+	var scheme = '', netloc='', path = '', params = '', query = '', fragment = '', i = 0;
+	i = url.indexOf(':');
+	if (i > 0) {
+		if (url.substring(0, i) == 'http') {
+			scheme = url.substring(0, i).toLowerCase();
+			url = url.substring(i+1);
+		} else {
+			for(var i=0, len = url.length; i < len; i++) {
+				if (scheme_chars.indexOf(url.charAt(i)) == -1) {
+					break;
+				}
+			}
+			scheme = url.substring(0, i);
+			url = url.substring(i + 1);
+		}
+	}
+	if (!scheme && default_scheme) {
+		scheme = default_scheme;
+	}
+	var splited = {};
+	if (url.substring(0, 2) == '//') {
+		splitUntil(splited, url.substring(2), '/?#', true);
+		netloc = splited.got;
+		url = splited.remained;
+	}
+
+	if (url.indexOf('#') != -1) {
+		splitUntil(splited, url, '#');
+		url = splited.got;
+		fragment = splited.remained;
+	}
+	if (url.indexOf('?') != -1) {
+		splitUntil(splited, url, '?');
+		url = splited.got;
+		query = splited.remained;
+	}
+	if (url.indexOf(';') != -1) {
+		splitUntil(splited, url, ';');
+		path = splited.got;
+		params = splited.remained;
+	}
+	
+	if (!path) {
+		path = url;
+	}
+	return [scheme, netloc, path, params, query, fragment];
 };
 
 /**
@@ -283,7 +340,7 @@ CommonJSPackage.prototype.execute = function(name, context, runtime) {
 		return null;
 	}
 
-	var deps = runtime.packages[this.id];
+	var deps = runtime.packages[this.id].deps;
 
 	runtime.pushStack(name, this);
 
@@ -344,14 +401,14 @@ CommonJSPackage.prototype.createRequire = function(name, context, deps, runtime)
 		// 创建一个同名package
 		var newPkg = new CommonJSPackage(parent.id, dependencies, function(require) {
 			var args = [];
-			newPkg.dependencies.forEach(function(dep) {
-				args.push(require(dep));
+			newPkg.dependencies.forEach(function(dependency) {
+				args.push(require(dependency));
 			});
 			callback.apply(null, args);
 		});
 		newPkg.load(runtime, function() {
 			// 由于newPkg的id与之前的相同，load方法会覆盖掉runtime.packages上保存的成员
-			var deps = runtime.packages[newPkg.id];
+			var deps = runtime.packages[newPkg.id].deps;
 			newPkg.make(name, parentContext, deps, runtime);
 		});
 	};
@@ -438,7 +495,7 @@ ObjectPackage.prototype.execute = function(name, context, runtime) {
 
 	} else {
 
-		deps = runtime.packages[this.id];
+		deps = runtime.packages[this.id].deps;
 
 		runtime.pushStack(name, this);
 
@@ -478,7 +535,7 @@ function Package(id, dependencies, factory) {
 }
 
 /**
- * 尝试获取此模块的所有依赖模块
+ * 尝试获取此模块的所有依赖模块，全部获取完毕后执行callback
  */
 Package.prototype.load = function(runtime, callback) {
 	var deps = [];
@@ -488,7 +545,9 @@ Package.prototype.load = function(runtime, callback) {
 	function next() {
 		loaded++;
 		if (loaded == pkg.dependencies.length) {
-			if (callback) callback();
+			if (callback) {
+				callback();
+			}
 		}
 	}
 
@@ -498,7 +557,12 @@ Package.prototype.load = function(runtime, callback) {
 		dep.load(next);
 	}, this);
 
-	runtime.packages[this.id] = deps;
+	runtime.packages[this.id].deps = deps;
+	// 此时deps已经有了，确保当前pkg是网络加载完毕了，执行之前未执行的callbacks
+	runtime.packages[this.id].callbacks.forEach(function(callback) {
+		callback();
+	});
+	runtime.packages[this.id].callbacks = [];
 
 	next();
 };
@@ -582,7 +646,7 @@ function CommonJSDependency(name, owner, runtime) {
 	}
 
 	this.id = id;
-	this.context = context;
+	this.context = context || '';
 	this.type = type;
 };
 
@@ -620,7 +684,14 @@ CommonJSDependency.prototype.execute = function(parentName, parentContext) {
 	var runtimeName;
 
 	if (this.type == 'top-level') {
-		runtimeName = this.name;
+		// CommonJSDependency生成的name不能有.js后缀，以保持和ObjectDependency的name兼容
+		// 同时，统一标准才能保证使用不同方法依赖时缓存有效
+		// 比如依赖 ui.js 和 ui，若不删除扩展名会被当成两个模块导致缓存失效
+		if (this.name.slice(-3) == '.js') {
+			runtimeName = this.name.slice(0, -3);
+		} else {
+			runtimeName = this.name;
+		}
 
 	} else if (this.type == 'relative') {
 		runtimeName = this.id.slice(parentContext.length);
@@ -837,12 +908,23 @@ LoaderRuntime.prototype.loadModule = function(id, callback) {
 	var runtime = this;
 	var loader = this.loader;
 
+	// 说明之前已经触发过load了
 	if (id in this.packages) {
-		callback();
+		// 已经加载完成，有deps了，直接返回
+		if (this.packages[id].deps) {
+			callback();
+		}
+		// 还在加载中，将callback存储起来
+		else {
+			this.packages[id].callbacks.push(callback);
+		}
 		return;
 	}
 
-	this.packages[id] = null;
+	this.packages[id] = {
+		deps: null,
+		callbacks: []
+	};
 
 	var pkg = loader.lib[id];
 

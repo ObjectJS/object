@@ -598,7 +598,7 @@ test('class member in class', function() {
 		F: F,
 		G: G,
 		H: H,
-		I: I,
+		I: I
 	});
 	var test = new Test();
 	ok(Test.A, 'general class in class.');
