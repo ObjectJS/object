@@ -81,24 +81,31 @@ test('async load component', function() {
 
 	var TestComponent = new Class(ui.Component, function() {
 		this.test = ui.define1('.test', 'test.test.TestComponent');
-		this.test2 = ui.define1('.test2', 'test.test.TestComponent', function(self) {
+		this.test2 = ui.define1('.test2', 'test.test.TestComponent', function(self, make) {
+			self._node.appendChild(make()._node);
 		});
+
+		this._init = function(self) {
+			ok(self.test, 'init called after load.');
+		};
 	});
 
 	var div = document.createElement('div');
-	div.innerHTML = '<div class="test"></div><div class="test2"></div>';
+	div.innerHTML = '<div class="test"></div>';
 
-	var test = new TestComponent(div);
+	var test = new TestComponent(div, {
+		'test2.template': '<div class="test2"></div>'
+	});
+	test.render('test2');
 
 	stop();
 	// 这里应该改成在某个事件中验证，200毫秒并不准确
 	setTimeout(function() {
 		start();
 		ok(test.test, 'async load component ok.');
+		ok(test.test2, 'async render component ok.');
 	}, 200);
 
-	test.render('test2');
-	console.log(test.test2);
 
 	document.body.removeChild(script);
 });

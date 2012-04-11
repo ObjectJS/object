@@ -61,20 +61,106 @@ function ensureTypedValue(value, type) {
 	else if (type === 'boolean') return Boolean(value);
 };
 
-function SubEventMeta(sub, eventType, gid) {
-	this.sub = sub;
+function ComponentMeta(selector, type, renderer) {
+	this.selector = selector;
+	this.type = type;
+	this.renderer = renderer;
+}
+ComponentMeta.prototype.select = function(self, name) {
+	var nodes = null, comps = null;
+	if (typeof this.selector == 'function') {
+		nodes = this.selector(self);
+		// 确保返回的是个dom.Elements
+		if (nodes.constructor != dom.Elements) {
+			if (!nodes.length) {
+				nodes = [nodes];
+			}
+			nodes = new dom.Elements(nodes);
+		}
+	} else {
+		nodes = self._node.getElements(this.selector);
+	}
+
+	if (nodes) {
+		getType(this.type, function(type) {
+			comps = new type.Components(nodes);
+			self.setComponent(name, comps);
+		});
+	}
+
+	self._set(name, comps);
+	self._set('_' + name, nodes);
+
+	return comps;
+}
+
+function SingleComponentMeta(selector, type, renderer) {
+	this.selector = selector;
+	this.type = type;
+	this.renderer = renderer;
+}
+SingleComponentMeta.prototype = new ComponentMeta();
+SingleComponentMeta.prototype.select = function(self, name) {
+	var node = null, comp = null;
+	if (typeof this.selector == 'function') {
+		node = dom.wrap(this.selector(self));
+	} else {
+		node = self._node.getElement(this.selector);
+	}
+
+	if (node) {
+		comp = node.component;
+		if (comp) {
+			self.setComponent(name, comp);
+		} else {
+			getType(this.type, function(type) {
+				if (!Class.instanceOf(type, Type)) {
+					throw new Error('type is not a class.');
+				}
+				comp = new type(node, self._options[name]);
+				self.setComponent(name, comp);
+			});
+		}
+
+	} else {
+		self.setComponent(name, null);
+	}
+
+	return comp;
+};
+
+function ParentComponentMeta(type) {
+	this.type = type;
+}
+ParentComponentMeta.prototype = new ComponentMeta();
+ParentComponentMeta.prototype.select = function(self, name) {
+	var node = self._node;
+	var comp = null;
+
+	while (node = node.parentNode) {
+		if (node.component.__class__ === this.type()) {
+			comp = node.component;
+			break;
+		}
+	}
+	self.setComponent(name, comp);
+	return comp;
+};
+
+function ComponentEventMeta(name, eventType, gid) {
+	this.name = name;
 	this.eventType = eventType;
 	this.gid = gid;
 }
 
-SubEventMeta.prototype.bindSubEvent = function() {
-	var sub = this.sub;
+ComponentEventMeta.prototype.bindComponentEvent = function() {
+	var name = this.name;
 	var eventType = this.eventType;
 	var methodName = this.methodName;
 	var comp = this.comp;
 
-	if (comp[sub]) {
-		comp[sub]._node.addEvent(eventType, function(event) {
+	if (comp[name]) {
+		comp[name]._node.addEvent(eventType, function(event) {
 			var args;
 			// 将event._args pass 到函数后面
 			if (event._args) {
@@ -87,33 +173,33 @@ SubEventMeta.prototype.bindSubEvent = function() {
 	}
 };
 
-SubEventMeta.prototype.bindOptionEvent = function() {
+ComponentEventMeta.prototype.bindOptionEvent = function() {
 	var methodName = this.methodName;
 	var comp = this.comp;
 	// 注册 option_change 等事件
-	var fakeEventType = '__option_' + this.eventType + '_' + this.sub;
+	var fakeEventType = '__option_' + this.eventType + '_' + this.name;
 
 	comp.addEvent(fakeEventType, function(event) {
 		comp[methodName](event);
 	});
 };
 
-SubEventMeta.prototype.bind = function(comp, methodName) {
-	var sub = this.sub;
+ComponentEventMeta.prototype.bind = function(comp, methodName) {
+	var name = this.name;
 	this.comp = comp;
 	this.methodName = methodName;
 
 	// options
-	if (comp.meta.options.indexOf(sub) != -1) {
+	if (comp.meta.options.indexOf(name) != -1) {
 		this.bindOptionEvent();
 	}
-	// sub component
-	else if (comp.meta.subs.indexOf(sub) != -1) {
-		this.bindSubEvent();
-		if (!(sub in comp.__subEventsMap)) {
-			comp.__subEventsMap[sub] = [];
+	// component
+	else if (comp.meta.components.indexOf(name) != -1) {
+		this.bindComponentEvent();
+		if (!(name in comp.__componentEventsMap)) {
+			comp.__componentEventsMap[name] = [];
 		}
-		comp.__subEventsMap[sub].push(this);
+		comp.__componentEventsMap[name].push(this);
 	}
 };
 
@@ -147,7 +233,20 @@ OnEventMeta.prototype.bind = function(self, methodName) {
 };
 
 /**
- * 为一个Component定义一个sub components引用
+ * 帮助定义一个生成组件间联系的方法
+ */
+function define(meta) {
+	function fget(self) {
+		var name = prop.__name__;
+		return meta.select(self, name);
+	}
+	var prop = property(fget);
+	prop.meta = meta;
+	return prop;
+}
+
+/**
+ * 为一个Component定义一个components引用
  * 用法：
  * MyComponent = new Class(ui.Component, {
  *	refname: ui.define('css selector', ui.menu.Menu)
@@ -158,112 +257,26 @@ OnEventMeta.prototype.bind = function(self, methodName) {
  */
 this.define = function(selector, type, renderer) {
 	if (!type) type = exports.Component;
-
-	function fget(self) {
-		var name = prop.__name__;
-		var nodes = null, comps = null;
-		if (typeof selector == 'function') {
-			nodes = selector(self);
-			// 确保返回的是个dom.Elements
-			if (nodes.constructor != dom.Elements) {
-				if (!nodes.length) {
-					nodes = [nodes];
-				}
-				nodes = new dom.Elements(nodes);
-			}
-		} else {
-			nodes = self._node.getElements(selector);
-		}
-
-		if (nodes) {
-			getType(type, function(type) {
-				comps = new type.Components(nodes);
-				self.setSub(name, comps);
-			});
-		}
-
-		self._set(name, comps);
-		self._set('_' + name, nodes);
-
-		return comps;
-	}
-
-	var prop = property(fget);
-	prop.isComponent = true;
-	prop.type = type;
-	prop.renderer = renderer;
-	return prop;
+	return define(new ComponentMeta(selector, type, renderer));
 };
 
 /**
- * 定义唯一引用的sub component
+ * 定义唯一引用的component
  */
 this.define1 = function(selector, type, renderer) {
 	if (!type) type = exports.Component;
-
-	function fget(self) {
-		var name = prop.__name__;
-		var node = null, comp = null;
-		if (typeof selector == 'function') {
-			node = dom.wrap(selector(self));
-		} else {
-			node = self._node.getElement(selector);
-		}
-
-		if (node) {
-			comp = node.component;
-			if (comp) {
-				self.setSub(name, comp);
-			} else {
-				getType(type, function(type) {
-					if (!Class.instanceOf(type, Type)) {
-						throw new Error('type is not a class.');
-					}
-					comp = new type(node, self._options[name]);
-					self.setSub(name, comp);
-				});
-			}
-
-		} else {
-			self.setSub(name, null);
-		}
-
-		return comp;
-	}
-
-	var prop = property(fget);
-	prop.isComponent = true;
-	prop.type = type;
-	prop.renderer = renderer;
-	return prop;
+	return define(new SingleComponentMeta(selector, type, renderer));
 };
 
+/**
+ * 定义父元素的引用
+ */
 this.parent = function(type) {
 	if (!type) {
 		throw new Error('arguments error.');
 	}
 
-	function fget(self) {
-		var name = prop.__name__;
-		var node = self._node;
-		var comp = null;
-
-		while (node = node.parentNode) {
-			if (node.component.__class__ === type()) {
-				comp = node.component;
-				break;
-			}
-		}
-
-		self._set(name, comp);
-		self._set('_' + name, node);
-
-		return comp;
-	}
-	var prop = property(fget);
-	prop.isComponent = true;
-	prop.type = type;
-	return prop;
+	return define(new ParentComponentMeta(type));
 };
 
 /**
@@ -322,13 +335,13 @@ this.option = function(defaultValue, getter) {
 /**
  * 定义一个向子元素注册事件的方法
  * @decorator
- * @param sub 子成员名称
+ * @param name 子成员名称
  * @param eventType
  * @param gid
  */
-this.subevent = function(sub, eventType, gid) {
+this.componentevent = function(name, eventType, gid) {
 	return function(func) {
-		func.meta = new SubEventMeta(sub, eventType, gid);
+		func.meta = new ComponentEventMeta(name, eventType, gid);
 		return func;
 	}
 };
@@ -366,16 +379,16 @@ this.ComponentFactory = new Class(type, function() {
 
 		var gid = dict.gid = globalid++;
 		var meta = dict.meta = {
-			subs: [],
+			components: [],
 			options: [],
 			handles: [],
 			onEvents: [],
 			mixinOnEvents: [],
-			subEvents: []
+			componentEvents: []
 		};
 
 		dict.__onEvents = [];
-		dict.__subEvents = [];
+		dict.__componentEvents = [];
 		dict.__handles = [];
 
 		// 这里选择在dict阶段就放置到类成员的，一个原因是Components是通过遍历dict生成的
@@ -390,9 +403,9 @@ this.ComponentFactory = new Class(type, function() {
 			if (member.__class__ == property && member.isOption) {
 				meta.options.push(name);
 			}
-			else if (member.__class__ == property && member.isComponent) {
-				meta.subs.push(name);
-				dict['render_' + name] = member.renderer;
+			else if (member.__class__ == property && member.meta instanceof ComponentMeta) {
+				meta.components.push(name);
+				dict['render_' + name] = member.meta.renderer;
 			}
 			else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
 				dict.__handles.push({
@@ -402,9 +415,9 @@ this.ComponentFactory = new Class(type, function() {
 			}
 			else if (name.match(/^(_?\w+)_(\w+)$/)) {
 				delete dict[name];
-				dict.__subEvents.push({
+				dict.__componentEvents.push({
 					name: name,
-					sub: RegExp.$1,
+					component: RegExp.$1,
 					eventType: RegExp.$2,
 					member: member
 				});
@@ -434,10 +447,10 @@ this.ComponentFactory = new Class(type, function() {
 			meta.onEvents.push(newName);
 			type.__setattr__(cls, newName, exports.onevent(item.eventType, gid)(item.member));
 		});
-		cls.get('__subEvents').forEach(function(item) {
+		cls.get('__componentEvents').forEach(function(item) {
 			var newName = item.name + '$' + gid;
-			meta.subEvents.push(newName);
-			type.__setattr__(cls, newName, exports.subevent(item.sub, item.eventType, gid)(item.member));
+			meta.componentEvents.push(newName);
+			type.__setattr__(cls, newName, exports.componentevent(item.component, item.eventType, gid)(item.member));
 		});
 		// 只有在initialize阶段生成handle方法才能确保mixin时能够获取到正确的cls
 		cls.get('__handles').forEach(function(item) {
@@ -451,7 +464,7 @@ this.ComponentFactory = new Class(type, function() {
 		});
 		// 清除这两个变量
 		type.__delattr__(cls, '__onEvents');
-		type.__delattr__(cls, '__subEvents');
+		type.__delattr__(cls, '__componentEvents');
 		type.__delattr__(cls, '__handles');
 
 		// 合并meta
@@ -471,11 +484,11 @@ this.ComponentFactory = new Class(type, function() {
 			}
 			type.__setattr__(cls, name, member);
 		}
-		else if (member.__class__ == property && member.isComponent) {
-			if (meta.subs.indexOf(name) == -1) {
-				meta.subs.push(name);
+		else if (member.__class__ == property && member.meta instanceof ComponentMeta) {
+			if (meta.components.indexOf(name) == -1) {
+				meta.components.push(name);
 			}
-			type.__setattr__(cls, 'render_' + name, member.renderer);
+			type.__setattr__(cls, 'render_' + name, member.meta.renderer);
 			type.__setattr__(cls, name, member);
 		}
 		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
@@ -492,9 +505,9 @@ this.ComponentFactory = new Class(type, function() {
 		}
 		else if (name.match(/^(_?\w+)_(\w+)$/)) {
 			var newName = name + '$' + gid;
-			var newMember = exports.subevent(RegExp.$1, RegExp.$2, gid)(member);
-			if (meta.subEvents.indexOf(newName) == -1) {
-				meta.subEvents.push(newName);
+			var newMember = exports.componentevent(RegExp.$1, RegExp.$2, gid)(member);
+			if (meta.componentEvents.indexOf(newName) == -1) {
+				meta.componentEvents.push(newName);
 			}
 			type.__setattr__(cls, newName, newMember);
 		}
@@ -520,8 +533,8 @@ this.ComponentFactory = new Class(type, function() {
 		if (base != Object) {
 			var bgid = base.get('gid');
 			var baseMeta = base.get('meta');
-			baseMeta.subs.forEach(function(name) {
-				if (meta.subs.indexOf(name) == -1) meta.subs.push(name);
+			baseMeta.components.forEach(function(name) {
+				if (meta.components.indexOf(name) == -1) meta.components.push(name);
 			});
 			baseMeta.options.forEach(function(name) {
 				if (meta.options.indexOf(name) == -1) meta.options.push(name);
@@ -536,8 +549,8 @@ this.ComponentFactory = new Class(type, function() {
 			baseMeta.mixinOnEvents.forEach(function(name) {
 				if (meta.mixinOnEvents.indexOf(name) == -1) meta.mixinOnEvents.push(name);
 			});
-			baseMeta.subEvents.forEach(function(name) {
-				if (meta.subEvents.indexOf(name) == -1) meta.subEvents.push(name);
+			baseMeta.componentEvents.forEach(function(name) {
+				if (meta.componentEvents.indexOf(name) == -1) meta.componentEvents.push(name);
 			});
 		}
 
@@ -546,8 +559,8 @@ this.ComponentFactory = new Class(type, function() {
 		mixes.forEach(function(mix) {
 			var gid = mix.get('gid');
 			var mixMeta = mix.get('meta');
-			mixMeta.subs.forEach(function(name) {
-				if (meta.subs.indexOf(name) == -1) meta.subs.push(name);
+			mixMeta.components.forEach(function(name) {
+				if (meta.components.indexOf(name) == -1) meta.components.push(name);
 			});
 			mixMeta.options.forEach(function(name) {
 				if (meta.options.indexOf(name) == -1) meta.options.push(name);
@@ -562,8 +575,8 @@ this.ComponentFactory = new Class(type, function() {
 			mixMeta.onEvents.forEach(function(name) {
 				if (meta.mixinOnEvents.indexOf(name) == -1) meta.mixinOnEvents.push(name);
 			});
-			mixMeta.subEvents.forEach(function(name) {
-				if (meta.subEvents.indexOf(name) == -1) meta.subEvents.push(name);
+			mixMeta.componentEvents.forEach(function(name) {
+				if (meta.componentEvents.indexOf(name) == -1) meta.componentEvents.push(name);
 			});
 		});
 	};
@@ -618,15 +631,15 @@ this.Component = new Class(function() {
 		}
 
 		if (!options) options = {};
-		// 保存options，生成sub时用于传递
+		// 保存options，生成component时用于传递
 		self._options = exports.parseOptions(options);
 
 		// 存储dispose事件的注册情况
 		self.__disposes = [];
 		// 存储make的新元素
 		self.__rendered = []; // 后来被加入的，而不是首次通过selector选择的node的引用
-		// 存储subEvents，用于render时获取信息
-		self.__subEventsMap = {};
+		// 存储componentEvents，用于render时获取信息
+		self.__componentEventsMap = {};
 
 		var template;
 
@@ -641,13 +654,13 @@ this.Component = new Class(function() {
 
 		self._node = dom.wrap(node);
 		if (node.component) {
-			console.error('一个元素只可以作为一个组件');
+			console.error('一个元素只可以作为一个组件', node);
 			return;
 		}
 		self._node.component = self;
 
-		// 初始化subs
-		self.meta.subs.forEach(function(name) {
+		// 初始化components
+		self.meta.components.forEach(function(name) {
 			self.get(name);
 		});
 		// 初始化options
@@ -658,8 +671,8 @@ this.Component = new Class(function() {
 		self.meta.mixinOnEvents.forEach(function(name) {
 			self[name].im_func.meta.bind(self, name);
 		});
-		// 初始化subEvents
-		self.meta.subEvents.forEach(function(name) {
+		// 初始化componentEvents
+		self.meta.componentEvents.forEach(function(name) {
 			self[name].im_func.meta.bind(self, name);
 		});
 
@@ -753,9 +766,9 @@ this.Component = new Class(function() {
 	};
 
 	/**
-	 * 设置获取到的sub component
+	 * 设置获取到的component
 	 */
-	this.setSub = function(self, name, comp) {
+	this.setComponent = function(self, name, comp) {
 		var node = null;
 		if (comp) {
 			node = comp._node;
@@ -816,9 +829,18 @@ this.Component = new Class(function() {
 		})(self, name, value);
 	});
 
+	this.getMeta = function(self, name) {
+		if (self.__properties__[name]) {
+			return self.__properties__[name].meta;
+		}
+		else {
+			return self[name].meta;
+		}
+	};
+
 	/**
-	 * 渲染一组subcomponent
-	 * @param name subcomponent名字
+	 * 渲染一组component
+	 * @param name component名字
 	 * @param data 模板数据/初始化参数
 	 */
 	this.render = function(self, name, data, callback) {
@@ -829,27 +851,31 @@ this.Component = new Class(function() {
 			return;
 		}
 
-		self[methodName](function() {
-			return self.make(name, data);
-		});
+		var meta = self.getMeta(name);
+		getType(meta.type, function(type) {
 
-		// 重建引用
-		self.get(name);
-
-		if (name in self.__subEventsMap) {
-			self.__subEventsMap[name].forEach(function(meta) {
-				meta.bindSubEvent();
+			self[methodName](function() {
+				return self.make(name, data);
 			});
-		}
+
+			// 重建引用
+			self.get(name);
+
+			if (name in self.__componentEventsMap) {
+				self.__componentEventsMap[name].forEach(function(meta) {
+					meta.bindComponentEvent();
+				});
+			}
+		});
 	};
 
 	/**
-	 * 根据subs的type创建一个component，并加入到引用中，这一般是在renderXXX方法中进行调用
+	 * 根据components的type创建一个component，并加入到引用中，这一般是在renderXXX方法中进行调用
 	 * @param name
 	 * @param data 模板数据
 	 */
 	this.make = function(self, name, data, callback) {
-		var sub = self.__properties__[name];
+		var meta = self.getMeta(name);
 		var pname = '_' + name;
 
 		data = data || {};
@@ -858,7 +884,7 @@ this.Component = new Class(function() {
 
 		var comp = null;
 
-		getType(sub.type, function(type) {
+		getType(meta.type, function(type) {
 			comp = new type(data, options);
 			self.__rendered.push(comp);
 			if (callback) callback(comp);
@@ -868,7 +894,7 @@ this.Component = new Class(function() {
 	};
 
 	/**
-	 * 设置subcomponent的template
+	 * 设置component的template
 	 */
 	this.setTemplate = function(self, name, template) {
 		self.setOption(name + '.template', template);
