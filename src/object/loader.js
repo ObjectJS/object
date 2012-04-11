@@ -340,7 +340,7 @@ CommonJSPackage.prototype.execute = function(name, context, runtime) {
 		return null;
 	}
 
-	var deps = runtime.packages[this.id];
+	var deps = runtime.packages[this.id].deps;
 
 	runtime.pushStack(name, this);
 
@@ -401,14 +401,14 @@ CommonJSPackage.prototype.createRequire = function(name, context, deps, runtime)
 		// 创建一个同名package
 		var newPkg = new CommonJSPackage(parent.id, dependencies, function(require) {
 			var args = [];
-			newPkg.dependencies.forEach(function(dep) {
-				args.push(require(dep));
+			newPkg.dependencies.forEach(function(dependency) {
+				args.push(require(dependency));
 			});
 			callback.apply(null, args);
 		});
 		newPkg.load(runtime, function() {
 			// 由于newPkg的id与之前的相同，load方法会覆盖掉runtime.packages上保存的成员
-			var deps = runtime.packages[newPkg.id];
+			var deps = runtime.packages[newPkg.id].deps;
 			newPkg.make(name, parentContext, deps, runtime);
 		});
 	};
@@ -495,7 +495,7 @@ ObjectPackage.prototype.execute = function(name, context, runtime) {
 
 	} else {
 
-		deps = runtime.packages[this.id];
+		deps = runtime.packages[this.id].deps;
 
 		runtime.pushStack(name, this);
 
@@ -535,7 +535,7 @@ function Package(id, dependencies, factory) {
 }
 
 /**
- * 尝试获取此模块的所有依赖模块
+ * 尝试获取此模块的所有依赖模块，全部获取完毕后执行callback
  */
 Package.prototype.load = function(runtime, callback) {
 	var deps = [];
@@ -545,7 +545,9 @@ Package.prototype.load = function(runtime, callback) {
 	function next() {
 		loaded++;
 		if (loaded == pkg.dependencies.length) {
-			if (callback) callback();
+			if (callback) {
+				callback();
+			}
 		}
 	}
 
@@ -555,7 +557,12 @@ Package.prototype.load = function(runtime, callback) {
 		dep.load(next);
 	}, this);
 
-	runtime.packages[this.id] = deps;
+	runtime.packages[this.id].deps = deps;
+	// 此时deps已经有了，确保当前pkg是网络加载完毕了，执行之前未执行的callbacks
+	runtime.packages[this.id].callbacks.forEach(function(callback) {
+		callback();
+	});
+	runtime.packages[this.id].callbacks = [];
 
 	next();
 };
@@ -639,7 +646,7 @@ function CommonJSDependency(name, owner, runtime) {
 	}
 
 	this.id = id;
-	this.context = context;
+	this.context = context || '';
 	this.type = type;
 };
 
@@ -677,7 +684,14 @@ CommonJSDependency.prototype.execute = function(parentName, parentContext) {
 	var runtimeName;
 
 	if (this.type == 'top-level') {
-		runtimeName = this.name;
+		// CommonJSDependency生成的name不能有.js后缀，以保持和ObjectDependency的name兼容
+		// 同时，统一标准才能保证使用不同方法依赖时缓存有效
+		// 比如依赖 ui.js 和 ui，若不删除扩展名会被当成两个模块导致缓存失效
+		if (this.name.slice(-3) == '.js') {
+			runtimeName = this.name.slice(0, -3);
+		} else {
+			runtimeName = this.name;
+		}
 
 	} else if (this.type == 'relative') {
 		runtimeName = this.id.slice(parentContext.length);
@@ -894,12 +908,23 @@ LoaderRuntime.prototype.loadModule = function(id, callback) {
 	var runtime = this;
 	var loader = this.loader;
 
+	// 说明之前已经触发过load了
 	if (id in this.packages) {
-		callback();
+		// 已经加载完成，有deps了，直接返回
+		if (this.packages[id].deps) {
+			callback();
+		}
+		// 还在加载中，将callback存储起来
+		else {
+			this.packages[id].callbacks.push(callback);
+		}
 		return;
 	}
 
-	this.packages[id] = null;
+	this.packages[id] = {
+		deps: null,
+		callbacks: []
+	};
 
 	var pkg = loader.lib[id];
 

@@ -299,3 +299,22 @@ test('many urls pointing to the same file', function() {
 	equal(Object.keys(Loader._urlNodeMap).length, 1, '../../test/unit/xxx.js# is the same dir with xxx.js, will not load again');
 	recoverEnv();
 });
+
+test('require.async', function() {
+	expect(2);
+	addModuleScriptToHead('module3', module_manyModules);
+	object.define('test', function(require) {
+		require.async('module3', function(module3) {
+			start();
+			equal(module3.c, 1, 'require.async ok.');
+		});
+		require.async('module3', function(module3) {
+			start();
+			equal(module3.c, 1, 'call require.async twice ok.');
+		});
+		stop();
+	});
+	object.execute('test');
+	object.remove('test');
+	recoverEnv();
+});
