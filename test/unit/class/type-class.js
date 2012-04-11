@@ -34,7 +34,7 @@ test('general', function() {
 	});
 
 	ok(BM.__new__, 'default __new__ exists.');
-	ok(BM.initialize, 'default initialize exists.');
+	ok(BM.get('initialize'), 'default initialize exists.');
 	ok(M.__new__, 'custom __new__ exists.');
 	ok(M.initialize, 'custom initialize exists.');
 	equal(A.get('b'), 1, 'new a metaclass create a class.');
