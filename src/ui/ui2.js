@@ -129,7 +129,9 @@ SingleComponentMeta.prototype.select = function(self, name) {
 	return comp;
 };
 
-function OptionMeta() {
+function OptionMeta(defaultValue, getter) {
+	this.defaultValue = defaultValue;
+	this.getter = getter;
 }
 
 function ParentComponentMeta(type) {
@@ -291,45 +293,14 @@ this.parent = function(type) {
  * 这样MyComponent实例的myConfig属性值即为默认值1，可通过 set 方法修改
  */
 this.option = function(defaultValue, getter) {
-	var name;
-	var meta = new OptionMeta();
-	// 默认getter是从结构中通过data-前缀获取
-	getter = getter || function(self) {
-		if (!self._node) return undefined;
-		var value = self._node.getData(name.toLowerCase());
-		if (value != undefined) {
-			return ensureTypedValue(value, typeof defaultValue);
-		}
-	};
+	var meta = new OptionMeta(defaultValue, getter);
 	function fget(self) {
-		// 三个获取级别，优先级：结构>用户设置>默认
-		name = prop.__name__;
-		var value;
-		var getterValue = getter(self, name);
-		// 优先从结构中获取
-		if (getterValue != undefined) {
-			value = getterValue;
-		}
-		// 其次用户设置中获取
-		else if (self._options[name]) {
-			value = self._options[name];
-		}
-		// 最后是defaultValue
-		else {
-			value = defaultValue;
-		}
-		// 确保获取到的value得到更新
-		self._set(name, value);
-		return value;
+		var name = prop.__name__;
+		return self.getOption(name);
 	}
 	function fset(self, value) {
-		name = prop.__name__;
-		var oldValue = self.getOption(name);
-		(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
-			self._options[name] = value;
-			// 重新更新对象上的直接引用值
-			self.get(name);
-		}))(self, oldValue, value);
+		var name = prop.__name__;
+		return self.setOption(name, value);
 	}
 	var prop = property(fget, fset);
 	prop.meta = meta;
@@ -665,7 +636,7 @@ this.Component = new Class(function() {
 
 		// 初始化components
 		self.meta.components.forEach(function(name) {
-			self.get(name);
+			self.getMeta(name).select(self, name);
 		});
 		// 初始化options
 		self.meta.options.forEach(function(name) {
@@ -790,14 +761,52 @@ this.Component = new Class(function() {
 	/**
 	 * 获取option的值
 	 * 支持复杂name的查询
+	 * comp.getOption('xxx') 获取comp的xxx
+	 * comp.getOption('sub.xxx') 获取当前comp为sub准备的xxx。若要获取运行时的option，需要用com.sub.getOption('xxx');
 	 * @param name name
 	 */
 	this.getOption = function(self, name) {
 		var parts = name.split('.');
 		var value, current;
+
+		// 获取自己身上的option
+		// 三个获取级别，优先级：结构>用户设置>默认
 		if (parts.length == 1) {
-			value = self.get(name);
-		} else {
+
+			var meta = self.getMeta(name);
+
+			// meta不存在表示在获取一个没有注册的option
+			if (!meta) {
+				return self._options[name];
+			}
+
+			// 默认getter是从结构中通过data-前缀获取
+			var getter = meta.getter || function(self) {
+				if (!self._node) return undefined;
+				var value = self._node.getData(name.toLowerCase());
+				if (value != undefined) {
+					return ensureTypedValue(value, typeof meta.defaultValue);
+				}
+			};
+
+			var getterValue = getter(self, name);
+			// 优先从结构中获取
+			if (getterValue != undefined) {
+				value = getterValue;
+			}
+			// 其次用户设置中获取
+			else if (self._options[name]) {
+				value = self._options[name];
+			}
+			// 最后是defaultValue
+			else {
+				value = meta.defaultValue;
+			}
+			// 确保获取到的value得到更新
+			self._set(name, value);
+		}
+		// 获取为子引用准备的option
+		else {
 			current = self._options;
 			for (var i = 0, part; i < parts.length; i++) {
 				part = parts[i];
@@ -819,17 +828,27 @@ this.Component = new Class(function() {
 		(function(self, name, value) {
 			var parts = Array.isArray(name)? name : name.split('.');
 
-			setOptionTo(self._options, parts, value);
-
-			// 子引用已经建立，为子引用设置option
-			if (self[parts[0]]) {
-				arguments.callee(self[parts[0]], parts.slice(1), value);
-			}
-
 			// 为自己设置option
 			if (parts.length == 1) {
-				self.set(name, value);
+				var oldValue = self.getOption(name);
+				setOptionTo(self._options, parts, value);
+				(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
+					// 重新更新对象上的直接引用值
+					self.get(name);
+				}))(self, oldValue, value);
 			}
+			// 为子引用设置option
+			else {
+				// 保存在_options中
+				setOptionTo(self._options, parts, value);
+
+				var sub = self[parts[0]];
+				// 子引用已经存在
+				if (sub) {
+					sub.setOption(parts.slice(1).join('.'), value);
+				}
+			}
+
 		})(self, name, value);
 	});
 
@@ -837,8 +856,11 @@ this.Component = new Class(function() {
 		if (self.__properties__[name]) {
 			return self.__properties__[name].meta;
 		}
-		else {
+		else if (self[name]) {
 			return self[name].meta;
+		}
+		else {
+			return null;
 		}
 	};
 

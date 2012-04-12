@@ -122,6 +122,12 @@ test('option property', function() {
 
 		this.sub = ui.define1('.test', SubComponent);
 
+		this.sub2 = ui.define1('.test2', SubComponent, function(self) {
+			var test2 = document.createElement('div');
+			test2.className = 'test2';
+			self._node.appendChild(test2);
+		});
+
 		this.test = ui.option(1);
 
 		this.test2 = ui.option('string');
@@ -133,8 +139,8 @@ test('option property', function() {
 		});
 
 		this.test_change = function(self, event) {
-			equal(event.oldValue, 1, '');
-			equal(event.value, 2, '');
+			equal(event.oldValue, 1, 'old value ok.');
+			equal(event.value, 2, 'new value set.');
 			optionChangeFired++;
 		};
 
@@ -173,7 +179,26 @@ test('option property', function() {
 	equals(test.test4, 'custom-value', 'get option from custom getter.');
 
 	// option传递
-	equals(test.sub.test, true, 'option pass to sub.')
+	equals(test.sub.test, true, 'option pass to sub.');
+
+	// setOption给未定义引用
+	test.setOption('a.b.c', 1);
+	equal(test.getOption('a.b.c'), 1, 'setOption to undefined sub ok.');
+
+	// setOption给已存在引用
+	test.setOption('sub.test', false);
+	strictEqual(test.sub.get('test'), false, 'setOption to exist sub ok.');
+
+	// setOption给未存在引用
+	test.setOption('sub2.test', true);
+	test.setOption('sub2.test2', true);
+	test.render('sub2');
+	// 已定义的option，getOption和get均能获取。
+	strictEqual(test.sub2.get('test'), true, 'can get defined option.');
+	strictEqual(test.sub2.getOption('test'), true, 'setOption to nonexistent defined sub ok.');
+	// 未定义的option，只能通过getOption获取，无法通过get获取。
+	strictEqual(test.sub2.get('test2'), undefined, 'can\'t get undefined option.');
+	strictEqual(test.sub2.getOption('test2'), true, 'setOption to nonexistent undefined sub ok.');
 });
 
 test('handle method', function() {
