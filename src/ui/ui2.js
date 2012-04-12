@@ -137,8 +137,10 @@ ParentComponentMeta.prototype.select = function(self, name, callback) {
 	var node = self._node;
 	var comp = null;
 
+	var type = this.type();
+
 	while (node = node.parentNode) {
-		if (node.component.__class__ === this.type()) {
+		if (node.component && Class.instanceOf(node.component, type)) {
 			comp = node.component;
 			break;
 		}
@@ -637,6 +639,7 @@ this.Component = new Class(function() {
 
 		function checkInit() {
 			if (inited.length == self.meta.components.length) {
+				inited = []; // reset
 				self.init();
 			}
 		}

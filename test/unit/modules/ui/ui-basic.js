@@ -203,7 +203,7 @@ test('handle method', function() {
 	var eventFired = 0;
 	var TestComponent = new Class(ui.Component, function() {
 		this._test = function(self, arg) {
-			ok(arg, 'test', 'arguments pass ok.');
+			strictEqual(arg, 'test', 'arguments pass ok.');
 			methodCalled = 1;
 		};
 		this._test2 = function(self) {
@@ -351,6 +351,8 @@ test('addons', function() {
 
 	var Test = new Class(ui.Component, function() {
 		this.__mixins__ = [A];
+
+		this.test = ui.define('.test');
 
 		this._init = function(self) {
 			initCalled++;
