@@ -98,6 +98,13 @@ this.ready = function(callback) {
 	}	
 };
 
+// 在IE下如果重新设置了父元素的innerHTML导致内部节点发生变化
+// 则再次获取内部节点时，所有的原始类型数据（例如String/Boolean/Number）都会保留，所有的引用类型数据（例如Function/Object）都会丢失
+// 如果将是否包装过的标识设置为true，在IE下将会出现元素包装过但是没有包装类的引用类型成员的情况
+// 因此将包装的标识用空对象代替
+// 具体示例请参见单元测试：test/unit/modules/dom/dom-usage.js: dom.wrap error in IE when parent.innerHTML changed
+var WRAPPED = {};
+
 /**
  * 包装一个元素，使其拥有相应的Element包装成员
  * 比如 div 会使用 Element 进行包装
@@ -130,7 +137,8 @@ var wrap = this.wrap = function(node) {
 		}
 
 		// 尽早的设置_wrapped，因为在wrapper的initialize中可能出现递归调用（FormElement/FormItemElement）
-		node._wrapped = true;
+		// 为了解决IE的bug，必须设置成引用类型的数据，而不能是原始类型的数据
+		node._wrapped = WRAPPED;
 
 		$uid(node);
 
