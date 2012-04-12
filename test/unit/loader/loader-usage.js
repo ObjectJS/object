@@ -304,17 +304,16 @@ test('require.async', function() {
 	expect(2);
 	addModuleScriptToHead('module3', module_manyModules);
 	object.define('test', function(require) {
+		stop();
 		require.async('module3', function(module3) {
-			start();
 			equal(module3.c, 1, 'require.async ok.');
 		});
 		require.async('module3', function(module3) {
 			start();
 			equal(module3.c, 1, 'call require.async twice ok.');
+			recoverEnv();
 		});
-		stop();
 	});
 	object.execute('test');
 	object.remove('test');
-	recoverEnv();
 });
