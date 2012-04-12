@@ -432,8 +432,12 @@ this.ComponentFactory = new Class(type, function() {
 			var newName = item.name.slice(1);
 			meta.handles.push(newName);
 			type.__setattr__(cls, newName, events.fireevent(function(self) {
-				if (cls.get(item.name)) {
-					return cls.get(item.name)(self, Array.prototype.slice.call(arguments, 1));
+				var method = cls.get(item.name);
+				var args;
+				if (method) {
+					args = Array.prototype.slice.call(arguments, 1);
+					args.unshift(self);
+					return method.apply(self, args);
 				}
 			}));
 		});
