@@ -30,30 +30,16 @@ var overloadSetter = function(func, usePlural) {
  * propery 特性支持getter函数，用法：
  * obj.get(prop_name)
  * 会被放到 cls.prototype.get
+ * @param name 需要获取的成员
+ * @param bind 如果目标成员是个函数，则使用bind进行绑定后返回，非函数忽略此参数
  */
-var getter = function(prop) {
-	var property = this.__properties__[prop];
-	// property
-	if (property) {
-		if (property.fget) {
-			return property.fget.call(this.__this__, this);
-		}
-		else {
-			throw new Error('get not allowed property ' + prop);
-		}
+var getter = function(name, bind) {
+	var value = Object.__getattribute__(this, name);
+	if (Class.isMethod(value)) {
+		bind = bind || this;
+		return value.bind(bind);
 	}
-	// 已存在此成员
-	else if (this[prop]) {
-		return this[prop];
-	}
-	// 调用getattr
-	else if (this.__getattr__) {
-		this.__getattr__.call(this, prop);
-	}
-	// 无此成员，报错
-	else {
-		throw new Error('member not found ' + prop);
-	}
+	return value;
 };
 
 /**
@@ -77,7 +63,7 @@ var setter = overloadSetter(function(prop, value) {
  */
 var membergetter = function(name, bind) {
 	var member = Type.__getattribute__(this, name);
-	if (typeof member == 'function') {
+	if (Class.isMethod(member)) {
 		bind = bind || this;
 		return member.bind(bind);
 	}
@@ -170,6 +156,83 @@ var parent = function(cls, name, args) {
 	}
 };
 
+var instancemethod = function(func, cls) {
+	// 区分两种方法，用typeof为function判定并不严谨，function也可能是一个实例
+	var _instancemethod;
+	if (cls) {
+		_instancemethod = function() {
+			return this.prototype[func.__name__].im_func.apply(this.__this__, arguments);
+		}
+	} else {
+		_instancemethod = function() {
+			var args = [].slice.call(arguments, 0);
+			args.unshift(this);
+			return func.apply(this.__this__, args);
+		};
+	}
+	_instancemethod.__class__ = arguments.callee;
+	_instancemethod.im_func = func;
+	return _instancemethod;
+};
+
+var staticmethod = this.staticmethod = function(func) {
+	var _staticmethod = function() {};
+	_staticmethod.__class__ = arguments.callee;
+	_staticmethod.im_func = func;
+	return _staticmethod;
+};
+
+var classmethod = this.classmethod = function(func) {
+	var _classmethod = function() {
+		var args = [].slice.call(arguments, 0);
+		var cls;
+		if (typeof this == 'function') {
+			args.unshift(this);
+			return this.prototype[func.__name__].im_func.apply(this.__this__, args);
+		} else {
+			cls = this.__class__;
+			args.unshift(cls);
+			return func.apply(cls.__this__, args);
+		}
+	};
+	_classmethod.__class__ = arguments.callee;
+	_classmethod.im_func = func;
+	return _classmethod;
+};
+
+var property = this.property = function(fget, fset) {
+	var p = {};
+	p.__class__ = arguments.callee;
+	p.fget = fget;
+	p.fset = fset;
+	return p;
+};
+
+// 获取一个native function的class形式用于继承
+var createNativeClass = function(source, methodNames) {
+	var cls = new Class(function() {
+		for (var i = 0, l = methodNames.length; i < l; i++) {
+			this[methodNames[i]] = (function(name) {
+				return function() {
+					return source.prototype[name].apply(arguments[0], [].slice.call(arguments, 1));
+				};
+			})(methodNames[i]);
+		}
+	});
+	return cls;
+};
+
+// TODO
+// 暂时只处理instancemethod
+// 将metaclass上的成员重新包装后放到cls上，需要把cls当成一个instance
+function bindMetaclassMemberToCls(cls, name, member) {
+	if (member.__class__ === instancemethod) {
+		// 这里把cls当成一个instance了（metaclass的instance），因此这里绑定intancemethod时不传第二个参数
+		cls[name] = instancemethod(member.im_func);
+	}
+	return cls[name] || member;
+}
+
 // IE不可以通过prototype = new Array的方式使function获得数组功能。
 var _nativeExtendable = (function() {
 	// IE和webkit没有统一访问方法（Array.forEach)，避免使用native extend
@@ -184,6 +247,34 @@ var _nativeExtendable = (function() {
 })();
 
 var ArrayClass, StringClass;
+
+/**
+ * 从一个object上获取成员
+ */
+Object.__getattribute__ = function(obj, name) {
+	var property = obj.__properties__[name];
+	// property
+	if (property) {
+		if (property.fget) {
+			return property.fget.call(obj.__this__, obj);
+		}
+		else {
+			throw new Error('get not allowed property ' + name);
+		}
+	}
+	// 已存在此成员
+	else if (name in obj) {
+		return obj[name];
+	}
+	// 调用getattr
+	else if (obj.__getattr__) {
+		return obj.__getattr__.call(obj, name);
+	}
+	// 无此成员，返回
+	else {
+		return undefined;
+	}
+};
 
 /**
  * 设置一个对象的成员
@@ -205,6 +296,15 @@ Object.__setattr__ = object.__setattr__ = function(obj, prop, value) {
 	}
 };
 
+// 获取父类的实例，用于 cls.prototype = new parent
+Object.__new__ = function(cls) {
+	if (cls === Array || cls === String) return new cls;
+	cls.__prototyping__ = true;
+	var instance = new cls();
+	delete cls.__prototyping__;
+	return instance;
+};
+
 // this.type 为兼容处理
 var Type = this.Type = this.type = function() {
 };
@@ -216,12 +316,12 @@ Type.__class__ = Type;
  */
 Type.__new__ = function(metaclass, name, base, dict) {
 	var cls = function() {
-		// 通过Class.getInstance获取一个空实例
+		// 通过Object.__new__获取一个空实例
 		if (cls.__prototyping__) return this;
 
 		// new OneMetaClass
 		// __constructs__是Type才有的，继承于object的类没有
-		if ('__constructs__' in cls) {
+		if (cls.__constructs__) {
 			return cls.__constructs__(arguments);
 		}
 		// new OneClass
@@ -241,7 +341,8 @@ Type.__new__ = function(metaclass, name, base, dict) {
 	cls.__subclasses__ = subclassesgetter;
 	// 存储此类上的classmethod和staticmethod的名字，方便继承时赋值
 	cls.__classbasedmethods__ = [];
-	cls.__mixin__ = cls.set = membersetter;
+	// cls.__mixin__ 为兼容
+	cls.set = cls.__mixin__ = membersetter;
 	cls.get = membergetter;
 	cls.has = memberchecker;
 	// 只有__metaclass__和__class__是指向metaclass的，其他成员都是从base继承而来。
@@ -252,13 +353,10 @@ Type.__new__ = function(metaclass, name, base, dict) {
 	cls.__dict__ = dict;
 
 	// 继承于Type的类才有__constructs__
-	var constructs = base.__constructs__;
-	if (constructs) {
-		cls.__constructs__ = constructs;
-	}
+	cls.__constructs__ = base.__constructs__ || null;
 
 	// 将base上的classmethod、staticmethod成员放到cls上
-	// object和Type上没有任何classmethod、staticmethod，且object上有无关成员，无需处理
+	// Object和Type上没有任何classmethod、staticmethod，无需处理
 	if (base !== Object && base !== Type) {
 		(base.__classbasedmethods__ || []).forEach(function(name) {
 			cls[name] = base[name];
@@ -270,7 +368,7 @@ Type.__new__ = function(metaclass, name, base, dict) {
 	/*
 	 * 实现继承
 	 */
-	cls.prototype = Class.getInstance(base);
+	cls.prototype = Object.__new__(base);
 	cls.prototype.constructor = cls;
 	// Array / String 没有 subclass，需要先判断一下是否存在 subclassesarray
 	if (base.__subclassesarray__) base.__subclassesarray__.push(cls);
@@ -286,7 +384,9 @@ Type.__new__ = function(metaclass, name, base, dict) {
 	/*
 	 * 同时设置cls和其prototype上的成员
 	 */
-	Type.__setattr__(cls, 'initialize', Type.__getattribute__(base, 'initialize'));
+	//if (base === Type) {
+		//Type.__setattr__(cls, 'initialize', Type.__getattribute__(base, 'initialize'));
+	//}
 	Type.__setattr__(cls, '__setattr__', Type.__getattribute__(base, '__setattr__'));
 	Type.__setattr__(cls, '__base__', base);
 	// 支持 this.parent 调用父级同名方法
@@ -467,6 +567,7 @@ Type.__getattribute__ = function(cls, name) {
 	var proto = cls.prototype;
 	var properties = proto.__properties__;
 	var metaclass = cls.__metaclass__;
+	var member;
 	// 直接在自己身上找
 	if (name in cls) return cls[name];
 	// 找property
@@ -480,11 +581,15 @@ Type.__getattribute__ = function(cls, name) {
 		cls[name] = instancemethod(proto[name].im_func, true);
 		return cls[name];
 	}
+
 	// 去其metaclass中找
-	// 大部分类的metaclass都是Type，为确保性能，直接忽略Type
-	if (metaclass && metaclass !== Type && Type.__getattribute__(metaclass, name)) {
-		// 这里有些复杂，需要将metaclass上的成员重新包装后放到cls上，需要把cls当成一个instance
-		return bindMetaclassMemberToCls(cls, name, Type.__getattribute__(metaclass, name));
+	// Type也要找，可以找到initialize
+	if (metaclass) {
+		member = Type.__getattribute__(metaclass, name);
+		if (member) {
+			// 这里有些复杂，需要将metaclass上的成员重新包装后放到cls上，需要把cls当成一个instance
+			return bindMetaclassMemberToCls(cls, name, member);
+		}
 	}
 	// 没找到
 	if (!name in proto) throw new Error('no member named ' + name + '.');
@@ -554,6 +659,28 @@ Type.__constructs__ = function(args) {
 Type.initialize = function() {
 };
 
+Object.__class__ = Type;
+
+/**
+ * 设置一个对象的成员
+ * object.__setattr__ 为兼容处理
+ */
+Object.__setattr__ = object.__setattr__ = function(obj, prop, value) {
+	var property = obj.__properties__[prop];
+	// 此prop不是property，直接赋值即可。
+	if (!property) {
+		obj[prop] = value;
+	}
+	// 有fset
+	else if (property.fset) {
+		property.fset.call(obj.__this__, obj, value);
+	}
+	// 未设置fset，不允许set
+	else {
+		throw 'set not allowed property ' + prop;
+	}
+};
+
 /**
  * 类的定义
  * @namespace Class
@@ -620,6 +747,22 @@ Class.hasMember = function(cls, name) {
 };
 
 /**
+ * 是否是方法
+ */
+Class.isMethod = function(member) {
+	if (typeof member == 'function') {
+		if (!member.__class__
+				|| member.__class__ == instancemethod
+				|| member.__class__ == staticmethod
+				|| member.__class__ == classmethod
+		   ) {
+			return true;
+		}
+	}
+	return false;
+};
+
+/**
  * 所有properties
  */
 Class.getPropertyNames = function(obj) {
@@ -631,10 +774,11 @@ Class.getPropertyNames = function(obj) {
  * @param cls 被注射的class
  * @param host 注射进去的对象
  * @param args 构造的参数
+ * @param filter 过滤器，实现选择性注射
  */
 Class.inject = function(cls, host, args, filter) {
 	if (typeof cls != 'function') {
-		throw new Error('cls should be function');
+		throw new Error('bad arguments.');
 	};
 	var argsLen = arguments.length;
 	if (argsLen === 2) {
@@ -652,23 +796,13 @@ Class.inject = function(cls, host, args, filter) {
 
 	host.__class__ = cls;
 	host.__properties__ = cls.prototype.__properties__;
-	var p = Class.getInstance(cls);
+	var p = Object.__new__(cls);
 	object.extend(host, p, filter);
 	Class.initMixins(cls, host);
 	if (typeof cls.prototype.initialize == 'function') {
 		cls.prototype.initialize.apply(host, args);
 	}
 };
-
-// TODO
-// 暂时只处理instancemethod
-function bindMetaclassMemberToCls(cls, name, member) {
-	if (member.__class__ === instancemethod) {
-		// 这里把cls当成一个instance了（metaclass的instance），因此这里绑定intancemethod时不传第二个参数
-		cls[name] = instancemethod(member.im_func);
-	}
-	return cls[name];
-}
 
 // 判断成员是否是一个type类型的
 Class.instanceOf = function(obj, func) {
@@ -707,15 +841,6 @@ Class.getChain = function(cls) {
 		cls = cls.__base__;
 	}
 	return result;
-};
-
-// 获取父类的实例，用于 cls.prototype = new parent
-Class.getInstance = function(cls) {
-	if (cls === Array || cls === String) return new cls;
-	cls.__prototyping__ = true;
-	var instance = new cls();
-	delete cls.__prototyping__;
-	return instance;
 };
 
 /**
@@ -759,72 +884,6 @@ Class.keys = function(cls) {
 		return !(name.indexOf('__') == 0 && name.slice(-2) == '__') && !(['get', 'set', '_set', 'initialize', 'constructor'].indexOf(name) != -1);
 	});
 	return keys;
-};
-
-var instancemethod = function(func, cls) {
-	// 区分两种方法，用typeof为function判定并不严谨，function也可能是一个实例
-	var _instancemethod;
-	if (cls) {
-		_instancemethod = function() {
-			return this.prototype[func.__name__].im_func.apply(this.__this__, arguments);
-		}
-	} else {
-		_instancemethod = function() {
-			var args = [].slice.call(arguments, 0);
-			args.unshift(this);
-			return func.apply(this.__this__, args);
-		};
-	}
-	_instancemethod.__class__ = arguments.callee;
-	_instancemethod.im_func = func;
-	return _instancemethod;
-};
-
-var staticmethod = this.staticmethod = function(func) {
-	var _staticmethod = function() {};
-	_staticmethod.__class__ = arguments.callee;
-	_staticmethod.im_func = func;
-	return _staticmethod;
-};
-
-var classmethod = this.classmethod = function(func) {
-	var _classmethod = function() {
-		var args = [].slice.call(arguments, 0);
-		var cls;
-		if (typeof this == 'function') {
-			args.unshift(this);
-			return this.prototype[func.__name__].im_func.apply(this.__this__, args);
-		} else {
-			cls = this.__class__;
-			args.unshift(cls);
-			return func.apply(cls.__this__, args);
-		}
-	};
-	_classmethod.__class__ = arguments.callee;
-	_classmethod.im_func = func;
-	return _classmethod;
-};
-
-var property = this.property = function(fget, fset) {
-	var p = {};
-	p.__class__ = arguments.callee;
-	p.fget = fget;
-	p.fset = fset;
-	return p;
-};
-
-// 获取一个native function的class形式用于继承
-var createNativeClass = function(source, methodNames) {
-	var cls = new Class(function() {
-		for (var i = 0, l = methodNames.length; i < l; i++) {
-			this[methodNames[i]] = (function(name) {
-				return function() {
-					return source.prototype[name].apply(arguments[0], [].slice.call(arguments, 1));
-				};
-			})(methodNames[i]);
-		}
-	});
-	return cls;
 };
 
 ArrayClass = createNativeClass(Array, ["concat", "indexOf", "join", "lastIndexOf", "pop", "push", "reverse", "shift", "slice", "sort", "splice", "toString", "unshift", "valueOf", "forEach", "some", "every", "map", "filter", "reduce", "reduceRight"]);

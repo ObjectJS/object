@@ -4,11 +4,11 @@ module("module-usage");
 test('modules in object._loader.lib', function() {
 	expect(3);
 	raises(function() {
-		object.use('not_defined_module', function(exports){});
+		object.use('not_defined_module', function(){});
 	}, 'use not defined module, should raise error');
 	object.add('test_object_add', function(exports){});
 	ok(loader.lib['sys'] != null, 'sys module exists after object.add is called');
-	object.use('test_object_add', function(exports, test) {});
+	object.use('test_object_add', function(test) {});
 	ok(loader.getModule('test_object_add') != null, 'test_object_add module exists');
 });
 
@@ -19,7 +19,7 @@ test('sys.modules - exists', function() {
 		ok(sys.modules['ttt'] != null, 'sys.modules[ttt] exists');
 	});
 	object.add('ttt.b', function(exports) {});
-	object.use('ttt.a, ttt.b, sys', function(exports, ttt, sys){
+	object.use('ttt.a, ttt.b, sys', function(ttt, sys){
 		ok(sys.modules != null, 'sys.modules exists');
 		ok(sys.modules['ttt'] != null, 'sys.modules[ttt] exists');
 		ok(sys.modules['ttt.a'] != null, 'sys.modules[ttt.a] exists');
@@ -46,7 +46,7 @@ test('sys.molules - submodule by use', function() {
 		equal(this.__name__, 'test4');
 	});
 
-	object.use('test4, sys', function(exports, test, sys) {
+	object.use('test4, sys', function(test, sys) {
 		ok(sys.modules['test4/a'] != null, 'test4.a is used by ./a, so a is in sys.modules');
 		ok(sys.modules['test4/a/b'] == null, 'a.b is not in sys.modules');
 		ok(sys.modules['test3'] != null, 'test3 is in sys.modules');
@@ -72,7 +72,7 @@ test('simple use of module', function() {
 			ok(true, 'method in module2 invoked');
 		};
 	});
-	object.use('module2', function(exports, module2) {
+	object.use('module2', function(module2) {
 		equal(module2.a, 2, 'a in module2 is correct');
 		module2.method();
 	});
@@ -85,7 +85,7 @@ test('return value of module', function() {
 	object.add('return_number', function(exports) {
 		return 1;
 	});
-	object.use('return_number', function(exports, return_number) {
+	object.use('return_number', function(return_number) {
 		ok(typeof return_number == 'number', 'number as return value');
 		ok(return_number == 1, 'number as return value');
 		ok(return_number.__name__ == null, 'number has no __name__ property');
@@ -93,7 +93,7 @@ test('return value of module', function() {
 	object.add('return_object', function(exports) {
 		return {value : 1};
 	});
-	object.use('return_object', function(exports, return_object) {
+	object.use('return_object', function(return_object) {
 		ok(typeof return_object == 'object', 'object as return value');
 		ok(return_object.value == 1, 'property in object is ok');
 		ok(return_object.__name__ == 'return_object', 'object has __name__ property');
@@ -103,7 +103,7 @@ test('return value of module', function() {
 			ok(true, 'returned function invoked');
 		}
 	});
-	object.use('return_function', function(exports, return_function) {
+	object.use('return_function', function(return_function) {
 		ok(typeof return_function == 'function', 'object as return value');
 		return_function();
 		ok(return_function.__name__ == 'return_function', 'object has __name__ property');
@@ -160,7 +160,7 @@ test('circular dependency - extra : a->b->a', function() {
 			equal(outA.a, 1, 'a.a is ok in b, after 100 ms');
 		}, 100);
 	});
-	object.use('a', function(exports, a) {
+	object.use('a', function(a) {
 		equal(a.__name__, 'a', 'module a is ok in circular dependency');
 		equal(a.a, 1, 'a.a is ok in circular dependency');
 	});
@@ -188,7 +188,7 @@ test('circular dependency - extra : c1->c2->c3->c1', function() {
 		}, 100);
 		exports.c3 = 1;
 	});
-	object.use('c1, c2, c3', function(exports, c1, c2, c3) {
+	object.use('c1, c2, c3', function(c1, c2, c3) {
 		equal(c1.c1, 1, 'c1.c1 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
 		equal(c2.c2, 1, 'c2.c2 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
 		equal(c3.c3, 1, 'c3.c3 is ok in circular dependency : c1 -> c2 -> c3 -> c2');
@@ -205,7 +205,7 @@ test('circular dependency', function() {
 	object.add('c', 'c', function(exports, c) {
 		exports.c = 1;
 	});
-	object.use('c', function(exports, c) {
+	object.use('c', function(c) {
 		equal(c.__name__, 'c', 'c.__name__ is ok in circular dependency : c -> c');
 		equal(c.c, 1, 'c.c is ok when circular dependency : c -> c');
 	});
@@ -214,7 +214,7 @@ test('circular dependency', function() {
 	object.add('ooos', 'uuua', function(exports) {});
 	object.add('uuua', 'ooos', function(exports) {});
 	try {
-		object.use('uuua', function(exports, uuua) {});
+		object.use('uuua', function(uuua) {});
 		ok(true, 'uuua use ooos will not cause an circular dependency error');
 	} catch (e) {
 		ok(false, 'uuua use ooos will cause an circular dependency error');
@@ -229,14 +229,14 @@ test('parent module and sub module', function() {
 	object.add('parent.sub', function(exports) {
 		exports.b = 2;
 	});
-	object.use('parent.sub', function(exports, parent) {
+	object.use('parent.sub', function(parent) {
 		equal(parent.b, 1, 'parent module is loaded automatically');
 		equal(parent.sub.b, 2, 'sub module is loaded successfully');
 	});
 	object.add('parent.sub2.sub3', function(exports) {
 		exports.b = 3;
 	});
-	object.use('parent.sub2.sub3', function(exports, parent) {
+	object.use('parent.sub2.sub3', function(parent) {
 		equal(parent.b, 1, 'parent module is loaded');
 		ok(parent.sub2 != null, 'parent.sub2 is not null');
 		ok(parent.sub2.fn === undefined && parent.sub2.file === undefined, 
@@ -252,7 +252,7 @@ test('parent module and sub module - prefix auto-define', function() {
 	object.add('parent.sub.sub2.sub', function(exports) {
 		exports.a = 1;
 	});
-	object.use('parent.sub.sub2.sub', function(exports, parent) {
+	object.use('parent.sub.sub2.sub', function(parent) {
 		equal(parent.sub.sub2.sub.a, 1, 'parent.sub.sub2.sub.a = 1 is ok');
 		equal(parent.sub.fn, undefined, 'parent.sub.fn is undefined');
 		equal(parent.sub.sub2.fn, undefined, 'parent.sub.sub2.fn is undefined');
@@ -261,7 +261,7 @@ test('parent module and sub module - prefix auto-define', function() {
 	object.add('parent.sub', function(exports) {
 		exports.a = 1;
 	});
-	object.use('parent.sub.sub2.sub', function(exports, parent) {
+	object.use('parent.sub.sub2.sub', function(parent) {
 		equal(parent.sub.a, 1, 'user-define module have override auto-define module.');
 	});
 	object.remove('parent.sub', true);
