@@ -233,7 +233,7 @@ test('Function.bind', function() {
 			continue;
 		}
 		var binder = (function () {
-			ok(this == emptys[i], descs[i] + ' can be bind by function');
+			equal(this, emptys[i], descs[i] + ' can be bind by function');
 		}).bind(emptys[i]);
 		binder();
 	}

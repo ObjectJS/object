@@ -1040,3 +1040,20 @@ test('dom.Elements', function() {
 	});
 });
 
+test('dom.wrap error in IE when parent.innerHTML changed', function() {
+	object.use('dom', function(dom) {
+		var fragment = dom.getDom("<div id='outer'><div id='inner'></div></div>");
+		document.body.appendChild(fragment);
+		var outer = dom.id('outer');
+		var inner = document.getElementById('inner');
+		equal(typeof inner._wrapped, 'undefined', 'inner element is wrapped');
+		var inner = dom.id('inner');
+		equal(typeof inner._wrapped, 'object', 'inner element is wrapped');
+		ok(typeof inner.store == 'function', 'inner.store is a function');
+		outer.innerHTML += '';
+		var inner = dom.id('inner');
+		equal(typeof inner._wrapped, 'object', 'inner element is wrapped');
+		ok(typeof inner.store == 'function', 'inner.store is a function');
+		document.body.removeChild(outer);
+	});
+});
