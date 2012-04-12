@@ -99,6 +99,10 @@ test('getter/setter basic', function() {
 	m = a.get('sm', {value: 2});
 	equal(m(), 2, 'custome bine instancemethod call ok.');
 
+	// 不绑定
+	m = a.get('m', false);
+	strictEqual(m(), undefined, 'no bind called ok.');
+
 });
 
 test('__getattr__/__setattr__', function() {
@@ -558,6 +562,14 @@ test('instancemethod', function() {
 		ok(false, 'cls.get bind a object throw a error.')
 	} catch(e) {
 		ok(true, 'cls.get bind a object throw a error.')
+	}
+
+	// cls.get 不绑定
+	try {
+		var result = A.get('b', false)(arg1, arg2);
+		ok(false, 'cls.get bind a object throw a error.')
+	} catch(e) {
+		ok(true, 'cls.get no bind throw a error.')
 	}
 
 	var result = A.get('b', B)(arg1, arg2);
