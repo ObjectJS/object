@@ -904,14 +904,14 @@ this.Component = new Class(function() {
 			// 重建引用
 			self.get(name);
 
-			if (callback) {
-				callback();
-			}
-
 			if (name in self.__subEventsMap) {
 				self.__subEventsMap[name].forEach(function(meta) {
 					meta.bindComponentEvent();
 				});
+			}
+
+			if (callback) {
+				callback();
 			}
 		});
 	};
