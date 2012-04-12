@@ -891,8 +891,9 @@ this.Component = new Class(function() {
 	this.render = function(self, name, data, callback) {
 		var methodName = 'render_' + name;
 
+		var comp = self.get(name);
 		// 如果已经存在结构了，则不用再render了
-		if (self.get(name)) {
+		if (comp && (!('length' in comp) || comp.length != 0)) {
 			return;
 		}
 
