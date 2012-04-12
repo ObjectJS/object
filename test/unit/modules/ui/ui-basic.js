@@ -73,6 +73,8 @@ test('parent property', function() {
 
 test('async load component', function() {
 
+	expect(2);
+
 	var script = document.createElement('script');
 	script.setAttribute('data-src', 'async-module.js');
 	script.setAttribute('data-module', 'test.test');
@@ -96,16 +98,11 @@ test('async load component', function() {
 	var test = new TestComponent(div, {
 		'test2.template': '<div class="test2"></div>'
 	});
-	test.render('test2');
-
 	stop();
-	// 这里应该改成在某个事件中验证，200毫秒并不准确
-	setTimeout(function() {
+	test.render('test2', null, function() {
 		start();
-		ok(test.test, 'async load component ok.');
 		ok(test.test2, 'async render component ok.');
-	}, 200);
-
+	});
 
 	document.body.removeChild(script);
 });

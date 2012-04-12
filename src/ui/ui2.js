@@ -66,7 +66,7 @@ function ComponentMeta(selector, type, renderer) {
 	this.type = type;
 	this.renderer = renderer;
 }
-ComponentMeta.prototype.select = function(self, name) {
+ComponentMeta.prototype.select = function(self, name, callback) {
 	var nodes = null, comps = null;
 	if (typeof this.selector == 'function') {
 		nodes = this.selector(self);
@@ -84,14 +84,11 @@ ComponentMeta.prototype.select = function(self, name) {
 	if (nodes) {
 		getType(this.type, function(type) {
 			comps = new type.Components(nodes);
-			self.setComponent(name, comps);
+			callback(comps);
 		});
+	} else {
+		callback(null);
 	}
-
-	self._set(name, comps);
-	self._set('_' + name, nodes);
-
-	return comps;
 }
 
 function SingleComponentMeta(selector, type, renderer) {
@@ -100,7 +97,7 @@ function SingleComponentMeta(selector, type, renderer) {
 	this.renderer = renderer;
 }
 SingleComponentMeta.prototype = new ComponentMeta();
-SingleComponentMeta.prototype.select = function(self, name) {
+SingleComponentMeta.prototype.select = function(self, name, callback) {
 	var node = null, comp = null;
 	if (typeof this.selector == 'function') {
 		node = dom.wrap(this.selector(self));
@@ -118,15 +115,13 @@ SingleComponentMeta.prototype.select = function(self, name) {
 					throw new Error('type is not a class.');
 				}
 				comp = new type(node, self._options[name]);
-				self.setComponent(name, comp);
+				callback(comp);
 			});
 		}
 
 	} else {
-		self.setComponent(name, null);
+		callback(null);
 	}
-
-	return comp;
 };
 
 function OptionMeta(defaultValue, getter) {
@@ -138,7 +133,7 @@ function ParentComponentMeta(type) {
 	this.type = type;
 }
 ParentComponentMeta.prototype = new ComponentMeta();
-ParentComponentMeta.prototype.select = function(self, name) {
+ParentComponentMeta.prototype.select = function(self, name, callback) {
 	var node = self._node;
 	var comp = null;
 
@@ -148,8 +143,7 @@ ParentComponentMeta.prototype.select = function(self, name) {
 			break;
 		}
 	}
-	self.setComponent(name, comp);
-	return comp;
+	callback(comp);
 };
 
 function SubEventMeta(sub, eventType, gid) {
@@ -243,7 +237,11 @@ OnEventMeta.prototype.bind = function(self, methodName) {
 function define(meta) {
 	function fget(self) {
 		var name = prop.__name__;
-		return meta.select(self, name);
+		// select只处理查询，不处理放置到self。
+		meta.select(self, name, function(comp) {
+			self.setComponent(name, comp);
+		});
+		return self[name];
 	}
 	var prop = property(fget);
 	prop.meta = meta;
@@ -634,9 +632,22 @@ this.Component = new Class(function() {
 		}
 		self._node.component = self;
 
+		// 记录已经获取完毕的components
+		var inited = [];
+
+		function checkInit() {
+			if (inited.length == self.meta.components.length) {
+				self.init();
+			}
+		}
+
 		// 初始化components
 		self.meta.components.forEach(function(name) {
-			self.getMeta(name).select(self, name);
+			self.getMeta(name).select(self, name, function(comp) {
+				self.setComponent(name, comp);
+				inited.push(name);
+				checkInit();
+			});
 		});
 		// 初始化options
 		self.meta.options.forEach(function(name) {
@@ -652,7 +663,7 @@ this.Component = new Class(function() {
 		});
 
 		self.initAddons(self);
-		self.init();
+		checkInit();
 	};
 
 	this.fireEvent = function(self) {
@@ -866,6 +877,7 @@ this.Component = new Class(function() {
 
 	/**
 	 * 渲染一组component
+	 * 异步方法
 	 * @param name component名字
 	 * @param data 模板数据/初始化参数
 	 */
@@ -878,14 +890,23 @@ this.Component = new Class(function() {
 		}
 
 		var meta = self.getMeta(name);
+		// make前先把type准备好，这样renderer中就无需考虑异步的问题
 		getType(meta.type, function(type) {
 
 			self[methodName](function() {
-				return self.make(name, data);
+				var comp;
+				self.make(name, data, function(maked) {
+					comp = maked;
+				});
+				return comp;
 			});
 
 			// 重建引用
 			self.get(name);
+
+			if (callback) {
+				callback();
+			}
 
 			if (name in self.__subEventsMap) {
 				self.__subEventsMap[name].forEach(function(meta) {
@@ -897,6 +918,7 @@ this.Component = new Class(function() {
 
 	/**
 	 * 根据components的type创建一个component，并加入到引用中，这一般是在renderXXX方法中进行调用
+	 * 异步方法
 	 * @param name
 	 * @param data 模板数据
 	 */
@@ -915,8 +937,6 @@ this.Component = new Class(function() {
 			self.__rendered.push(comp);
 			if (callback) callback(comp);
 		});
-
-		return comp;
 	};
 
 	/**
