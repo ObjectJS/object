@@ -211,26 +211,25 @@ function OnEventMeta(eventType, gid) {
 
 OnEventMeta.prototype.bind = function(self, methodName) {
 	var eventType = this.eventType;
-	var realEventType; // 正常大小写的名称
-	// 自己身上的on事件不触发，只触发addon上的。
-	if (this.gid != self.gid && self.meta.handles.some(function(handle) {
-		if (handle.toLowerCase() == eventType) {
-			realEventType = handle;
-			return true;
-		}
-		return false;
-	})) {
-		self.addEvent(realEventType, function(event) {
-			var args;
-			// 将event._args pass 到函数后面
+	var onHandle = 'on' + eventType;
+
+	if (!(onHandle in self._node)) {
+		self._node[onHandle] = function(event) {
+			var args = [event];
+			//将event._args pass 到函数后面
 			if (event._args) {
-				args = [event].concat(event._args);
-				self[methodName].apply(self, args);
-			} else {
-				self[methodName](event);
+				args = args.concat(event._args);
 			}
-		});
+			self.__onEventsMap[eventType].forEach(function(func) {
+				func.apply(self, args);
+			});
+		}
 	}
+
+	if (!(eventType in self.__onEventsMap)) {
+		self.__onEventsMap[eventType] = [];
+	}
+	self.__onEventsMap[eventType].push(self[methodName]);
 };
 
 /**
@@ -356,9 +355,7 @@ this.ComponentFactory = new Class(type, function() {
 		var meta = dict.meta = {
 			components: [],
 			options: [],
-			handles: [],
 			onEvents: [],
-			mixinOnEvents: [],
 			subEvents: []
 		};
 
@@ -430,7 +427,6 @@ this.ComponentFactory = new Class(type, function() {
 		// 只有在initialize阶段生成handle方法才能确保mixin时能够获取到正确的cls
 		cls.get('__handles').forEach(function(item) {
 			var newName = item.name.slice(1);
-			meta.handles.push(newName);
 			type.__setattr__(cls, newName, events.fireevent(function(self) {
 				var method = cls.get(item.name);
 				var args;
@@ -472,9 +468,6 @@ this.ComponentFactory = new Class(type, function() {
 		}
 		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
 			var newName = name.slice(1);
-			if (meta.handles.indexOf(name) == -1) {
-				meta.handles.push(newName);
-			}
 			type.__setattr__(cls, newName, events.fireevent(function(self) {
 				if (self[name]) {
 					return self[name].apply(self, Array.prototype.slice.call(arguments, 1));
@@ -518,15 +511,8 @@ this.ComponentFactory = new Class(type, function() {
 			baseMeta.options.forEach(function(name) {
 				if (meta.options.indexOf(name) == -1) meta.options.push(name);
 			});
-			baseMeta.handles.forEach(function(name) {
-				if (meta.handles.indexOf(name) == -1) meta.handles.push(name);
-			});
-			// 对于继承来说，父类的onEvents和mixinOnEvents被放到对应的位置
 			baseMeta.onEvents.forEach(function(name) {
 				if (meta.onEvents.indexOf(name) == -1) meta.onEvents.push(name);
-			});
-			baseMeta.mixinOnEvents.forEach(function(name) {
-				if (meta.mixinOnEvents.indexOf(name) == -1) meta.mixinOnEvents.push(name);
 			});
 			baseMeta.subEvents.forEach(function(name) {
 				if (meta.subEvents.indexOf(name) == -1) meta.subEvents.push(name);
@@ -544,15 +530,8 @@ this.ComponentFactory = new Class(type, function() {
 			mixMeta.options.forEach(function(name) {
 				if (meta.options.indexOf(name) == -1) meta.options.push(name);
 			});
-			mixMeta.handles.forEach(function(name) {
-				if (meta.handles.indexOf(name) == -1) meta.handles.push(name);
-			});
-			// 对于mixin来说，mixin的onEvents和mixinOnEvents都意味着需要被执行，都放到mixinOnEvents中
-			mixMeta.mixinOnEvents.forEach(function(name) {
-				if (meta.mixinOnEvents.indexOf(name) == -1) meta.mixinOnEvents.push(name);
-			});
 			mixMeta.onEvents.forEach(function(name) {
-				if (meta.mixinOnEvents.indexOf(name) == -1) meta.mixinOnEvents.push(name);
+				if (meta.onEvents.indexOf(name) == -1) meta.onEvents.push(name);
 			});
 			mixMeta.subEvents.forEach(function(name) {
 				if (meta.subEvents.indexOf(name) == -1) meta.subEvents.push(name);
@@ -572,6 +551,10 @@ this.ComponentFactory = new Class(type, function() {
 			this.initialize = function(self, node) {
 				self._node = node;
 				self._node.component = self;
+				self._node.forEach(function(node) {
+					var comp = node.component || new cls(node);
+					self.push(comp);
+				});
 			};
 
 			Object.keys(dict).forEach(function(name) {
@@ -619,6 +602,8 @@ this.Component = new Class(function() {
 		self.__rendered = []; // 后来被加入的，而不是首次通过selector选择的node的引用
 		// 存储subEvents，用于render时获取信息
 		self.__subEventsMap = {};
+		// 存储onEvents
+		self.__onEventsMap = {};
 
 		var template;
 
@@ -661,7 +646,7 @@ this.Component = new Class(function() {
 			self.get(name);
 		});
 		// 初始化onEvents
-		self.meta.mixinOnEvents.forEach(function(name) {
+		self.meta.onEvents.forEach(function(name) {
 			self[name].im_func.meta.bind(self, name);
 		});
 		// 初始化subEvents

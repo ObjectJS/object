@@ -46,6 +46,7 @@ test('mutiple sub property', function() {
 	var testNode = test.test.getNode();
 
 	// 初始化时会获取所有sub
+	equals(test.test.length, 4, 'define components ok.');
 	equals(test.test.getNode().length, 4, 'define components node ok.');
 
 	// 下环线形式获取节点
@@ -232,6 +233,7 @@ test('on event method', function() {
 
 	var eventFired = 0;
 	var onEventCalled = 0;
+	var fireEventCalled = 0;
 
 	var AddonComponent = new Class(ui.Component, function() {
 
@@ -257,9 +259,12 @@ test('on event method', function() {
 		};
 
 		this.ontest = function(self, event) {
-			// 不应该执行，因为是自己身上的
+			ok(true, 'on event called in self.');
 			onEventCalled++;
-			ok(false, 'on event runed by self.');
+		};
+
+		this.ontest2 = function(self) {
+			fireEventCalled++;
 		};
 
 	});
@@ -268,11 +273,15 @@ test('on event method', function() {
 	var test = new TestComponent(div);
 	test.test();
 	equal(eventFired, 1, 'event fired.');
-	equal(onEventCalled, 1, 'on event called.');
+	equal(onEventCalled, 2, 'on event called.');
+
+	test.fireEvent('test2');
+	equal(fireEventCalled, 1, 'on event called by fireEvent.');
+
 
 });
 
-test('on event method in extend', function() {
+test('extend on event method', function() {
 	var onEventCalled = 0;
 	var AddonComponent = new Class(ui.Component, function() {
 		this.ontest = function(self) {
