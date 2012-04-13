@@ -46,6 +46,7 @@ var module_manyModules = path + 'one-file-many-modules.js';
 
 function addModuleScriptToHead(name, src) {
 	var script = document.createElement('script');
+	script.type = "text/javascript";
 	script.setAttribute('data-module', name);
 	script.setAttribute('data-src', src);
 	document.getElementsByTagName('head')[0].appendChild(script);
@@ -303,7 +304,8 @@ test('many urls pointing to the same file', function() {
 test('require.async', function() {
 	expect(2);
 	addModuleScriptToHead('module3', module_manyModules);
-	object.define('test', function(require) {
+	object.define('require_async_test', function(require) {
+		stop();
 		require.async('module3', function(module3) {
 			start();
 			equal(module3.c, 1, 'require.async ok.');
@@ -311,10 +313,9 @@ test('require.async', function() {
 		require.async('module3', function(module3) {
 			start();
 			equal(module3.c, 1, 'call require.async twice ok.');
+			recoverEnv();
 		});
-		stop();
 	});
-	object.execute('test');
-	object.remove('test');
-	recoverEnv();
+	object.execute('require_async_test');
+	object.remove('require_async_test');
 });

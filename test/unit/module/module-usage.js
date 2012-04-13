@@ -58,26 +58,26 @@ test('sys.molules - submodule by use', function() {
 
 test('simple use of module', function() {
 	expect(4);
-	object.add('module1', function(exports) {
+	object.add('simple_use_module1', function(exports) {
 		exports.a = 1;
 		exports.method = function() {
-			ok(true, 'method in module1 invoked');
+			ok(true, 'method in simple_use_module1 invoked');
 		};
 	});
-	object.add('module2', 'module1', function(exports, module1) {
-		equal(module1.a, 1, 'a in module1 is correct'); 
+	object.add('simple_use_module2', 'simple_use_module1', function(exports, module1) {
+		equal(module1.a, 1, 'a in simple_use_module1 is correct'); 
 		module1.method();
 		exports.a = 2;
 		exports.method = function() {
-			ok(true, 'method in module2 invoked');
+			ok(true, 'method in simple_use_module2 invoked');
 		};
 	});
-	object.use('module2', function(module2) {
-		equal(module2.a, 2, 'a in module2 is correct');
+	object.use('simple_use_module2', function(module2) {
+		equal(module2.a, 2, 'a in simple_use_module2 is correct');
 		module2.method();
 	});
-	object.remove('module1');
-	object.remove('module2');
+	object.remove('simple_use_module1');
+	object.remove('simple_use_module2');
 });
 
 test('return value of module', function() {
