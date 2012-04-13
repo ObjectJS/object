@@ -404,7 +404,7 @@ this.ComponentFactory = new Class(type, function() {
 			}
 		});
 
-		return type.__new__(cls, name, base, dict);
+		return Type.__new__(cls, name, base, dict);
 	};
 
 	this.initialize = function(cls, name, base, dict) {
@@ -417,17 +417,17 @@ this.ComponentFactory = new Class(type, function() {
 		cls.get('__onEvents').forEach(function(item) {
 			var newName = item.name + '$' + gid;
 			meta.onEvents.push(newName);
-			type.__setattr__(cls, newName, exports.onevent(item.eventType, gid)(item.member));
+			Type.__setattr__(cls, newName, exports.onevent(item.eventType, gid)(item.member));
 		});
 		cls.get('__subEvents').forEach(function(item) {
 			var newName = item.name + '$' + gid;
 			meta.subEvents.push(newName);
-			type.__setattr__(cls, newName, exports.subevent(item.sub, item.eventType, gid)(item.member));
+			Type.__setattr__(cls, newName, exports.subevent(item.sub, item.eventType, gid)(item.member));
 		});
 		// 只有在initialize阶段生成handle方法才能确保mixin时能够获取到正确的cls
 		cls.get('__handles').forEach(function(item) {
 			var newName = item.name.slice(1);
-			type.__setattr__(cls, newName, events.fireevent(function(self) {
+			Type.__setattr__(cls, newName, events.fireevent(function(self) {
 				var method = cls.get(item.name);
 				var args;
 				if (method) {
@@ -438,9 +438,9 @@ this.ComponentFactory = new Class(type, function() {
 			}));
 		});
 		// 清除这两个变量
-		type.__delattr__(cls, '__onEvents');
-		type.__delattr__(cls, '__subEvents');
-		type.__delattr__(cls, '__handles');
+		Type.__delattr__(cls, '__onEvents');
+		Type.__delattr__(cls, '__subEvents');
+		Type.__delattr__(cls, '__handles');
 
 		// 合并meta
 		cls.get('mixMeta')(name, base, dict);
@@ -457,23 +457,23 @@ this.ComponentFactory = new Class(type, function() {
 			if (meta.options.indexOf(name) == -1) {
 				meta.options.push(name);
 			}
-			type.__setattr__(cls, name, member);
+			Type.__setattr__(cls, name, member);
 		}
 		else if (member.__class__ == property && member.meta instanceof ComponentMeta) {
 			if (meta.components.indexOf(name) == -1) {
 				meta.components.push(name);
 			}
-			type.__setattr__(cls, 'render_' + name, member.meta.renderer);
-			type.__setattr__(cls, name, member);
+			Type.__setattr__(cls, 'render_' + name, member.meta.renderer);
+			Type.__setattr__(cls, name, member);
 		}
 		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
 			var newName = name.slice(1);
-			type.__setattr__(cls, newName, events.fireevent(function(self) {
+			Type.__setattr__(cls, newName, events.fireevent(function(self) {
 				if (self[name]) {
 					return self[name].apply(self, Array.prototype.slice.call(arguments, 1));
 				}
 			}));
-			type.__setattr__(cls, name, member);
+			Type.__setattr__(cls, name, member);
 		}
 		else if (name.match(/^(_?\w+)_(\w+)$/)) {
 			var newName = name + '$' + gid;
@@ -481,7 +481,7 @@ this.ComponentFactory = new Class(type, function() {
 			if (meta.subEvents.indexOf(newName) == -1) {
 				meta.subEvents.push(newName);
 			}
-			type.__setattr__(cls, newName, newMember);
+			Type.__setattr__(cls, newName, newMember);
 		}
 		else if (name.match(/^on(\w+)$/)) {
 			var newName = name + '$' + gid;
@@ -489,10 +489,10 @@ this.ComponentFactory = new Class(type, function() {
 			if (meta.onEvents.indexOf(newName) == -1) {
 				meta.onEvents.push(newName);
 			}
-			type.__setattr__(cls, newName, newMember);
+			Type.__setattr__(cls, newName, newMember);
 		}
 		else {
-			type.__setattr__(cls, name, member);
+			Type.__setattr__(cls, name, member);
 		}
 	};
 
@@ -970,7 +970,7 @@ this.AddonFactoryFactory = new Class(type, function() {
 		// 如果不带下划线，就有可能覆盖掉自定义的方法，也就意味着开发者不能定义这些名字的成员
 		dict.__variables = variables;
 		dict.__members = members;
-		return type.__new__(cls, name, base, dict);
+		return Type.__new__(cls, name, base, dict);
 	};
 });
 
