@@ -263,10 +263,6 @@ test('on event method', function() {
 			onEventCalled++;
 		};
 
-		//this._test2 = function() {
-			//alert('fuck');
-		//};
-
 		this.onTest2 = function(self) {
 			fireEventCalled++;
 		};
