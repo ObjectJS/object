@@ -237,14 +237,14 @@ test('on event method', function() {
 
 	var AddonComponent = new Class(ui.Component, function() {
 
-		this.ontest = function(self, event) {
+		this.onTest = function(self, event) {
 			// 不应该被执行，因为被下面覆盖掉了
 			onEventCalled++;
 			ok(false, 'on event override failed.');
 		};
 
 	});
-	AddonComponent.set('ontest', function() {
+	AddonComponent.set('onTest', function() {
 		ok(true, 'on event override ok.');
 		// 应该被执行
 		onEventCalled++;
@@ -258,12 +258,16 @@ test('on event method', function() {
 			eventFired++;
 		};
 
-		this.ontest = function(self, event) {
+		this.onTest = function(self, event) {
 			ok(true, 'on event called in self.');
 			onEventCalled++;
 		};
 
-		this.ontest2 = function(self) {
+		//this._test2 = function() {
+			//alert('fuck');
+		//};
+
+		this.onTest2 = function(self) {
 			fireEventCalled++;
 		};
 
@@ -284,7 +288,7 @@ test('on event method', function() {
 test('extend on event method', function() {
 	var onEventCalled = 0;
 	var AddonComponent = new Class(ui.Component, function() {
-		this.ontest = function(self) {
+		this.onTest = function(self) {
 			onEventCalled++;
 		};
 	});

@@ -211,25 +211,15 @@ function OnEventMeta(eventType, gid) {
 
 OnEventMeta.prototype.bind = function(self, methodName) {
 	var eventType = this.eventType;
-	var onHandle = 'on' + eventType;
 
-	if (!(onHandle in self._node)) {
-		self._node[onHandle] = function(event) {
-			var args = [event];
-			//将event._args pass 到函数后面
-			if (event._args) {
-				args = args.concat(event._args);
-			}
-			self.__onEventsMap[eventType].forEach(function(func) {
-				func.apply(self, args);
-			});
+	self.addEvent(eventType, function(event) {
+		var args = [event];
+		//将event._args pass 到函数后面
+		if (event._args) {
+			args = args.concat(event._args);
 		}
-	}
-
-	if (!(eventType in self.__onEventsMap)) {
-		self.__onEventsMap[eventType] = [];
-	}
-	self.__onEventsMap[eventType].push(self[methodName]);
+		self[methodName].apply(self, args);
+	});
 };
 
 /**
@@ -417,7 +407,8 @@ this.ComponentFactory = new Class(type, function() {
 		cls.get('__onEvents').forEach(function(item) {
 			var newName = item.name + '$' + gid;
 			meta.onEvents.push(newName);
-			Type.__setattr__(cls, newName, exports.onevent(item.eventType, gid)(item.member));
+			var eventType = item.eventType.slice(0, 1).toLowerCase() + item.eventType.slice(1);
+			Type.__setattr__(cls, newName, exports.onevent(eventType, gid)(item.member));
 		});
 		cls.get('__subEvents').forEach(function(item) {
 			var newName = item.name + '$' + gid;
@@ -485,7 +476,8 @@ this.ComponentFactory = new Class(type, function() {
 		}
 		else if (name.match(/^on(\w+)$/)) {
 			var newName = name + '$' + gid;
-			var newMember = exports.onevent(RegExp.$1, gid)(member);
+			var eventType = RegExp.$1.slice(0, 1).toLowerCase() + RegExp.$1.slice(1);
+			var newMember = exports.onevent(eventType, gid)(member);
 			if (meta.onEvents.indexOf(newName) == -1) {
 				meta.onEvents.push(newName);
 			}
@@ -602,8 +594,6 @@ this.Component = new Class(function() {
 		self.__rendered = []; // 后来被加入的，而不是首次通过selector选择的node的引用
 		// 存储subEvents，用于render时获取信息
 		self.__subEventsMap = {};
-		// 存储onEvents
-		self.__onEventsMap = {};
 
 		var template;
 
