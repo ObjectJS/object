@@ -4,6 +4,7 @@ test('sys.modules', function() {
 	object.define('test', 'sys', function(require) {
 		var sys = require('sys');
 		this.a = {};
+		ok(sys.modules.test.__package__, '__package__ ok.');
 		equal(sys.modules.test.a, this.a, 'sys.modules ok.');
 	});
 	object.use('test', function() {

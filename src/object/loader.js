@@ -319,6 +319,7 @@ CommonJSPackage.prototype.constructor = CommonJSPackage;
 
 CommonJSPackage.prototype.make = function(name, context, deps, runtime) {
 	var exports = new Module(name);
+	exports.__package__ = this;
 	// 只是暂时存放，为了factory执行时可以通过sys.modules找到自己，有了返回值后，后面需要重新addModule
 	runtime.modules[name] = exports;
 	var require = this.createRequire(name, context, deps, runtime);
@@ -353,8 +354,6 @@ CommonJSPackage.prototype.execute = function(name, context, runtime) {
 		exports.main();
 	}
 	runtime.popStack();
-
-	exports.__package__ = this;
 	return exports;
 };
 
@@ -447,6 +446,7 @@ ObjectPackage.prototype.make = function(name, context, deps, runtime) {
 	exports = runtime.modules[name];
 	if (!exports) {
 		exports = new Module(name);
+		exports.__package__ = this;
 		// 只是暂时存放，为了factory执行时可以通过sys.modules找到自己，有了返回值后，后面需要重新addModule
 		runtime.modules[name] = exports;
 	}
@@ -517,7 +517,6 @@ ObjectPackage.prototype.execute = function(name, context, runtime) {
 		runtime.popStack();
 	}
 
-	exports.__package__ = this;
 	return exports;
 };
 
