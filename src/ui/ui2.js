@@ -33,6 +33,10 @@ function setOptionTo(current, name, value) {
 };
 
 function loadMember(items, callback) {
+	if (!items) {
+		callback();
+		return;
+	}
 	var dependencies = [];
 	var memberNames = [];
 	items.forEach(function(item) {
@@ -75,21 +79,26 @@ function getType(self, name, type, callback) {
 	}
 	// class
 	else if (Class.instanceOf(type, Type)) {
-		if (addons) {
-			loadMember(addons, function() {
-				var addons = Array.prototype.slice.call(arguments, 0);
+		loadMember(addons, function() {
+			if (addons) {
+				addons = Array.prototype.slice.call(arguments, 0);
 				// TODO 这个type需要保存起来下次使用，否则每次都产生一个新的类
 				type = new Class(type, {__mixins__: addons});
-				callback(type);
-			});
-		} else {
+			}
 			callback(type);
-		}
+		});
 	}
 	// sync
 	else if (typeof type == 'function') {
 		type = type();
-		callback(type);
+		loadMember(addons, function() {
+			if (addons) {
+				addons = Array.prototype.slice.call(arguments, 0);
+				// TODO 这个type需要保存起来下次使用，否则每次都产生一个新的类
+				type = new Class(type, {__mixins__: addons});
+			}
+			callback(type);
+		});
 	}
 }
 
