@@ -1,8 +1,9 @@
-object.use('ui/ui2.js, sys', function(ui, sys) {
 
 module('basic');
 
 test('sub property', function() {
+
+object.use('ui/ui2.js', function(ui) {
 	var TestComponent = new Class(ui.Component, function() {
 		this.test = ui.define1('.test');
 		this.test2 = ui.define1('.test');
@@ -35,7 +36,12 @@ test('sub property', function() {
 	equal(test.get('test').getNode().className, 'foo', 'change selector ok.');
 });
 
+});
+
 test('mutiple sub property', function() {
+
+object.use('ui/ui2.js', function(ui) {
+
 	var TestComponent = new Class(ui.Component, function() {
 		this.test = ui.define('.test');
 		this.test2 = ui.define('.test');
@@ -57,7 +63,11 @@ test('mutiple sub property', function() {
 	equals(test._test, testNode, 'define components right when init.');
 });
 
+});
+
 test('parent property', function() {
+
+object.use('ui/ui2.js', function(ui) {
 
 	var TestComponent = new Class(ui.Component, function() {
 		this.parent = ui.parent(function() {
@@ -75,9 +85,11 @@ test('parent property', function() {
 
 	ok(test.test.parent === test, 'parent component ok.');
 });
+});
 
 test('async load component', function() {
 
+object.use('ui/ui2.js', function(ui) {
 	expect(2);
 
 	var script = document.createElement('script');
@@ -111,6 +123,7 @@ test('async load component', function() {
 
 	document.body.removeChild(script);
 });
+});
 
 test('async load template', function() {
 
@@ -120,29 +133,50 @@ test('async load template', function() {
 	document.body.appendChild(script);
 	object._loader.buildFileLib();
 
-	var TestComponent = new Class(ui.Component, function() {
-		this.test = ui.define1('.test', null, function(self, make) {
-			self.getNode().appendChild(make());
+	object.define('test', 'ui/ui2', function(require) {
+
+		var ui = require('ui/ui2');
+
+		var TestComponent = new Class(ui.Component, function() {
+			this.test = ui.define1('.test', null, function(self, make) {
+				self.getNode().appendChild(make());
+			});
+			this.test2 = ui.define1('.test', null, function(self, make) {
+				self.getNode().appendChild(make());
+			});
 		});
+
+		var div = document.createElement('div');
+		var test = new TestComponent(div, {
+			'components.test.templatemodule': 'test/template.mustache',
+			'components.test2.templatemodule': 'test/template.mustache'
+		});
+
+		stop();
+		test.render('test', {
+			'msg': 'haha'
+		}, function() {
+			start();
+			ok(test.test, 'render component by async template ok.');
+		});
+
+		stop();
+		test.render('test2', {
+			'msg': 'haha'
+		}, function() {
+			start();
+			ok(test.test2, 'render component by relative async template ok.');
+		});
+
+		document.body.removeChild(script);
 	});
 
-	var div = document.createElement('div');
-	var test = new TestComponent(div, {
-		'components.test.templatemodule': 'test/template.mustache'
+	object.use('test, sys', function(test, sys) {
 	});
-
-	stop();
-	test.render('test', {
-		'msg': 'haha'
-	}, function() {
-		start();
-		ok(test.test, 'render component by async template ok.');
-	});
-
-	document.body.removeChild(script);
 });
 
 test('option property', function() {
+object.use('ui/ui2.js', function(ui) {
 
 	optionChangeFired = 0;
 
@@ -232,8 +266,11 @@ test('option property', function() {
 	strictEqual(test.sub2.get('test2'), undefined, 'can\'t get undefined option.');
 	strictEqual(test.sub2.getOption('test2'), true, 'setOption to nonexistent undefined sub ok.');
 });
+});
 
 test('handle method', function() {
+object.use('ui/ui2.js', function(ui) {
+
 	var methodCalled = 0;
 	var eventFired = 0;
 	var TestComponent = new Class(ui.Component, function() {
@@ -262,8 +299,10 @@ test('handle method', function() {
 	equals(methodCalled, 1, 'method called.');
 	equals(eventFired, 1, 'event fired.');
 });
+});
 
 test('on event method', function() {
+object.use('ui/ui2.js', function(ui) {
 
 	var eventFired = 0;
 	var onEventCalled = 0;
@@ -312,10 +351,12 @@ test('on event method', function() {
 	test.fireEvent('test2');
 	equal(fireEventCalled, 1, 'on event called by fireEvent.');
 
-
+});
 });
 
 test('extend on event method', function() {
+object.use('ui/ui2.js', function(ui) {
+
 	var onEventCalled = 0;
 	var AddonComponent = new Class(ui.Component, function() {
 		this.onTest = function(self) {
@@ -336,8 +377,11 @@ test('extend on event method', function() {
 
 	equal(onEventCalled, 1, 'on event called in extend.');
 });
+});
 
 test('sub event method', function() {
+object.use('ui/ui2.js', function(ui) {
+
 
 	var clickEventCalled = 0;
 	var customEventCalled = 0;
@@ -382,8 +426,11 @@ test('sub event method', function() {
 	test.test.test('test');
 	equals(customEventCalled, 1, 'sub custom event called.');
 });
+});
 
 test('addons', function() {
+object.use('ui/ui2.js', function(ui) {
+
 
 	addonInitCalled = 0;
 	initCalled = 0;
@@ -409,8 +456,11 @@ test('addons', function() {
 	equal(addonInitCalled, 1, 'addon init method called.');
 	equal(initCalled, 1, 'init method called.');
 });
+});
 
 test('custom addons', function() {
+object.use('ui/ui2.js', function(ui) {
+
 
 	var script = document.createElement('script');
 	script.setAttribute('data-src', 'async-module.js');
@@ -456,8 +506,11 @@ test('custom addons', function() {
 	document.body.removeChild(script);
 
 });
+});
 
 test('render', function() {
+object.use('ui/ui2.js', function(ui) {
+
 
 	var renderedEventCalled = 0;
 
@@ -513,5 +566,5 @@ test('render', function() {
 	ok(test.test === null, 'dispose ok.');
 
 });
-
 });
+
