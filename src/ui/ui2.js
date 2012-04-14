@@ -35,7 +35,7 @@ function setOptionTo(current, name, value) {
 function getType(type, callback) {
 	// async
 	if (typeof type == 'string') {
-		var moduleStr = type.slice(0, type.lastIndexOf('.')).replace(/\./, '/');
+		var moduleStr = type.slice(0, type.lastIndexOf('.')).replace(/\./g, '/');
 		var typeStr = type.slice(type.lastIndexOf('.') + 1);
 		require.async(moduleStr, function(module) {
 			type = module[typeStr];
@@ -869,6 +869,7 @@ this.Component = new Class(function() {
 		var comp = self.get(name);
 		// 如果已经存在结构了，则不用再render了
 		if (comp && (!('length' in comp) || comp.length != 0)) {
+			callback();
 			return;
 		}
 

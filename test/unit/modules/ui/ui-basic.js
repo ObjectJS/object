@@ -403,9 +403,20 @@ test('render', function() {
 		'test.template': '<div class="test">{{hello}}</div>'
 	});
 
+	var renderCallbackCalled = 0;
+
 	// 渲染
-	test.render('test');
+	test.render('test', null, function() {
+		renderCallbackCalled++;
+	});
 	equal(test.getNode().innerHTML, '<div class="test">test</div>', 'template render ok.');
+	equal(renderCallbackCalled, 1, 'render callback called.');
+
+	// 第二次渲染，调用callback
+	test.render('test', null, function() {
+		renderCallbackCalled++;
+	});
+	equal(renderCallbackCalled, 2, 'render callback called.');
 
 	// option传递
 	equal(test.test.test, true, 'option pass to sub.');
