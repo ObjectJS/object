@@ -1,4 +1,4 @@
-object.use('ui/ui2.js', function(ui) {
+object.use('ui/ui2.js, sys', function(ui, sys) {
 
 module('basic');
 

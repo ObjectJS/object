@@ -1,9 +1,10 @@
-object.define('ui/ui2.js', 'string, options, dom, events', function(require, exports) {
+object.define('ui/ui2.js', 'sys, string, options, dom, events, ./memberloader', function(require, exports) {
 
 var string = require('string');
 var options = require('options');
 var dom = require('dom');
 var events = require('events');
+var memberloader = require('./memberloader');
 
 var globalid = 0;
 
@@ -32,26 +33,6 @@ function setOptionTo(current, name, value) {
 	current[parts[parts.length - 1]] = value;
 };
 
-function loadMember(items, callback) {
-	if (!items) {
-		callback();
-		return;
-	}
-	var dependencies = [];
-	var memberNames = [];
-	items.forEach(function(item) {
-		dependencies.push(item.slice(0, item.lastIndexOf('.')).replace(/\./g, '/'));
-		memberNames.push(item.slice(item.lastIndexOf('.') + 1));
-	});
-	require.async(dependencies, function() {
-		var members = [];
-		for (var i = 0; i < arguments.length; i++) {
-			members.push(arguments[i][memberNames[i]]);
-		}
-		callback.apply(null, members);
-	});
-}
-
 function getTemplate(self, name, callback) {
 	var moduleStr = self.getOption('components.' + name + '.templatemodule');
 	if (moduleStr) {
@@ -67,15 +48,12 @@ function getTemplate(self, name, callback) {
 function getType(self, name, type, callback) {
 
 	var addons = self.getOption('components.' + name + '.addons');
-	if (addons) {
-		addons = addons.split(/\s*,\s*/g);
-	}
 
 	function getAddonedType(type, addons, callback) {
 		if (type.get('__addoned')) {
 			callback(type);
 		} else {
-			loadMember(addons, function() {
+			memberloader.load(addons, function() {
 				if (addons) {
 					addons = Array.prototype.slice.call(arguments, 0);
 					type = new Class(type, {__mixins__: addons, __addoned: true});
@@ -89,7 +67,7 @@ function getType(self, name, type, callback) {
 
 	// async
 	if (typeof type == 'string') {
-		loadMember([type], function(type) {
+		memberloader.load(type, function(type) {
 			getAddonedType(type, addons, callback);
 		});
 	}
