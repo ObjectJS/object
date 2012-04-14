@@ -81,6 +81,26 @@ test('use object.define - submodule', function() {
 	object.remove('subdefine');
 });
 
+test('return module', function() {
+	object.define('test/a', function() {
+		return 1;
+	});
+
+	object.define('test/b', './a', function(require) {
+		var a = require('./a');
+		equal(a, 1, 'return module ok in twice.');
+	});
+
+	object.define('test/main', './b, ./a', function(require) {
+		var a = require('./a');
+		var b = require('./b');
+		equal(a, 1, 'return module ok.');
+	});
+
+	object.execute('test/main');
+	object.remove('test', true);
+});
+
 test('require.async', function() {
 	object.define('a', function() {
 	});

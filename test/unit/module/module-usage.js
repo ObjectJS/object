@@ -275,6 +275,7 @@ test('object.add relative __name__', function() {
 	});
 	object.use('test.b', function(test) {
 	});
+	object.remove('test', true);
 });
 
 test('object.execute auto call exports.main', function() {
