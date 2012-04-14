@@ -4,8 +4,6 @@ var string = require('string');
 var options = require('options');
 var dom = require('dom');
 var events = require('events');
-// 需要时再加载
-var sys, urlparse, memberloader;
 
 var globalid = 0;
 
@@ -35,8 +33,8 @@ function setOptionTo(current, name, value) {
 };
 
 function getTemplate(self, name, callback) {
-	sys = sys || require('sys');
-	urlparse = urlparse || require('urlparse');
+	var sys = require('sys');
+	var urlparse = require('urlparse');
 
 	var moduleStr = self.getOption('components.' + name + '.templatemodule');
 	// 处理相对路径
@@ -59,9 +57,9 @@ function getTemplate(self, name, callback) {
 
 function getType(self, name, type, callback) {
 
-	var addons = self.getOption('components.' + name + '.addons');
+	var memberloader = require('./memberloader');
 
-	memberloader = memberloader || require('./memberloader');
+	var addons = self.getOption('components.' + name + '.addons');
 
 	function getAddonedType(type, addons, callback) {
 		if (type.get('__addoned')) {
