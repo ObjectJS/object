@@ -71,34 +71,36 @@ function getType(self, name, type, callback) {
 		addons = addons.split(/\s*,\s*/g);
 	}
 
+	function getAddonedType(type, addons, callback) {
+		if (type.get('__addoned')) {
+			callback(type);
+		} else {
+			loadMember(addons, function() {
+				if (addons) {
+					addons = Array.prototype.slice.call(arguments, 0);
+					type = new Class(type, {__mixins__: addons, __addoned: true});
+					// 将新type记录在meta上
+					self.getMeta(name).type = type;
+				}
+				callback(type);
+			});
+		}
+	}
+
 	// async
 	if (typeof type == 'string') {
 		loadMember([type], function(type) {
-			callback(type);
+			getAddonedType(type, addons, callback);
 		});
 	}
 	// class
 	else if (Class.instanceOf(type, Type)) {
-		loadMember(addons, function() {
-			if (addons) {
-				addons = Array.prototype.slice.call(arguments, 0);
-				// TODO 这个type需要保存起来下次使用，否则每次都产生一个新的类
-				type = new Class(type, {__mixins__: addons});
-			}
-			callback(type);
-		});
+		getAddonedType(type, addons, callback);
 	}
 	// sync
 	else if (typeof type == 'function') {
 		type = type();
-		loadMember(addons, function() {
-			if (addons) {
-				addons = Array.prototype.slice.call(arguments, 0);
-				// TODO 这个type需要保存起来下次使用，否则每次都产生一个新的类
-				type = new Class(type, {__mixins__: addons});
-			}
-			callback(type);
-		});
+		getAddonedType(type, addons, callback);
 	}
 }
 

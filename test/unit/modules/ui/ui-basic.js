@@ -423,19 +423,34 @@ test('custom addons', function() {
 
 		this.test = ui.define1('.test');
 
+		this.test2 = ui.define1('.test2', 'test.test.TestComponent');
+
 		this._init = function(self) {
 			start();
+			// a、b均来自于addon
 			equal(self.test.a, 1, 'custom addon addoned.');
 			equal(self.test.b, 1, 'mutiple custom addon addoned.');
+
+			// a来自于自定义类型，b来自于addon
+			equal(self.test2.a, 1, 'custom addon addoned with custom type.');
+			equal(self.test2.b, 1, 'mutiple custom addon addoned with custom type.');
+
+			var type = self.test2.constructor;
+			// 刷新内容，测试constructor是否一致
+			self.getNode().innerHTML += '';
+			self.get('test2');
+			// 确保多次获取时用的都是生成的同一个类，而不是多次生成
+			ok(self.test2.constructor === type, 'custom addon using same constructor.');
 		};
 	});
 
 	var div = document.createElement('div');
-	div.innerHTML = '<div class="test"></div>';
+	div.innerHTML = '<div class="test"></div><div class="test2"></div>';
 
 	stop();
 	var test = new Test(div, {
-		'components.test.addons': 'test.test.TestComponent, test.test.TestComponent2'
+		'components.test.addons': 'test.test.TestComponent, test.test.TestComponent2',
+		'components.test2.addons': 'test.test.TestComponent2'
 	});
 
 	document.body.removeChild(script);
