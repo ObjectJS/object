@@ -1,12 +1,11 @@
 object.define('ui/ui2.js', 'sys, string, options, dom, events, urlparse, ./memberloader', function(require, exports) {
 
-var sys = require('sys');
 var string = require('string');
 var options = require('options');
 var dom = require('dom');
 var events = require('events');
-var urlparse = require('urlparse');
-var memberloader = require('./memberloader');
+// 需要时再加载
+var sys, urlparse, memberloader;
 
 var globalid = 0;
 
@@ -36,6 +35,9 @@ function setOptionTo(current, name, value) {
 };
 
 function getTemplate(self, name, callback) {
+	sys = sys || require('sys');
+	urlparse = urlparse || require('urlparse');
+
 	var moduleStr = self.getOption('components.' + name + '.templatemodule');
 	// 处理相对路径
 	var callerModule = self.__class__.__module__;
@@ -59,10 +61,13 @@ function getType(self, name, type, callback) {
 
 	var addons = self.getOption('components.' + name + '.addons');
 
+	memberloader = memberloader || require('./memberloader');
+
 	function getAddonedType(type, addons, callback) {
 		if (type.get('__addoned')) {
 			callback(type);
 		} else {
+
 			memberloader.load(addons, function() {
 				if (addons) {
 					addons = Array.prototype.slice.call(arguments, 0);
