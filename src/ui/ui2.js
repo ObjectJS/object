@@ -877,11 +877,11 @@ this.Component = new Class(function() {
 		getType(meta.type, function(type) {
 
 			self[methodName](function() {
-				var comp;
-				self.make(name, data, function(maked) {
-					comp = maked;
+				var node;
+				self.make(name, data, function(comp) {
+					node = comp._node;
 				});
-				return comp;
+				return node;
 			});
 
 			// 重建引用

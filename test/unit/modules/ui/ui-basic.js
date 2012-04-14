@@ -85,7 +85,7 @@ test('async load component', function() {
 	var TestComponent = new Class(ui.Component, function() {
 		this.test = ui.define1('.test', 'test.test.TestComponent');
 		this.test2 = ui.define1('.test2', 'test.test.TestComponent', function(self, make) {
-			self._node.appendChild(make()._node);
+			self._node.appendChild(make());
 		});
 
 		this._init = function(self) {
@@ -386,7 +386,7 @@ test('render', function() {
 
 		this.test = ui.define1('.test', SubComponent, function(self, make) {
 			var a = make();
-			self._node.appendChild(a._node);
+			self._node.appendChild(a);
 		});
 
 		this.test_click = function(self) {
