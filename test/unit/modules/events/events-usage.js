@@ -440,7 +440,10 @@ test('addNativeEvent and preventDefault', function() {
 		// preventDefault in onclick
 		var node = dom.wrap(document.createElement('div'));
 		node.onclick = function(event) {
-			event.preventDefault();
+			event = event || window.event;
+			if (event) {
+				event.preventDefault();
+			}
 		};
 		node.addNativeEvent('click', function(event) {
 			var prevented = event.getPreventDefault? event.getPreventDefault() : event.defaultPrevented;
