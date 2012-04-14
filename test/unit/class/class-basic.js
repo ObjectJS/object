@@ -1,4 +1,21 @@
 module("class-basic");
+
+test('__module__', function() {
+	object.define('test', function() {
+		var A = new Class({});
+		equal(A.__module__, 'test', '__module__ ok.');
+
+		stop();
+		setTimeout(function() {
+			start();
+			var B = new Class({});
+			equal(B.__module__, '', 'async class __module__ empty.')
+		}, 0);
+	});
+	object.use('test', function() {
+	});
+});
+
 test('modify global variable in constructor', function() {
 	var counter = 0;
 	var A = new Class(function() {
