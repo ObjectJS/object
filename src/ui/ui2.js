@@ -39,8 +39,11 @@ function getTemplate(self, name, callback) {
 	var moduleStr = self.getOption('components.' + name + '.templatemodule');
 	// 处理相对路径
 	var callerModule = self.__class__.__module__;
-	if (callerModule && sys.modules[callerModule]) {
-		//moduleStr = urlparse.urljoin(sys.modules[callerModule].__package__.id, moduleStr);
+	var base;
+	// 是相对路径 && 能找到此类的所在模块信息 && 在sys.modules中有这个模块
+	if ((moduleStr.indexOf('./') === 0 || moduleStr.indexOf('../') === 0) && callerModule && sys.modules[callerModule]) {
+		base = sys.modules[callerModule].__package__.id;
+		moduleStr = urlparse.urljoin(base, moduleStr);
 	}
 	if (moduleStr) {
 		require.async(moduleStr, function(module) {

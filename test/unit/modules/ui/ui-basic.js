@@ -133,7 +133,7 @@ test('async load template', function() {
 	document.body.appendChild(script);
 	object._loader.buildFileLib();
 
-	object.define('test', 'ui/ui2', function(require) {
+	object.define('test/index.js', 'ui/ui2', function(require) {
 
 		var ui = require('ui/ui2');
 
