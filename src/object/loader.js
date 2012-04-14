@@ -320,7 +320,9 @@ CommonJSPackage.prototype.constructor = CommonJSPackage;
 CommonJSPackage.prototype.make = function(name, context, deps, runtime) {
 	var exports = new Module(name);
 	var require = this.createRequire(name, context, deps, runtime);
+	object.creating = name;
 	var returnExports = this.factory.call(exports, require, exports, this);
+	object.creating = '';
 	if (returnExports) {
 		returnExports.__name__ = exports.__name__;
 		exports = returnExports;
@@ -447,7 +449,9 @@ ObjectPackage.prototype.make = function(name, context, deps, runtime) {
 	args.unshift(exports);
 
 	if (this.factory) {
+		object.creating = name;
 		returnExports = this.factory.apply(exports, args);
+		object.creating = '';
 	}
 
 	// 当有returnExports时，之前建立的空模块（即exports变量）则没有用武之地了，给出警告。

@@ -341,6 +341,7 @@ Type.__new__ = function(metaclass, name, base, dict) {
 	cls.__subclasses__ = subclassesgetter;
 	// 存储此类上的classmethod和staticmethod的名字，方便继承时赋值
 	cls.__classbasedmethods__ = [];
+	cls.__module__ = object.creating;
 	// cls.__mixin__ 为兼容
 	cls.set = cls.__mixin__ = membersetter;
 	cls.get = membergetter;
