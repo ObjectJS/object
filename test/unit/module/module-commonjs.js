@@ -1,5 +1,16 @@
 module('module-commonjs');
 
+test('sys.modules', function() {
+	object.define('test', 'sys', function(require) {
+		var sys = require('sys');
+		this.a = {};
+		equal(sys.modules.test.a, this.a, 'sys.modules ok.');
+	});
+	object.use('test', function() {
+	})
+	object.remove('test');
+});
+
 test('use object.define - basic', function() {
 	object.define('define_b', function(require, exports, module) {
 		exports.b = 1;

@@ -319,6 +319,7 @@ CommonJSPackage.prototype.constructor = CommonJSPackage;
 
 CommonJSPackage.prototype.make = function(name, context, deps, runtime) {
 	var exports = new Module(name);
+	runtime.addModule(name, exports);
 	var require = this.createRequire(name, context, deps, runtime);
 	var returnExports = this.factory.call(exports, require, exports, this);
 	if (returnExports) {
@@ -349,7 +350,6 @@ CommonJSPackage.prototype.execute = function(name, context, runtime) {
 	if (name == '__main__' && typeof exports.main == 'function') {
 		exports.main();
 	}
-	runtime.addModule(name, exports);
 	runtime.popStack();
 
 	exports.__package__ = this;
@@ -408,8 +408,7 @@ CommonJSPackage.prototype.createRequire = function(name, context, deps, runtime)
 		});
 		newPkg.load(runtime, function() {
 			// 由于newPkg的id与之前的相同，load方法会覆盖掉runtime.packages上保存的成员
-			var deps = runtime.packages[newPkg.id].deps;
-			newPkg.make(name, parentContext, deps, runtime);
+			newPkg.execute(newPkg.id, context, runtime);
 		});
 	};
 
@@ -441,7 +440,11 @@ ObjectPackage.prototype.make = function(name, context, deps, runtime) {
 	}, this); 
 
 	// 自己
-	exports = runtime.modules[name] || new Module(name);
+	exports = runtime.modules[name];
+	if (!exports) {
+		exports = new Module(name);
+		runtime.addModule(name, exports);
+	}
 
 	// 最后再放入exports，否则当错误的自己依赖自己时，会导致少传一个参数
 	args.unshift(exports);
@@ -505,7 +508,6 @@ ObjectPackage.prototype.execute = function(name, context, runtime) {
 			exports.main();
 		}
 
-		runtime.addModule(name, exports);
 		runtime.popStack();
 	}
 
