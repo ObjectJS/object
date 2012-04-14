@@ -32,6 +32,20 @@ function setOptionTo(current, name, value) {
 	current[parts[parts.length - 1]] = value;
 };
 
+function getTemplate(options, callback) {
+
+	if (options.template && options.template.module) {
+		var moduleStr = options.template.module.replace(/\./g, '/');
+		require.async(moduleStr, function(module) {
+			options.template = module;
+			callback();
+		});
+	} else {
+		callback();
+	}
+
+}
+
 function getType(type, callback) {
 	// async
 	if (typeof type == 'string') {
@@ -602,6 +616,7 @@ this.Component = new Class(function() {
 			if (template) {
 				node = self.createNode(template, node);
 			} else {
+				console.error('no template specified.');
 				return;
 			}
 		}
@@ -873,30 +888,36 @@ this.Component = new Class(function() {
 			return;
 		}
 
+		if (!self[methodName]) {
+			console.error('no renderer defined for ' + name + '.');
+			return;
+		}
+
 		var meta = self.getMeta(name);
-		// make前先把type准备好，这样renderer中就无需考虑异步的问题
+		// make前先把type和template准备好，这样renderer中就无需考虑异步的问题
 		getType(meta.type, function(type) {
-
-			self[methodName](function() {
-				var node;
-				self.make(name, data, function(comp) {
-					node = comp._node;
+			getTemplate(self._options[name], function() {
+				self[methodName](function() {
+					var node;
+					self.make(name, data, function(comp) {
+						node = comp._node;
+					});
+					return node;
 				});
-				return node;
+
+				// 重建引用
+				self.get(name);
+
+				if (name in self.__subEventsMap) {
+					self.__subEventsMap[name].forEach(function(meta) {
+						meta.bindComponentEvent();
+					});
+				}
+
+				if (callback) {
+					callback();
+				}
 			});
-
-			// 重建引用
-			self.get(name);
-
-			if (name in self.__subEventsMap) {
-				self.__subEventsMap[name].forEach(function(meta) {
-					meta.bindComponentEvent();
-				});
-			}
-
-			if (callback) {
-				callback();
-			}
 		});
 	};
 
@@ -917,9 +938,11 @@ this.Component = new Class(function() {
 		var comp = null;
 
 		getType(meta.type, function(type) {
-			comp = new type(data, options);
-			self.__rendered.push(comp);
-			if (callback) callback(comp);
+			getTemplate(options, function() {
+				comp = new type(data, options);
+				self.__rendered.push(comp);
+				if (callback) callback(comp);
+			})
 		});
 	};
 

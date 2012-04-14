@@ -108,6 +108,36 @@ test('async load component', function() {
 	document.body.removeChild(script);
 });
 
+test('async load template', function() {
+
+	var script = document.createElement('script');
+	script.setAttribute('data-src', 'async-template.js');
+	script.setAttribute('data-module', 'test.template');
+	document.body.appendChild(script);
+	object._loader.buildFileLib();
+
+	var TestComponent = new Class(ui.Component, function() {
+		this.test = ui.define1('.test', null, function(self, make) {
+			self.getNode().appendChild(make());
+		});
+	});
+
+	var div = document.createElement('div');
+	var test = new TestComponent(div, {
+		'test.template.module': 'test.template'
+	});
+
+	stop();
+	test.render('test', {
+		'msg': 'haha'
+	}, function() {
+		start();
+		ok(test.test, 'render component by async template ok.');
+	});
+
+	document.body.removeChild(script);
+});
+
 test('option property', function() {
 
 	optionChangeFired = 0;
