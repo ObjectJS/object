@@ -10,7 +10,7 @@ test('sub property', function() {
 	TestComponent.set('test3', ui.define1('.test'));
 
 	var div = document.createElement('div');
-	div.innerHTML = '<div class="test">test</div>';
+	div.innerHTML = '<div class="test">test</div><div class="foo"></div>';
 
 	var test = new TestComponent(div);
 	var testComp = test.test;
@@ -19,16 +19,20 @@ test('sub property', function() {
 	// 初始化时会获取所有sub
 	equals(test.test.getNode().className, 'test', 'define1 component right when init.');
 
-	// 下环线形式获取节点
-	equals(test._test, testNode, 'define1 component right when init.');
+	// 获取节点
+	equals(test.test.getNode(), testNode, 'define1 component right when init.');
 
 	// 两个引用相同，返回相同一个component引用
 	equals(test.test2, testComp, 'using one same component when selector same.');
 	equals(test.test3, testComp, 'component defined after class created.');
 
 	// 直接获取节点方式
-	equals(test._test2, testNode, 'using one same node when selector same.');
-	equals(test._test3, testNode, 'component defined after class created.');
+	equals(test.test2.getNode(), testNode, 'using one same node when selector same.');
+	equals(test.test3.getNode(), testNode, 'component defined after class created.');
+
+	// 修改selector
+	test.setOption('components.test.selector', '.foo');
+	equal(test.get('test').getNode().className, 'foo', 'change selector ok.');
 });
 
 test('mutiple sub property', function() {
@@ -380,8 +384,10 @@ test('sub event method', function() {
 });
 
 test('addons', function() {
+
 	addonInitCalled = 0;
 	initCalled = 0;
+
 	var A = new Class(ui.Component, function() {
 		this._init = function(self) {
 			addonInitCalled++;
@@ -402,6 +408,38 @@ test('addons', function() {
 
 	equal(addonInitCalled, 1, 'addon init method called.');
 	equal(initCalled, 1, 'init method called.');
+});
+
+test('custom addons', function() {
+
+	var script = document.createElement('script');
+	script.setAttribute('data-src', 'async-module.js');
+	script.setAttribute('data-module', 'test.test');
+	document.body.appendChild(script);
+	object._loader.buildFileLib();
+
+	// custom addon
+	var Test = new Class(ui.Component, function() {
+
+		this.test = ui.define1('.test');
+
+		this._init = function(self) {
+			start();
+			equal(self.test.a, 1, 'custom addon addoned.');
+			equal(self.test.b, 1, 'mutiple custom addon addoned.');
+		};
+	});
+
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="test"></div>';
+
+	stop();
+	var test = new Test(div, {
+		'components.test.addons': 'test.test.TestComponent, test.test.TestComponent2'
+	});
+
+	document.body.removeChild(script);
+
 });
 
 test('render', function() {

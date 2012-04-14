@@ -32,6 +32,22 @@ function setOptionTo(current, name, value) {
 	current[parts[parts.length - 1]] = value;
 };
 
+function loadMember(items, callback) {
+	var dependencies = [];
+	var memberNames = [];
+	items.forEach(function(item) {
+		dependencies.push(item.slice(0, item.lastIndexOf('.')).replace(/\./g, '/'));
+		memberNames.push(item.slice(item.lastIndexOf('.') + 1));
+	});
+	require.async(dependencies, function() {
+		var members = [];
+		for (var i = 0; i < arguments.length; i++) {
+			members.push(arguments[i][memberNames[i]]);
+		}
+		callback.apply(null, members);
+	});
+}
+
 function getTemplate(self, name, callback) {
 	var moduleStr = self.getOption('components.' + name + '.templatemodule');
 	if (moduleStr) {
@@ -44,23 +60,36 @@ function getTemplate(self, name, callback) {
 
 }
 
-function getType(type, callback) {
+function getType(self, name, type, callback) {
+
+	var addons = self.getOption('components.' + name + '.addons');
+	if (addons) {
+		addons = addons.split(/\s*,\s*/g);
+	}
+
 	// async
 	if (typeof type == 'string') {
-		var moduleStr = type.slice(0, type.lastIndexOf('.')).replace(/\./g, '/');
-		var typeStr = type.slice(type.lastIndexOf('.') + 1);
-		require.async(moduleStr, function(module) {
-			type = module[typeStr];
+		loadMember([type], function(type) {
 			callback(type);
 		});
 	}
 	// class
 	else if (Class.instanceOf(type, Type)) {
-		callback(type);
+		if (addons) {
+			loadMember(addons, function() {
+				var addons = Array.prototype.slice.call(arguments, 0);
+				// TODO 这个type需要保存起来下次使用，否则每次都产生一个新的类
+				type = new Class(type, {__mixins__: addons});
+				callback(type);
+			});
+		} else {
+			callback(type);
+		}
 	}
 	// sync
 	else if (typeof type == 'function') {
-		callback(type());
+		type = type();
+		callback(type);
 	}
 }
 
@@ -80,8 +109,13 @@ function ComponentMeta(selector, type, renderer) {
 }
 ComponentMeta.prototype.select = function(self, name, callback) {
 	var nodes = null, comps = null;
-	if (typeof this.selector == 'function') {
-		nodes = this.selector(self);
+
+	var selector = self.getOption('components.' + name + '.selector') || this.selector;
+	// 暂时不支持type的修改
+	var type = this.type;
+
+	if (typeof selector == 'function') {
+		nodes = selector(self);
 		// 确保返回的是个dom.Elements
 		if (nodes.constructor != dom.Elements) {
 			if (!nodes.length) {
@@ -90,11 +124,11 @@ ComponentMeta.prototype.select = function(self, name, callback) {
 			nodes = new dom.Elements(nodes);
 		}
 	} else {
-		nodes = self._node.getElements(this.selector);
+		nodes = self._node.getElements(selector);
 	}
 
 	if (nodes) {
-		getType(this.type, function(type) {
+		getType(self, name, type, function(type) {
 			comps = new type.Components(nodes);
 			callback(comps);
 		});
@@ -111,10 +145,15 @@ function SingleComponentMeta(selector, type, renderer) {
 SingleComponentMeta.prototype = new ComponentMeta();
 SingleComponentMeta.prototype.select = function(self, name, callback) {
 	var node = null, comp = null;
-	if (typeof this.selector == 'function') {
-		node = dom.wrap(this.selector(self));
+
+	var selector = self.getOption('components.' + name + '.selector') || this.selector;
+	// 暂时不支持type的修改
+	var type = this.type;
+
+	if (typeof selector == 'function') {
+		node = dom.wrap(selector(self));
 	} else {
-		node = self._node.getElement(this.selector);
+		node = self._node.getElement(selector);
 	}
 
 	if (node) {
@@ -122,7 +161,7 @@ SingleComponentMeta.prototype.select = function(self, name, callback) {
 		if (comp) {
 			self.setComponent(name, comp);
 		} else {
-			getType(this.type, function(type) {
+			getType(self, name, type, function(type) {
 				if (!Class.instanceOf(type, Type)) {
 					throw new Error('type is not a class.');
 				}
@@ -594,10 +633,6 @@ this.Component = new Class(function() {
 			return;
 		}
 
-		if (!options) options = {};
-		// 保存options，生成component时用于传递
-		self._options = exports.parseOptions(options);
-
 		// 存储dispose事件的注册情况
 		self.__disposes = [];
 		// 存储make的新元素
@@ -612,12 +647,16 @@ this.Component = new Class(function() {
 		}
 		self._node.component = self;
 
+		if (!options) options = {};
+		// 保存options，生成component时用于传递
+		self._options = exports.parseOptions(options);
+
 		// 记录已经获取完毕的components
-		var inited = [];
+		var inited = 0;
 
 		function checkInit() {
-			if (inited.length == self.meta.components.length) {
-				inited = []; // reset
+			if (inited == self.meta.components.length) {
+				inited = -1; // reset
 				self.init();
 			}
 		}
@@ -626,7 +665,7 @@ this.Component = new Class(function() {
 		self.meta.components.forEach(function(name) {
 			self.getMeta(name).select(self, name, function(comp) {
 				self.setComponent(name, comp);
-				inited.push(name);
+				inited++;
 				checkInit();
 			});
 		});
@@ -881,7 +920,7 @@ this.Component = new Class(function() {
 
 		var meta = self.getMeta(name);
 		// make前先把type和template准备好，这样renderer中就无需考虑异步的问题
-		getType(meta.type, function() {
+		getType(self, name, meta.type, function() {
 			getTemplate(self, name, function() {
 				self[methodName](function() {
 					var node;
@@ -921,7 +960,7 @@ this.Component = new Class(function() {
 		var options = self._options[name];
 		object.extend(data, options, false);
 
-		getType(meta.type, function(type) {
+		getType(self, name, meta.type, function(type) {
 			getTemplate(self, name, function(template) {
 
 				if (template) {
@@ -936,13 +975,6 @@ this.Component = new Class(function() {
 				if (callback) callback(comp);
 			})
 		});
-	};
-
-	/**
-	 * 设置component的template
-	 */
-	this.setTemplate = function(self, name, template) {
-		self.setOption(name + '.template', template);
 	};
 
 	/**

@@ -6,4 +6,8 @@ object.define('test.test', 'ui/ui2.js', function(require, exports, module) {
 		this.a = 1;
 	});
 
+	this.TestComponent2 = new Class(ui.Component, function() {
+		this.b = 1;
+	});
+
 });
