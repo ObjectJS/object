@@ -160,6 +160,7 @@ test('async load template', function() {
 			ok(test.test, 'render component by async template ok.');
 		});
 
+		// 测试相对路径
 		stop();
 		test.render('test2', {
 			'msg': 'haha'
