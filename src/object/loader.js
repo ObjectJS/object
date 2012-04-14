@@ -319,13 +319,15 @@ CommonJSPackage.prototype.constructor = CommonJSPackage;
 
 CommonJSPackage.prototype.make = function(name, context, deps, runtime) {
 	var exports = new Module(name);
-	runtime.addModule(name, exports);
+	// 只是暂时存放，为了factory执行时可以通过sys.modules找到自己，有了返回值后，后面需要重新addModule
+	runtime.modules[name] = exports;
 	var require = this.createRequire(name, context, deps, runtime);
 	var returnExports = this.factory.call(exports, require, exports, this);
 	if (returnExports) {
 		returnExports.__name__ = exports.__name__;
 		exports = returnExports;
 	}
+	runtime.addModule(name, exports);
 	return exports;
 };
 
@@ -445,7 +447,8 @@ ObjectPackage.prototype.make = function(name, context, deps, runtime) {
 	exports = runtime.modules[name];
 	if (!exports) {
 		exports = new Module(name);
-		runtime.addModule(name, exports);
+		// 只是暂时存放，为了factory执行时可以通过sys.modules找到自己，有了返回值后，后面需要重新addModule
+		runtime.modules[name] = exports;
 	}
 
 	// 最后再放入exports，否则当错误的自己依赖自己时，会导致少传一个参数
@@ -472,6 +475,7 @@ ObjectPackage.prototype.make = function(name, context, deps, runtime) {
 		delete exports.__empty_refs__;
 	}
 
+	runtime.addModule(name, exports);
 	return exports;
 };
 
