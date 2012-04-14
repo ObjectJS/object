@@ -341,7 +341,12 @@ Type.__new__ = function(metaclass, name, base, dict) {
 	cls.__subclasses__ = subclassesgetter;
 	// 存储此类上的classmethod和staticmethod的名字，方便继承时赋值
 	cls.__classbasedmethods__ = [];
-	cls.__module__ = object.creating;
+	// cls.__module__，从loader的runtime中获取
+	if (object.runtime) {
+		cls.__module__ = object.runtime.stack[object.runtime.stack.length - 1].id;
+	} else {
+		cls.__module__ = '';
+	}
 	// cls.__mixin__ 为兼容
 	cls.set = cls.__mixin__ = membersetter;
 	cls.get = membergetter;
