@@ -1,9 +1,11 @@
-object.define('ui/ui2.js', 'sys, string, options, dom, events, ./memberloader', function(require, exports) {
+object.define('ui/ui2.js', 'sys, string, options, dom, events, urlparse, ./memberloader', function(require, exports) {
 
+var sys = require('sys');
 var string = require('string');
 var options = require('options');
 var dom = require('dom');
 var events = require('events');
+var urlparse = require('urlparse');
 var memberloader = require('./memberloader');
 
 var globalid = 0;
@@ -35,6 +37,11 @@ function setOptionTo(current, name, value) {
 
 function getTemplate(self, name, callback) {
 	var moduleStr = self.getOption('components.' + name + '.templatemodule');
+	// 处理相对路径
+	var callerModule = self.__class__.__module__;
+	if (callerModule && sys.modules[callerModule]) {
+		//moduleStr = urlparse.urljoin(sys.modules[callerModule].__package__.id, moduleStr);
+	}
 	if (moduleStr) {
 		require.async(moduleStr, function(module) {
 			callback(module);

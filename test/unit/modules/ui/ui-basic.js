@@ -149,7 +149,7 @@ test('async load template', function() {
 		var div = document.createElement('div');
 		var test = new TestComponent(div, {
 			'components.test.templatemodule': 'test/template.mustache',
-			'components.test2.templatemodule': 'test/template.mustache'
+			'components.test2.templatemodule': './template.mustache'
 		});
 
 		stop();
