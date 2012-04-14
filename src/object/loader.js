@@ -398,15 +398,17 @@ CommonJSPackage.prototype.createRequire = function(name, context, deps, runtime)
 	}
 
 	require.async = function(dependencies, callback) {
-		// 创建一个同名package
-		var newPkg = new CommonJSPackage(parent.id, dependencies, function(require) {
+		// 创建一个同目录package，保证相对依赖的正确
+		var id = parent.id + '~' + new Date().getTime() + Math.floor(Math.random() * 100);
+		runtime.loader.defineModule(CommonJSPackage, id, dependencies, function(require, exports, module) {
 			var args = [];
-			newPkg.dependencies.forEach(function(dependency) {
+			module.dependencies.forEach(function(dependency) {
 				args.push(require(dependency));
 			});
 			callback.apply(null, args);
 		});
-		newPkg.load(runtime, function() {
+		runtime.loadModule(id, function() {
+			var newPkg = runtime.loader.lib[id]
 			// 由于newPkg的id与之前的相同，load方法会覆盖掉runtime.packages上保存的成员
 			newPkg.execute(newPkg.id, context, runtime);
 		});
