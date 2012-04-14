@@ -32,16 +32,14 @@ function setOptionTo(current, name, value) {
 	current[parts[parts.length - 1]] = value;
 };
 
-function getTemplate(options, callback) {
-
-	if (options.template && options.template.module) {
-		var moduleStr = options.template.module.replace(/\./g, '/');
+function getTemplate(self, name, callback) {
+	var moduleStr = self.getOption('components.' + name + '.templatemodule');
+	if (moduleStr) {
 		require.async(moduleStr, function(module) {
-			options.template = module;
-			callback();
+			callback(module);
 		});
 	} else {
-		callback();
+		callback(self.getOption('components.' + name + '.template'));
 	}
 
 }
@@ -586,10 +584,8 @@ this.Component = new Class(function() {
 
 	this.__metaclass__ = exports.ComponentFactory;
 
-	this.template = exports.option('');
-
 	/**
-	 * @param node 包装的节点 / 模板数据（搭配options.template）
+	 * @param node 包装的节点
 	 * @param options 配置
 	 */
 	this.initialize = function(self, node, options) {
@@ -608,18 +604,6 @@ this.Component = new Class(function() {
 		self.__rendered = []; // 后来被加入的，而不是首次通过selector选择的node的引用
 		// 存储subEvents，用于render时获取信息
 		self.__subEventsMap = {};
-
-		var template;
-
-		if (!node.nodeType) {
-			template = self.getOption('template')
-			if (template) {
-				node = self.createNode(template, node);
-			} else {
-				console.error('no template specified.');
-				return;
-			}
-		}
 
 		self._node = dom.wrap(node);
 		if (node.component) {
@@ -818,7 +802,9 @@ this.Component = new Class(function() {
 			current = self._options;
 			for (var i = 0, part; i < parts.length; i++) {
 				part = parts[i];
-				current = current[part];
+				if (current) {
+					current = current[part];
+				}
 			}
 			value = current;
 		}
@@ -895,8 +881,8 @@ this.Component = new Class(function() {
 
 		var meta = self.getMeta(name);
 		// make前先把type和template准备好，这样renderer中就无需考虑异步的问题
-		getType(meta.type, function(type) {
-			getTemplate(self._options[name], function() {
+		getType(meta.type, function() {
+			getTemplate(self, name, function() {
 				self[methodName](function() {
 					var node;
 					self.make(name, data, function(comp) {
@@ -935,11 +921,17 @@ this.Component = new Class(function() {
 		var options = self._options[name];
 		object.extend(data, options, false);
 
-		var comp = null;
-
 		getType(meta.type, function(type) {
-			getTemplate(options, function() {
-				comp = new type(data, options);
+			getTemplate(self, name, function(template) {
+
+				if (template) {
+					var node = self.createNode(template, data);
+				} else {
+					console.error('no template specified.');
+					return;
+				}
+
+				var comp = new type(node, options);
 				self.__rendered.push(comp);
 				if (callback) callback(comp);
 			})

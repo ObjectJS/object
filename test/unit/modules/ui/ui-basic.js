@@ -97,7 +97,7 @@ test('async load component', function() {
 	div.innerHTML = '<div class="test"></div>';
 
 	var test = new TestComponent(div, {
-		'test2.template': '<div class="test2"></div>'
+		'components.test2.template': '<div class="test2"></div>'
 	});
 	stop();
 	test.render('test2', null, function() {
@@ -112,7 +112,7 @@ test('async load template', function() {
 
 	var script = document.createElement('script');
 	script.setAttribute('data-src', 'async-template.js');
-	script.setAttribute('data-module', 'test.template');
+	script.setAttribute('data-module', 'test/template.mustache');
 	document.body.appendChild(script);
 	object._loader.buildFileLib();
 
@@ -124,7 +124,7 @@ test('async load template', function() {
 
 	var div = document.createElement('div');
 	var test = new TestComponent(div, {
-		'test.template.module': 'test.template'
+		'components.test.templatemodule': 'test/template.mustache'
 	});
 
 	stop();
@@ -430,7 +430,7 @@ test('render', function() {
 	var test = new TestComponent(div, {
 		'test.test': true,
 		'test.hello': 'test',
-		'test.template': '<div class="test">{{hello}}</div>'
+		'components.test.template': '<div class="test">{{hello}}</div>'
 	});
 
 	var renderCallbackCalled = 0;
