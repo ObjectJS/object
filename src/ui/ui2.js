@@ -41,7 +41,7 @@ function getTemplate(self, name, callback) {
 	var callerModule = self.__class__.__module__;
 	var base;
 	// 是相对路径 && 能找到此类的所在模块信息 && 在sys.modules中有这个模块
-	if ((moduleStr.indexOf('./') === 0 || moduleStr.indexOf('../') === 0) && callerModule && sys.modules[callerModule]) {
+	if (moduleStr && (moduleStr.indexOf('./') === 0 || moduleStr.indexOf('../') === 0) && callerModule && sys.modules[callerModule]) {
 		base = sys.modules[callerModule].__package__.id;
 		moduleStr = urlparse.urljoin(base, moduleStr);
 	}
