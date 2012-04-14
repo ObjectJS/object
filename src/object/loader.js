@@ -704,7 +704,7 @@ CommonJSDependency.prototype.execute = function(parentName, parentContext) {
 		runtimeName = this.id.slice(parentContext.length);
 
 	} else {
-		runtimeName = id;
+		runtimeName = this.id;
 	}
 
 	var exports = runtime.modules[runtimeName];
