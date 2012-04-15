@@ -309,6 +309,11 @@ function define(meta) {
  * @param type 构造类
  */
 this.define = function(selector, type, renderer) {
+	if (!renderer && typeof type == 'function' && !Class.instanceOf(type, Type)) {
+		renderer = type;
+		type = null;
+	}
+
 	if (!type) type = exports.Component;
 	return define(new ComponentMeta(selector, type, renderer));
 };
@@ -317,6 +322,11 @@ this.define = function(selector, type, renderer) {
  * 定义唯一引用的component
  */
 this.define1 = function(selector, type, renderer) {
+	if (!renderer && typeof type == 'function' && !Class.instanceOf(type, Type)) {
+		renderer = type;
+		type = null;
+	}
+
 	if (!type) type = exports.Component;
 	return define(new SingleComponentMeta(selector, type, renderer));
 };
@@ -910,8 +920,15 @@ this.Component = new Class(function() {
 	 * 异步方法
 	 * @param name component名字
 	 * @param data 模板数据/初始化参数
+	 * @param callback render结束后的回调
 	 */
 	this.render = function(self, name, data, callback) {
+		// data可选
+		if (!callback && typeof data == 'function') {
+			callback = data;
+			data = null;
+		}
+
 		var methodName = 'render_' + name;
 
 		var comp = self.get(name);

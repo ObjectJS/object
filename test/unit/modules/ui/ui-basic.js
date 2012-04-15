@@ -138,10 +138,10 @@ test('async load template', function() {
 		var ui = require('ui/ui2');
 
 		var TestComponent = new Class(ui.Component, function() {
-			this.test = ui.define1('.test', null, function(self, make) {
+			this.test = ui.define1('.test', function(self, make) {
 				self.getNode().appendChild(make());
 			});
-			this.test2 = ui.define1('.test', null, function(self, make) {
+			this.test2 = ui.define1('.test', function(self, make) {
 				self.getNode().appendChild(make());
 			});
 		});
@@ -561,7 +561,7 @@ object.use('ui/ui2.js', function(ui) {
 	var renderCallbackCalled = 0;
 
 	// 渲染
-	test.render('test', null, function() {
+	test.render('test', function() {
 		// render时将node插入后才生成comp
 		ok(test.test.parent, 'parent got when render.');
 		renderCallbackCalled++;
@@ -570,7 +570,8 @@ object.use('ui/ui2.js', function(ui) {
 	equal(renderCallbackCalled, 1, 'render callback called.');
 
 	// 第二次渲染，调用callback
-	test.render('test', null, function() {
+	// 忽略第二个参数
+	test.render('test', function() {
 		renderCallbackCalled++;
 	});
 	equal(renderCallbackCalled, 2, 'render callback called.');
