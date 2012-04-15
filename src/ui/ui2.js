@@ -36,7 +36,7 @@ function getTemplate(self, name, callback) {
 	var sys = require('sys');
 	var urlparse = require('urlparse');
 
-	var moduleStr = self.getOption('components.' + name + '.templatemodule');
+	var moduleStr = self.getOption(name + '.meta.templatemodule');
 	// 处理相对路径
 	var callerModule = self.__class__.__module__;
 	var base;
@@ -50,7 +50,7 @@ function getTemplate(self, name, callback) {
 			callback(module);
 		});
 	} else {
-		callback(self.getOption('components.' + name + '.template'));
+		callback(self.getOption(name + '.meta.template'));
 	}
 
 }
@@ -59,7 +59,7 @@ function getType(self, name, type, callback) {
 
 	var memberloader = require('./memberloader');
 
-	var addons = self.getOption('components.' + name + '.addons');
+	var addons = self.getOption(name + '.meta.addons');
 
 	function getAddonedType(type, addons, callback) {
 		if (type.get('__addoned')) {
@@ -112,7 +112,7 @@ function ComponentMeta(selector, type, renderer) {
 ComponentMeta.prototype.select = function(self, name, callback) {
 	var nodes = null, comps = null;
 
-	var selector = self.getOption('components.' + name + '.selector') || this.selector;
+	var selector = self.getOption(name + '.meta.selector') || this.selector;
 	// 暂时不支持type的修改
 	var type = this.type;
 
@@ -148,7 +148,7 @@ SingleComponentMeta.prototype = new ComponentMeta();
 SingleComponentMeta.prototype.select = function(self, name, callback) {
 	var node = null, comp = null;
 
-	var selector = self.getOption('components.' + name + '.selector') || this.selector;
+	var selector = self.getOption(name + '.meta.selector') || this.selector;
 	// 暂时不支持type的修改
 	var type = this.type;
 
@@ -895,7 +895,7 @@ this.Component = new Class(function() {
 
 				var sub = self[parts[0]];
 				// 子引用已经存在
-				if (sub) {
+				if (sub && sub.setOption) {
 					sub.setOption(parts.slice(1).join('.'), value);
 				}
 			}

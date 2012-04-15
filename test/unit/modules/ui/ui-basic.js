@@ -32,7 +32,7 @@ object.use('ui/ui2.js', function(ui) {
 	equals(test.test3.getNode(), testNode, 'component defined after class created.');
 
 	// 修改selector
-	test.setOption('components.test.selector', '.foo');
+	test.setOption('test.meta.selector', '.foo');
 	equal(test.get('test').getNode().className, 'foo', 'change selector ok.');
 });
 
@@ -113,7 +113,7 @@ object.use('ui/ui2.js', function(ui) {
 	div.innerHTML = '<div class="test"></div>';
 
 	var test = new TestComponent(div, {
-		'components.test2.template': '<div class="test2"></div>'
+		'test2.meta.template': '<div class="test2"></div>'
 	});
 	stop();
 	test.render('test2', null, function() {
@@ -148,8 +148,8 @@ test('async load template', function() {
 
 		var div = document.createElement('div');
 		var test = new TestComponent(div, {
-			'components.test.templatemodule': 'test/template.mustache',
-			'components.test2.templatemodule': './template.mustache'
+			'test.meta.templatemodule': 'test/template.mustache',
+			'test2.meta.templatemodule': './template.mustache'
 		});
 
 		stop();
@@ -500,8 +500,8 @@ object.use('ui/ui2.js', function(ui) {
 
 	stop();
 	var test = new Test(div, {
-		'components.test.addons': 'test.test.TestComponent, test.test.TestComponent2',
-		'components.test2.addons': 'test.test.TestComponent2'
+		'test.meta.addons': 'test.test.TestComponent, test.test.TestComponent2',
+		'test2.meta.addons': 'test.test.TestComponent2'
 	});
 
 	document.body.removeChild(script);
@@ -553,9 +553,9 @@ object.use('ui/ui2.js', function(ui) {
 	var test = new TestComponent(div, {
 		'test.test': true,
 		'test.hello': 'test',
-		'components.test.template': '<div class="test">{{hello}}</div>',
-		'components.test2.template': '<div class="test2">foo:{{foo}},bar:{{bar}}</div>',
-		'components.test3.template': '<div class="test3">{{value}}</div>'
+		'test.meta.template': '<div class="test">{{hello}}</div>',
+		'test2.meta.template': '<div class="test2">foo:{{foo}},bar:{{bar}}</div>',
+		'test3.meta.template': '<div class="test3">{{value}}</div>'
 	});
 
 	var renderCallbackCalled = 0;
