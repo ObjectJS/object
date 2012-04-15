@@ -176,6 +176,8 @@ SingleComponentMeta.prototype.select = function(self, name, callback) {
 		comp = node.component;
 		if (comp) {
 			self.setComponent(name, comp);
+			callback(comp);
+
 		} else {
 			getType(self, name, type, function(type) {
 				if (!Class.instanceOf(type, Type)) {
@@ -710,6 +712,7 @@ this.Component = new Class(function() {
 		});
 
 		self.initAddons(self);
+
 		checkInit();
 	};
 
@@ -977,6 +980,10 @@ this.Component = new Class(function() {
 					}
 					return node;
 				};
+
+				// for debug
+				make.template = template;
+				make.data = data;
 
 				self[methodName](make, data);
 

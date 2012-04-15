@@ -4,11 +4,18 @@ module('basic');
 test('sub property', function() {
 
 object.use('ui/ui2.js', function(ui) {
+	var initCalled = 0;
 	var TestComponent = new Class(ui.Component, function() {
 		this.test = ui.define1('.test');
-		this.test2 = ui.define1('.test');
+		this.test2 = ui.define1(function(self) {
+			return self._node.getElement('.test');
+		});
+		this.test3 = ui.define1('.test');
+		this._init = function(self) {
+			initCalled++;
+		};
 	});
-	TestComponent.set('test3', ui.define1('.test'));
+	TestComponent.set('test4', ui.define1('.test'));
 
 	var div = document.createElement('div');
 	div.innerHTML = '<div class="test">test</div><div class="foo"></div>';
@@ -17,19 +24,24 @@ object.use('ui/ui2.js', function(ui) {
 	var testComp = test.test;
 	var testNode = test.test.getNode();
 
+	// 初始化执行init
+	equal(initCalled, 1, 'init called.');
+
 	// 初始化时会获取所有sub
 	equals(test.test.getNode().className, 'test', 'define1 component right when init.');
 
 	// 获取节点
 	equals(test.test.getNode(), testNode, 'define1 component right when init.');
 
-	// 两个引用相同，返回相同一个component引用
-	equals(test.test2, testComp, 'using one same component when selector same.');
-	equals(test.test3, testComp, 'component defined after class created.');
+	// 引用相同，返回相同一个component引用
+	strictEqual(test.test2, testComp, 'using one same component when selector same.');
+	strictEqual(test.test3, testComp, 'using one same component when selector same.');
+	strictEqual(test.test4, testComp, 'component defined after class created.');
 
 	// 直接获取节点方式
 	equals(test.test2.getNode(), testNode, 'using one same node when selector same.');
-	equals(test.test3.getNode(), testNode, 'component defined after class created.');
+	equals(test.test3.getNode(), testNode, 'using one same node when selector same.');
+	equals(test.test4.getNode(), testNode, 'component defined after class created.');
 
 	// 修改selector
 	test.setOption('test.meta.selector', '.foo');
