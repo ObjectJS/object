@@ -942,9 +942,9 @@ this.Component = new Class(function() {
 				var node;
 
 				// make方法仅仅返回node，这样在new comp时node已经在正确的位置，parent可以被正确的查找到
-				function make() {
+				function make(newData) {
 					if (template) {
-						node = self.createNode(template, data);
+						node = self.createNode(template, newData || data);
 					} else {
 						console.error('no template specified for ' + name + '.');
 						return;

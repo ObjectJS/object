@@ -533,7 +533,11 @@ object.use('ui/ui2.js', function(ui) {
 		this.test2 = ui.define1('.test2', SubComponent, function(self, make, data) {
 			ok(data, 'data arguments ok.');
 			data.bar = 3;
-			self._node.appendChild(make(data));
+			self._node.appendChild(make());
+		});
+
+		this.test3 = ui.define1('.test3', SubComponent, function(self, make, data) {
+			self._node.appendChild(make({value:data.value + 1}));
 		});
 
 		this.test_click = function(self) {
@@ -550,7 +554,8 @@ object.use('ui/ui2.js', function(ui) {
 		'test.test': true,
 		'test.hello': 'test',
 		'components.test.template': '<div class="test">{{hello}}</div>',
-		'components.test2.template': '<div class="test2">foo:{{foo}},bar:{{bar}}</div>'
+		'components.test2.template': '<div class="test2">foo:{{foo}},bar:{{bar}}</div>',
+		'components.test3.template': '<div class="test3">{{value}}</div>'
 	});
 
 	var renderCallbackCalled = 0;
@@ -584,6 +589,11 @@ object.use('ui/ui2.js', function(ui) {
 	// data传递
 	test.render('test2', {foo: 1, bar: 2}, function() {
 		equal(test.test2.getNode().innerHTML, 'foo:1,bar:3', 'data pass ok in render.');
+	});
+
+	// data传递且替换
+	test.render('test3', {value: 1}, function() {
+		equal(test.test3.getNode().innerHTML, '2', 'data pass and write ok in render.');
 	});
 
 });
