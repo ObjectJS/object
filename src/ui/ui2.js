@@ -190,7 +190,9 @@ ParentComponentMeta.prototype.select = function(self, name, callback) {
 	var node = self._node;
 	var comp = null;
 
-	var type = this.type();
+	if (typeof this.type == 'function' && !Class.instanceOf(this.type, Type)) {
+		type = this.type();
+	}
 
 	while (node = node.parentNode) {
 		if (node.component && Class.instanceOf(node.component, type)) {
