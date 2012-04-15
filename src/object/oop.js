@@ -823,9 +823,11 @@ Class.instanceOf = function(obj, func) {
 	if (typeof obj == 'function') {
 		// 遍历实例的创建者继承链，找是否与func相同
 		cls = obj.__class__;
-		do {
-			if (cls === func) return true;
-		} while (cls = cls.__base__);
+		if (cls) {
+			do {
+				if (cls === func) return true;
+			} while (cls = cls.__base__);
+		}
 	}
 	// 查询普通对象的constructor，可直接使用instanceof
 	else {
