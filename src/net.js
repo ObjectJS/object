@@ -88,7 +88,7 @@ this.ping = function(url) {
  */
 this.Request = new Class(function() {
 
-	Class.mixin(this, events.Events);
+	this.__mixins__ = [events.Events];
 
 	this.initialize = function(self, options) {
 		options = options || {};

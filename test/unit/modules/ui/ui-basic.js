@@ -331,7 +331,6 @@ test.dataFetcher3.oncomplete = function() {
 	equal(successCalled, 2, 'request success fired by url changed.');
 };
 
-
 });
 });
 
