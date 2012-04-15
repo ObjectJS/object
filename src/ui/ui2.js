@@ -911,12 +911,14 @@ this.Component = new Class(function() {
 		var comp = self.get(name);
 		// 如果已经存在结构了，则不用再render了
 		if (comp && (!('length' in comp) || comp.length != 0)) {
-			callback();
+			if (callback) {
+				callback();
+			}
 			return;
 		}
 
 		if (!self[methodName]) {
-			console.error('no renderer defined for ' + name + '.');
+			console.error('no renderer specified for ' + name + '.');
 			return;
 		}
 
@@ -968,7 +970,7 @@ this.Component = new Class(function() {
 				if (template) {
 					var node = self.createNode(template, data);
 				} else {
-					console.error('no template specified.');
+					console.error('no template specified for ' + name + '.');
 					return;
 				}
 
