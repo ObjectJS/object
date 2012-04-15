@@ -940,7 +940,8 @@ this.Component = new Class(function() {
 			getTemplate(self, name, function(template) {
 				var node;
 
-				self[methodName](function() {
+				// make方法仅仅返回node，这样在new comp时node已经在正确的位置，parent可以被正确的查找到
+				function make() {
 					if (template) {
 						node = self.createNode(template, data);
 					} else {
@@ -948,7 +949,9 @@ this.Component = new Class(function() {
 						return;
 					}
 					return node;
-				});
+				};
+
+				self[methodName](make);
 
 				var comp = new type(node, options);
 				self.__rendered.push(comp);

@@ -515,7 +515,11 @@ object.use('ui/ui2.js', function(ui) {
 
 	var renderedEventCalled = 0;
 
+	var ParentComponent = new Class(ui.Component, function() {
+	});
+
 	var SubComponent = new Class(ui.Component, function() {
+		this.parent = ui.parent(ParentComponent);
 		this.test = ui.option(false);
 	});
 
@@ -532,7 +536,9 @@ object.use('ui/ui2.js', function(ui) {
 
 	});
 
+	var parent = new ParentComponent(document.createElement('div'));
 	var div = document.createElement('div');
+	parent.getNode().appendChild(div);
 
 	var test = new TestComponent(div, {
 		'test.test': true,
@@ -544,6 +550,8 @@ object.use('ui/ui2.js', function(ui) {
 
 	// 渲染
 	test.render('test', null, function() {
+		// render时将node插入后才生成comp
+		ok(test.test.parent, 'parent got when render.');
 		renderCallbackCalled++;
 	});
 	equal(test.getNode().innerHTML, '<div class="test">test</div>', 'template render ok.');
