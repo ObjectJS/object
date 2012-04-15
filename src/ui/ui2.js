@@ -936,6 +936,7 @@ this.Component = new Class(function() {
 		object.extend(data, options, false);
 
 		// make前先把type和template准备好，这样renderer中就无需考虑异步的问题
+		// TODO 用async维护两个异步
 		getType(self, name, meta.type, function(type) {
 			getTemplate(self, name, function(template) {
 				var node;
