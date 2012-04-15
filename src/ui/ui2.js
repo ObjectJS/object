@@ -14,6 +14,20 @@ function Options() {
 }
 
 /**
+ * 用于存放每个Component的信息
+ */
+function MetaMap() {
+	// 所有元素引用
+	this.components = [];
+	// 所有选项
+	this.options = [];
+	// 所有onXxx形式注册事件方法
+	this.onEvents = [];
+	// 所有xxx_xxx形式注册事件方法
+	this.subEvents = [];
+}
+
+/**
  * 向current这个对象的name成员设置value值
  * @param current 需要被设置的对象
  * @param name 一个通过.分开各个部分的名称
@@ -411,12 +425,7 @@ this.ComponentFactory = new Class(type, function() {
 	this.__new__ = function(cls, name, base, dict) {
 
 		var gid = dict.gid = globalid++;
-		var meta = dict.meta = {
-			components: [],
-			options: [],
-			onEvents: [],
-			subEvents: []
-		};
+		var meta = dict.meta = new MetaMap();
 
 		dict.__onEvents = [];
 		dict.__subEvents = [];
