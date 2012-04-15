@@ -32,6 +32,8 @@
 			<include path="ui/index.js" />
 			<include path="ui/ui2.js" />
 			<include path="ui/memberloader.js" />
+			<include path="ui/net.js" />
+			<include path="ui/options.js" />
 			<include path="ui/decorators.js" />
 			<include path="urlparse.js" />
 			<include path="validator.js" />

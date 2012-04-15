@@ -1,17 +1,12 @@
-object.define('ui/ui2.js', 'sys, string, options, dom, events, urlparse, ./memberloader', function(require, exports) {
+object.define('ui/ui2.js', 'sys, string, options, dom, events, urlparse, ./net, ./options, ./memberloader', function(require, exports) {
 
 var string = require('string');
-var options = require('options');
 var dom = require('dom');
 var events = require('events');
+var net = require('./net');
+var optionsmod = require('./options');
 
 var globalid = 0;
-
-/**
- * 用于承载options的空对象
- */
-function Options() {
-}
 
 /**
  * 用于存放每个Component的信息
@@ -26,25 +21,6 @@ function MetaMap() {
 	// 所有xxx_xxx形式注册事件方法
 	this.subEvents = [];
 }
-
-/**
- * 向current这个对象的name成员设置value值
- * @param current 需要被设置的对象
- * @param name 一个通过.分开各个部分的名称
- * @param value 需要设置的值
- */
-function setOptionTo(current, name, value) {
-	var parts = Array.isArray(name)? name : name.split('.');
-	// 生成前缀对象
-	for (var i = 0, part; i < parts.length - 1; i++) {
-		part = parts[i];
-		if (current[part] === undefined) {
-			current[part] = new Options();
-		}
-		current = current[part];
-	}
-	current[parts[parts.length - 1]] = value;
-};
 
 function getTemplate(self, name, callback) {
 	var sys = require('sys');
@@ -260,6 +236,26 @@ SubEventMeta.prototype.bindOptionEvent = function() {
 	});
 };
 
+SubEventMeta.prototype.bindUnknownEvent = function() {
+	var sub = this.sub;
+	var eventType = this.eventType;
+	var methodName = this.methodName;
+	var comp = this.comp;
+
+	if (comp[sub]) {
+		comp[sub].addEvent(eventType, function(event) {
+			var args;
+			// 将event._args pass 到函数后面
+			if (event._args) {
+				args = [event].concat(event._args);
+				comp[methodName].apply(comp, args);
+			} else {
+				comp[methodName](event);
+			}
+		});
+	}
+};
+
 SubEventMeta.prototype.bind = function(comp, methodName) {
 	var sub = this.sub;
 	this.comp = comp;
@@ -272,10 +268,15 @@ SubEventMeta.prototype.bind = function(comp, methodName) {
 	// component
 	else if (comp.meta.components.indexOf(sub) != -1) {
 		this.bindComponentEvent();
+		// 记录下来，render时从__subEventsMap获取信息
 		if (!(sub in comp.__subEventsMap)) {
 			comp.__subEventsMap[sub] = [];
 		}
 		comp.__subEventsMap[sub].push(this);
+	}
+	// request ...
+	else {
+		this.bindUnknownEvent();
 	}
 };
 
@@ -381,6 +382,14 @@ this.option = function(defaultValue, getter) {
 	return prop;
 };
 
+this.request = function(url, method) {
+	var request = new net.Request({
+		url: url,
+		method: method
+	});
+	return request;
+};
+
 /**
  * 定义一个向子元素注册事件的方法
  * @decorator
@@ -406,19 +415,6 @@ this.onevent = function(eventType, gid) {
 		func.meta = new OnEventMeta(eventType, gid);
 		return func;
 	}
-};
-
-/**
- * {'a.b.c': 1, b: 2} ==> {a: {b: {c:1}}, b: 2}
- */
-this.parseOptions = function(options) {
-	if (options.constructor == Options) return options;
-
-	var parsed = new Options();
-	Object.keys(options).forEach(function(name) {
-		setOptionTo(parsed, name, options[name]);
-	});
-	return parsed;
 };
 
 // metaclass
@@ -595,6 +591,10 @@ this.ComponentFactory = new Class(type, function() {
 		var mixes = (cls.__mixins__ || []);
 		mixes.forEach(function(mix) {
 			var gid = mix.get('gid');
+			if (!gid) {
+				// mixin的有可能不是addon
+				return;
+			}
 			var mixMeta = mix.get('meta');
 			mixMeta.components.forEach(function(name) {
 				if (meta.components.indexOf(name) == -1) meta.components.push(name);
@@ -678,7 +678,7 @@ this.Component = new Class(function() {
 
 		if (!options) options = {};
 		// 保存options，生成component时用于传递
-		self._options = exports.parseOptions(options);
+		self._options = optionsmod.parseOptions(options);
 
 		// 记录已经获取完毕的components
 		var inited = 0;
@@ -759,6 +759,10 @@ this.Component = new Class(function() {
 		var mixins = cls.get('__mixins__');
 		if (mixins) {
 			mixins.forEach(function(mixin) {
+				if (!mixin.get('gid')) {
+					// 不是addon
+					return;
+				}
 				mixin.get('init')(self);
 			}); 
 		}
@@ -885,7 +889,7 @@ this.Component = new Class(function() {
 	 * @param name name
 	 * @param value value
 	 */
-	this.setOption = options.overloadsetter(function(self, name, value) {
+	this.setOption = optionsmod.overloadsetter(function(self, name, value) {
 		// 由于overloadsetter是通过name是否为string来判断传递形式是name-value还是{name:value}的
 		// 在回调中为了性能需要直接传的parts，类型为数组，而不是字符串，因此无法通过回调用overloadsetter包装后的方法进行回调
 		(function(self, name, value) {
@@ -894,7 +898,7 @@ this.Component = new Class(function() {
 			// 为自己设置option
 			if (parts.length == 1) {
 				var oldValue = self.getOption(name);
-				setOptionTo(self._options, parts, value);
+				optionsmod.setOptionTo(self._options, parts, value);
 				(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
 					// 重新更新对象上的直接引用值
 					self.get(name);
@@ -903,7 +907,7 @@ this.Component = new Class(function() {
 			// 为子引用设置option
 			else {
 				// 保存在_options中
-				setOptionTo(self._options, parts, value);
+				optionsmod.setOptionTo(self._options, parts, value);
 
 				var sub = self[parts[0]];
 				// 子引用已经存在

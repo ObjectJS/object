@@ -281,6 +281,60 @@ object.use('ui/ui2.js', function(ui) {
 });
 });
 
+test('request property', function() {
+object.use('ui/ui2.js', function(ui) {
+
+var errorCalled = 0;
+var successCalled = 0;
+
+var TestComponent = new Class(ui.Component, function() {
+
+	this.dataFetcher = ui.request('error');
+	this.dataFetcher2 = ui.request('request.txt');
+	this.dataFetcher3 = ui.request('error');
+
+	this.dataFetcher_error = function(self, event) {
+		errorCalled++;
+	}; 
+
+	this.dataFetcher2_success = function(self, event) {
+		successCalled++;
+	};
+
+	this.dataFetcher3_success = function(self, event) {
+		successCalled++;
+	};
+
+});
+
+var test = new TestComponent(document.createElement('div'));
+
+stop();
+test.dataFetcher.send();
+test.dataFetcher.oncomplete = function() {
+	start();
+	equal(errorCalled, 1, 'request error fired.');
+};
+
+stop();
+test.dataFetcher2.send();
+test.dataFetcher2.oncomplete = function() {
+	start();
+	equal(successCalled, 1, 'request success fired.');
+};
+
+stop();
+test.setOption('dataFetcher3.url', 'request.txt');
+test.dataFetcher3.send();
+test.dataFetcher3.oncomplete = function() {
+	start();
+	equal(successCalled, 2, 'request success fired by url changed.');
+};
+
+
+});
+});
+
 test('handle method', function() {
 object.use('ui/ui2.js', function(ui) {
 
