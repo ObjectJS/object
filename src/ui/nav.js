@@ -1,6 +1,7 @@
-object.add('ui/nav.js', 'ui, ui.decorators', function(exports, ui) {
+object.define('ui/nav.js', 'ui/ui2, events', function(require, exports) {
 
-var fireevent = ui.decorators.fireevent;
+var ui = require('ui/ui2');
+var events = require('events');
 
 this.ForeNextControl = new Class(ui.Component, function() {
 
@@ -32,12 +33,12 @@ this.ForeNextControl = new Class(ui.Component, function() {
 		self.fore();
 	};
 
-	this.next = fireevent(function(self) {
+	this.next = events.fireevent(function(self) {
 		self.position++;
 		self.change();
 	});
 
-	this.fore = fireevent(function(self) {
+	this.fore = events.fireevent(function(self) {
 		self.position--;
 		self.change();
 	});
@@ -49,11 +50,11 @@ this.ForeNextControl = new Class(ui.Component, function() {
 		self.updatePosition();
 	};
 
-	this.updatePosition = fireevent(function(self) {
+	this.updatePosition = events.fireevent(function(self) {
 		self._node.getElements('.current').set('innerHTML', self.position + 1); // position是从0开始滴～展示的时候+1
 	});
 
-	this.updateTotal = fireevent(function(self) {
+	this.updateTotal = events.fireevent(function(self) {
 		self._node.getElements('.total').set('innerHTML', self.total);
 	});
 

@@ -930,7 +930,7 @@ this.Component = new Class(function() {
 
 		var meta = self.getMeta(name);
 
-		// options
+		// data
 		data = data || {};
 		var options = self._options[name];
 		object.extend(data, options, false);
@@ -952,7 +952,7 @@ this.Component = new Class(function() {
 					return node;
 				};
 
-				self[methodName](make);
+				self[methodName](make, data);
 
 				var comp = new type(node, options);
 				self.__rendered.push(comp);

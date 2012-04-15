@@ -530,6 +530,12 @@ object.use('ui/ui2.js', function(ui) {
 			self._node.appendChild(a);
 		});
 
+		this.test2 = ui.define1('.test2', SubComponent, function(self, make, data) {
+			ok(data, 'data arguments ok.');
+			data.bar = 3;
+			self._node.appendChild(make(data));
+		});
+
 		this.test_click = function(self) {
 			renderedEventCalled++;
 		}
@@ -543,7 +549,8 @@ object.use('ui/ui2.js', function(ui) {
 	var test = new TestComponent(div, {
 		'test.test': true,
 		'test.hello': 'test',
-		'components.test.template': '<div class="test">{{hello}}</div>'
+		'components.test.template': '<div class="test">{{hello}}</div>',
+		'components.test2.template': '<div class="test2">foo:{{foo}},bar:{{bar}}</div>'
 	});
 
 	var renderCallbackCalled = 0;
@@ -573,6 +580,11 @@ object.use('ui/ui2.js', function(ui) {
 	// 删除
 	test.test.dispose();
 	ok(test.test === null, 'dispose ok.');
+
+	// data传递
+	test.render('test2', {foo: 1, bar: 2}, function() {
+		equal(test.test2.getNode().innerHTML, 'foo:1,bar:3', 'data pass ok in render.');
+	});
 
 });
 });
