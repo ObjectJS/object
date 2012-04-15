@@ -189,8 +189,12 @@ ParentComponentMeta.prototype = new ComponentMeta();
 ParentComponentMeta.prototype.select = function(self, name, callback) {
 	var node = self._node;
 	var comp = null;
+	var type;
 
-	if (typeof this.type == 'function' && !Class.instanceOf(this.type, Type)) {
+	if (Class.instanceOf(this.type, Type)) {
+		type = this.type;
+	}
+	else if (typeof this.type == 'function') {
 		type = this.type();
 	}
 
@@ -925,16 +929,29 @@ this.Component = new Class(function() {
 		}
 
 		var meta = self.getMeta(name);
+
+		// options
+		data = data || {};
+		var options = self._options[name];
+		object.extend(data, options, false);
+
 		// make前先把type和template准备好，这样renderer中就无需考虑异步的问题
-		getType(self, name, meta.type, function() {
-			getTemplate(self, name, function() {
+		getType(self, name, meta.type, function(type) {
+			getTemplate(self, name, function(template) {
+				var node;
+
 				self[methodName](function() {
-					var node;
-					self.make(name, data, function(comp) {
-						node = comp._node;
-					});
+					if (template) {
+						node = self.createNode(template, data);
+					} else {
+						console.error('no template specified for ' + name + '.');
+						return;
+					}
 					return node;
 				});
+
+				var comp = new type(node, options);
+				self.__rendered.push(comp);
 
 				// 重建引用
 				self.get(name);
@@ -949,37 +966,6 @@ this.Component = new Class(function() {
 					callback();
 				}
 			});
-		});
-	};
-
-	/**
-	 * 根据components的type创建一个component，并加入到引用中，这一般是在renderXXX方法中进行调用
-	 * 异步方法
-	 * @param name
-	 * @param data 模板数据
-	 */
-	this.make = function(self, name, data, callback) {
-		var meta = self.getMeta(name);
-		var pname = '_' + name;
-
-		data = data || {};
-		var options = self._options[name];
-		object.extend(data, options, false);
-
-		getType(self, name, meta.type, function(type) {
-			getTemplate(self, name, function(template) {
-
-				if (template) {
-					var node = self.createNode(template, data);
-				} else {
-					console.error('no template specified for ' + name + '.');
-					return;
-				}
-
-				var comp = new type(node, options);
-				self.__rendered.push(comp);
-				if (callback) callback(comp);
-			})
 		});
 	};
 
