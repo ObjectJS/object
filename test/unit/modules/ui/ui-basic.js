@@ -527,17 +527,24 @@ object.use('ui/ui2.js', function(ui) {
 test('custom addons', function() {
 object.use('ui/ui2.js', function(ui) {
 
-
 	var script = document.createElement('script');
 	script.setAttribute('data-src', 'async-module.js');
 	script.setAttribute('data-module', 'test.test');
 	document.body.appendChild(script);
 	object._loader.buildFileLib();
 
-	// custom addon
-	var Test = new Class(ui.Component, function() {
+	var A = new Class(ui.Component, function() {
+		this.foo = 1;
+	});
 
-		this.test = ui.define1('.test');
+	var SubComponent = new Class(ui.Component, function() {
+		this.__mixins__ = [A];
+	});
+
+	// custom addon
+	var TestComponent = new Class(ui.Component, function() {
+
+		this.test = ui.define1('.test', SubComponent);
 
 		this.test2 = ui.define1('.test2', 'test.test.TestComponent');
 
@@ -557,6 +564,9 @@ object.use('ui/ui2.js', function(ui) {
 			self.get('test2');
 			// 确保多次获取时用的都是生成的同一个类，而不是多次生成
 			ok(self.test2.constructor === type, 'custom addon using same constructor.');
+
+			// test已存在一个addon为A，确保不会被重置掉
+			equal(self.test.get('foo'), 1, 'write-in addon ok.');
 		};
 	});
 
@@ -564,7 +574,7 @@ object.use('ui/ui2.js', function(ui) {
 	div.innerHTML = '<div class="test"></div><div class="test2"></div>';
 
 	stop();
-	var test = new Test(div, {
+	var test = new TestComponent(div, {
 		'test.meta.addons': 'test.test.TestComponent, test.test.TestComponent2',
 		'test2.meta.addons': 'test.test.TestComponent2'
 	});
@@ -665,3 +675,24 @@ object.use('ui/ui2.js', function(ui) {
 });
 });
 
+test('create', function() {
+object.use('ui/ui2', function(ui) {
+	var script = document.createElement('script');
+	script.setAttribute('data-src', 'async-module.js');
+	script.setAttribute('data-module', 'test.test');
+	document.body.appendChild(script);
+	object._loader.buildFileLib();
+
+	var TestComponent = new Class(ui.Component, function() {
+	});
+
+	TestComponent.create(document.createElement('div'), {
+		'meta.addons': 'test.test.TestComponent'
+	}, function(test) {
+		ok(test.__class__ !== TestComponent, 'should be addoned class.');
+		equal(test.a, 1, 'addoned.');
+	});
+
+	document.body.removeChild(script);
+});
+});

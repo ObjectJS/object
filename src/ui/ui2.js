@@ -22,69 +22,6 @@ function MetaMap() {
 	this.subEvents = [];
 }
 
-function getTemplate(self, name, callback) {
-	var sys = require('sys');
-	var urlparse = require('urlparse');
-
-	var moduleStr = self.getOption(name + '.meta.templatemodule');
-	// 处理相对路径
-	var callerModule = self.__class__.__module__;
-	var base;
-	// 是相对路径 && 能找到此类的所在模块信息 && 在sys.modules中有这个模块
-	if (moduleStr && (moduleStr.indexOf('./') === 0 || moduleStr.indexOf('../') === 0) && callerModule && sys.modules[callerModule]) {
-		base = sys.modules[callerModule].__package__.id;
-		moduleStr = urlparse.urljoin(base, moduleStr);
-	}
-	if (moduleStr) {
-		require.async(moduleStr, function(module) {
-			callback(module);
-		});
-	} else {
-		callback(self.getOption(name + '.meta.template'));
-	}
-
-}
-
-function getType(self, name, type, callback) {
-
-	var memberloader = require('./memberloader');
-
-	var addons = self.getOption(name + '.meta.addons');
-
-	function getAddonedType(type, addons, callback) {
-		if (type.get('__addoned')) {
-			callback(type);
-		} else {
-
-			memberloader.load(addons, function() {
-				if (addons) {
-					addons = Array.prototype.slice.call(arguments, 0);
-					type = new Class(type, {__mixins__: addons, __addoned: true});
-					// 将新type记录在meta上
-					self.getMeta(name).type = type;
-				}
-				callback(type);
-			});
-		}
-	}
-
-	// async
-	if (typeof type == 'string') {
-		memberloader.load(type, function(type) {
-			getAddonedType(type, addons, callback);
-		});
-	}
-	// class
-	else if (Class.instanceOf(type, Type)) {
-		getAddonedType(type, addons, callback);
-	}
-	// sync
-	else if (typeof type == 'function') {
-		type = type();
-		getAddonedType(type, addons, callback);
-	}
-}
-
 /**
  * 将value转换成需要的type
  */
@@ -99,12 +36,84 @@ function ComponentMeta(selector, type, renderer) {
 	this.type = type;
 	this.renderer = renderer;
 }
+
+ComponentMeta.prototype.getType = function(callback) {
+
+	var meta = this;
+	var type = meta.type;
+
+	var memberloader = require('./memberloader');
+
+	function getAddonedType(type, callback) {
+		var addons = meta.addons;
+
+		// 已经是一个处理过的type
+		if (type.get('__addoned')) {
+			callback(type);
+
+		}
+		// 未处理过
+		else {
+			memberloader.load(addons, function() {
+				if (addons) {
+					addons = Array.prototype.slice.call(arguments, 0);
+					type = new Class(type, {__mixins__: addons, __addoned: true});
+				}
+				// 将处理结果放到type上
+				meta.type = type;
+				callback(type);
+			});
+		}
+	}
+
+	// async
+	if (typeof type == 'string') {
+		memberloader.load(type, function(type) {
+			getAddonedType(type, callback);
+		});
+	}
+	// class
+	else if (Class.instanceOf(type, Type)) {
+		getAddonedType(type, callback);
+	}
+	// sync
+	else if (typeof type == 'function') {
+		type = type();
+		getAddonedType(type, callback);
+	}
+}
+
+/**
+ * @param relativeModule 类所在的模块名，用来生成相对路径
+ */
+ComponentMeta.prototype.getTemplate = function(relativeModule, callback) {
+	var meta = this;
+	var sys = require('sys');
+	var urlparse = require('urlparse');
+	var templatemodule = meta.templatemodule;
+	var template = meta.template;
+
+	var base;
+	// 是相对路径 && 能找到此类的所在模块信息 && 在sys.modules中有这个模块
+	if (templatemodule && (templatemodule.indexOf('./') === 0 || templatemodule.indexOf('../') === 0) && relativeModule && sys.modules[relativeModule]) {
+		base = sys.modules[relativeModule].__package__.id;
+		templatemodule = urlparse.urljoin(base, templatemodule);
+	}
+	if (templatemodule) {
+		require.async(templatemodule, function(module) {
+			callback(module);
+		});
+	} else {
+		callback(template);
+	}
+
+};
+
 ComponentMeta.prototype.select = function(self, name, callback) {
 	var nodes = null, comps = null;
+	var meta = this;
 
-	var selector = self.getOption(name + '.meta.selector') || this.selector;
-	// 暂时不支持type的修改
-	var type = this.type;
+	var selector = meta.selector;
 
 	if (typeof selector == 'function') {
 		nodes = selector(self);
@@ -120,7 +129,7 @@ ComponentMeta.prototype.select = function(self, name, callback) {
 	}
 
 	if (nodes) {
-		getType(self, name, type, function(type) {
+		meta.getType(function(type) {
 			comps = new type.Components(nodes);
 			callback(comps);
 		});
@@ -137,10 +146,9 @@ function SingleComponentMeta(selector, type, renderer) {
 SingleComponentMeta.prototype = new ComponentMeta();
 SingleComponentMeta.prototype.select = function(self, name, callback) {
 	var node = null, comp = null;
+	var meta = this;
 
-	var selector = self.getOption(name + '.meta.selector') || this.selector;
-	// 暂时不支持type的修改
-	var type = this.type;
+	var selector = meta.selector;
 
 	if (typeof selector == 'function') {
 		node = dom.wrap(selector(self));
@@ -155,7 +163,7 @@ SingleComponentMeta.prototype.select = function(self, name, callback) {
 			callback(comp);
 
 		} else {
-			getType(self, name, type, function(type) {
+			meta.getType(function(type) {
 				if (!Class.instanceOf(type, Type)) {
 					throw new Error('type is not a class.');
 				}
@@ -305,7 +313,8 @@ function define(meta) {
 	function fget(self) {
 		var name = prop.__name__;
 		// select只处理查询，不处理放置到self。
-		meta.select(self, name, function(comp) {
+		// 这里不能直接meta.select，而是确保options中的meta信息存在，需要用getMeta
+		self.getMeta(name).select(self, name, function(comp) {
 			self.setComponent(name, comp);
 		});
 		return self[name];
@@ -920,16 +929,31 @@ this.Component = new Class(function() {
 	});
 
 	this.getMeta = function(self, name) {
+		var meta;
+
+		var metaOptions = self._options[name];
+		metaOptions = metaOptions? metaOptions.meta : null;
+
 		if (self.__properties__[name]) {
-			return self.__properties__[name].meta;
+			meta = self.__properties__[name].meta;
 		}
 		else if (self[name]) {
-			return self[name].meta;
+			meta = self[name].meta;
 		}
 		else {
-			return null;
+			meta = null;
 		}
+
+		// 将metaOptions上的成员复制到meta上
+		if (meta && metaOptions) {
+			object.extend(meta, metaOptions);
+		}
+
+		return meta;
 	};
+
+	this.create = classmethod(function(cls, meta, options, callback) {
+	});
 
 	/**
 	 * 渲染一组component
@@ -968,10 +992,13 @@ this.Component = new Class(function() {
 		var options = self._options[name];
 		object.extend(data, options, false);
 
+		self.create(meta, self._options[name], function() {
+		});
+
 		// make前先把type和template准备好，这样renderer中就无需考虑异步的问题
 		// TODO 用async维护两个异步
-		getType(self, name, meta.type, function(type) {
-			getTemplate(self, name, function(template) {
+		meta.getType(function(type) {
+			meta.getTemplate(self.__class__.__module__, function(template) {
 				var node;
 
 				// make方法仅仅返回node，这样在new comp时node已经在正确的位置，parent可以被正确的查找到
