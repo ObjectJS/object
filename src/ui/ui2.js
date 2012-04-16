@@ -96,7 +96,7 @@ ComponentMeta.prototype.getTemplate = function(relativeModule, callback) {
 	var base;
 	// 是相对路径 && 能找到此类的所在模块信息 && 在sys.modules中有这个模块
 	if (templatemodule && (templatemodule.indexOf('./') === 0 || templatemodule.indexOf('../') === 0) && relativeModule && sys.modules[relativeModule]) {
-		base = sys.modules[relativeModule].__package__.id;
+		base = sys.getModule(relativeModule).id;
 		templatemodule = urlparse.urljoin(base, templatemodule);
 	}
 	if (templatemodule) {
