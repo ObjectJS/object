@@ -674,25 +674,3 @@ object.use('ui/ui2.js', function(ui) {
 
 });
 });
-
-test('create', function() {
-object.use('ui/ui2', function(ui) {
-	var script = document.createElement('script');
-	script.setAttribute('data-src', 'async-module.js');
-	script.setAttribute('data-module', 'test.test');
-	document.body.appendChild(script);
-	object._loader.buildFileLib();
-
-	var TestComponent = new Class(ui.Component, function() {
-	});
-
-	TestComponent.create(document.createElement('div'), {
-		'meta.addons': 'test.test.TestComponent'
-	}, function(test) {
-		ok(test.__class__ !== TestComponent, 'should be addoned class.');
-		equal(test.a, 1, 'addoned.');
-	});
-
-	document.body.removeChild(script);
-});
-});

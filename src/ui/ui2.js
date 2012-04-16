@@ -40,7 +40,7 @@ function ComponentMeta(selector, type, renderer) {
 ComponentMeta.prototype.getType = function(callback) {
 
 	var meta = this;
-	var type = meta.type;
+	var type = this.type;
 
 	var memberloader = require('./memberloader');
 
@@ -87,11 +87,10 @@ ComponentMeta.prototype.getType = function(callback) {
  * @param relativeModule 类所在的模块名，用来生成相对路径
  */
 ComponentMeta.prototype.getTemplate = function(relativeModule, callback) {
-	var meta = this;
 	var sys = require('sys');
 	var urlparse = require('urlparse');
-	var templatemodule = meta.templatemodule;
-	var template = meta.template;
+	var templatemodule = this.templatemodule;
+	var template = this.template;
 
 	var base;
 	// 是相对路径 && 能找到此类的所在模块信息 && 在sys.modules中有这个模块
@@ -111,9 +110,8 @@ ComponentMeta.prototype.getTemplate = function(relativeModule, callback) {
 
 ComponentMeta.prototype.select = function(self, name, callback) {
 	var nodes = null, comps = null;
-	var meta = this;
 
-	var selector = meta.selector;
+	var selector = this.selector;
 
 	if (typeof selector == 'function') {
 		nodes = selector(self);
@@ -129,7 +127,7 @@ ComponentMeta.prototype.select = function(self, name, callback) {
 	}
 
 	if (nodes) {
-		meta.getType(function(type) {
+		this.getType(function(type) {
 			comps = new type.Components(nodes);
 			callback(comps);
 		});
@@ -146,9 +144,8 @@ function SingleComponentMeta(selector, type, renderer) {
 SingleComponentMeta.prototype = new ComponentMeta();
 SingleComponentMeta.prototype.select = function(self, name, callback) {
 	var node = null, comp = null;
-	var meta = this;
 
-	var selector = meta.selector;
+	var selector = this.selector;
 
 	if (typeof selector == 'function') {
 		node = dom.wrap(selector(self));
@@ -163,7 +160,7 @@ SingleComponentMeta.prototype.select = function(self, name, callback) {
 			callback(comp);
 
 		} else {
-			meta.getType(function(type) {
+			this.getType(function(type) {
 				if (!Class.instanceOf(type, Type)) {
 					throw new Error('type is not a class.');
 				}
@@ -952,9 +949,6 @@ this.Component = new Class(function() {
 		return meta;
 	};
 
-	this.create = classmethod(function(cls, meta, options, callback) {
-	});
-
 	/**
 	 * 渲染一组component
 	 * 异步方法
@@ -992,10 +986,6 @@ this.Component = new Class(function() {
 		var options = self._options[name];
 		object.extend(data, options, false);
 
-		self.create(meta, self._options[name], function() {
-		});
-
-		// make前先把type和template准备好，这样renderer中就无需考虑异步的问题
 		// TODO 用async维护两个异步
 		meta.getType(function(type) {
 			meta.getTemplate(self.__class__.__module__, function(template) {
