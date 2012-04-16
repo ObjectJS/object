@@ -31,9 +31,10 @@ function ensureTypedValue(value, type) {
 	else if (type === 'boolean') return Boolean(value);
 };
 
-function ComponentMeta(selector, type, renderer) {
+function ComponentMeta(selector, type, options, renderer) {
 	this.selector = selector;
 	this.type = type;
+	this.options = options;
 	this.renderer = renderer;
 }
 
@@ -115,6 +116,7 @@ ComponentMeta.prototype.getTemplate = function(relativeModule, callback) {
 };
 
 ComponentMeta.prototype.wrap = function(self, name, nodes, callback) {
+	var meta = this;
 	if (nodes) {
 		// 返回的是数组，变成Elements
 		// 避免重复包装
@@ -153,16 +155,18 @@ ComponentMeta.prototype.select = function(self, name, callback) {
 	this.wrap(self, name, nodes, callback);
 };
 
-function SingleComponentMeta(selector, type, renderer) {
+function SingleComponentMeta(selector, type, options, renderer) {
 	this.selector = selector;
 	this.type = type;
 	this.renderer = renderer;
+	this.options = options;
 }
 
 SingleComponentMeta.prototype = new ComponentMeta();
 
 SingleComponentMeta.prototype.wrap = function(self, name, node, callback) {
 	var comp;
+	var meta = this;
 	if (node) {
 		comp = node.component;
 		if (comp) {
@@ -350,28 +354,44 @@ function define(meta) {
  * 这样MyComponent实例的refname属性即为相对应selector获取到的节点引用
  * @param selector 选择器
  * @param type 构造类
+ * @param options 可选
+ * @param renderer 可选
  */
-this.define = function(selector, type, renderer) {
-	if (!renderer && typeof type == 'function' && !Class.instanceOf(type, Type)) {
-		renderer = type;
+this.define = function(selector, type, options, renderer) {
+	if (type && typeof type !== 'string' && !Class.instanceOf(type, Type)) {
+		renderer = options;
+		options = type;
 		type = null;
+	}
+	if (options && typeof options != 'object') {
+		renderer = options;
+		options = null;
 	}
 
 	if (!type) type = exports.Component;
-	return define(new ComponentMeta(selector, type, renderer));
+	return define(new ComponentMeta(selector, type, options, renderer));
 };
 
 /**
  * 定义唯一引用的component
+ * @param selector 必选
+ * @param type 可选
+ * @param options 可选
+ * @param renderer 可选
  */
-this.define1 = function(selector, type, renderer) {
-	if (!renderer && typeof type == 'function' && !Class.instanceOf(type, Type)) {
-		renderer = type;
+this.define1 = function(selector, type, options, renderer) {
+	if (type && typeof type !== 'string' && !Class.instanceOf(type, Type)) {
+		renderer = options;
+		options = type;
 		type = null;
+	}
+	if (options && typeof options != 'object') {
+		renderer = options;
+		options = null;
 	}
 
 	if (!type) type = exports.Component;
-	return define(new SingleComponentMeta(selector, type, renderer));
+	return define(new SingleComponentMeta(selector, type, options, renderer));
 };
 
 /**
@@ -704,7 +724,7 @@ this.Component = new Class(function() {
 
 		if (!options) options = {};
 		// 保存options，生成component时用于传递
-		self._options = optionsmod.parseOptions(options);
+		self._options = optionsmod.parse(options);
 
 		// 记录已经获取完毕的components
 		var inited = 0;
@@ -924,7 +944,7 @@ this.Component = new Class(function() {
 			// 为自己设置option
 			if (parts.length == 1) {
 				var oldValue = self.getOption(name);
-				optionsmod.setOptionTo(self._options, parts, value);
+				self._options[parts[0]] = value;
 				(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
 					// 重新更新对象上的直接引用值
 					self.get(name);

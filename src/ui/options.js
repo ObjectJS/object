@@ -14,6 +14,13 @@ function Options() {
  */
 this.setOptionTo = function(current, name, value) {
 	var parts = Array.isArray(name)? name : name.split('.');
+	//var prefix = parts[0];
+	//var surfix = parts.slice(1).join('.');
+	//if (!current[prefix]) {
+		//current[prefix] = {};
+	//}
+	//current[prefix][surfix] = value;
+	//return;
 	// 生成前缀对象
 	for (var i = 0, part; i < parts.length - 1; i++) {
 		part = parts[i];
@@ -26,9 +33,9 @@ this.setOptionTo = function(current, name, value) {
 };
 
 /**
- * {'a.b.c': 1, b: 2} ==> {a: {b: {c:1}}, b: 2}
+ * {'a.b.c': 1, b: 2} ==> {a: {b.c:1}, b: 2}
  */
-this.parseOptions = function(options) {
+this.parse = function(options) {
 	if (options.constructor == Options) return options;
 
 	var parsed = new Options();
