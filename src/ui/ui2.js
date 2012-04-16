@@ -108,6 +108,24 @@ ComponentMeta.prototype.getTemplate = function(relativeModule, callback) {
 
 };
 
+ComponentMeta.prototype.wrap = function(self, name, nodes, callback) {
+	if (nodes) {
+		// 返回的是数组，变成Elements
+		// 避免重复包装
+		// TODO
+		if (!nodes.addEvent) {
+			nodes = new dom.Elements(nodes);
+		}
+
+		this.getType(function(type) {
+			comps = new type.Components(nodes, self._options[name]);
+			callback(comps);
+		});
+	} else {
+		callback(null);
+	}
+};
+
 ComponentMeta.prototype.select = function(self, name, callback) {
 	var nodes = null, comps = null;
 
@@ -126,24 +144,38 @@ ComponentMeta.prototype.select = function(self, name, callback) {
 		nodes = self._node.getElements(selector);
 	}
 
-	if (nodes) {
-		this.getType(function(type) {
-			comps = new type.Components(nodes);
-			callback(comps);
-		});
-	} else {
-		callback(null);
-	}
-}
+	this.wrap(self, name, nodes, callback);
+};
 
 function SingleComponentMeta(selector, type, renderer) {
 	this.selector = selector;
 	this.type = type;
 	this.renderer = renderer;
 }
+
 SingleComponentMeta.prototype = new ComponentMeta();
+
+SingleComponentMeta.prototype.wrap = function(self, name, node, callback) {
+	var comp;
+	if (node) {
+		comp = node.component;
+		if (comp) {
+			callback(comp);
+
+		} else {
+			this.getType(function(type) {
+				comp = new type(node, self._options[name]);
+				callback(comp);
+			});
+		}
+
+	} else {
+		callback(null);
+	}
+};
+
 SingleComponentMeta.prototype.select = function(self, name, callback) {
-	var node = null, comp = null;
+	var node = null;
 
 	var selector = this.selector;
 
@@ -153,25 +185,7 @@ SingleComponentMeta.prototype.select = function(self, name, callback) {
 		node = self._node.getElement(selector);
 	}
 
-	if (node) {
-		comp = node.component;
-		if (comp) {
-			self.setComponent(name, comp);
-			callback(comp);
-
-		} else {
-			this.getType(function(type) {
-				if (!Class.instanceOf(type, Type)) {
-					throw new Error('type is not a class.');
-				}
-				comp = new type(node, self._options[name]);
-				callback(comp);
-			});
-		}
-
-	} else {
-		callback(null);
-	}
+	this.wrap(self, name, node, callback);
 };
 
 function OptionMeta(defaultValue, getter) {
@@ -797,8 +811,8 @@ this.Component = new Class(function() {
 	 * 重置一个component，回到初始状态，删除所有render的元素。
 	 */
 	this._destory = function(self) {
-		self.__rendered.forEach(function(comp) {
-			comp.dispose();
+		self.__rendered.forEach(function(node) {
+			node.component.dispose();
 		});
 		self.__rendered = [];
 	};
@@ -965,8 +979,8 @@ this.Component = new Class(function() {
 
 		var methodName = 'render_' + name;
 
-		var comp = self.get(name);
 		// 如果已经存在结构了，则不用再render了
+		var comp = self.get(name);
 		if (comp && (!('length' in comp) || comp.length != 0)) {
 			if (callback) {
 				callback();
@@ -974,12 +988,20 @@ this.Component = new Class(function() {
 			return;
 		}
 
-		if (!self[methodName]) {
+		var meta = self.getMeta(name);
+
+		var renderer = self[methodName];
+		// selector为false的free组件拥有默认renderer，创建即返回
+		if (!renderer && meta.selector === false) {
+			renderer = function(make) {
+				return make();
+			};
+		}
+
+		if (!renderer) {
 			console.error('no renderer specified for ' + name + '.');
 			return;
 		}
-
-		var meta = self.getMeta(name);
 
 		// data
 		data = data || {};
@@ -989,16 +1011,16 @@ this.Component = new Class(function() {
 		// TODO 用async维护两个异步
 		meta.getType(function(type) {
 			meta.getTemplate(self.__class__.__module__, function(template) {
-				var node;
-
 				// make方法仅仅返回node，这样在new comp时node已经在正确的位置，parent可以被正确的查找到
 				function make(newData) {
+					var node;
 					if (template) {
 						node = self.createNode(template, newData || data);
 					} else {
 						console.error('no template specified for ' + name + '.');
 						return;
 					}
+					self.__rendered.push(node);
 					return node;
 				};
 
@@ -1006,13 +1028,21 @@ this.Component = new Class(function() {
 				make.template = template;
 				make.data = data;
 
-				self[methodName](make, data);
+				// nodes用在free component的定义
+				var nodes = renderer.call(self, make, data);
 
-				var comp = new type(node, options);
-				self.__rendered.push(comp);
-
-				// 重建引用
-				self.get(name);
+				// 说明无所谓selector，生成什么就放什么就行
+				if (meta.selector === false) {
+					meta.wrap(self, name, nodes, function(comp) {
+						self.setComponent(name, comp);
+					});
+				}
+				// 重建引用，若render正常，刚刚创建的节点会被找到并包装
+				else {
+					meta.select(self, name, function(comp) {
+						self.setComponent(name, comp);
+					});
+				}
 
 				if (name in self.__subEventsMap) {
 					self.__subEventsMap[name].forEach(function(meta) {

@@ -630,7 +630,7 @@ object.use('ui/ui2.js', function(ui) {
 		'test.hello': 'test',
 		'test.meta.template': '<div class="test">{{hello}}</div>',
 		'test2.meta.template': '<div class="test2">foo:{{foo}},bar:{{bar}}</div>',
-		'test3.meta.template': '<div class="test3">{{value}}</div>'
+		'test3.meta.template': '<div class="test3">{{value}}</div>',
 	});
 
 	var renderCallbackCalled = 0;
@@ -673,4 +673,59 @@ object.use('ui/ui2.js', function(ui) {
 	});
 
 });
+});
+
+test('render free component', function() {
+object.use('ui/ui2.js', function(ui) {
+
+	var TestComponent = new Class(ui.Component, function() {
+		this.free = ui.define1(false);
+		this.free2 = ui.define(false, function(self, make) {
+			return [make(), make()];
+		});
+	});
+
+	var test = new TestComponent(document.createElement('div'), {
+		'free.meta.template': '<div>{{value}}</div>',
+		'free2.meta.template': '<div>{{value}}</div>'
+	})
+
+	// 渲染free，无所谓selector，render出来就能取到
+	test.render('free', {value: 'free'}, function() {
+		equal(test.free.getNode().innerHTML, 'free', 'render free component ok.');
+	});
+
+	test.render('free2', {value: 'free'}, function() {
+		equal(test.free2.getNode().length, 2, 'render free components ok.');
+		equal(test.free2.getNode()[0].innerHTML, 'free', 'render free components ok.');
+	});
+});
+});
+
+test('register', function() {
+
+object.define('test', 'ui/ui2', function(require) {
+
+	var ui = require('ui/ui2');
+
+	this.TestComponent = new Class(ui.Component, function() {
+	});
+
+});
+
+object.use('ui/ui2, test', function(ui, test) {
+
+	var A = new Class(ui.Component, function() {
+		this.test = ui.define1('.test', test.TestComponent, function(self, make) {
+			self.getNode().appendChild(make());
+		});
+	});
+
+	window.doc = new A(window.document, {
+	});
+
+});
+
+object.remove('test');
+
 });
