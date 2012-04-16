@@ -1011,6 +1011,7 @@ this.Component = new Class(function() {
 		// TODO 用async维护两个异步
 		meta.getType(function(type) {
 			meta.getTemplate(self.__class__.__module__, function(template) {
+				var nodes = [];
 				// make方法仅仅返回node，这样在new comp时node已经在正确的位置，parent可以被正确的查找到
 				function make(newData) {
 					var node;
@@ -1020,6 +1021,7 @@ this.Component = new Class(function() {
 						console.error('no template specified for ' + name + '.');
 						return;
 					}
+					nodes.push(node);
 					self.__rendered.push(node);
 					return node;
 				};
@@ -1029,7 +1031,10 @@ this.Component = new Class(function() {
 				make.data = data;
 
 				// nodes用在free component的定义
-				var nodes = renderer.call(self, make, data);
+				var returnNodes = renderer.call(self, make, data);
+				if (returnNodes) {
+					nodes = returnNodes;
+				}
 
 				// 说明无所谓selector，生成什么就放什么就行
 				if (meta.selector === false) {
