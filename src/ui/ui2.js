@@ -41,15 +41,16 @@ ComponentMeta.prototype.getType = function(callback) {
 
 	var meta = this;
 	var type = this.type;
+	var cls;
 
 	var memberloader = require('./memberloader');
 
-	function getAddonedType(type, callback) {
+	function getAddonedType(cls, callback) {
 		var addons = meta.addons;
 
 		// 已经是一个处理过的type
-		if (type.get('__addoned')) {
-			callback(type);
+		if (cls.get('__addoned')) {
+			callback(cls);
 
 		}
 		// 未处理过
@@ -57,29 +58,34 @@ ComponentMeta.prototype.getType = function(callback) {
 			memberloader.load(addons, function() {
 				if (addons) {
 					addons = Array.prototype.slice.call(arguments, 0);
-					type = new Class(type, {__mixins__: addons, __addoned: true});
+					cls = new Class(cls, {__mixins__: addons, __addoned: true});
 				}
 				// 将处理结果放到type上
-				meta.type = type;
-				callback(type);
+				meta.type = cls;
+				callback(cls);
 			});
 		}
 	}
 
 	// async
 	if (typeof type == 'string') {
-		memberloader.load(type, function(type) {
-			getAddonedType(type, callback);
+		memberloader.load(type, function(cls) {
+			if (!cls) {
+				console.error('can\'t get type ' + type);
+				return;
+			}
+			getAddonedType(cls, callback);
 		});
 	}
 	// class
 	else if (Class.instanceOf(type, Type)) {
-		getAddonedType(type, callback);
+		cls = type;
+		getAddonedType(cls, callback);
 	}
 	// sync
 	else if (typeof type == 'function') {
-		type = type();
-		getAddonedType(type, callback);
+		cls = type();
+		getAddonedType(cls, callback);
 	}
 }
 

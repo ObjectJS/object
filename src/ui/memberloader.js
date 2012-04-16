@@ -5,6 +5,7 @@ function load(items, callback) {
 		callback();
 		return;
 	}
+	items = items.trim();
 	var dependencies = [];
 	var memberNames = [];
 	if (!Array.isArray(items)) {
