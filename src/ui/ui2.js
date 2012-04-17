@@ -11,7 +11,7 @@ var globalid = 0;
 /**
  * 用于存放每个Component的信息
  */
-function MetaMap() {
+function RuntimeMeta() {
 	// 所有元素引用
 	this.components = [];
 	// 所有选项
@@ -178,10 +178,7 @@ ComponentMeta.prototype.bindOptions = function(comp, name) {
 };
 
 function ComponentsMeta(selector, type, options, renderer) {
-	this.selector = selector;
-	this.type = type;
-	this.defualtOptions = options;
-	this.renderer = renderer;
+	ComponentMeta.apply(this, arguments);
 }
 
 ComponentsMeta.prototype = new ComponentMeta();
@@ -517,7 +514,7 @@ this.ComponentFactory = new Class(Type, function() {
 	this.__new__ = function(cls, name, base, dict) {
 
 		var gid = dict.gid = globalid++;
-		var meta = dict.meta = new MetaMap();
+		var meta = dict.meta = new RuntimeMeta();
 
 		dict.__onEvents = [];
 		dict.__subEvents = [];
