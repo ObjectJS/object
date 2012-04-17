@@ -52,14 +52,6 @@ ComponentMeta.prototype.bind = function(comp, name) {
 		this.name = name;
 	}
 
-	var optionsMeta = comp._options[name];
-	optionsMeta = optionsMeta? optionsMeta.meta : null;
-
-	// 将metaOptions上的成员复制到meta上
-	if (optionsMeta) {
-		object.extend(this, optionsMeta);
-	}
-
 };
 
 ComponentMeta.prototype.getType = function(callback) {
@@ -147,7 +139,7 @@ ComponentMeta.prototype.wrap = function(nodes, callback) {
 	if (nodes) {
 		// 返回的是数组，变成Elements
 		// 避免重复包装
-		// TODO
+		// TODO 用addEvent避免重复包装的方法不优雅
 		if (!nodes.addEvent) {
 			nodes = new dom.Elements(nodes);
 		}
@@ -389,7 +381,8 @@ function define(meta) {
 		var name = prop.__name__;
 		// select只处理查询，不处理放置到self。
 		// 这里不能直接meta.select，而是确保options中的meta信息存在，需要用getMeta
-		self.getMeta(name).select(function(comp) {
+		var meta = self.getMeta(name);
+		meta.select(function(comp) {
 			self.setComponent(name, comp);
 		});
 		return self[name];
@@ -794,11 +787,13 @@ this.Component = new Class(function() {
 		// 初始化subEventsMap
 		self.meta.subEvents.forEach(function(name) {
 			var meta = self.getMeta(name);
+			meta.bind(self, name);
 		});
 
 		// 初始化components
 		self.meta.components.forEach(function(name) {
 			var meta = self.getMeta(name);
+			meta.bind(self, name);
 			meta.select(function(comp) {
 				self.setComponent(name, comp);
 				inited++;
@@ -812,6 +807,7 @@ this.Component = new Class(function() {
 		// 初始化onEvents
 		self.meta.onEvents.forEach(function(name) {
 			var meta = self.getMeta(name);
+			meta.bind(self, name);
 		});
 
 		self.initAddons(self);
@@ -1038,8 +1034,13 @@ this.Component = new Class(function() {
 			meta = null;
 		}
 
-		if (meta) {
-			meta.bind(self, name);
+		// 每次获取meta都要重新部署options
+		var optionsMeta = self._options[name];
+		optionsMeta = optionsMeta? optionsMeta.meta : null;
+
+		// 将metaOptions上的成员复制到meta上
+		if (optionsMeta) {
+			object.extend(meta, optionsMeta);
 		}
 
 		return meta;
