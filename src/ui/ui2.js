@@ -153,7 +153,19 @@ ComponentMeta.prototype.wrap = function(nodes, callback) {
 		}
 
 		this.getType(function(type) {
-			var result = new type.Components(nodes, comp._options[name]);
+
+			nodes.forEach(function(node) {
+				if (!node.component) {
+					var c = new type(node, comp._options[name]);
+					if (name in comp.__subEventsMap) {
+						comp.__subEventsMap[name].forEach(function(meta) {
+							meta.addEventTo(c);
+						});
+					}
+				}
+			});
+
+			var result = new type.Components(nodes);
 			callback(result);
 		});
 	} else {
@@ -206,6 +218,13 @@ SingleComponentMeta.prototype.wrap = function(node, callback) {
 		} else {
 			this.getType(function(type) {
 				result = new type(node, comp._options[name]);
+
+				if (name in comp.__subEventsMap) {
+					comp.__subEventsMap[name].forEach(function(meta) {
+						meta.addEventTo(result);
+					});
+				}
+
 				callback(result);
 			});
 		}
@@ -272,24 +291,22 @@ function SubEventMeta(sub, eventType, gid) {
 	this.gid = gid;
 }
 
-SubEventMeta.prototype.bindComponentEvent = function() {
+SubEventMeta.prototype.addEventTo = function(comp) {
 	var sub = this.sub;
 	var eventType = this.eventType;
 	var name = this.name;
-	var comp = this.binded;
+	var self = this.binded;
 
-	if (comp[sub]) {
-		comp[sub]._node.addEvent(eventType, function(event) {
-			var args;
-			// 将event._args pass 到函数后面
-			if (event._args) {
-				args = [event].concat(event._args);
-				comp[name].apply(comp, args);
-			} else {
-				comp[name](event);
-			}
-		});
-	}
+	comp._node.addEvent(eventType, function(event) {
+		var args;
+		// 将event._args pass 到函数后面
+		if (event._args) {
+			args = [event].concat(event._args);
+			self[name].apply(self, args);
+		} else {
+			self[name](event);
+		}
+	})
 };
 
 SubEventMeta.prototype.bindOptionEvent = function() {
@@ -334,7 +351,6 @@ SubEventMeta.prototype.bind = function(comp, name) {
 	}
 	// component
 	else if (comp.meta.components.indexOf(sub) != -1) {
-		this.bindComponentEvent();
 		// 记录下来，render时从__subEventsMap获取信息
 		if (!(sub in comp.__subEventsMap)) {
 			comp.__subEventsMap[sub] = [];
@@ -705,11 +721,11 @@ this.ComponentFactory = new Class(Type, function() {
 
 		cls.set('Components', new Class(compsBase, function() {
 
-			this.initialize = function(self, node) {
-				self._node = node;
+			this.initialize = function(self, nodes, options) {
+				self._node = nodes;
 				self._node.component = self;
 				self._node.forEach(function(node) {
-					var comp = node.component || new cls(node);
+					var comp = node.component || new cls(node, options);
 					self.push(comp);
 				});
 			};
@@ -775,6 +791,11 @@ this.Component = new Class(function() {
 			}
 		}
 
+		// 初始化subEventsMap
+		self.meta.subEvents.forEach(function(name) {
+			var meta = self.getMeta(name);
+		});
+
 		// 初始化components
 		self.meta.components.forEach(function(name) {
 			var meta = self.getMeta(name);
@@ -790,10 +811,6 @@ this.Component = new Class(function() {
 		});
 		// 初始化onEvents
 		self.meta.onEvents.forEach(function(name) {
-			var meta = self.getMeta(name);
-		});
-		// 初始化subEvents
-		self.meta.subEvents.forEach(function(name) {
 			var meta = self.getMeta(name);
 		});
 
@@ -1111,12 +1128,6 @@ this.Component = new Class(function() {
 				else {
 					meta.select(function(comp) {
 						self.setComponent(name, comp);
-					});
-				}
-
-				if (name in self.__subEventsMap) {
-					self.__subEventsMap[name].forEach(function(meta) {
-						meta.bindComponentEvent();
 					});
 				}
 
