@@ -35,7 +35,7 @@ function ComponentMeta(selector, type, options, renderer) {
 	this.selector = selector;
 	this.type = type;
 	this.renderer = renderer;
-	this.options = options;
+	this.defaultOptions = options;
 }
 
 ComponentMeta.prototype.wrap = function(comp, name, node, callback) {
@@ -170,9 +170,9 @@ ComponentMeta.prototype.getTemplate = function(relativeModule, callback) {
 
 ComponentMeta.prototype.bindOptions = function(comp, name) {
 	// fill meta.options to comp._options
-	if (this.options) {
-		Object.keys(this.options).forEach(function(key) {
-			optionsmod.setOptionTo(comp._options, name + '.' + key, this.options[key]);
+	if (this.defaultOptions) {
+		Object.keys(this.defaultOptions).forEach(function(key) {
+			optionsmod.setOptionTo(comp._options, name + '.' + key, this.defaultOptions[key]);
 		}, this);
 	}
 };
@@ -180,7 +180,7 @@ ComponentMeta.prototype.bindOptions = function(comp, name) {
 function ComponentsMeta(selector, type, options, renderer) {
 	this.selector = selector;
 	this.type = type;
-	this.options = options;
+	this.defualtOptions = options;
 	this.renderer = renderer;
 }
 
