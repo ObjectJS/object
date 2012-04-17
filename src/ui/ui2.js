@@ -38,6 +38,30 @@ function ComponentMeta(selector, type, options, renderer) {
 	this.renderer = renderer;
 }
 
+ComponentMeta.prototype.bind = function(comp, name) {
+
+	if (!this.binded) {
+		// fill meta.options to self._options
+		if (this.options) {
+			Object.keys(this.options).forEach(function(key) {
+				optionsmod.setOptionTo(comp._options, name + '.' + key, this.options[key]);
+			}, this);
+		}
+
+		this.binded = comp;
+		this.name = name;
+	}
+
+	var optionsMeta = comp._options[name];
+	optionsMeta = optionsMeta? optionsMeta.meta : null;
+
+	// 将metaOptions上的成员复制到meta上
+	if (optionsMeta) {
+		object.extend(this, optionsMeta);
+	}
+
+};
+
 ComponentMeta.prototype.getType = function(callback) {
 
 	var meta = this;
@@ -115,8 +139,11 @@ ComponentMeta.prototype.getTemplate = function(relativeModule, callback) {
 
 };
 
-ComponentMeta.prototype.wrap = function(self, name, nodes, callback) {
+ComponentMeta.prototype.wrap = function(nodes, callback) {
 	var meta = this;
+	var comp = this.binded;
+	var name = this.name;
+
 	if (nodes) {
 		// 返回的是数组，变成Elements
 		// 避免重复包装
@@ -126,21 +153,22 @@ ComponentMeta.prototype.wrap = function(self, name, nodes, callback) {
 		}
 
 		this.getType(function(type) {
-			comps = new type.Components(nodes, self._options[name]);
-			callback(comps);
+			var result = new type.Components(nodes, comp._options[name]);
+			callback(result);
 		});
 	} else {
 		callback(null);
 	}
 };
 
-ComponentMeta.prototype.select = function(self, name, callback) {
+ComponentMeta.prototype.select = function(callback) {
 	var nodes = null, comps = null;
+	var comp = this.binded;
 
 	var selector = this.selector;
 
 	if (typeof selector == 'function') {
-		nodes = selector(self);
+		nodes = selector(comp);
 		// 确保返回的是个dom.Elements
 		if (nodes.constructor != dom.Elements) {
 			if (!nodes.length) {
@@ -149,10 +177,10 @@ ComponentMeta.prototype.select = function(self, name, callback) {
 			nodes = new dom.Elements(nodes);
 		}
 	} else {
-		nodes = self._node.getElements(selector);
+		nodes = comp._node.getElements(selector);
 	}
 
-	this.wrap(self, name, nodes, callback);
+	this.wrap(nodes, callback);
 };
 
 function SingleComponentMeta(selector, type, options, renderer) {
@@ -164,18 +192,21 @@ function SingleComponentMeta(selector, type, options, renderer) {
 
 SingleComponentMeta.prototype = new ComponentMeta();
 
-SingleComponentMeta.prototype.wrap = function(self, name, node, callback) {
-	var comp;
+SingleComponentMeta.prototype.wrap = function(node, callback) {
 	var meta = this;
+	var comp = this.binded;
+	var name = this.name;
+	var result;
+
 	if (node) {
-		comp = node.component;
-		if (comp) {
-			callback(comp);
+		result = node.component;
+		if (result) {
+			callback(result);
 
 		} else {
 			this.getType(function(type) {
-				comp = new type(node, self._options[name]);
-				callback(comp);
+				result = new type(node, comp._options[name]);
+				callback(result);
 			});
 		}
 
@@ -184,18 +215,19 @@ SingleComponentMeta.prototype.wrap = function(self, name, node, callback) {
 	}
 };
 
-SingleComponentMeta.prototype.select = function(self, name, callback) {
+SingleComponentMeta.prototype.select = function(callback) {
 	var node = null;
+	var comp = this.binded;
 
 	var selector = this.selector;
 
 	if (typeof selector == 'function') {
-		node = dom.wrap(selector(self));
+		node = dom.wrap(selector(comp));
 	} else {
-		node = self._node.getElement(selector);
+		node = comp._node.getElement(selector);
 	}
 
-	this.wrap(self, name, node, callback);
+	this.wrap(node, callback);
 };
 
 function OptionMeta(defaultValue, getter) {
@@ -203,13 +235,18 @@ function OptionMeta(defaultValue, getter) {
 	this.getter = getter;
 }
 
+OptionMeta.prototype.bind = function(comp, name) {
+};
+
 function ParentComponentMeta(type) {
 	this.type = type;
 }
+
 ParentComponentMeta.prototype = new ComponentMeta();
-ParentComponentMeta.prototype.select = function(self, name, callback) {
-	var node = self._node;
-	var comp = null;
+
+ParentComponentMeta.prototype.select = function(callback) {
+	var comp = this.binded;
+	var node = comp._node;
 	var type;
 
 	if (Class.instanceOf(this.type, Type)) {
@@ -219,13 +256,14 @@ ParentComponentMeta.prototype.select = function(self, name, callback) {
 		type = this.type();
 	}
 
+	var result = null;
 	while (node = node.parentNode) {
 		if (node.component && Class.instanceOf(node.component, type)) {
-			comp = node.component;
+			result = node.component;
 			break;
 		}
 	}
-	callback(comp);
+	callback(result);
 };
 
 function SubEventMeta(sub, eventType, gid) {
@@ -237,8 +275,8 @@ function SubEventMeta(sub, eventType, gid) {
 SubEventMeta.prototype.bindComponentEvent = function() {
 	var sub = this.sub;
 	var eventType = this.eventType;
-	var methodName = this.methodName;
-	var comp = this.comp;
+	var name = this.name;
+	var comp = this.binded;
 
 	if (comp[sub]) {
 		comp[sub]._node.addEvent(eventType, function(event) {
@@ -246,30 +284,30 @@ SubEventMeta.prototype.bindComponentEvent = function() {
 			// 将event._args pass 到函数后面
 			if (event._args) {
 				args = [event].concat(event._args);
-				comp[methodName].apply(comp, args);
+				comp[name].apply(comp, args);
 			} else {
-				comp[methodName](event);
+				comp[name](event);
 			}
 		});
 	}
 };
 
 SubEventMeta.prototype.bindOptionEvent = function() {
-	var methodName = this.methodName;
-	var comp = this.comp;
+	var name = this.name;
+	var comp = this.binded;
 	// 注册 option_change 等事件
 	var fakeEventType = '__option_' + this.eventType + '_' + this.sub;
 
 	comp.addEvent(fakeEventType, function(event) {
-		comp[methodName](event);
+		comp[name](event);
 	});
 };
 
 SubEventMeta.prototype.bindUnknownEvent = function() {
 	var sub = this.sub;
 	var eventType = this.eventType;
-	var methodName = this.methodName;
-	var comp = this.comp;
+	var name = this.name;
+	var comp = this.binded;
 
 	if (comp[sub]) {
 		comp[sub].addEvent(eventType, function(event) {
@@ -277,18 +315,18 @@ SubEventMeta.prototype.bindUnknownEvent = function() {
 			// 将event._args pass 到函数后面
 			if (event._args) {
 				args = [event].concat(event._args);
-				comp[methodName].apply(comp, args);
+				comp[name].apply(comp, args);
 			} else {
-				comp[methodName](event);
+				comp[name](event);
 			}
 		});
 	}
 };
 
-SubEventMeta.prototype.bind = function(comp, methodName) {
+SubEventMeta.prototype.bind = function(comp, name) {
 	var sub = this.sub;
-	this.comp = comp;
-	this.methodName = methodName;
+	this.binded = comp;
+	this.name = name;
 
 	// options
 	if (comp.meta.options.indexOf(sub) != -1) {
@@ -314,16 +352,16 @@ function OnEventMeta(eventType, gid) {
 	this.gid = gid;
 }
 
-OnEventMeta.prototype.bind = function(self, methodName) {
+OnEventMeta.prototype.bind = function(comp, name) {
 	var eventType = this.eventType;
 
-	self.addEvent(eventType, function(event) {
+	comp.addEvent(eventType, function(event) {
 		var args = [event];
 		//将event._args pass 到函数后面
 		if (event._args) {
 			args = args.concat(event._args);
 		}
-		self[methodName].apply(self, args);
+		comp[name].apply(comp, args);
 	});
 };
 
@@ -335,7 +373,7 @@ function define(meta) {
 		var name = prop.__name__;
 		// select只处理查询，不处理放置到self。
 		// 这里不能直接meta.select，而是确保options中的meta信息存在，需要用getMeta
-		self.getMeta(name).select(self, name, function(comp) {
+		self.getMeta(name).select(function(comp) {
 			self.setComponent(name, comp);
 		});
 		return self[name];
@@ -460,11 +498,11 @@ this.onevent = function(eventType, gid) {
 	return function(func) {
 		func.meta = new OnEventMeta(eventType, gid);
 		return func;
-	}
+	};
 };
 
 // metaclass
-this.ComponentFactory = new Class(type, function() {
+this.ComponentFactory = new Class(Type, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 
@@ -531,6 +569,7 @@ this.ComponentFactory = new Class(type, function() {
 			meta.onEvents.push(newName);
 			var eventType = item.eventType.slice(0, 1).toLowerCase() + item.eventType.slice(1);
 			Type.__setattr__(cls, newName, exports.onevent(eventType, gid)(item.member));
+
 		});
 		cls.get('__subEvents').forEach(function(item) {
 			var newName = item.name + '$' + gid;
@@ -558,7 +597,7 @@ this.ComponentFactory = new Class(type, function() {
 		// 合并meta
 		cls.get('mixMeta')(name, base, dict);
 
-		// 生成Component
+		// 生成Components
 		cls.get('makeComponents')(name, base, dict);
 	};
 
@@ -738,7 +777,8 @@ this.Component = new Class(function() {
 
 		// 初始化components
 		self.meta.components.forEach(function(name) {
-			self.getMeta(name).select(self, name, function(comp) {
+			var meta = self.getMeta(name);
+			meta.select(function(comp) {
 				self.setComponent(name, comp);
 				inited++;
 				checkInit();
@@ -750,11 +790,11 @@ this.Component = new Class(function() {
 		});
 		// 初始化onEvents
 		self.meta.onEvents.forEach(function(name) {
-			self[name].im_func.meta.bind(self, name);
+			var meta = self.getMeta(name);
 		});
 		// 初始化subEvents
 		self.meta.subEvents.forEach(function(name) {
-			self[name].im_func.meta.bind(self, name);
+			var meta = self.getMeta(name);
 		});
 
 		self.initAddons(self);
@@ -968,11 +1008,11 @@ this.Component = new Class(function() {
 	this.getMeta = function(self, name) {
 		var meta;
 
-		var metaOptions = self._options[name];
-		metaOptions = metaOptions? metaOptions.meta : null;
-
 		if (self.__properties__[name]) {
 			meta = self.__properties__[name].meta;
+		}
+		else if (typeof self[name] == 'function') {
+			meta = self[name].im_func.meta;
 		}
 		else if (self[name]) {
 			meta = self[name].meta;
@@ -981,9 +1021,8 @@ this.Component = new Class(function() {
 			meta = null;
 		}
 
-		// 将metaOptions上的成员复制到meta上
-		if (meta && metaOptions) {
-			object.extend(meta, metaOptions);
+		if (meta) {
+			meta.bind(self, name);
 		}
 
 		return meta;
@@ -1064,13 +1103,13 @@ this.Component = new Class(function() {
 
 				// 说明无所谓selector，生成什么就放什么就行
 				if (meta.selector === false) {
-					meta.wrap(self, name, nodes, function(comp) {
+					meta.wrap(nodes, function(comp) {
 						self.setComponent(name, comp);
 					});
 				}
 				// 重建引用，若render正常，刚刚创建的节点会被找到并包装
 				else {
-					meta.select(self, name, function(comp) {
+					meta.select(function(comp) {
 						self.setComponent(name, comp);
 					});
 				}
