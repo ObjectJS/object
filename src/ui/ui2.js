@@ -283,6 +283,27 @@ function SubEventMeta(sub, eventType, gid) {
 	this.gid = gid;
 }
 
+SubEventMeta.setTo = function(cls, name, member) {
+	var gid = cls.get('gid');
+	var meta = cls.get('meta');
+	var match;
+	if (Array.isArray(name)) {
+		match = name;
+		name = name[0];
+	} else {
+		// TODO
+	}
+
+	var newName = name + '$' + gid;
+	var sub = match[1];
+	var eventType = match[2];
+	var newMember = exports.subevent(sub, eventType, gid)(member);
+	if (meta.subEvents.indexOf(newName) == -1) {
+		meta.subEvents.push(newName);
+	}
+	Type.__setattr__(cls, newName, newMember);
+};
+
 SubEventMeta.prototype.addOptionEventTo = function(comp) {
 	var name = this.name;
 	var fakeEventType = '__option_' + this.eventType + '_' + this.sub;
@@ -356,6 +377,28 @@ function OnEventMeta(eventType, gid) {
 	this.eventType = eventType;
 	this.gid = gid;
 }
+
+OnEventMeta.setTo = function(cls, name, member) {
+	var gid = cls.get('gid');
+	var meta = cls.get('meta');
+	var match;
+	if (Array.isArray(name)) {
+		match = name;
+		name = name[0];
+	} else {
+		// TODO
+	}
+
+	var newName = name + '$' + gid;
+	if (meta.onEvents.indexOf(newName) == -1) {
+		meta.onEvents.push(newName);
+	}
+	var eventType = match[1];
+	var eventType = eventType.slice(0, 1).toLowerCase() + eventType.slice(1);
+	var newMember = exports.onevent(eventType, gid)(member);
+	Type.__setattr__(cls, newName, newMember);
+
+};
 
 OnEventMeta.prototype.bindEvents = function(comp, name) {
 	var eventType = this.eventType;
@@ -524,6 +567,7 @@ this.ComponentFactory = new Class(Type, function() {
 		Object.keys(dict).forEach(function(name) {
 			var member = dict[name];
 			var newName;
+			var match;
 
 			if (name == 'initialize' || name.indexOf('__') == 0 || member == null) {
 				return;
@@ -542,20 +586,17 @@ this.ComponentFactory = new Class(Type, function() {
 					member: member
 				});
 			}
-			else if (name.match(/^(_?\w+)_(\w+)$/)) {
+			else if (match = name.match(/^(_?\w+)_(\w+)$/)) {
 				delete dict[name];
 				dict.__subEvents.push({
-					name: name,
-					sub: RegExp.$1,
-					eventType: RegExp.$2,
+					name: match,
 					member: member
 				});
 			}
-			else if (name.match(/^on(\w+)$/)) {
+			else if (match = name.match(/^on(\w+)$/)) {
 				delete dict[name];
 				dict.__onEvents.push({
-					name: name,
-					eventType: RegExp.$1,
+					name: match,
 					member: member
 				});
 			}
@@ -572,16 +613,10 @@ this.ComponentFactory = new Class(Type, function() {
 		// 生成meta方法
 		// 在initialize中创建而不是__new__中目的是避免Components中出现无用的方法
 		cls.get('__onEvents').forEach(function(item) {
-			var newName = item.name + '$' + gid;
-			meta.onEvents.push(newName);
-			var eventType = item.eventType.slice(0, 1).toLowerCase() + item.eventType.slice(1);
-			Type.__setattr__(cls, newName, exports.onevent(eventType, gid)(item.member));
-
+			OnEventMeta.setTo(cls, item.name, item.member);
 		});
 		cls.get('__subEvents').forEach(function(item) {
-			var newName = item.name + '$' + gid;
-			meta.subEvents.push(newName);
-			Type.__setattr__(cls, newName, exports.subevent(item.sub, item.eventType, gid)(item.member));
+			SubEventMeta.setTo(cls, item.name, item.member);
 		});
 		// 只有在initialize阶段生成handle方法才能确保mixin时能够获取到正确的cls
 		cls.get('__handles').forEach(function(item) {
@@ -611,6 +646,7 @@ this.ComponentFactory = new Class(Type, function() {
 	this.__setattr__ = function(cls, name, member) {
 		var gid = cls.get('gid');
 		var meta = cls.get('meta');
+		var match;
 
 		if (member.__class__ == property && member.meta instanceof OptionMeta) {
 			if (meta.options.indexOf(name) == -1) {
@@ -634,22 +670,13 @@ this.ComponentFactory = new Class(Type, function() {
 			}));
 			Type.__setattr__(cls, name, member);
 		}
-		else if (name.match(/^(_?\w+)_(\w+)$/)) {
-			var newName = name + '$' + gid;
-			var newMember = exports.subevent(RegExp.$1, RegExp.$2, gid)(member);
-			if (meta.subEvents.indexOf(newName) == -1) {
-				meta.subEvents.push(newName);
-			}
-			Type.__setattr__(cls, newName, newMember);
+		else if (match = name.match(/^(_?\w+)_(\w+)$/)) {
+			SubEventMeta.setTo(cls, match, member);
+
 		}
-		else if (name.match(/^on(\w+)$/)) {
-			var newName = name + '$' + gid;
-			var eventType = RegExp.$1.slice(0, 1).toLowerCase() + RegExp.$1.slice(1);
-			var newMember = exports.onevent(eventType, gid)(member);
-			if (meta.onEvents.indexOf(newName) == -1) {
-				meta.onEvents.push(newName);
-			}
-			Type.__setattr__(cls, newName, newMember);
+		else if (match = name.match(/^on(\w+)$/)) {
+			OnEventMeta.setTo(cls, match, member);
+
 		}
 		else {
 			Type.__setattr__(cls, name, member);
