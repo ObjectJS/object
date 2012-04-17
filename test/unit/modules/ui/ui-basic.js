@@ -717,6 +717,74 @@ object.use('ui/ui2.js', function(ui) {
 });
 });
 
+test('addon factory', function() {
+object.use('ui/ui2', function(ui) {
+
+	var eventFired = 0;
+
+	var A = new Class(ui.Component, function() {
+	});
+
+	var BaseFactory = new Class(ui.AddonFactory, function() {
+
+		this.$trigger = '{{name}}Trigger';
+
+		this['{{trigger}}_click'] = function(cls, self) {
+			ok(self.test, 'arguments ok.');
+			var $name = cls.get('$name');
+			equal($name, 'test', 'variable ok.');
+			eventFired++;
+		};
+
+	});
+
+	var TestFactory = new Class(BaseFactory, function() {
+
+		this.$name = 'test';
+
+		this['{{name}}'] = ui.define1(false, function() {
+			return document.createElement('div');
+		});
+
+		this['{{trigger}}'] = ui.define1(false, function() {
+			return document.createElement('span');
+		});
+	});
+
+	var Test2Factory = new Class(BaseFactory, function() {
+
+		this.$name = 'test2';
+
+		this['{{name}}'] = ui.define1(false, function() {
+			return document.createElement('div');
+		});
+
+		this['{{trigger}}'] = ui.define1(false, function() {
+			return document.createElement('span');
+		});
+	});
+
+	var Test = new TestFactory({});
+	var Test2 = new Test2Factory({});
+
+	var test = new Test(document.createElement('div'));
+	var test2 = new Test2(document.createElement('div'));
+
+	test.render('test', function() {
+		equal(test.test.getNode().tagName, 'DIV', 'render component ok.');
+	});
+
+	test.render('testTrigger', function() {
+		test.testTrigger.getNode().click();
+	});
+
+	test2.render('test2Trigger', function() {
+		test.testTrigger.getNode().click();
+	});
+
+});
+});
+
 test('register', function() {
 
 object.define('test', 'ui/ui2', function(require) {

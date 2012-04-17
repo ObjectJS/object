@@ -1124,11 +1124,11 @@ this.AddonFactoryFactory = new Class(Type, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 
-		var members = (base.get('__xmembers') || []).slice();
+		var members = (base.get('__members') || []).slice();
 		var variables = (base.get('__variables') || []).slice();
 
 		Object.keys(dict).forEach(function(name) {
-			if (name.indexOf('__') == 0) {
+			if (name.indexOf('__') == 0 || name == 'initialize') {
 				return;
 			}
 			else if (name.indexOf('$') == 0) {
@@ -1140,7 +1140,8 @@ this.AddonFactoryFactory = new Class(Type, function() {
 		});
 		// 如果不带下划线，就有可能覆盖掉自定义的方法，也就意味着开发者不能定义这些名字的成员
 		dict.__variables = variables;
-		dict.__xmembers = members;
+		dict.__members = members;
+
 		return Type.__new__(cls, name, base, dict);
 	};
 });
@@ -1150,11 +1151,18 @@ this.AddonFactory = new Class(exports.ComponentFactory, function() {
 
 	this.__metaclass__ = exports.AddonFactoryFactory;
 
-	this.initialize = function(cls, name, base, dict) {
+	this.__new__ = function(cls, name, base, dict) {
+		// base是Component
+		if (base !== exports.Component) {
+			base = exports.Component;
+		}
+		return exports.ComponentFactory.get('__new__')(cls, name, base, dict);
+	};
 
+	this.initialize = function(cls, name, base, dict) {
 		exports.ComponentFactory.get('initialize')(cls, name, base, dict);
 
-		var members = cls.get('__xmembers');
+		var members = cls.get('__members');
 		var variables = cls.get('__variables');
 
 		var vars = {};
@@ -1169,23 +1177,9 @@ this.AddonFactory = new Class(exports.ComponentFactory, function() {
 		members.forEach(function(nameTpl) {
 			var name = string.substitute(nameTpl, vars);
 			var member = cls.get(nameTpl);
-			if (member.__class__ == property) {
-				cls.set(name, member);
-			}
-			else if (typeof member == 'function') {
-				cls.set(name, function() {
-					var args = Array.prototype.slice.call(arguments, 0);
-					args.unshift(cls);
-					member.apply(cls.__this__, args);
-				});
-			}
+			cls.set(name, member);
 		});
 		cls.set('__vars', vars);
-
-		// base是Component
-		if (base !== exports.Component) {
-			base = exports.Component;
-		}
 	};
 });
 
