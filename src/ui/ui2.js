@@ -34,24 +34,61 @@ function ensureTypedValue(value, type) {
 function ComponentMeta(selector, type, options, renderer) {
 	this.selector = selector;
 	this.type = type;
-	this.options = options;
 	this.renderer = renderer;
+	this.options = options;
 }
 
-ComponentMeta.prototype.bind = function(comp, name) {
+ComponentMeta.prototype.wrap = function(comp, name, node, callback) {
+	var meta = this;
+	var result;
 
-	if (!this.binded) {
-		// fill meta.options to self._options
-		if (this.options) {
-			Object.keys(this.options).forEach(function(key) {
-				optionsmod.setOptionTo(comp._options, name + '.' + key, this.options[key]);
-			}, this);
+	if (node) {
+		result = node.component;
+		if (result) {
+			callback(result);
+
+		} else {
+			this.getType(function(type) {
+				result = new type(node, comp._options[name]);
+
+				if (name in comp.__subEventsMap) {
+					comp.__subEventsMap[name].forEach(function(meta) {
+						meta.addEventTo(result);
+					});
+				}
+
+				callback(result);
+			});
 		}
 
-		this.binded = comp;
-		this.name = name;
+	} else {
+		callback(null);
+	}
+};
+
+ComponentMeta.prototype.select = function(comp, name, callback) {
+	var node = null;
+
+	var selector = this.selector;
+
+	if (typeof selector == 'function') {
+		node = dom.wrap(selector(comp));
+	} else {
+		node = comp._node.getElement(selector);
 	}
 
+	this.wrap(comp, name, node, callback);
+};
+
+ComponentMeta.prototype.fillOptions = function(comp, name) {
+	// 每次获取meta都要重新部署options
+	var optionsMeta = comp._options[name];
+	optionsMeta = optionsMeta? optionsMeta.meta : null;
+
+	// 将metaOptions上的成员复制到meta上
+	if (optionsMeta) {
+		object.extend(this, optionsMeta);
+	}
 };
 
 ComponentMeta.prototype.getType = function(callback) {
@@ -131,10 +168,26 @@ ComponentMeta.prototype.getTemplate = function(relativeModule, callback) {
 
 };
 
-ComponentMeta.prototype.wrap = function(nodes, callback) {
+ComponentMeta.prototype.bindOptions = function(comp, name) {
+	// fill meta.options to comp._options
+	if (this.options) {
+		Object.keys(this.options).forEach(function(key) {
+			optionsmod.setOptionTo(comp._options, name + '.' + key, this.options[key]);
+		}, this);
+	}
+};
+
+function ComponentsMeta(selector, type, options, renderer) {
+	this.selector = selector;
+	this.type = type;
+	this.options = options;
+	this.renderer = renderer;
+}
+
+ComponentsMeta.prototype = new ComponentMeta();
+
+ComponentsMeta.prototype.wrap = function(comp, name, nodes, callback) {
 	var meta = this;
-	var comp = this.binded;
-	var name = this.name;
 
 	if (nodes) {
 		// 返回的是数组，变成Elements
@@ -165,9 +218,8 @@ ComponentMeta.prototype.wrap = function(nodes, callback) {
 	}
 };
 
-ComponentMeta.prototype.select = function(callback) {
+ComponentsMeta.prototype.select = function(comp, name, callback) {
 	var nodes = null, comps = null;
-	var comp = this.binded;
 
 	var selector = this.selector;
 
@@ -184,61 +236,7 @@ ComponentMeta.prototype.select = function(callback) {
 		nodes = comp._node.getElements(selector);
 	}
 
-	this.wrap(nodes, callback);
-};
-
-function SingleComponentMeta(selector, type, options, renderer) {
-	this.selector = selector;
-	this.type = type;
-	this.renderer = renderer;
-	this.options = options;
-}
-
-SingleComponentMeta.prototype = new ComponentMeta();
-
-SingleComponentMeta.prototype.wrap = function(node, callback) {
-	var meta = this;
-	var comp = this.binded;
-	var name = this.name;
-	var result;
-
-	if (node) {
-		result = node.component;
-		if (result) {
-			callback(result);
-
-		} else {
-			this.getType(function(type) {
-				result = new type(node, comp._options[name]);
-
-				if (name in comp.__subEventsMap) {
-					comp.__subEventsMap[name].forEach(function(meta) {
-						meta.addEventTo(result);
-					});
-				}
-
-				callback(result);
-			});
-		}
-
-	} else {
-		callback(null);
-	}
-};
-
-SingleComponentMeta.prototype.select = function(callback) {
-	var node = null;
-	var comp = this.binded;
-
-	var selector = this.selector;
-
-	if (typeof selector == 'function') {
-		node = dom.wrap(selector(comp));
-	} else {
-		node = comp._node.getElement(selector);
-	}
-
-	this.wrap(node, callback);
+	this.wrap(comp, name, nodes, callback);
 };
 
 function OptionMeta(defaultValue, getter) {
@@ -246,7 +244,13 @@ function OptionMeta(defaultValue, getter) {
 	this.getter = getter;
 }
 
-OptionMeta.prototype.bind = function(comp, name) {
+OptionMeta.prototype.bindEvents = function(comp, name) {
+	// 注册 option_change 等事件
+	if (name in comp.__subEventsMap) {
+		comp.__subEventsMap[name].forEach(function(meta) {
+			meta.addOptionEventTo(comp);
+		});
+	}
 };
 
 function ParentComponentMeta(type) {
@@ -255,8 +259,7 @@ function ParentComponentMeta(type) {
 
 ParentComponentMeta.prototype = new ComponentMeta();
 
-ParentComponentMeta.prototype.select = function(callback) {
-	var comp = this.binded;
+ParentComponentMeta.prototype.select = function(comp, name, callback) {
 	var node = comp._node;
 	var type;
 
@@ -283,6 +286,14 @@ function SubEventMeta(sub, eventType, gid) {
 	this.gid = gid;
 }
 
+SubEventMeta.prototype.addOptionEventTo = function(comp) {
+	var name = this.name;
+	var fakeEventType = '__option_' + this.eventType + '_' + this.sub;
+	comp.addEvent(fakeEventType, function(event) {
+		comp[name](event);
+	});
+};
+
 SubEventMeta.prototype.addEventTo = function(comp) {
 	var sub = this.sub;
 	var eventType = this.eventType;
@@ -299,17 +310,6 @@ SubEventMeta.prototype.addEventTo = function(comp) {
 			self[name](event);
 		}
 	})
-};
-
-SubEventMeta.prototype.bindOptionEvent = function() {
-	var name = this.name;
-	var comp = this.binded;
-	// 注册 option_change 等事件
-	var fakeEventType = '__option_' + this.eventType + '_' + this.sub;
-
-	comp.addEvent(fakeEventType, function(event) {
-		comp[name](event);
-	});
 };
 
 SubEventMeta.prototype.bindUnknownEvent = function() {
@@ -337,17 +337,17 @@ SubEventMeta.prototype.bind = function(comp, name) {
 	this.binded = comp;
 	this.name = name;
 
+	// 记录下来，render时从__subEventsMap获取信息
+	if (!(sub in comp.__subEventsMap)) {
+		comp.__subEventsMap[sub] = [];
+	}
+	comp.__subEventsMap[sub].push(this);
+
 	// options
 	if (comp.meta.options.indexOf(sub) != -1) {
-		this.bindOptionEvent();
 	}
 	// component
 	else if (comp.meta.components.indexOf(sub) != -1) {
-		// 记录下来，render时从__subEventsMap获取信息
-		if (!(sub in comp.__subEventsMap)) {
-			comp.__subEventsMap[sub] = [];
-		}
-		comp.__subEventsMap[sub].push(this);
 	}
 	// request ...
 	else {
@@ -360,7 +360,7 @@ function OnEventMeta(eventType, gid) {
 	this.gid = gid;
 }
 
-OnEventMeta.prototype.bind = function(comp, name) {
+OnEventMeta.prototype.bindEvents = function(comp, name) {
 	var eventType = this.eventType;
 
 	comp.addEvent(eventType, function(event) {
@@ -382,7 +382,8 @@ function define(meta) {
 		// select只处理查询，不处理放置到self。
 		// 这里不能直接meta.select，而是确保options中的meta信息存在，需要用getMeta
 		var meta = self.getMeta(name);
-		meta.select(function(comp) {
+		meta.fillOptions(self, name);
+		meta.select(self, name, function(comp) {
 			self.setComponent(name, comp);
 		});
 		return self[name];
@@ -416,7 +417,7 @@ this.define = function(selector, type, options, renderer) {
 	}
 
 	if (!type) type = exports.Component;
-	return define(new ComponentMeta(selector, type, options, renderer));
+	return define(new ComponentsMeta(selector, type, options, renderer));
 };
 
 /**
@@ -438,7 +439,7 @@ this.define1 = function(selector, type, options, renderer) {
 	}
 
 	if (!type) type = exports.Component;
-	return define(new SingleComponentMeta(selector, type, options, renderer));
+	return define(new ComponentMeta(selector, type, options, renderer));
 };
 
 /**
@@ -793,8 +794,10 @@ this.Component = new Class(function() {
 		// 初始化components
 		self.meta.components.forEach(function(name) {
 			var meta = self.getMeta(name);
-			meta.bind(self, name);
-			meta.select(function(comp) {
+			// 将meta.options合并到self._options上，其优先级低，并非动态的，合并一次即可，后续可以被覆盖
+			meta.bindOptions(self, name);
+			meta.fillOptions(self, name);
+			meta.select(self, name, function(comp) {
 				self.setComponent(name, comp);
 				inited++;
 				checkInit();
@@ -802,12 +805,14 @@ this.Component = new Class(function() {
 		});
 		// 初始化options
 		self.meta.options.forEach(function(name) {
+			var meta = self.getMeta(name);
+			meta.bindEvents(self, name);
 			self.get(name);
 		});
 		// 初始化onEvents
 		self.meta.onEvents.forEach(function(name) {
 			var meta = self.getMeta(name);
-			meta.bind(self, name);
+			meta.bindEvents(self, name);
 		});
 
 		self.initAddons(self);
@@ -1034,15 +1039,6 @@ this.Component = new Class(function() {
 			meta = null;
 		}
 
-		// 每次获取meta都要重新部署options
-		var optionsMeta = self._options[name];
-		optionsMeta = optionsMeta? optionsMeta.meta : null;
-
-		// 将metaOptions上的成员复制到meta上
-		if (optionsMeta) {
-			object.extend(meta, optionsMeta);
-		}
-
 		return meta;
 	};
 
@@ -1072,6 +1068,7 @@ this.Component = new Class(function() {
 		}
 
 		var meta = self.getMeta(name);
+		meta.fillOptions(self, name);
 
 		var renderer = self[methodName];
 		// selector为false的free组件拥有默认renderer，创建即返回
@@ -1121,13 +1118,13 @@ this.Component = new Class(function() {
 
 				// 说明无所谓selector，生成什么就放什么就行
 				if (meta.selector === false) {
-					meta.wrap(nodes, function(comp) {
+					meta.wrap(self, name, nodes, function(comp) {
 						self.setComponent(name, comp);
 					});
 				}
 				// 重建引用，若render正常，刚刚创建的节点会被找到并包装
 				else {
-					meta.select(function(comp) {
+					meta.select(self, name, function(comp) {
 						self.setComponent(name, comp);
 					});
 				}
