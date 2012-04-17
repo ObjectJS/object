@@ -38,6 +38,58 @@ function ComponentMeta(selector, type, options, renderer) {
 	this.defaultOptions = options;
 }
 
+ComponentMeta.prototype.getType = function(callback) {
+
+	var meta = this;
+	var type = this.type;
+	var cls;
+
+	var memberloader = require('./memberloader');
+
+	function getAddonedType(cls, callback) {
+		var addons = meta.addons;
+
+		// 已经是一个处理过的type
+		if (cls.get('__addoned')) {
+			callback(cls);
+
+		}
+		// 未处理过
+		else {
+			memberloader.load(addons, function() {
+				if (addons) {
+					addons = Array.prototype.slice.call(arguments, 0);
+					cls = new Class(cls, {__mixins__: addons, __addoned: true});
+				}
+				// 将处理结果放到type上
+				meta.type = cls;
+				callback(cls);
+			});
+		}
+	}
+
+	// async
+	if (typeof type == 'string') {
+		memberloader.load(type, function(cls) {
+			if (!cls) {
+				console.error('can\'t get type ' + type);
+				return;
+			}
+			getAddonedType(cls, callback);
+		});
+	}
+	// class
+	else if (Class.instanceOf(type, Type)) {
+		cls = type;
+		getAddonedType(cls, callback);
+	}
+	// sync
+	else if (typeof type == 'function') {
+		cls = type();
+		getAddonedType(cls, callback);
+	}
+};
+
 ComponentMeta.prototype.wrap = function(comp, name, node, callback) {
 	var meta = this;
 	var result;
@@ -90,58 +142,6 @@ ComponentMeta.prototype.fillOptions = function(comp, name) {
 		object.extend(this, optionsMeta);
 	}
 };
-
-ComponentMeta.prototype.getType = function(callback) {
-
-	var meta = this;
-	var type = this.type;
-	var cls;
-
-	var memberloader = require('./memberloader');
-
-	function getAddonedType(cls, callback) {
-		var addons = meta.addons;
-
-		// 已经是一个处理过的type
-		if (cls.get('__addoned')) {
-			callback(cls);
-
-		}
-		// 未处理过
-		else {
-			memberloader.load(addons, function() {
-				if (addons) {
-					addons = Array.prototype.slice.call(arguments, 0);
-					cls = new Class(cls, {__mixins__: addons, __addoned: true});
-				}
-				// 将处理结果放到type上
-				meta.type = cls;
-				callback(cls);
-			});
-		}
-	}
-
-	// async
-	if (typeof type == 'string') {
-		memberloader.load(type, function(cls) {
-			if (!cls) {
-				console.error('can\'t get type ' + type);
-				return;
-			}
-			getAddonedType(cls, callback);
-		});
-	}
-	// class
-	else if (Class.instanceOf(type, Type)) {
-		cls = type;
-		getAddonedType(cls, callback);
-	}
-	// sync
-	else if (typeof type == 'function') {
-		cls = type();
-		getAddonedType(cls, callback);
-	}
-}
 
 /**
  * @param relativeModule 类所在的模块名，用来生成相对路径
@@ -559,7 +559,11 @@ this.ComponentFactory = new Class(Type, function() {
 		var meta = cls.get('meta');
 		var match;
 
-		if (member.__class__ == property && member.meta instanceof OptionMeta) {
+		if (member == null) {
+			Type.__setattr__(cls, name, member);
+
+		}
+		else if (member.__class__ == property && member.meta instanceof OptionMeta) {
 			if (meta.options.indexOf(name) == -1) {
 				meta.options.push(name);
 			}
@@ -1116,11 +1120,11 @@ this.Component = new Class(function() {
 });
 
 // metaclass 的 metaclass
-this.AddonFactoryFactory = new Class(type, function() {
+this.AddonFactoryFactory = new Class(Type, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 
-		var members = (base.get('__members') || []).slice();
+		var members = (base.get('__xmembers') || []).slice();
 		var variables = (base.get('__variables') || []).slice();
 
 		Object.keys(dict).forEach(function(name) {
@@ -1136,19 +1140,21 @@ this.AddonFactoryFactory = new Class(type, function() {
 		});
 		// 如果不带下划线，就有可能覆盖掉自定义的方法，也就意味着开发者不能定义这些名字的成员
 		dict.__variables = variables;
-		dict.__members = members;
+		dict.__xmembers = members;
 		return Type.__new__(cls, name, base, dict);
 	};
 });
 
-// 继承于 component
+// 继承于 ComponentFactory
 this.AddonFactory = new Class(exports.ComponentFactory, function() {
 
 	this.__metaclass__ = exports.AddonFactoryFactory;
 
-	this.__new__ = function(cls, name, base, dict) {
-		// 这里的cls获取的是最后被当作metaclass的那个继承后的类
-		var members = cls.get('__members');
+	this.initialize = function(cls, name, base, dict) {
+
+		exports.ComponentFactory.get('initialize')(cls, name, base, dict);
+
+		var members = cls.get('__xmembers');
 		var variables = cls.get('__variables');
 
 		var vars = {};
@@ -1164,14 +1170,14 @@ this.AddonFactory = new Class(exports.ComponentFactory, function() {
 			var name = string.substitute(nameTpl, vars);
 			var member = cls.get(nameTpl);
 			if (member.__class__ == property) {
-				dict[name] = member;
+				cls.set(name, member);
 			}
 			else if (typeof member == 'function') {
-				dict[name] = function() {
+				cls.set(name, function() {
 					var args = Array.prototype.slice.call(arguments, 0);
 					args.unshift(cls);
 					member.apply(cls.__this__, args);
-				};
+				});
 			}
 		});
 		cls.set('__vars', vars);
@@ -1180,7 +1186,6 @@ this.AddonFactory = new Class(exports.ComponentFactory, function() {
 		if (base !== exports.Component) {
 			base = exports.Component;
 		}
-		return exports.ComponentFactory.__new__(cls, name, base, dict);
 	};
 });
 

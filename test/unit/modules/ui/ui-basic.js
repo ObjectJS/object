@@ -497,10 +497,14 @@ object.use('ui/ui2.js', function(ui) {
 test('addons', function() {
 object.use('ui/ui2.js', function(ui) {
 
-	addonInitCalled = 0;
-	initCalled = 0;
+	var addonInitCalled = 0;
+	var initCalled = 0;
+	var eventCalled = 0;
 
 	var A = new Class(ui.Component, function() {
+
+		this.a = ui.define('.a');
+
 		this._init = function(self) {
 			addonInitCalled++;
 		};
@@ -511,15 +515,27 @@ object.use('ui/ui2.js', function(ui) {
 
 		this.test = ui.define('.test');
 
+		this.a_show = function() {
+			eventCalled++;
+		};
+
 		this._init = function(self) {
 			initCalled++;
 		};
 	});
 
-	var test = new Test(document.createElement('div'));
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="a"></div>';
+
+	var test = new Test(div);
 
 	equal(addonInitCalled, 1, 'addon init method called.');
 	equal(initCalled, 1, 'init method called.');
+
+	ok(test.a, 'component addoned.');
+
+	test.a.fireEvent('show');
+	equal(eventCalled, 1, 'addoned event called.');
 });
 });
 
