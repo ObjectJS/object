@@ -283,27 +283,6 @@ function SubEventMeta(sub, eventType, gid) {
 	this.gid = gid;
 }
 
-SubEventMeta.setTo = function(cls, name, member) {
-	var gid = cls.get('gid');
-	var meta = cls.get('meta');
-	var match;
-	if (Array.isArray(name)) {
-		match = name;
-		name = name[0];
-	} else {
-		// TODO
-	}
-
-	var newName = name + '$' + gid;
-	var sub = match[1];
-	var eventType = match[2];
-	var newMember = exports.subevent(sub, eventType, gid)(member);
-	if (meta.subEvents.indexOf(newName) == -1) {
-		meta.subEvents.push(newName);
-	}
-	Type.__setattr__(cls, newName, newMember);
-};
-
 SubEventMeta.prototype.addOptionEventTo = function(comp) {
 	var name = this.name;
 	var fakeEventType = '__option_' + this.eventType + '_' + this.sub;
@@ -377,28 +356,6 @@ function OnEventMeta(eventType, gid) {
 	this.eventType = eventType;
 	this.gid = gid;
 }
-
-OnEventMeta.setTo = function(cls, name, member) {
-	var gid = cls.get('gid');
-	var meta = cls.get('meta');
-	var match;
-	if (Array.isArray(name)) {
-		match = name;
-		name = name[0];
-	} else {
-		// TODO
-	}
-
-	var newName = name + '$' + gid;
-	if (meta.onEvents.indexOf(newName) == -1) {
-		meta.onEvents.push(newName);
-	}
-	var eventType = match[1];
-	var eventType = eventType.slice(0, 1).toLowerCase() + eventType.slice(1);
-	var newMember = exports.onevent(eventType, gid)(member);
-	Type.__setattr__(cls, newName, newMember);
-
-};
 
 OnEventMeta.prototype.bindEvents = function(comp, name) {
 	var eventType = this.eventType;
@@ -556,85 +513,39 @@ this.ComponentFactory = new Class(Type, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 
-		var gid = dict.gid = globalid++;
-		var meta = dict.meta = new RuntimeMeta();
+		var members = [];
 
-		dict.__onEvents = [];
-		dict.__subEvents = [];
-		dict.__handles = [];
-
-		// 这里选择在dict阶段就放置到类成员的，一个原因是Components是通过遍历dict生成的
 		Object.keys(dict).forEach(function(name) {
 			var member = dict[name];
-			var newName;
-			var match;
-
-			if (name == 'initialize' || name.indexOf('__') == 0 || member == null) {
+			if (name.slice(0, 2) == '__') {
 				return;
 			}
-
-			if (member.__class__ == property && member.meta instanceof OptionMeta) {
-				meta.options.push(name);
-			}
-			else if (member.__class__ == property && member.meta instanceof ComponentMeta) {
-				meta.components.push(name);
-				dict['render_' + name] = member.meta.renderer;
-			}
-			else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
-				dict.__handles.push({
-					name: name,
-					member: member
-				});
-			}
-			else if (match = name.match(/^(_?\w+)_(\w+)$/)) {
-				delete dict[name];
-				dict.__subEvents.push({
-					name: match,
-					member: member
-				});
-			}
-			else if (match = name.match(/^on(\w+)$/)) {
-				delete dict[name];
-				dict.__onEvents.push({
-					name: match,
-					member: member
-				});
-			}
+			members.push({
+				name: name,
+				member: member
+			});
+			delete dict[name];
 		});
+
+		dict.__members = members;
 
 		return Type.__new__(cls, name, base, dict);
 	};
 
 	this.initialize = function(cls, name, base, dict) {
-		var gid = dict.gid;
+		var gid = globalid++;
+		var meta = new RuntimeMeta();
 
-		var meta = cls.get('meta');
+		cls.set('gid', gid);
+		cls.set('meta', meta);
 
-		// 生成meta方法
-		// 在initialize中创建而不是__new__中目的是避免Components中出现无用的方法
-		cls.get('__onEvents').forEach(function(item) {
-			OnEventMeta.setTo(cls, item.name, item.member);
+		var members = cls.get('__members');
+
+		members.forEach(function(item) {
+			cls.set(item.name, item.member);
 		});
-		cls.get('__subEvents').forEach(function(item) {
-			SubEventMeta.setTo(cls, item.name, item.member);
-		});
-		// 只有在initialize阶段生成handle方法才能确保mixin时能够获取到正确的cls
-		cls.get('__handles').forEach(function(item) {
-			var newName = item.name.slice(1);
-			Type.__setattr__(cls, newName, events.fireevent(function(self) {
-				var method = cls.get(item.name);
-				var args;
-				if (method) {
-					args = Array.prototype.slice.call(arguments, 1);
-					args.unshift(self);
-					return method.apply(self, args);
-				}
-			}));
-		});
-		// 清除这两个变量
-		Type.__delattr__(cls, '__onEvents');
-		Type.__delattr__(cls, '__subEvents');
-		Type.__delattr__(cls, '__handles');
+
+		Type.__delattr__(cls, '__members');
 
 		// 合并meta
 		cls.get('mixMeta')(name, base, dict);
@@ -653,6 +564,7 @@ this.ComponentFactory = new Class(Type, function() {
 				meta.options.push(name);
 			}
 			Type.__setattr__(cls, name, member);
+
 		}
 		else if (member.__class__ == property && member.meta instanceof ComponentMeta) {
 			if (meta.components.indexOf(name) == -1) {
@@ -660,26 +572,47 @@ this.ComponentFactory = new Class(Type, function() {
 			}
 			Type.__setattr__(cls, 'render_' + name, member.meta.renderer);
 			Type.__setattr__(cls, name, member);
+
 		}
 		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
 			var newName = name.slice(1);
 			Type.__setattr__(cls, newName, events.fireevent(function(self) {
-				if (self[name]) {
-					return self[name].apply(self, Array.prototype.slice.call(arguments, 1));
+				var method = cls.get(name);
+				var args;
+				if (method) {
+					args = Array.prototype.slice.call(arguments, 1);
+					args.unshift(self);
+					return method.apply(self, args);
 				}
 			}));
 			Type.__setattr__(cls, name, member);
+
 		}
 		else if (match = name.match(/^(_?\w+)_(\w+)$/)) {
-			SubEventMeta.setTo(cls, match, member);
+			var newName = name + '$' + gid;
+			var sub = match[1];
+			var eventType = match[2];
+			var newMember = exports.subevent(sub, eventType, gid)(member);
+			if (meta.subEvents.indexOf(newName) == -1) {
+				meta.subEvents.push(newName);
+			}
+			Type.__setattr__(cls, newName, newMember);
 
 		}
 		else if (match = name.match(/^on(\w+)$/)) {
-			OnEventMeta.setTo(cls, match, member);
+			var newName = name + '$' + gid;
+			if (meta.onEvents.indexOf(newName) == -1) {
+				meta.onEvents.push(newName);
+			}
+			var eventType = match[1];
+			var eventType = eventType.slice(0, 1).toLowerCase() + eventType.slice(1);
+			var newMember = exports.onevent(eventType, gid)(member);
+			Type.__setattr__(cls, newName, newMember);
 
 		}
 		else {
 			Type.__setattr__(cls, name, member);
+
 		}
 	};
 
@@ -737,7 +670,7 @@ this.ComponentFactory = new Class(Type, function() {
 		// Component则是Array，其他则是父类上的Components
 		var compsBase = base.Components || Array;
 
-		cls.set('Components', new Class(compsBase, function() {
+		cls.set('Components', new exports.ComponentsFactory(compsBase, function() {
 
 			this.initialize = function(self, nodes, options) {
 				self._node = nodes;
@@ -750,16 +683,29 @@ this.ComponentFactory = new Class(Type, function() {
 
 			Object.keys(dict).forEach(function(name) {
 				var member = dict[name];
-				if (name == '__metaclass__' || name == 'initialize') {
+				if (name == '__metaclass__') {
 					return;
 				}
-				// 只放方法
-				if (typeof member == 'function') {
-					this[name] = member;
-				}
+				this[name] = member;
 			}, this);
 		}));
 
+	};
+
+});
+
+this.ComponentsFactory = new Class(Type, function() {
+
+	this.initialize = function(cls, name, base, dict) {
+
+		var members = cls.get('__members');
+
+		members.forEach(function(item) {
+			if (item.name === 'initialize') return;
+			cls.set(item.name, item.member);
+		});
+
+		Type.__delattr__(cls, '__members');
 	};
 
 });

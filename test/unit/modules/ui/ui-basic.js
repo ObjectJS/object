@@ -497,7 +497,6 @@ object.use('ui/ui2.js', function(ui) {
 test('addons', function() {
 object.use('ui/ui2.js', function(ui) {
 
-
 	addonInitCalled = 0;
 	initCalled = 0;
 
