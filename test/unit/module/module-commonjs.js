@@ -1,5 +1,17 @@
 module('module-commonjs');
 
+test('sys.modules', function() {
+	object.define('test', 'sys', function(require) {
+		var sys = require('sys');
+		this.a = {};
+		ok(sys.getModule('test'), 'sys.getModule ok.');
+		equal(sys.modules.test.a, this.a, 'sys.modules ok.');
+	});
+	object.use('test', function() {
+	})
+	object.remove('test');
+});
+
 test('use object.define - basic', function() {
 	object.define('define_b', function(require, exports, module) {
 		exports.b = 1;
@@ -68,6 +80,26 @@ test('use object.define - submodule', function() {
 		equal(subdefine.value, 1, 'value from subdefine/root is ok');
 	});
 	object.remove('subdefine');
+});
+
+test('return module', function() {
+	object.define('test/a', function() {
+		return 1;
+	});
+
+	object.define('test/b', './a', function(require) {
+		var a = require('./a');
+		equal(a, 1, 'return module ok in twice.');
+	});
+
+	object.define('test/main', './b, ./a', function(require) {
+		var a = require('./a');
+		var b = require('./b');
+		equal(a, 1, 'return module ok.');
+	});
+
+	object.execute('test/main');
+	object.remove('test', true);
 });
 
 test('require.async', function() {
