@@ -182,17 +182,20 @@ var staticmethod = this.staticmethod = function(func) {
 	return _staticmethod;
 };
 
-var classmethod = this.classmethod = function(func) {
+var classmethod = this.classmethod = function(func, isinstance) {
 	var _classmethod = function() {
 		var args = [].slice.call(arguments, 0);
 		var cls;
-		if (typeof this == 'function') {
-			args.unshift(this);
-			return this.prototype[func.__name__].im_func.apply(this.__this__, args);
-		} else {
+		if (isinstance !== true) {
+			isinstance = typeof this != 'function';
+		}
+		if (isinstance) {
 			cls = this.__class__;
 			args.unshift(cls);
 			return func.apply(cls.__this__, args);
+		} else {
+			args.unshift(this);
+			return this.prototype[func.__name__].im_func.apply(this.__this__, args);
 		}
 	};
 	_classmethod.__class__ = arguments.callee;
@@ -229,6 +232,10 @@ function bindMetaclassMemberToCls(cls, name, member) {
 	if (member.__class__ === instancemethod) {
 		// 这里把cls当成一个instance了（metaclass的instance），因此这里绑定intancemethod时不传第二个参数
 		cls[name] = instancemethod(member.im_func);
+	} else if (member.__class__ === classmethod) {
+		cls[name] = classmethod(member.im_func, true);
+	} else if (member.__class__ === staticmethod) {
+		cls[name] = member;
 	}
 	return cls[name] || member;
 }
@@ -437,14 +444,8 @@ Type.__new__ = function(metaclass, name, base, dict) {
 		mixins.forEach(function(mixin) {
 			Class.keys(mixin).forEach(function(name) {
 				if (cls.has(name)) return; // 不要覆盖自定义的
-
 				var member = Type.__getattribute__(mixin, name);
-
-				if (typeof member == 'function' && member.__class__ === instancemethod) {
-					Type.__setattr__(cls, name, member.im_func);
-				} else {
-					Type.__setattr__(cls, name, member);
-				}
+				Type.__setattr__(cls, name, member);
 			});
 		});
 	}
