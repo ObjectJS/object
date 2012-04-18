@@ -307,7 +307,6 @@ test('require.async', function() {
 	object.define('require_async_test', function(require) {
 		stop();
 		require.async('module3', function(module3) {
-			start();
 			equal(module3.c, 1, 'require.async ok.');
 		});
 		require.async('module3', function(module3) {
