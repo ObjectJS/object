@@ -698,11 +698,19 @@ object.use('ui/ui2.js', function(ui) {
 		this.free2 = ui.define(false, function(self, make) {
 			return [make(), make()];
 		});
+		this.free3 = ui.define1(false, function(self) {
+			// 没有selector，没用make，也没return，无法找到节点
+		});
+		this.free4 = ui.define(false, function(self, make) {
+			// 定义为多个，却没有返回数组
+			return make();
+		});
 	});
 
 	var test = new TestComponent(document.createElement('div'), {
 		'free.meta.template': '<div>{{value}}</div>',
-		'free2.meta.template': '<div>{{value}}</div>'
+		'free2.meta.template': '<div>{{value}}</div>',
+		'free4.meta.template': '<div>{{value}}</div>'
 	})
 
 	// 渲染free，无所谓selector，render出来就能取到
@@ -710,9 +718,18 @@ object.use('ui/ui2.js', function(ui) {
 		equal(test.free.getNode().innerHTML, 'free', 'render free component ok.');
 	});
 
-	test.render('free2', {value: 'free'}, function() {
+	test.render('free2', {value: 'free2'}, function() {
 		equal(test.free2.getNode().length, 2, 'render free components ok.');
-		equal(test.free2.getNode()[0].innerHTML, 'free', 'render free components ok.');
+		equal(test.free2.getNode()[0].innerHTML, 'free2', 'render free components ok.');
+	});
+
+	test.render('free3', function() {
+		strictEqual(test.free3, null, 'render empty free components.');
+	});
+
+	test.render('free4', {value: 'free4'}, function() {
+		equal(test.free4.getNode().length, 1, 'render free components with single return value.');
+		equal(test.free4.getNode()[0].innerHTML, 'free4', 'render free components with single return value.');
 	});
 });
 });
@@ -785,30 +802,48 @@ object.use('ui/ui2', function(ui) {
 });
 });
 
-test('register', function() {
+test('page', function() {
 
-object.define('test', 'ui/ui2', function(require) {
+object.use('ui/ui2', function(ui) {
 
-	var ui = require('ui/ui2');
-
-	this.TestComponent = new Class(ui.Component, function() {
+	var TestComponent = new Class(ui.Component, function() {
 	});
 
-});
+	var Home = new Class(ui.Page, function() {
+		this.test = ui.define1('.test', TestComponent);
+	});
 
-object.use('ui/ui2, test', function(ui, test) {
+	var Profile = new Class(ui.Page, function() {
+		this.free = ui.define1(false, TestComponent, function(self) {
+			var div = document.createElement('div');
+			div.innerHTML = 'test';
+			self.getNode().appendChild(div);
+			return div;
+		});
 
-	var A = new Class(ui.Component, function() {
-		this.test = ui.define1('.test', test.TestComponent, function(self, make) {
-			self.getNode().appendChild(make());
+		this.test = ui.define1(false, function(self, make) {
+			make();
 		});
 	});
 
-	window.doc = new A(window.document, {
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="test"></div>';
+
+	document.body.appendChild(div);
+
+	window.home = new Home(document.body);
+	window.profile = new Profile({
+		'test.meta.template': '<div>{{value}}</div>'
+	});
+
+	window.profile.render('free', function() {
+		equal(window.profile.free.getNode().innerHTML, 'test', 'render free component ok.');
+	});
+
+	window.profile.render('test', {value: 'test'}, function() {
+		equal(window.profile.test.getNode().innerHTML, 'test', 'render templated component ok.');
 	});
 
 });
-
-object.remove('test');
 
 });

@@ -1,4 +1,4 @@
-object.define('ui/ui2.js', 'sys, string, options, dom, events, urlparse, ./net, ./options, ./memberloader', function(require, exports) {
+object.define('ui/ui2.js', 'sys, window, string, options, dom, events, urlparse, ./net, ./options, ./memberloader', function(require, exports) {
 
 var string = require('string');
 var dom = require('dom');
@@ -297,7 +297,7 @@ SubEventMeta.prototype.addEventTo = function(comp) {
 	var name = this.name;
 	var self = this.binded;
 
-	comp._node.addEvent(eventType, function(event) {
+	comp.addEvent(eventType, function(event) {
 		var args;
 		// 将event._args pass 到函数后面
 		if (event._args) {
@@ -1065,7 +1065,7 @@ this.Component = new Class(function() {
 		// TODO 用async维护两个异步
 		meta.getType(function(type) {
 			meta.getTemplate(self.__class__.__module__, function(template) {
-				var nodes = [];
+				var made = [];
 				// make方法仅仅返回node，这样在new comp时node已经在正确的位置，parent可以被正确的查找到
 				function make(newData) {
 					var node;
@@ -1075,7 +1075,7 @@ this.Component = new Class(function() {
 						console.error('no template specified for ' + name + '.');
 						return;
 					}
-					nodes.push(node);
+					made.push(node);
 					self.__rendered.push(node);
 					return node;
 				};
@@ -1084,15 +1084,25 @@ this.Component = new Class(function() {
 				make.template = template;
 				make.data = data;
 
-				// nodes用在free component的定义
-				var returnNodes = renderer.call(self, make, data);
-				if (returnNodes) {
-					nodes = returnNodes;
+				// made用在free component的定义
+				var returnMade = renderer.call(self, make, data);
+				if (returnMade) {
+					made = returnMade;
 				}
 
 				// 说明无所谓selector，生成什么就放什么就行
 				if (meta.selector === false) {
-					meta.wrap(self, name, nodes, function(comp) {
+
+					// 不应该是一组成员，却是数组
+					if (!(meta instanceof ComponentsMeta) && Array.isArray(made)) {
+						made = made[0];
+					}
+					// 应该是一组成员，确是不是数组
+					else if (meta instanceof ComponentsMeta && !Array.isArray(made)) {
+						made = [made];
+					}
+
+					meta.wrap(self, name, made, function(comp) {
 						self.setComponent(name, comp);
 					});
 				}
@@ -1181,6 +1191,43 @@ this.AddonFactory = new Class(exports.ComponentFactory, function() {
 		});
 		cls.set('__vars', vars);
 	};
+});
+
+this.Page = new Class(exports.Component, function() {
+
+	this.initialize = function(self, node, options) {
+
+		var window = require('window');
+
+		// node 参数可选
+		if (node.ownerDocument !== window.document) {
+			options = node;
+			node = window.document.body;
+		}
+
+		// Page不限制一个节点只能包装一个组件
+		// Component进行此限制是为了理解更简单，对于触发的事件也避免冲突
+		// Page触发的事件全都有一个隐含节点 delegateNode 来触发
+		self._delegateNode = dom.wrap(document.createElement('div'));
+
+		this.parent(self, node, options);
+
+		// node上不进行component的存储
+		delete node.component;
+	};
+
+	this.fireEvent = function(self) {
+		return self._delegateNode.fireEvent.apply(self._delegateNode, Array.prototype.slice.call(arguments, 1));
+	};
+
+	this.addEvent = function(self) {
+		return self._delegateNode.addEvent.apply(self._delegateNode, Array.prototype.slice.call(arguments, 1));
+	};
+
+	this.removeEvent = function(self) {
+		return self._delegateNode.removeEvent.apply(self._delegateNode, Array.prototype.slice.call(arguments, 1));
+	};
+
 });
 
 });
