@@ -196,6 +196,7 @@ test('use-basic', function() {
 	}
 	loader.remove('a');
 });
+
 test('use-usage', function() {
 	var loader = object._loader;
 	loader.add('a', function(exports) {
@@ -304,4 +305,5 @@ test('loadScript with/without cache', function() {
 		equal(len1, len2, 'cache works, load same script, get from cache');
 	}
 })
+
 })();
