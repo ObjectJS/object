@@ -38,16 +38,18 @@ function ComponentMeta(selector, type, options, renderer) {
 	this.defaultOptions = options;
 }
 
-ComponentMeta.prototype.getType = function(callback) {
+ComponentMeta.prototype.getType = function(metaOptions, callback) {
+
+	if (!metaOptions) metaOptions = {};
 
 	var meta = this;
-	var type = this.type;
+	var type = metaOptions.type || this.type;
+	var addons = metaOptions.addons || this.addons;
 	var cls;
 
 	var memberloader = require('./memberloader');
 
 	function getAddonedType(cls, callback) {
-		var addons = meta.addons;
 
 		// 已经是一个处理过的type
 		if (cls.get('__addoned')) {
@@ -100,7 +102,7 @@ ComponentMeta.prototype.wrap = function(comp, name, node, callback) {
 			callback(result);
 
 		} else {
-			this.getType(function(type) {
+			this.getType(comp.getOption(name + '.meta'), function(type) {
 				result = new type(node, comp._options[name]);
 
 				if (name in comp.__subEventsMap) {
@@ -120,8 +122,9 @@ ComponentMeta.prototype.wrap = function(comp, name, node, callback) {
 
 ComponentMeta.prototype.select = function(comp, name, callback) {
 	var node = null;
+	var metaOptions = comp.getOption(name + '.meta') || {};
 
-	var selector = this.selector;
+	var selector = metaOptions.selector || this.selector;
 
 	if (typeof selector == 'function') {
 		node = dom.wrap(selector(comp));
@@ -132,25 +135,18 @@ ComponentMeta.prototype.select = function(comp, name, callback) {
 	this.wrap(comp, name, node, callback);
 };
 
-ComponentMeta.prototype.fillOptions = function(comp, name) {
-	// 每次获取meta都要重新部署options
-	var optionsMeta = comp._options[name];
-	optionsMeta = optionsMeta? optionsMeta.meta : null;
-
-	// 将metaOptions上的成员复制到meta上
-	if (optionsMeta) {
-		object.extend(this, optionsMeta);
-	}
-};
-
 /**
  * @param relativeModule 类所在的模块名，用来生成相对路径
  */
-ComponentMeta.prototype.getTemplate = function(relativeModule, callback) {
+ComponentMeta.prototype.getTemplate = function(metaOptions, relativeModule, callback) {
+	if (!metaOptions) {
+		metaOptions = {};
+	}
+
 	var sys = require('sys');
 	var urlparse = require('urlparse');
-	var templatemodule = this.templatemodule;
-	var template = this.template;
+	var templatemodule = metaOptions.templatemodule;
+	var template = metaOptions.template;
 
 	var base;
 	// 是相对路径 && 能找到此类的所在模块信息 && 在sys.modules中有这个模块
@@ -166,15 +162,6 @@ ComponentMeta.prototype.getTemplate = function(relativeModule, callback) {
 		callback(template);
 	}
 
-};
-
-ComponentMeta.prototype.bindOptions = function(comp, name) {
-	// fill meta.options to comp._options
-	if (this.defaultOptions) {
-		Object.keys(this.defaultOptions).forEach(function(key) {
-			optionsmod.setOptionTo(comp._options, name + '.' + key, this.defaultOptions[key]);
-		}, this);
-	}
 };
 
 function ComponentsMeta(selector, type, options, renderer) {
@@ -194,7 +181,7 @@ ComponentsMeta.prototype.wrap = function(comp, name, nodes, callback) {
 			nodes = new dom.Elements(nodes);
 		}
 
-		this.getType(function(type) {
+		this.getType(comp.getOption(name + '.meta'), function(type) {
 
 			nodes.forEach(function(node) {
 				if (!node.component) {
@@ -379,7 +366,6 @@ function define(meta) {
 		// select只处理查询，不处理放置到self。
 		// 这里不能直接meta.select，而是确保options中的meta信息存在，需要用getMeta
 		var meta = self.getMeta(name);
-		meta.fillOptions(self, name);
 		meta.select(self, name, function(comp) {
 			self.setComponent(name, comp);
 		});
@@ -768,9 +754,14 @@ this.Component = new Class(function() {
 		// 初始化components
 		self.meta.components.forEach(function(name) {
 			var meta = self.getMeta(name);
+
 			// 将meta.options合并到self._options上，其优先级低，并非动态的，合并一次即可，后续可以被覆盖
-			meta.bindOptions(self, name);
-			meta.fillOptions(self, name);
+			if (meta.defaultOptions) {
+				Object.keys(meta.defaultOptions).forEach(function(key) {
+					optionsmod.setOptionTo(comp._options, name + '.' + key, meta.defaultOptions[key], false);
+				});
+			}
+
 			meta.select(self, name, function(comp) {
 				self.setComponent(name, comp);
 				inited++;
@@ -1042,7 +1033,6 @@ this.Component = new Class(function() {
 		}
 
 		var meta = self.getMeta(name);
-		meta.fillOptions(self, name);
 
 		var renderer = self[methodName];
 		// selector为false的free组件拥有默认renderer，创建即返回
@@ -1062,9 +1052,11 @@ this.Component = new Class(function() {
 		var options = self._options[name];
 		object.extend(data, options, false);
 
+		var metaOptions = self.getOption(name + '.meta');
+
 		// TODO 用async维护两个异步
-		meta.getType(function(type) {
-			meta.getTemplate(self.__class__.__module__, function(template) {
+		meta.getType(metaOptions, function(type) {
+			meta.getTemplate(metaOptions, self.__class__.__module__, function(template) {
 				var made = [];
 				// make方法仅仅返回node，这样在new comp时node已经在正确的位置，parent可以被正确的查找到
 				function make(newData) {
