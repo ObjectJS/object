@@ -103,7 +103,7 @@ test('getter/setter basic', function() {
 	var m = a.get('m');
 	equal(m(), 1, 'self bind method called ok.');
 	m = a.get('m', {value: 2});
-	equal(m(), 2, 'custom bine method call ok.');
+	equal(m(), 2, 'custom bind method call ok.');
 
 	equal(a.cm(), 1, 'classmethod called.');
 	var m = a.get('cm');
@@ -116,7 +116,7 @@ test('getter/setter basic', function() {
 	var m = a.get('sm');
 	equal(m(), 1, 'self bind instancemethod called ok.');
 	m = a.get('sm', {value: 2});
-	equal(m(), 2, 'custome bine instancemethod call ok.');
+	equal(m(), 2, 'custome bind instancemethod call ok.');
 
 	// 不绑定
 	m = a.get('m', false);
