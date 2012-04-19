@@ -156,6 +156,14 @@ var parent = function(cls, name, args) {
 	}
 };
 
+function renameCheck(prop, value) {
+	if (prop === '__name__' && this[prop] && this[prop] !== value) {
+		if (typeof console != 'undefined' && console.warn) {
+			console.warn('请不要将同一个方法赋值给多个类成员：' + this[prop] + ' --> ' + value);
+		}
+	}
+}
+
 /**
  * 返回一个绑定了self的instancemethod
  * 若self为false，则返回一个未绑定的方法
@@ -198,26 +206,30 @@ var instancemethod = function(func, self) {
 	_instancemethod.im_self = self;
 	_instancemethod.__class__ = arguments.callee;
 	_instancemethod.im_func = func;
+	_instancemethod.__setattr__ = renameCheck;
 	return _instancemethod;
 };
 
 var staticmethod = this.staticmethod = function(func) {
 	return {
 		__class__: arguments.callee,
-		im_func: func
+		im_func: func,
+		__setattr__: renameCheck
 	};
 };
 
 var classmethod = this.classmethod = function(func, isinstance) {
 	return {
 		__class__ : arguments.callee,
-		im_func : func
+		im_func : func,
+		__setattr__: renameCheck
 	};
 };
 
 var property = this.property = function(fget, fset) {
 	var p = {};
 	p.__class__ = arguments.callee;
+	p.__setattr__ = renameCheck;
 	p.fget = fget;
 	p.fset = fset;
 	return p;
@@ -291,11 +303,6 @@ Object.__setattr__ = object.__setattr__ = function(obj, prop, value) {
 	}
 	// 此prop不是property，直接赋值即可。
 	if (!property) {
-		if (prop === '__name__' && obj[prop] && obj[prop] !== value) {
-			if (typeof console != 'undefined' && console.warn) {
-				console.warn('请不要将同一个方法赋值给多个类成员：' + obj[prop] + ' --> ' + value);
-			}
-		}
 		obj[prop] = value;
 	}
 	// 有fset
@@ -507,8 +514,9 @@ Type.__setattr__ = function(cls, name, member) {
 	// this.a = function() {}
 	else if (member.__class__ === undefined && typeof member == 'function') {
 		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
-		Object.__setattr__(member, '__name__', name);
+		member.__name__ = name;
 		proto[name] = instancemethod(member);
+		proto[name].__setattr__('__name__', name);
 		proto[name].__name__ = name;
 		// 初始化方法放在cls上，metaclass会从cls上进行调用
 		if (name == 'initialize') {
@@ -517,7 +525,7 @@ Type.__setattr__ = function(cls, name, member) {
 	}
 	// this.a = property(function fget() {}, function fset() {})
 	else if (member.__class__ === property) {
-		Object.__setattr__(member, '__name__', name);
+		member.__setattr__('__name__', name);
 		properties[name] = member;
 		// 当prototype覆盖instancemethod/classmethod/staticmethod时，需要去除prototype上的属性
 		proto[name] = undefined;
@@ -533,8 +541,8 @@ Type.__setattr__ = function(cls, name, member) {
 	}
 	// this.a = classmethod(function() {})
 	else if (member.__class__ === classmethod) {
-		Object.__setattr__(member, '__name__', name);
 		member.im_func.__name__ = name;
+		member.__setattr__('__name__', name);
 		member.__name__ = name;
 		// classmethod，都绑定其class
 		cls[name] = proto[name] = instancemethod(member.im_func, true);
@@ -542,7 +550,7 @@ Type.__setattr__ = function(cls, name, member) {
 	}
 	// this.a = staticmethod(function() {})
 	else if (member.__class__ === staticmethod) {
-		Object.__setattr__(member, '__name__', name);
+		member.__setattr__('__name__', name);
 		member.im_func.__name__ = name;
 		cls[name] = proto[name] = member.im_func;
 		cls.__classbasedmethods__.push(name);
