@@ -708,14 +708,19 @@ Class.initMixins = function(cls, instance) {
 	if (cls.__base__) {
 		Class.initMixins(cls.__base__, instance);
 	}
-	if (cls.__mixins__) {
-		for (var i = 0, l = cls.__mixins__.length, mixin; i < l; i++) {
-			mixin = cls.__mixins__[i];
+	var mixins = cls.__mixins__;
+	if (mixins) {
+		// 这里必须是instance.__this__，因为initialize.call调用中已经设置了this指向的是instance
+		instance.__this__.mixining = true;
+		for (var i = 0, l = mixins.length, mixin; i < l; i++) {
+			mixin = mixins[i];
 			if (mixin.prototype && typeof mixin.prototype.initialize == 'function') {
 				mixin.prototype.initialize.call(instance);
 			}
 		}
+		delete instance.__this__.mixining;
 	}
+	
 };
 
 /**
