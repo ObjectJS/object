@@ -295,7 +295,7 @@ Object.__setattr__ = object.__setattr__ = function(obj, prop, value) {
 	// 此prop不是property，直接赋值即可。
 	if (!property) {
 		if (prop === '__name__' && obj[prop] && obj[prop] !== value) {
-			if (console != 'undefined' && console.warn) {
+			if (typeof console != 'undefined' && console.warn) {
 				console.warn('请不要将同一个方法赋值给多个类成员：' + obj[prop] + ' --> ' + value);
 			}
 		}
