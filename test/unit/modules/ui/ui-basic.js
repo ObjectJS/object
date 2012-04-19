@@ -602,7 +602,6 @@ object.use('ui/ui2.js', function(ui) {
 test('render', function() {
 object.use('ui/ui2.js', function(ui) {
 
-
 	var renderedEventCalled = 0;
 
 	var ParentComponent = new Class(ui.Component, function() {
@@ -615,7 +614,9 @@ object.use('ui/ui2.js', function(ui) {
 
 	var TestComponent = new Class(ui.Component, function() {
 
-		this.test = ui.define1('.test', SubComponent, function(self, make) {
+		this.test = ui.define1('.test', SubComponent, {
+			'meta.template': '<div class="test">{{hello}}</div>'
+		}, function(self, make) {
 			var a = make();
 			self._node.appendChild(a);
 		});
@@ -626,7 +627,9 @@ object.use('ui/ui2.js', function(ui) {
 			self._node.appendChild(make());
 		});
 
-		this.test3 = ui.define1('.test3', SubComponent, function(self, make, data) {
+		this.test3 = ui.define1('.test3', SubComponent, {
+			'meta.template': '<div class="test3">old</div>',
+		}, function(self, make, data) {
 			self._node.appendChild(make({value:data.value + 1}));
 		});
 
@@ -643,7 +646,6 @@ object.use('ui/ui2.js', function(ui) {
 	var test = new TestComponent(div, {
 		'test.test': true,
 		'test.hello': 'test',
-		'test.meta.template': '<div class="test">{{hello}}</div>',
 		'test2.meta.template': '<div class="test2">foo:{{foo}},bar:{{bar}}</div>',
 		'test3.meta.template': '<div class="test3">{{value}}</div>',
 	});
@@ -656,7 +658,7 @@ object.use('ui/ui2.js', function(ui) {
 		ok(test.test.parent, 'parent got when render.');
 		renderCallbackCalled++;
 	});
-	equal(test.getNode().innerHTML, '<div class="test">test</div>', 'template render ok.');
+	equal(test.getNode().innerHTML, '<div class="test">test</div>', 'template render ok by default options.');
 	equal(renderCallbackCalled, 1, 'render callback called.');
 
 	// 第二次渲染，调用callback
@@ -684,7 +686,7 @@ object.use('ui/ui2.js', function(ui) {
 
 	// data传递且替换
 	test.render('test3', {value: 1}, function() {
-		equal(test.test3.getNode().innerHTML, '2', 'data pass and write ok in render.');
+		equal(test.test3.getNode().innerHTML, '2', 'data pass and write ok in render by overwide default options.');
 	});
 
 });

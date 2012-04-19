@@ -758,7 +758,7 @@ this.Component = new Class(function() {
 			// 将meta.options合并到self._options上，其优先级低，并非动态的，合并一次即可，后续可以被覆盖
 			if (meta.defaultOptions) {
 				Object.keys(meta.defaultOptions).forEach(function(key) {
-					optionsmod.setOptionTo(comp._options, name + '.' + key, meta.defaultOptions[key], false);
+					optionsmod.setOptionTo(self._options, name + '.' + key, meta.defaultOptions[key], false);
 				});
 			}
 

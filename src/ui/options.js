@@ -11,16 +11,10 @@ function Options() {
  * @param current 需要被设置的对象
  * @param name 一个通过.分开各个部分的名称
  * @param value 需要设置的值
+ * @pram ov 是否覆盖已有值
  */
-this.setOptionTo = function(current, name, value) {
+this.setOptionTo = function(current, name, value, ov) {
 	var parts = Array.isArray(name)? name : name.split('.');
-	//var prefix = parts[0];
-	//var surfix = parts.slice(1).join('.');
-	//if (!current[prefix]) {
-		//current[prefix] = {};
-	//}
-	//current[prefix][surfix] = value;
-	//return;
 	// 生成前缀对象
 	for (var i = 0, part; i < parts.length - 1; i++) {
 		part = parts[i];
@@ -29,7 +23,10 @@ this.setOptionTo = function(current, name, value) {
 		}
 		current = current[part];
 	}
-	current[parts[parts.length - 1]] = value;
+	var last = parts[parts.length - 1];
+	if (!current[last] || ov !== false) {
+		current[last] = value;
+	}
 };
 
 /**
