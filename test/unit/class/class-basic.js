@@ -1,19 +1,21 @@
 module("class-basic");
 
 test('__module__', function() {
-	object.define('test', function() {
+	object.define('test__module__', function() {
 		var A = new Class({});
-		equal(A.__module__, 'test', '__module__ ok.');
+		equal(A.__module__, 'test__module__', '__module__ ok.');
 
 		stop();
-		setTimeout(function() {
+		var image = new Image();
+		image.onload = image.onerror = function() {
 			start();
 			var B = new Class({});
 			equal(B.__module__, '', 'async class __module__ empty.')
-		}, 0);
+		};
+		image.src = 'not-exists.jpg';
 	});
-	object.use('test', function() {
-	});
+	object.use('test__module__', function() {});
+	object.remove('test_module__');
 });
 
 test('modify global variable in constructor', function() {
