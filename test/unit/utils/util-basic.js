@@ -350,9 +350,10 @@ test('Class.initMixins', function() {
 		Class.mixin(this, mixin2);
 	});
 
-	Class.initMixins(A, a = {});
-	equal(a.a, 1, 'intialize called, value a set');
-	equal(a.b, 2, 'intialize called, value b set');
+	// not necessary
+	//Class.initMixins(A, a = {});
+	//equal(a.a, 1, 'intialize called, value a set');
+	//equal(a.b, 2, 'intialize called, value b set');
 });
 
 test('Class.mixin', function() {

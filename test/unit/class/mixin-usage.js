@@ -389,3 +389,33 @@ test('initialize in mixin should be called in parent and all subclasses', functi
 	var c = new C();
 	equal(counter, 3, 'mixin.initialize called from sub class C');
 });
+
+test('initialize in mixin, considering the mixining property', function() {
+	expect(4);
+	var mixin = new Class(function() {
+		this.initialize = function(self) {
+			equal(this.mixining, true, 'this.mixining can be used to recongnize whether initialize is called when mixin');
+		};
+	});
+	var counter = 0;
+	var MixinAndUse = new Class(function() {
+		this.initialize = function(self) {
+			if (this.mixining) {
+				ok(true, 'initialize called when mixining');
+				counter += 1;
+			} else {
+				ok(true, 'initialize called when creating new instance of class');
+				counter += 2;
+			}
+		};
+	});
+
+	var A = new Class(function() {
+		Class.mixin(this, mixin);
+		Class.mixin(this, MixinAndUse);
+	});
+
+	var a = new A();
+	var b = new MixinAndUse();
+	equal(counter, 3, 'initialize in mixined class called when mixining and creating new instance');
+});
