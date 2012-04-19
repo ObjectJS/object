@@ -54,18 +54,12 @@ test('mixin normal class', function() {
 
 	ok(typeof b.d == 'function', 'normal function is inherited');
 	equal(b.d(), 1, 'function inherited execute correctly');
-	if(typeof instancemethod != 'undefined') {
-		equal(a.d.__class__, instancemethod, 'instancemethod in parent');
-		equal(b.d.__class__, instancemethod, 'instancemethod in sub');
-	}
 
 	b.e();
 	equal(staticValue, 2, 'staticmethod execute correctly');
 
 	equal(A.f(), 'A', 'classmethod execute correctly in parent');
 	equal(B.f(), 'B', 'classmethod execute correctly in sub');
-	equal(A.f.__class__, classmethod, 'classmethod in parent');
-	equal(B.f.__class__, classmethod, 'classmethod in sub');
 
 	a.classProperty = 'a';
 	//equal(a.f(), 'a', 'should return a.classProperty in python???');
