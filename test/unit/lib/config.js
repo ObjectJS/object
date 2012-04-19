@@ -47,7 +47,6 @@
 		//'document.createElement(\'object\')' : document.createElement('object'),
 		//'location' : location,
 		'String' : String,
-		'\'string\'' : 'string',
 		'Array' : Array,
 		'[1,2]' : [1,2],
 		//'Date' : Date,

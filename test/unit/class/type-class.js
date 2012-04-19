@@ -79,3 +79,25 @@ test('base', function() {
 	equal(baseNewCalled, 1, '__new__ method in base called.');
 	equal(baseInitCalled, 1, 'initialize method in base called.');
 });
+
+test('classmethod/staticmethod called in metaclass', function() {
+	expect(2);
+	var Meta = new Class(Type, function() {
+		this.initialize = function(cls, name, base, dict) {
+			cls.get('makeElements')(name, base, dict);
+		};
+		this.staticmethod = staticmethod(function() {
+			ok(true, 'staticmethod called');
+		});
+		this.classmethod = classmethod(function(cls) {
+			ok(true, 'classmethod called');
+		});
+		this.makeElements = function(cls, name, base, dict) {
+			cls.get('staticmethod')();
+			cls.get('classmethod')();
+		};
+	});
+	var Element = new Class(function() {
+		this.__metaclass__ = Meta;
+	});
+});

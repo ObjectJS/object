@@ -94,6 +94,14 @@
 		assertNotSame(msg ? msg : '', b, a);
 	};
 
+	window.strictEqual = function strictEqual(a, b, msg) {
+		assertSame(msg ? msg : '', b, a);
+	}
+
+	window.notStrictEqual = function notStrictEqual(a, b, msg) {
+		assertNotSame(msg ? msg : '', b, a);
+	}
+
 	window.equals = function equals(a, b, msg) {
 		assertEquals(msg ? msg : '', b, a);
 	};

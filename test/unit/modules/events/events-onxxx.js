@@ -572,3 +572,30 @@ test('wrap DOM node', function() {
 	document.fireEvent('a');
 });
 //by fireEvent   / by operation
+
+test('onrequestsuccess and requestSuccess event', function() {
+	expect(4);
+	var obj = {};
+	Class.inject(events.Events, obj);
+	var counter = 0;
+	obj.onrequestsuccess = function() {
+		ok(true, 'onrequestsuccess called');
+	}
+	obj.addEvent('requestSuccess', function() {
+		ok(true, 'addEvent handler called');
+	}, false);
+
+	obj.fireEvent('requestSuccess');
+
+	obj.onrequestsuccess = null;
+	obj.fireEvent('requestSuccess');
+
+	obj.onrequestsuccess2 = function() {
+		ok(true, 'onrequestsuccess called');
+	}
+	obj.fireEvent('requestSuccess2');
+
+	obj.onrequestsuccess2 = null;
+	obj.fireEvent('requestSuccess2');
+
+});

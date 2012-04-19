@@ -246,13 +246,14 @@ this.Events = new Class(function() {
 	function addOnHandlerAsEventListener(self, type) {
 		// 只有DOM节点的标准事件，才会由浏览器来执行标准方法
 		if (type in NATIVE_EVENTS && self.nodeType == 1) return;
+		var typeLower = typeof type == 'string' ? type.toLowerCase() : type;
 
 		var boss = self.__boss || self;
-		var onhandler = self['on' + type], onhandlerBak = boss['__on' + type];
+		var onhandler = self['on' + typeLower], onhandlerBak = boss['__on' + typeLower];
 		// 如果onHandler为空，并且已经添加过，则需要remove
 		if (!onhandler && onhandlerBak) {
 			boss.removeEventListener(type, onhandlerBak, false);
-			boss['__on' + type] = null;
+			boss['__on' + typeLower] = null;
 		}
 		// 如果onHandler不为空，则需要判断是否已经添加过
 		else if (onhandler && onhandler != onhandlerBak) {
@@ -261,7 +262,7 @@ this.Events = new Class(function() {
 			// 将新的事件监听方法加入列表
 			boss.addEventListener(type, onhandler, false);
 			// 将新的事件监听方法备份
-			boss['__on' + type] = onhandler;
+			boss['__on' + typeLower] = onhandler;
 		}
 	}
 	
@@ -273,6 +274,8 @@ this.Events = new Class(function() {
 		// 只有DOM节点的标准事件，并且此标准事件能够在节点上触发，才会由浏览器来执行标准方法
 		if (self.nodeType == 1 && isNativeEventForNode(self, type) && isNodeInDOMTree(self)) return;
 
+		var typeLower = typeof type == 'string' ? type.toLowerCase() : type;
+
 		if (!self.__eventListeners) {
 			self.__eventListeners = {};
 		}
@@ -281,7 +284,7 @@ this.Events = new Class(function() {
 		}
 		var funcs = self.__eventListeners[type];
 		var l = funcs.length;
-		var onhandler = self['on' + type], onhandlerBak = self['__on' + type];
+		var onhandler = self['on' + typeLower], onhandlerBak = self['__on' + typeLower];
 		// 如果onHandler为空，并且已经添加过，则需要remove
 		if (!onhandler && onhandlerBak) {
 			for (var i = 0; i < l; i++) {
@@ -290,7 +293,7 @@ this.Events = new Class(function() {
 					break;
 				}
 			}
-			self['__on' + type] = null;
+			self['__on' + typeLower] = null;
 		}
 		// 如果onHandler不为空，则需要判断是否已经添加过
 		else if (onhandler && onhandler != onhandlerBak) {
@@ -304,7 +307,7 @@ this.Events = new Class(function() {
 			// 将新的事件监听方法加入列表
 			funcs.push(onhandler);
 			// 将新的事件监听方法备份
-			self['__on' + type] = onhandler;
+			self['__on' + typeLower] = onhandler;
 		}
 	}
 
