@@ -494,6 +494,7 @@ Type.__setattr__ = function(cls, name, member) {
 	// 先判断最常出现的instancemethod
 	// this.a = function() {}
 	else if (member.__class__ === undefined && typeof member == 'function') {
+		Class.detectDuplicateAssign(member, name);
 		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
 		member.__name__ = name;
 		proto[name] = instancemethod(member);
@@ -505,6 +506,7 @@ Type.__setattr__ = function(cls, name, member) {
 	}
 	// this.a = property(function fget() {}, function fset() {})
 	else if (member.__class__ === property) {
+		Class.detectDuplicateAssign(member, name);
 		member.__name__ = name;
 		properties[name] = member;
 		// 当prototype覆盖instancemethod/classmethod/staticmethod时，需要去除prototype上的属性
@@ -512,6 +514,7 @@ Type.__setattr__ = function(cls, name, member) {
 	}
 	// 在继承的时候，有可能直接把instancemethod传进来，比如__setattr__
 	else if (member.__class__ === instancemethod) {
+		Class.detectDuplicateAssign(member, name);
 		// 重新绑定
 		proto[name] = instancemethod(member.im_func);
 		// 绑定了cls的instancemethod，意味着是一个classmethod
@@ -521,6 +524,7 @@ Type.__setattr__ = function(cls, name, member) {
 	}
 	// this.a = classmethod(function() {})
 	else if (member.__class__ === classmethod) {
+		Class.detectDuplicateAssign(member, name);
 		member.im_func.__name__ = name;
 		member.__name__ = name;
 		// classmethod，都绑定其class
@@ -529,6 +533,7 @@ Type.__setattr__ = function(cls, name, member) {
 	}
 	// this.a = staticmethod(function() {})
 	else if (member.__class__ === staticmethod) {
+		Class.detectDuplicateAssign(member, name);
 		member.im_func.__name__ = name;
 		member.__name__ = name;
 		cls[name] = proto[name] = member.im_func;
@@ -714,14 +719,19 @@ Class.initMixins = function(cls, instance) {
 	if (cls.__base__) {
 		Class.initMixins(cls.__base__, instance);
 	}
-	if (cls.__mixins__) {
-		for (var i = 0, l = cls.__mixins__.length, mixin; i < l; i++) {
-			mixin = cls.__mixins__[i];
+	var mixins = cls.__mixins__;
+	if (mixins) {
+		// 这里必须是instance.__this__，因为initialize.call调用中已经设置了this指向的是instance
+		instance.__this__.mixining = true;
+		for (var i = 0, l = mixins.length, mixin; i < l; i++) {
+			mixin = mixins[i];
 			if (mixin.prototype && typeof mixin.prototype.initialize == 'function') {
 				mixin.prototype.initialize.call(instance);
 			}
 		}
+		delete instance.__this__.mixining;
 	}
+	
 };
 
 /**
@@ -774,6 +784,17 @@ Class.isMethod = function(member) {
 	}
 	return false;
 };
+
+/**
+ * 检测
+ */
+Class.detectDuplicateAssign = function(member, name) {
+	if (member.__name__ && member.__name__ !== name) {
+		if (console != 'undefined' && console.warn) {
+			console.warn('请不要将同一个方法赋值给多个类成员：' + member.__name__ + ' --> ' + name);
+		}
+	}
+}
 
 /**
  * 所有properties
