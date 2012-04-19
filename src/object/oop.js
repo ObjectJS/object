@@ -206,7 +206,10 @@ var instancemethod = function(func, self) {
 	_instancemethod.im_self = self;
 	_instancemethod.__class__ = arguments.callee;
 	_instancemethod.im_func = func;
-	_instancemethod.__setattr__ = renameCheck.bind(func); // 检测的是im_func的name
+	_instancemethod.__setattr__ = function(prop, value) {
+		renameCheck.bind(func);
+		this[prop] = value;
+	}; // 检测的是im_func的name
 	return _instancemethod;
 };
 
@@ -214,22 +217,32 @@ var staticmethod = this.staticmethod = function(func) {
 	return {
 		__class__: arguments.callee,
 		im_func: func,
-		__setattr__: renameCheck
+		__setattr__: function(prop, value) {
+			renameCheck(prop, value);
+			this[prop] = value;
+		}
 	};
 };
 
 var classmethod = this.classmethod = function(func, isinstance) {
-	return {
+	var obj = {
 		__class__ : arguments.callee,
 		im_func : func,
-		__setattr__: renameCheck
+		__setattr__: function(prop, value) {
+			renameCheck(prop, value);
+			this[prop] = value;
+		}
 	};
+	return obj;
 };
 
 var property = this.property = function(fget, fset) {
 	var p = {};
 	p.__class__ = arguments.callee;
-	p.__setattr__ = renameCheck;
+	p.__setattr__ = function(prop, value) {
+		renameCheck(prop, value);
+		this[prop] = value;
+	}
 	p.fget = fget;
 	p.fset = fset;
 	return p;
