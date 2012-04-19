@@ -206,7 +206,7 @@ var instancemethod = function(func, self) {
 	_instancemethod.im_self = self;
 	_instancemethod.__class__ = arguments.callee;
 	_instancemethod.im_func = func;
-	_instancemethod.__setattr__ = renameCheck;
+	_instancemethod.__setattr__ = renameCheck.bind(func); // 检测的是im_func的name
 	return _instancemethod;
 };
 
@@ -513,11 +513,10 @@ Type.__setattr__ = function(cls, name, member) {
 	// 先判断最常出现的instancemethod
 	// this.a = function() {}
 	else if (member.__class__ === undefined && typeof member == 'function') {
-		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
-		member.__name__ = name;
 		proto[name] = instancemethod(member);
 		proto[name].__setattr__('__name__', name);
-		proto[name].__name__ = name;
+		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
+		member.__name__ = name;
 		// 初始化方法放在cls上，metaclass会从cls上进行调用
 		if (name == 'initialize') {
 			cls[name] = instancemethod(member, false);
@@ -541,9 +540,8 @@ Type.__setattr__ = function(cls, name, member) {
 	}
 	// this.a = classmethod(function() {})
 	else if (member.__class__ === classmethod) {
-		member.im_func.__name__ = name;
 		member.__setattr__('__name__', name);
-		member.__name__ = name;
+		member.im_func.__name__ = name;
 		// classmethod，都绑定其class
 		cls[name] = proto[name] = instancemethod(member.im_func, true);
 		cls.__classbasedmethods__.push(name);
