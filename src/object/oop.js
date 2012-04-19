@@ -207,7 +207,7 @@ var instancemethod = function(func, self) {
 	_instancemethod.__class__ = arguments.callee;
 	_instancemethod.im_func = func;
 	_instancemethod.__setattr__ = function(prop, value) {
-		renameCheck.bind(func);
+		renameCheck.call(func, prop, value);
 		this[prop] = value;
 	}; // 检测的是im_func的name
 	return _instancemethod;
