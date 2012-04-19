@@ -285,9 +285,17 @@ Object.__getattribute__ = function(obj, name) {
  * object.__setattr__ 为兼容处理
  */
 Object.__setattr__ = object.__setattr__ = function(obj, prop, value) {
-	var property = obj.__properties__[prop];
+	var property = null;
+	if (obj.__properties__) {
+		property = obj.__properties__[prop];
+	}
 	// 此prop不是property，直接赋值即可。
 	if (!property) {
+		if (prop === '__name__' && obj[prop] && obj[prop] !== value) {
+			if (typeof console != 'undefined' && console.warn) {
+				console.warn('请不要将同一个方法赋值给多个类成员：' + obj[prop] + ' --> ' + value);
+			}
+		}
 		obj[prop] = value;
 	}
 	// 有fset
@@ -498,9 +506,8 @@ Type.__setattr__ = function(cls, name, member) {
 	// 先判断最常出现的instancemethod
 	// this.a = function() {}
 	else if (member.__class__ === undefined && typeof member == 'function') {
-		Class.detectDuplicateAssign(member, name);
 		// 这样赋值__name__，确保__name__都是被赋值在开发者所书写的那个function上，能够通过arguments.callee.__name__获取到。
-		member.__name__ = name;
+		Object.__setattr__(member, '__name__', name);
 		proto[name] = instancemethod(member);
 		proto[name].__name__ = name;
 		// 初始化方法放在cls上，metaclass会从cls上进行调用
@@ -510,15 +517,13 @@ Type.__setattr__ = function(cls, name, member) {
 	}
 	// this.a = property(function fget() {}, function fset() {})
 	else if (member.__class__ === property) {
-		Class.detectDuplicateAssign(member, name);
-		member.__name__ = name;
+		Object.__setattr__(member, '__name__', name);
 		properties[name] = member;
 		// 当prototype覆盖instancemethod/classmethod/staticmethod时，需要去除prototype上的属性
 		proto[name] = undefined;
 	}
 	// 在继承的时候，有可能直接把instancemethod传进来，比如__setattr__
 	else if (member.__class__ === instancemethod) {
-		Class.detectDuplicateAssign(member, name);
 		// 重新绑定
 		proto[name] = instancemethod(member.im_func);
 		// 绑定了cls的instancemethod，意味着是一个classmethod
@@ -528,18 +533,16 @@ Type.__setattr__ = function(cls, name, member) {
 	}
 	// this.a = classmethod(function() {})
 	else if (member.__class__ === classmethod) {
-		Class.detectDuplicateAssign(member, name);
+		Object.__setattr__(member, '__name__', name);
 		member.im_func.__name__ = name;
-		member.__name__ = name;
 		// classmethod，都绑定其class
 		cls[name] = proto[name] = instancemethod(member.im_func, true);
 		cls.__classbasedmethods__.push(name);
 	}
 	// this.a = staticmethod(function() {})
 	else if (member.__class__ === staticmethod) {
-		Class.detectDuplicateAssign(member, name);
+		Object.__setattr__(member, '__name__', name);
 		member.im_func.__name__ = name;
-		member.__name__ = name;
 		cls[name] = proto[name] = member.im_func;
 		cls.__classbasedmethods__.push(name);
 	}
@@ -684,26 +687,6 @@ Type.initialize = function() {
 Object.__class__ = Type;
 
 /**
- * 设置一个对象的成员
- * object.__setattr__ 为兼容处理
- */
-Object.__setattr__ = object.__setattr__ = function(obj, prop, value) {
-	var property = obj.__properties__[prop];
-	// 此prop不是property，直接赋值即可。
-	if (!property) {
-		obj[prop] = value;
-	}
-	// 有fset
-	else if (property.fset) {
-		property.fset.call(obj.__this__, obj, value);
-	}
-	// 未设置fset，不允许set
-	else {
-		throw 'set not allowed property ' + prop;
-	}
-};
-
-/**
  * 类的定义
  * @namespace Class
  */
@@ -788,17 +771,6 @@ Class.isMethod = function(member) {
 	}
 	return false;
 };
-
-/**
- * 检测
- */
-Class.detectDuplicateAssign = function(member, name) {
-	if (member.__name__ && member.__name__ !== name) {
-		if (console != 'undefined' && console.warn) {
-			console.warn('请不要将同一个方法赋值给多个类成员：' + member.__name__ + ' --> ' + name);
-		}
-	}
-}
 
 /**
  * 所有properties
