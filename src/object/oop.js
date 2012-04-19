@@ -176,10 +176,10 @@ var instancemethod = function(func, cls) {
 };
 
 var staticmethod = this.staticmethod = function(func) {
-	var _staticmethod = function() {};
-	_staticmethod.__class__ = arguments.callee;
-	_staticmethod.im_func = func;
-	return _staticmethod;
+	return {
+		__class__: arguments.callee,
+		im_func: func
+	};
 };
 
 var classmethod = this.classmethod = function(func, isinstance) {
