@@ -160,6 +160,7 @@ var parent = function(cls, name, args) {
  * 返回一个绑定了self的instancemethod
  * 若self为false，则返回一个未绑定的方法
  * 若self为undefined，则动态采用this为self
+ * 若self为true，则动态采用this为cls
  */
 var instancemethod = function(func, self) {
 	// 区分两种方法，用typeof为function判定并不严谨，function也可能是一个实例
@@ -177,10 +178,13 @@ var instancemethod = function(func, self) {
 	else {
 		_instancemethod = function() {
 			var args = [].slice.call(arguments, 0);
+			// 绑定class
 			if (self === true) {
+				// 在class上调用
 				if (typeof this == 'function') {
 					im_self = this;
 				}
+				// 在instance上调用
 				else {
 					im_self = this.__class__;
 				}
