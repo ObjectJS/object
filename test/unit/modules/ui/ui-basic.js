@@ -310,23 +310,23 @@ var TestComponent = new Class(ui.Component, function() {
 var test = new TestComponent(document.createElement('div'));
 
 stop();
-test.dataFetcher.send();
-test.dataFetcher.oncomplete = function() {
+test.get('dataFetcher').send();
+test.get('dataFetcher').oncomplete = function() {
 	start();
 	equal(errorCalled, 1, 'request error fired.');
 };
 
 stop();
-test.dataFetcher2.send();
-test.dataFetcher2.oncomplete = function() {
+test.get('dataFetcher2').send();
+test.get('dataFetcher2').oncomplete = function() {
 	start();
 	equal(successCalled, 1, 'request success fired.');
 };
 
 stop();
 test.setOption('dataFetcher3.url', 'request.txt');
-test.dataFetcher3.send();
-test.dataFetcher3.oncomplete = function() {
+test.get('dataFetcher3').send();
+test.get('dataFetcher3').oncomplete = function() {
 	start();
 	equal(successCalled, 2, 'request success fired by url changed.');
 };
