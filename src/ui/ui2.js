@@ -36,6 +36,13 @@ function ComponentMeta(selector, type, options, renderer) {
 	this.type = type;
 	this.renderer = renderer;
 	this.defaultOptions = options;
+
+	// selector为false的free组件拥有默认renderer，创建即返回
+	if (!renderer && this.selector === false) {
+		this.renderer = function(self, make) {
+			return make();
+		};
+	}
 }
 
 ComponentMeta.prototype.getType = function(metaOptions, callback) {
@@ -114,19 +121,43 @@ ComponentMeta.prototype.wrap = function(self, name, node, callback) {
 	}
 };
 
-ComponentMeta.prototype.select = function(comp, name, callback) {
-	var node = null;
-	var metaOptions = comp.getOption(name + '.meta') || {};
+/**
+ * 根据selector查询节点并进行包装，通过callback返回
+ * @param self
+ * @param name
+ * @param made 如果selector为false，则需要指定节点是什么
+ * @param callback
+ */
+ComponentMeta.prototype.select = function(self, name, made, callback) {
 
-	var selector = metaOptions.selector || this.selector;
+	var metaOptions = self.getOption(name + '.meta') || {};
+	var selector = this.selector;
+	var node;
 
-	if (typeof selector == 'function') {
-		node = dom.wrap(selector(comp));
-	} else {
-		node = comp._node.getElement(selector);
+	// 说明无所谓selector，生成什么就放什么就行
+	// 在强指定selector为false时，忽略meta中配置的selector
+	if (selector === false) {
+		// 不应该是一组成员，却是数组
+		if (Array.isArray(made)) {
+			node = made[0];
+		} else {
+			node = made;
+		}
+	}
+	// 重建引用，若render正常，刚刚创建的节点会被找到并包装
+	else {
+		selector = metaOptions.selector || selector;
+
+		if (typeof selector == 'function') {
+			node = dom.wrap(selector(self));
+		} else {
+			node = self._node.getElement(selector);
+		}
+
 	}
 
-	this.wrap(comp, name, node, callback);
+	this.wrap(self, name, node, callback);
+
 };
 
 /**
@@ -159,11 +190,8 @@ ComponentMeta.prototype.getTemplate = function(metaOptions, relativeModule, call
 };
 
 ComponentMeta.prototype.addEvent = function(self, name, obj) {
-	if (!obj || !obj.addEvent) {
-		return;
-	}
 
-	if (!self.__subEventsMap[name]) {
+	if (!(obj && obj.addEvent && self.__subEventsMap[name])) {
 		return;
 	}
 
@@ -217,25 +245,38 @@ ComponentsMeta.prototype.wrap = function(self, name, nodes, callback) {
 	}
 };
 
-ComponentsMeta.prototype.select = function(comp, name, callback) {
-	var nodes = null, comps = null;
+ComponentsMeta.prototype.select = function(self, name, made, callback) {
 
 	var selector = this.selector;
+	var nodes = null, comps = null;
 
-	if (typeof selector == 'function') {
-		nodes = selector(comp);
-		// 确保返回的是个dom.Elements
-		if (nodes.constructor != dom.Elements) {
-			if (!nodes.length) {
-				nodes = [nodes];
-			}
-			nodes = new dom.Elements(nodes);
+	// 说明无所谓selector，生成什么就放什么就行
+	// 在强指定selector为false时，忽略options中配置的selector
+	if (selector === false) {
+		// 应该是一组成员，确是不是数组
+		if (made && !Array.isArray(made)) {
+			nodes = [made];
+		} else {
+			nodes = made;
 		}
-	} else {
-		nodes = comp._node.getElements(selector);
+	}
+	// 重建引用，若render正常，刚刚创建的节点会被找到并包装
+	else {
+		if (typeof selector == 'function') {
+			nodes = selector(self);
+			// 确保返回的是个dom.Elements
+			if (nodes.constructor != dom.Elements) {
+				if (!nodes.length) {
+					nodes = [nodes];
+				}
+				nodes = new dom.Elements(nodes);
+			}
+		} else {
+			nodes = self._node.getElements(selector);
+		}
 	}
 
-	this.wrap(comp, name, nodes, callback);
+	this.wrap(self, name, nodes, callback);
 };
 
 function OptionMeta(defaultValue, getter) {
@@ -262,7 +303,7 @@ function ParentComponentMeta(type) {
 
 ParentComponentMeta.prototype = new ComponentMeta();
 
-ParentComponentMeta.prototype.select = function(comp, name, callback) {
+ParentComponentMeta.prototype.select = function(comp, name, made, callback) {
 	var node = comp._node;
 	var type;
 
@@ -290,14 +331,13 @@ function SubEventMeta(sub, eventType, gid) {
 	this.methodName = sub + '_' + eventType + '$' + gid;
 }
 
-SubEventMeta.prototype.bind = function(comp, name) {
+SubEventMeta.prototype.init = function(self, name) {
 	var sub = this.sub;
-
 	// 记录下来，render时从__subEventsMap获取信息
-	if (!(sub in comp.__subEventsMap)) {
-		comp.__subEventsMap[sub] = [];
+	if (!(sub in self.__subEventsMap)) {
+		self.__subEventsMap[sub] = [];
 	}
-	comp.__subEventsMap[sub].push(this);
+	self.__subEventsMap[sub].push(this);
 };
 
 function OnEventMeta(eventType, gid) {
@@ -305,16 +345,16 @@ function OnEventMeta(eventType, gid) {
 	this.gid = gid;
 }
 
-OnEventMeta.prototype.bindEvents = function(comp, name) {
+OnEventMeta.prototype.bindEvents = function(self, name) {
 	var eventType = this.eventType;
 
-	comp.addEvent(eventType, function(event) {
+	self.addEvent(eventType, function(event) {
 		var args = [event];
 		//将event._args pass 到函数后面
 		if (event._args) {
 			args = args.concat(event._args);
 		}
-		comp[name].apply(comp, args);
+		self[name].apply(self, args);
 	});
 };
 
@@ -336,7 +376,7 @@ function define(meta) {
 		// select只处理查询，不处理放置到self。
 		// 这里不能直接meta.select，而是确保options中的meta信息存在，需要用getMeta
 		var meta = self.getMeta(name);
-		meta.select(self, name, function(comp) {
+		meta.select(self, name, null, function(comp) {
 			self.setComponent(name, comp);
 		});
 		return self[name];
@@ -507,8 +547,19 @@ this.ComponentFactory = new Class(Type, function() {
 
 		Type.__delattr__(cls, '__members');
 
-		// 合并meta
-		cls.get('mixMeta')(name, base, dict);
+		var mix = cls.get('mixMeta');
+		// 合并base的meta
+		if (base != Object) {
+			mix(base);
+		}
+		// 合并mixin的meta
+		;(cls.__mixins__ || []).forEach(function(mixin) {
+			// mixin的有可能不是addon
+			if (!mixin.get('gid')) {
+				return;
+			}
+			mix(mixin);
+		});
 
 		// 生成Components
 		cls.get('makeComponents')(name, base, dict);
@@ -518,12 +569,15 @@ this.ComponentFactory = new Class(Type, function() {
 		var gid = cls.get('gid');
 		var meta = cls.get('meta');
 		var options = cls.get('_defaultOptions');
-		var match;
+		var match, newName, newMember;
+		var memberMeta = member? member.meta : null;
 
 		// 生成defaultOptions
-		if (member && member.meta && member.meta.defaultOptions) {
-			Object.keys(member.meta.defaultOptions).forEach(function(key) {
-				options[name + '.' + key] = member.meta.defaultOptions[key];
+		// 从meta中获取defaultOptions属性并合并到此组件的defaultOptions中
+		// 组件并不支持实例产生后同步其类的修改，因此defaultOptions只在类的初始化函数中合并一次即可。
+		if (member && memberMeta && memberMeta.defaultOptions) {
+			Object.keys(memberMeta.defaultOptions).forEach(function(key) {
+				options[name + '.' + key] = memberMeta.defaultOptions[key];
 			});
 		}
 
@@ -531,23 +585,23 @@ this.ComponentFactory = new Class(Type, function() {
 			Type.__setattr__(cls, name, member);
 
 		}
-		else if (member.__class__ == property && member.meta instanceof OptionMeta) {
+		else if (member.__class__ == property && memberMeta instanceof OptionMeta) {
 			if (meta.options.indexOf(name) == -1) {
 				meta.options.push(name);
 			}
 			Type.__setattr__(cls, name, member);
 
 		}
-		else if (member.__class__ == property && member.meta instanceof ComponentMeta) {
+		else if (member.__class__ == property && memberMeta instanceof ComponentMeta) {
 			if (meta.components.indexOf(name) == -1) {
 				meta.components.push(name);
 			}
-			Type.__setattr__(cls, 'render_' + name, member.meta.renderer);
+			Type.__setattr__(cls, 'render_' + name, memberMeta.renderer);
 			Type.__setattr__(cls, name, member);
 
 		}
 		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
-			var newName = name.slice(1);
+			newName = name.slice(1);
 			Type.__setattr__(cls, newName, events.fireevent(function(self) {
 				var method = cls.get(name);
 				var args;
@@ -561,10 +615,10 @@ this.ComponentFactory = new Class(Type, function() {
 
 		}
 		else if (match = name.match(/^(_?\w+)_(\w+)$/)) {
-			var newName = name + '$' + gid;
 			var sub = match[1];
 			var eventType = match[2];
-			var newMember = exports.subevent(sub, eventType, gid)(member);
+			newName = name + '$' + gid;
+			newMember = exports.subevent(sub, eventType, gid)(member);
 			if (meta.subEvents.indexOf(newName) == -1) {
 				meta.subEvents.push(newName);
 			}
@@ -572,13 +626,13 @@ this.ComponentFactory = new Class(Type, function() {
 
 		}
 		else if (match = name.match(/^on(\w+)$/)) {
-			var newName = name + '$' + gid;
+			newName = name + '$' + gid;
 			if (meta.onEvents.indexOf(newName) == -1) {
 				meta.onEvents.push(newName);
 			}
 			var eventType = match[1];
 			var eventType = eventType.slice(0, 1).toLowerCase() + eventType.slice(1);
-			var newMember = exports.onevent(eventType, gid)(member);
+			newMember = exports.onevent(eventType, gid)(member);
 			Type.__setattr__(cls, newName, newMember);
 
 		}
@@ -589,49 +643,22 @@ this.ComponentFactory = new Class(Type, function() {
 	};
 
 	/**
-	 * 将base和mixins中的meta信息合并之cls.meta
+	 * 将other中的meta信息合并到cls
 	 */
-	this.mixMeta = function(cls, name, base, dict) {
+	this.mixMeta = function(cls, other) {
 		var meta = cls.get('meta');
-		// 合并base的meta
-		if (base != Object) {
-			var bgid = base.get('gid');
-			var baseMeta = base.get('meta');
-			baseMeta.components.forEach(function(name) {
-				if (meta.components.indexOf(name) == -1) meta.components.push(name);
-			});
-			baseMeta.options.forEach(function(name) {
-				if (meta.options.indexOf(name) == -1) meta.options.push(name);
-			});
-			baseMeta.onEvents.forEach(function(name) {
-				if (meta.onEvents.indexOf(name) == -1) meta.onEvents.push(name);
-			});
-			baseMeta.subEvents.forEach(function(name) {
-				if (meta.subEvents.indexOf(name) == -1) meta.subEvents.push(name);
-			});
-		}
-
-		// 合并mixin的meta
-		var mixes = (cls.__mixins__ || []);
-		mixes.forEach(function(mix) {
-			var gid = mix.get('gid');
-			if (!gid) {
-				// mixin的有可能不是addon
-				return;
-			}
-			var mixMeta = mix.get('meta');
-			mixMeta.components.forEach(function(name) {
-				if (meta.components.indexOf(name) == -1) meta.components.push(name);
-			});
-			mixMeta.options.forEach(function(name) {
-				if (meta.options.indexOf(name) == -1) meta.options.push(name);
-			});
-			mixMeta.onEvents.forEach(function(name) {
-				if (meta.onEvents.indexOf(name) == -1) meta.onEvents.push(name);
-			});
-			mixMeta.subEvents.forEach(function(name) {
-				if (meta.subEvents.indexOf(name) == -1) meta.subEvents.push(name);
-			});
+		var oMeta = other.get('meta');
+		oMeta.components.forEach(function(name) {
+			if (meta.components.indexOf(name) == -1) meta.components.push(name);
+		});
+		oMeta.options.forEach(function(name) {
+			if (meta.options.indexOf(name) == -1) meta.options.push(name);
+		});
+		oMeta.onEvents.forEach(function(name) {
+			if (meta.onEvents.indexOf(name) == -1) meta.onEvents.push(name);
+		});
+		oMeta.subEvents.forEach(function(name) {
+			if (meta.subEvents.indexOf(name) == -1) meta.subEvents.push(name);
 		});
 	};
 
@@ -732,28 +759,27 @@ this.Component = new Class(function() {
 
 		// 初始化subEventsMap
 		self.meta.subEvents.forEach(function(name) {
-			var meta = self.getMeta(name);
-			meta.bind(self, name);
+			self.getMeta(name).init(self, name);
 		});
 
 		// 初始化components
 		self.meta.components.forEach(function(name) {
-			var meta = self.getMeta(name);
-			meta.select(self, name, function(comp) {
+			self.getMeta(name).select(self, name, null, function(comp) {
 				self.setComponent(name, comp);
 				inited++;
 				checkInit();
 			});
 		});
+
 		// 初始化options
 		self.meta.options.forEach(function(name) {
 			self.getMeta(name).addEvent(self, name);
 			self.getOption(name);
 		});
+
 		// 初始化onEvents
 		self.meta.onEvents.forEach(function(name) {
-			var meta = self.getMeta(name);
-			meta.bindEvents(self, name);
+			self.getMeta(name).bindEvents(self, name);
 		});
 
 		self.initAddons(self);
@@ -959,7 +985,7 @@ this.Component = new Class(function() {
 				self._options[parts[0]] = value;
 				(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
 					// 重新更新对象上的直接引用值
-					self.get(name);
+					self.getOption(name);
 				}))(self, oldValue, value);
 			}
 			// 为子引用设置option
@@ -1024,13 +1050,6 @@ this.Component = new Class(function() {
 		var meta = self.getMeta(name);
 
 		var renderer = self[methodName];
-		// selector为false的free组件拥有默认renderer，创建即返回
-		if (!renderer && meta.selector === false) {
-			renderer = function(make) {
-				return make();
-			};
-		}
-
 		if (!renderer) {
 			console.error('no renderer specified for ' + name + '.');
 			return;
@@ -1071,28 +1090,9 @@ this.Component = new Class(function() {
 					made = returnMade;
 				}
 
-				// 说明无所谓selector，生成什么就放什么就行
-				if (meta.selector === false) {
-
-					// 不应该是一组成员，却是数组
-					if (!(meta instanceof ComponentsMeta) && Array.isArray(made)) {
-						made = made[0];
-					}
-					// 应该是一组成员，确是不是数组
-					else if (meta instanceof ComponentsMeta && !Array.isArray(made)) {
-						made = [made];
-					}
-
-					meta.wrap(self, name, made, function(comp) {
-						self.setComponent(name, comp);
-					});
-				}
-				// 重建引用，若render正常，刚刚创建的节点会被找到并包装
-				else {
-					meta.select(self, name, function(comp) {
-						self.setComponent(name, comp);
-					});
-				}
+				meta.select(self, name, made, function(comp) {
+					self.setComponent(name, comp);
+				});
 
 				if (callback) {
 					callback();
