@@ -156,7 +156,12 @@ ComponentMeta.prototype.select = function(self, name, made, callback) {
 
 	}
 
-	this.wrap(self, name, node, callback);
+	this.wrap(self, name, node, function(comp) {
+		self.setComponent(name, comp);
+		if (callback) {
+			callback(comp);
+		}
+	});
 
 };
 
@@ -276,7 +281,12 @@ ComponentsMeta.prototype.select = function(self, name, made, callback) {
 		}
 	}
 
-	this.wrap(self, name, nodes, callback);
+	this.wrap(self, name, nodes, function(comps) {
+		self.setComponent(name, comps);
+		if (callback) {
+			callback(comps);
+		}
+	});
 };
 
 function OptionMeta(defaultValue, getter) {
@@ -303,8 +313,8 @@ function ParentComponentMeta(type) {
 
 ParentComponentMeta.prototype = new ComponentMeta();
 
-ParentComponentMeta.prototype.select = function(comp, name, made, callback) {
-	var node = comp._node;
+ParentComponentMeta.prototype.select = function(self, name, made, callback) {
+	var node = self._node;
 	var type;
 
 	if (Class.instanceOf(this.type, Type)) {
@@ -314,14 +324,18 @@ ParentComponentMeta.prototype.select = function(comp, name, made, callback) {
 		type = this.type();
 	}
 
-	var result = null;
+	var comp = null;
 	while (node = node.parentNode) {
 		if (node.component && Class.instanceOf(node.component, type)) {
-			result = node.component;
+			comp = node.component;
 			break;
 		}
 	}
-	callback(result);
+
+	self.setComponent(name, comp);
+	if (callback) {
+		callback(comp);
+	}
 };
 
 function SubEventMeta(sub, eventType, gid) {
@@ -376,9 +390,7 @@ function define(meta) {
 		// select只处理查询，不处理放置到self。
 		// 这里不能直接meta.select，而是确保options中的meta信息存在，需要用getMeta
 		var meta = self.getMeta(name);
-		meta.select(self, name, null, function(comp) {
-			self.setComponent(name, comp);
-		});
+		meta.select(self, name);
 		return self[name];
 	}
 	var prop = property(fget);
@@ -765,7 +777,6 @@ this.Component = new Class(function() {
 		// 初始化components
 		self.meta.components.forEach(function(name) {
 			self.getMeta(name).select(self, name, null, function(comp) {
-				self.setComponent(name, comp);
 				inited++;
 				checkInit();
 			});
@@ -1090,9 +1101,7 @@ this.Component = new Class(function() {
 					made = returnMade;
 				}
 
-				meta.select(self, name, made, function(comp) {
-					self.setComponent(name, comp);
-				});
+				meta.select(self, name, made);
 
 				if (callback) {
 					callback();
