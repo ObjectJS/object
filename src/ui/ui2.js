@@ -693,6 +693,7 @@ this.ComponentFactory = new Class(Type, function() {
 	this.mixMeta = function(cls, other) {
 		var meta = cls.get('meta');
 		var oMeta = other.get('meta');
+		object.extend(cls.get('_defaultOptions'), other.get('_defaultOptions'), false);
 		oMeta.components.forEach(function(name) {
 			if (meta.components.indexOf(name) == -1) meta.components.push(name);
 		});
