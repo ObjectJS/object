@@ -46,7 +46,7 @@ function ComponentMeta(selector, type, options, renderer) {
 }
 
 /**
- * 获取构造类
+ * 获取组件类
  */
 ComponentMeta.prototype.getType = function(metaOptions, callback) {
 
@@ -59,39 +59,6 @@ ComponentMeta.prototype.getType = function(metaOptions, callback) {
 
 	var memberloader = require('./memberloader');
 
-	function getAddonedType(cls, callback) {
-
-		memberloader.load(addons, function() {
-			// 存储最终的被扩展过的组件
-			var addoned;
-
-			if (addons) {
-				addons = Array.prototype.slice.call(arguments, 0);
-
-				// 作为保存生成的组件的key
-				var key = [];
-				addons.forEach(function(addon) {
-					key.push(addon.get('gid'));
-				});
-				key.sort();
-				key = key.join();
-
-				// 之前已经生成过
-				addoned = cls.get('addoned$' + key);
-
-				if (!addoned) {
-					// 把生成的类保存在原始类上，用addons的gid的集合作为key
-					addoned = new Class(cls, {__mixins__: addons});
-					cls.set('addoned$' + key, addoned);
-				}
-
-			} else {
-				addoned = cls;
-			}
-			callback(addoned);
-		});
-	}
-
 	// async
 	if (typeof type == 'string') {
 		memberloader.load(type, function(cls) {
@@ -99,20 +66,63 @@ ComponentMeta.prototype.getType = function(metaOptions, callback) {
 				console.error('can\'t get type ' + type);
 				return;
 			}
-			getAddonedType(cls, callback);
+			meta.getAddonedType(cls, addons, callback);
 		});
 	}
 	// class
 	else if (Class.instanceOf(type, Type)) {
 		cls = type;
-		getAddonedType(cls, callback);
+		this.getAddonedType(cls, addons, callback);
 	}
 	// sync
 	else if (typeof type == 'function') {
 		cls = type();
-		getAddonedType(cls, callback);
+		this.getAddonedType(cls, addons, callback);
 	}
 };
+
+/**
+ * 获取被addon过的组件类
+ * @param cls 基类
+ * @param addons addons字符串
+ * @param calblack
+ */
+ComponentMeta.prototype.getAddonedType = function(cls, addons, callback) {
+	if (!addons) {
+		callback(cls);
+		return;
+	}
+
+	var memberloader = require('./memberloader');
+
+	memberloader.load(addons, function() {
+		// 存储最终的被扩展过的组件
+		var addoned;
+
+		// 获取到的组件类
+		addons = Array.prototype.slice.call(arguments, 0);
+
+		// 根据addons的gid顺序拼成一个字符串，作为保存生成的组件的key
+		var key = [];
+		addons.forEach(function(addon) {
+			key.push(addon.get('gid'));
+		});
+		key.sort();
+		key = key.join();
+
+		// 之前已经生成过
+		addoned = cls.get('addoned$' + key);
+
+		// 没有生成过
+		if (!addoned) {
+			// 把生成的类保存在原始类上，用addons的gid的集合作为key
+			addoned = new Class(cls, {__mixins__: addons});
+			cls.set('addoned$' + key, addoned);
+		}
+		callback(addoned);
+	});
+}
+
 
 ComponentMeta.prototype.wrap = function(self, name, node, callback) {
 	var meta = this;
