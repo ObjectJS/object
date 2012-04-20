@@ -540,6 +540,52 @@ object.use('ui/ui2.js', function(ui) {
 });
 
 test('custom addons', function() {
+object.define('test.test', 'ui/ui2', function(require) {
+	var ui = require('ui/ui2');
+	this.TestComponent = new Class(ui.Component, function() {
+		this.a = 1;
+	});
+	this.TestComponent2 = new Class(ui.Component, function() {
+		this.b = 1;
+	});
+});
+object.use('ui/ui2.js', function(ui) {
+
+	var A = new Class(ui.Component, function() {
+		this.foo = 1;
+	});
+
+	var SubComponent = new Class(ui.Component, function() {
+		this.__mixins__ = [A];
+	});
+
+	// custom addon
+	var TestComponent = new Class(ui.Component, function() {
+		this.test = ui.define1(false, SubComponent, function(self, make) {
+			return document.createElement('div');
+		});
+	});
+
+	var test = new TestComponent(document.createElement('div'), {
+		'test.meta.addons': 'test.test.TestComponent',
+	});
+
+	// 使用不同的addons
+	var test2 = new TestComponent(document.createElement('div'), {
+		'test.meta.addons': 'test.test.TestComponent2',
+	});
+
+	test.render('test');
+	test2.render('test');
+
+	equal(test.test.a, 1, 'test use addon.');
+	equal(test2.test.b, 1, 'test2 use another addon.');
+	ok(test.test.constructor !== test2.test.constructor, 'different addon using different constructor.');
+
+});
+});
+
+test('async custom addons', function() {
 object.use('ui/ui2.js', function(ui) {
 
 	var script = document.createElement('script');
@@ -576,9 +622,8 @@ object.use('ui/ui2.js', function(ui) {
 			var type = self.test2.constructor;
 			// 刷新内容，测试constructor是否一致
 			self.getNode().innerHTML += '';
-			self.get('test2');
 			// 确保多次获取时用的都是生成的同一个类，而不是多次生成
-			ok(self.test2.constructor === type, 'custom addon using same constructor.');
+			ok(self.get('test2').constructor === type, 'custom addon using same constructor.');
 
 			// test已存在一个addon为A，确保不会被重置掉
 			equal(self.test.get('foo'), 1, 'write-in addon ok.');

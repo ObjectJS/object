@@ -45,6 +45,9 @@ function ComponentMeta(selector, type, options, renderer) {
 	}
 }
 
+/**
+ * 获取构造类
+ */
 ComponentMeta.prototype.getType = function(metaOptions, callback) {
 
 	if (!metaOptions) metaOptions = {};
@@ -58,23 +61,35 @@ ComponentMeta.prototype.getType = function(metaOptions, callback) {
 
 	function getAddonedType(cls, callback) {
 
-		// 已经是一个处理过的type
-		if (cls.get('__addoned')) {
-			callback(cls);
+		memberloader.load(addons, function() {
+			// 存储最终的被扩展过的组件
+			var addoned;
 
-		}
-		// 未处理过
-		else {
-			memberloader.load(addons, function() {
-				if (addons) {
-					addons = Array.prototype.slice.call(arguments, 0);
-					cls = new Class(cls, {__mixins__: addons, __addoned: true});
+			if (addons) {
+				addons = Array.prototype.slice.call(arguments, 0);
+
+				// 作为保存生成的组件的key
+				var key = [];
+				addons.forEach(function(addon) {
+					key.push(addon.get('gid'));
+				});
+				key.sort();
+				key = key.join();
+
+				// 之前已经生成过
+				addoned = cls.get('addoned$' + key);
+
+				if (!addoned) {
+					// 把生成的类保存在原始类上，用addons的gid的集合作为key
+					addoned = new Class(cls, {__mixins__: addons});
+					cls.set('addoned$' + key, addoned);
 				}
-				// 将处理结果放到type上
-				meta.type = cls;
-				callback(cls);
-			});
-		}
+
+			} else {
+				addoned = cls;
+			}
+			callback(addoned);
+		});
 	}
 
 	// async
