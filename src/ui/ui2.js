@@ -20,6 +20,8 @@ function RuntimeMeta() {
 	this.onEvents = [];
 	// 所有xxx_xxx形式注册事件方法
 	this.subEvents = [];
+	// 默认option
+	this.defaultOptions = {};
 }
 
 /**
@@ -588,7 +590,6 @@ this.ComponentFactory = new Class(Type, function() {
 
 		cls.set('gid', gid);
 		cls.set('meta', meta);
-		cls.set('_defaultOptions', options);
 
 		var members = cls.get('__members');
 
@@ -619,16 +620,15 @@ this.ComponentFactory = new Class(Type, function() {
 	this.__setattr__ = function(cls, name, member) {
 		var gid = cls.get('gid');
 		var meta = cls.get('meta');
-		var options = cls.get('_defaultOptions');
 		var newName, newMember;
 		var memberMeta = member? member.meta : null;
 
-		// 生成defaultOptions
-		// 从meta中获取defaultOptions属性并合并到此组件的defaultOptions中
-		// 组件并不支持实例产生后同步其类的修改，因此defaultOptions只在类的初始化函数中合并一次即可。
+		// 生成meta.defaultOptions
+		// 从meta中获取defaultOptions属性并合并到此组件的meta.defaultOptions中
+		// 组件并不支持实例产生后同步其类的修改，因此meta.defualtOptions只在类的初始化函数中合并一次即可。
 		if (member && memberMeta && memberMeta.defaultOptions) {
 			Object.keys(memberMeta.defaultOptions).forEach(function(key) {
-				options[name + '.' + key] = memberMeta.defaultOptions[key];
+				meta.defaultOptions[name + '.' + key] = memberMeta.defaultOptions[key];
 			});
 		}
 
@@ -693,16 +693,21 @@ this.ComponentFactory = new Class(Type, function() {
 	this.mixMeta = function(cls, other) {
 		var meta = cls.get('meta');
 		var oMeta = other.get('meta');
-		object.extend(cls.get('_defaultOptions'), other.get('_defaultOptions'), false);
+		// 合并defaultOptions
+		object.extend(meta.defaultOptions, oMeta.defaultOptions, false);
+		// 合并components
 		oMeta.components.forEach(function(name) {
 			if (meta.components.indexOf(name) == -1) meta.components.push(name);
 		});
+		// 合并options
 		oMeta.options.forEach(function(name) {
 			if (meta.options.indexOf(name) == -1) meta.options.push(name);
 		});
+		// 合并onevent
 		oMeta.onEvents.forEach(function(name) {
 			if (meta.onEvents.indexOf(name) == -1) meta.onEvents.push(name);
 		});
+		// 合并subevent
 		oMeta.subEvents.forEach(function(name) {
 			if (meta.subEvents.indexOf(name) == -1) meta.subEvents.push(name);
 		});
@@ -794,9 +799,9 @@ this.Component = new Class(function() {
 
 		// 保存options，生成component时用于传递
 		self._options = optionsmod.parse(options || {});
-		// 此时self._defaultOptions已经有没有解析过的默认options了
-		Object.keys(self._defaultOptions).forEach(function(key) {
-			optionsmod.setOptionTo(self._options, key, self._defaultOptions[key], false);
+		// 此时self.meta.defaultOptions已经有没有解析过的默认options了
+		Object.keys(self.meta.defaultOptions).forEach(function(key) {
+			optionsmod.setOptionTo(self._options, key, self.meta.defaultOptions[key], false);
 		});
 
 		// 记录已经获取完毕的components
