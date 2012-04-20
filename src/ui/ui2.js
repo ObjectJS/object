@@ -494,11 +494,18 @@ this.request = function(url, method) {
 /**
  * 定义一个向子元素注册事件的方法
  * @decorator
- * @param sub 子成员名称
- * @param eventType
- * @param gid
+ * @param name 一个函数名字
  */
-this.subevent = function(sub, eventType, gid) {
+this.subevent = function(name, gid) {
+	var match = name.match(/^(_?\w+)_(\w+)$/);
+	if (!match) {
+		// 名字不匹配，返回的decorator返回空
+		return function(func) {
+			return null;
+		}
+	}
+	var sub = match[1];
+	var eventType = match[2];
 	return function(func) {
 		func.meta = new SubEventMeta(sub, eventType, gid);
 		return func;
@@ -508,10 +515,17 @@ this.subevent = function(sub, eventType, gid) {
 /**
  * 定义一个扩展向宿主元素定义事件的方法
  * @decorator
- * @param eventType
- * @param gid
  */
-this.onevent = function(eventType, gid) {
+this.onevent = function(name, gid) {
+	var match = name.match(/^on(\w+)$/);
+	if (!match) {
+		// 名字不匹配，返回的decorator返回空
+		return function(func) {
+			return null;
+		}
+	}
+	var eventType = match[1];
+	eventType = eventType.slice(0, 1).toLowerCase() + eventType.slice(1);
 	return function(func) {
 		func.meta = new OnEventMeta(eventType, gid);
 		return func;
@@ -581,7 +595,7 @@ this.ComponentFactory = new Class(Type, function() {
 		var gid = cls.get('gid');
 		var meta = cls.get('meta');
 		var options = cls.get('_defaultOptions');
-		var match, newName, newMember;
+		var newName, newMember;
 		var memberMeta = member? member.meta : null;
 
 		// 生成defaultOptions
@@ -626,25 +640,19 @@ this.ComponentFactory = new Class(Type, function() {
 			Type.__setattr__(cls, name, member);
 
 		}
-		else if (match = name.match(/^(_?\w+)_(\w+)$/)) {
-			var sub = match[1];
-			var eventType = match[2];
+		else if (newMember = (exports.subevent(name, gid)(member))) {
 			newName = name + '$' + gid;
-			newMember = exports.subevent(sub, eventType, gid)(member);
 			if (meta.subEvents.indexOf(newName) == -1) {
 				meta.subEvents.push(newName);
 			}
 			Type.__setattr__(cls, newName, newMember);
 
 		}
-		else if (match = name.match(/^on(\w+)$/)) {
+		else if (newMember = (exports.onevent(name, gid)(member))) {
 			newName = name + '$' + gid;
 			if (meta.onEvents.indexOf(newName) == -1) {
 				meta.onEvents.push(newName);
 			}
-			var eventType = match[1];
-			var eventType = eventType.slice(0, 1).toLowerCase() + eventType.slice(1);
-			newMember = exports.onevent(eventType, gid)(member);
 			Type.__setattr__(cls, newName, newMember);
 
 		}
