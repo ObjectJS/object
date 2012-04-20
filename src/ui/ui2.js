@@ -107,7 +107,7 @@ ComponentMeta.prototype.wrap = function(comp, name, node, callback) {
 
 				if (name in comp.__subEventsMap) {
 					comp.__subEventsMap[name].forEach(function(meta) {
-						meta.addEventTo(result);
+						meta.addEventTo(comp, name, result);
 					});
 				}
 
@@ -188,7 +188,7 @@ ComponentsMeta.prototype.wrap = function(comp, name, nodes, callback) {
 					var c = new type(node, comp._options[name]);
 					if (name in comp.__subEventsMap) {
 						comp.__subEventsMap[name].forEach(function(meta) {
-							meta.addEventTo(c);
+							meta.addEventTo(comp, name, c);
 						});
 					}
 				}
@@ -232,7 +232,7 @@ OptionMeta.prototype.bindEvents = function(comp, name) {
 	// 注册 option_change 等事件
 	if (name in comp.__subEventsMap) {
 		comp.__subEventsMap[name].forEach(function(meta) {
-			meta.addOptionEventTo(comp);
+			meta.addOptionEventTo(comp, name);
 		});
 	}
 };
@@ -270,19 +270,18 @@ function SubEventMeta(sub, eventType, gid) {
 	this.gid = gid;
 }
 
-SubEventMeta.prototype.addOptionEventTo = function(comp) {
-	var name = this.name;
+SubEventMeta.prototype.addOptionEventTo = function(comp, name) {
+	name = name + '_' + this.eventType + '$' + this.gid;
 	var fakeEventType = '__option_' + this.eventType + '_' + this.sub;
 	comp.addEvent(fakeEventType, function(event) {
 		comp[name](event);
 	});
 };
 
-SubEventMeta.prototype.addEventTo = function(comp) {
+SubEventMeta.prototype.addEventTo = function(self, name, comp) {
 	var sub = this.sub;
 	var eventType = this.eventType;
-	var name = this.name;
-	var self = this.binded;
+	name = name + '_' + eventType + '$' + this.gid;
 
 	comp.addEvent(eventType, function(event) {
 		var args;
@@ -296,11 +295,9 @@ SubEventMeta.prototype.addEventTo = function(comp) {
 	})
 };
 
-SubEventMeta.prototype.bindUnknownEvent = function() {
+SubEventMeta.prototype.bindUnknownEvent = function(comp, name) {
 	var sub = this.sub;
 	var eventType = this.eventType;
-	var name = this.name;
-	var comp = this.binded;
 
 	if (comp[sub]) {
 		comp[sub].addEvent(eventType, function(event) {
@@ -318,8 +315,6 @@ SubEventMeta.prototype.bindUnknownEvent = function() {
 
 SubEventMeta.prototype.bind = function(comp, name) {
 	var sub = this.sub;
-	this.binded = comp;
-	this.name = name;
 
 	// 记录下来，render时从__subEventsMap获取信息
 	if (!(sub in comp.__subEventsMap)) {
@@ -335,7 +330,7 @@ SubEventMeta.prototype.bind = function(comp, name) {
 	}
 	// request ...
 	else {
-		this.bindUnknownEvent();
+		this.bindUnknownEvent(comp, name);
 	}
 };
 
