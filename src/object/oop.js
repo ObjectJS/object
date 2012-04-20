@@ -156,10 +156,10 @@ var parent = function(cls, name, args) {
 	}
 };
 
-function renameCheck(prop, value) {
-	if (prop === '__name__' && this[prop] && this[prop] !== value) {
+function renameCheck(func, prop, value) {
+	if (prop === '__name__' && func[prop] && func[prop] !== value) {
 		if (typeof console != 'undefined' && console.warn) {
-			console.warn('请不要将同一个方法赋值给多个类成员：' + this[prop] + ' --> ' + value);
+			console.warn('请不要将同一个方法赋值给多个类成员：' + func[prop] + ' --> ' + value);
 		}
 	}
 }
@@ -207,7 +207,7 @@ var instancemethod = function(func, self) {
 	_instancemethod.__class__ = arguments.callee;
 	_instancemethod.im_func = func;
 	_instancemethod.__setattr__ = function(prop, value) {
-		renameCheck.call(func, prop, value);
+		renameCheck(func, prop, value);
 		this[prop] = value;
 	}; // 检测的是im_func的name
 	return _instancemethod;
@@ -218,7 +218,7 @@ var staticmethod = this.staticmethod = function(func) {
 		__class__: arguments.callee,
 		im_func: func,
 		__setattr__: function(prop, value) {
-			renameCheck(prop, value);
+			renameCheck(this, prop, value);
 			this[prop] = value;
 		}
 	};
@@ -229,7 +229,7 @@ var classmethod = this.classmethod = function(func, isinstance) {
 		__class__ : arguments.callee,
 		im_func : func,
 		__setattr__: function(prop, value) {
-			renameCheck(prop, value);
+			renameCheck(this, prop, value);
 			this[prop] = value;
 		}
 	};
@@ -240,7 +240,7 @@ var property = this.property = function(fget, fset) {
 	var p = {};
 	p.__class__ = arguments.callee;
 	p.__setattr__ = function(prop, value) {
-		renameCheck(prop, value);
+		renameCheck(this, prop, value);
 		this[prop] = value;
 	}
 	p.fget = fget;
