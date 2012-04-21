@@ -81,10 +81,16 @@ test('parent property', function() {
 
 object.use('ui/ui2.js', function(ui) {
 
+	var eventCalled = 0;
+
 	var TestComponent = new Class(ui.Component, function() {
 		this.parent = ui.parent(function() {
 			return ParentComponent;
 		});
+
+		this.parent_click = function() {
+			eventCalled++;
+		};
 	});
 
 	var ParentComponent = new Class(ui.Component, function() {
@@ -96,6 +102,9 @@ object.use('ui/ui2.js', function(ui) {
 	var test = new ParentComponent(div);
 
 	ok(test.test.parent === test, 'parent component ok.');
+
+	test.fireEvent('click');
+	equal(eventCalled, 1, 'bind event called.');
 });
 });
 
@@ -486,7 +495,7 @@ object.use('ui/ui2.js', function(ui) {
 
 	var test = new TestComponent(div);
 
-	test.test.getNode().click();
+	test.test.getNode().fireEvent('click');
 	equals(clickEventCalled, 1, 'sub click event called.');
 
 	test.test.test('test');
@@ -717,7 +726,7 @@ object.use('ui/ui2.js', function(ui) {
 	equal(test.test.test, true, 'option pass to sub.');
 
 	// 事件
-	test.test.getNode().click();
+	test.test.getNode().fireEvent('click');
 	equal(renderedEventCalled, 1, 'rendered component event called.');
 
 	// 删除
@@ -839,11 +848,11 @@ object.use('ui/ui2', function(ui) {
 	});
 
 	test.render('testTrigger', function() {
-		test.testTrigger.getNode().click();
+		test.testTrigger.getNode().fireEvent('click');
 	});
 
 	test2.render('test2Trigger', function() {
-		test.testTrigger.getNode().click();
+		test.testTrigger.getNode().fireEvent('click');
 	});
 
 });

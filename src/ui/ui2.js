@@ -125,7 +125,6 @@ ComponentMeta.prototype.getAddonedType = function(cls, addons, callback) {
 	});
 }
 
-
 ComponentMeta.prototype.wrap = function(self, name, node, callback) {
 	var meta = this;
 	var comp;
@@ -359,7 +358,9 @@ ParentComponentMeta.prototype.select = function(self, name, made, callback) {
 		}
 	}
 
+	this.addEvent(self, name, comp);
 	self.setComponent(name, comp);
+
 	if (callback) {
 		callback(comp);
 	}
