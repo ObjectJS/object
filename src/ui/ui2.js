@@ -781,7 +781,6 @@ this.ComponentsClass = new Class(Type, function() {
 
 		members.forEach(function(item) {
 			if (item.name === 'initialize') return;
-			// 重新包装，避免名字不同导致warning
 			cls.set(item.name, item.member);
 		});
 
@@ -794,6 +793,7 @@ this.ComponentsClass = new Class(Type, function() {
 			return;
 		}
 		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
+			// 重新包装，避免名字不同导致warning
 			Type.__setattr__(cls, name.slice(1), function(self) {
 				// 有可能是个空的Components
 				if (self._node) {
@@ -802,6 +802,7 @@ this.ComponentsClass = new Class(Type, function() {
 			});
 		}
 		else {
+			// 重新包装，避免名字不同导致warning
 			Type.__setattr__(cls, name, function(self) {
 				return member.apply(self, arguments);
 			});
