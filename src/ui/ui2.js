@@ -126,27 +126,28 @@ ComponentMeta.prototype.getAddonedType = function(cls, addons, callback) {
 };
 
 /**
- * 将生成或查询到的node进行包装
+ * 将生成或查询到的node用type进行包装
  */
-ComponentMeta.prototype.wrap = function(self, name, node, callback) {
-	var meta = this;
-	var comp;
-
-	if (node) {
-		comp = node.component;
-		if (comp) {
-			callback(comp);
-
-		} else {
-			this.getType(self.getOption(name + '.meta'), function(type) {
-				comp = new type(node, self._options[name]);
-				meta.addEvent(self, name, comp);
-				callback(comp);
-			});
-		}
+ComponentMeta.prototype.wrap = function(self, name, node, type) {
+	var comp = node.component;
+	// 此node已包装，但包装类不一定是type类型的，下面强制重新包装触发error
+	if (comp && Class.instanceOf(comp, type)) {
+		this.addEvent(self, name, comp);
 
 	} else {
-		callback(null);
+		comp = new type(node, self._options[name]);
+		this.addEvent(self, name, comp);
+	}
+	return comp;
+};
+
+/**
+ * 将生成的comp设置到self上，并执行callback
+ */
+ComponentMeta.prototype.setComponent = function(self, name, comp, callback) {
+	self.setComponent(name, comp);
+	if (callback) {
+		callback(comp);
 	}
 };
 
@@ -161,6 +162,7 @@ ComponentMeta.prototype.select = function(self, name, made, callback) {
 
 	var metaOptions = self.getOption(name + '.meta') || {};
 	var selector = this.selector;
+	var meta = this;
 	var node;
 
 	// 说明无所谓selector，生成什么就放什么就行
@@ -185,12 +187,16 @@ ComponentMeta.prototype.select = function(self, name, made, callback) {
 
 	}
 
-	this.wrap(self, name, node, function(comp) {
-		self.setComponent(name, comp);
-		if (callback) {
-			callback(comp);
-		}
-	});
+	if (node) {
+		this.getType(self.getOption(name + '.meta'), function(type) {
+			var comp = meta.wrap(self, name, node, type);
+			meta.setComponent(self, name, comp, callback);
+		});
+
+	} else {
+		meta.setComponent(self, name, null, callback);
+	}
+
 
 };
 
@@ -223,15 +229,27 @@ ComponentMeta.prototype.getTemplate = function(metaOptions, relativeModule, call
 
 };
 
-ComponentMeta.prototype.addEvent = function(self, name, obj) {
+ComponentMeta.prototype.addEvent = function(self, name, comp) {
 
-	if (!(obj && obj.addEvent && self.__subEventsMap[name])) {
+	// comp可能会注册来自多个引用了它的其他的comp的事件注册
+	// 通过在eventBinds中保存已经注册过的其他组件，避免重复注册
+	if (!comp.eventBinds) {
+		comp.eventBinds = [];
+	}
+
+	if (comp.eventBinds.indexOf(self) != -1) {
+		return;
+	} else {
+		comp.eventBinds.push(self);
+	}
+
+	if (!(comp && comp.addEvent && self.__subEventsMap[name])) {
 		return;
 	}
 
 	self.__subEventsMap[name].forEach(function(eventMeta) {
 		var methodName = eventMeta.methodName;
-		obj.addEvent(eventMeta.eventType, function(event) {
+		comp.addEvent(eventMeta.eventType, function(event) {
 			var args;
 			// 将event._args pass 到函数后面
 			if (event._args) {
@@ -251,38 +269,11 @@ function ComponentsMeta(selector, type, options, renderer) {
 
 ComponentsMeta.prototype = new ComponentMeta();
 
-ComponentsMeta.prototype.wrap = function(self, name, nodes, callback) {
-	var meta = this;
-
-	if (nodes) {
-		// 返回的是数组，变成Elements
-		// 避免重复包装
-		// TODO 用addEvent避免重复包装的方法不优雅
-		if (!nodes.addEvent) {
-			nodes = new dom.Elements(nodes);
-		}
-
-		this.getType(self.getOption(name + '.meta'), function(type) {
-
-			nodes.forEach(function(node) {
-				if (!node.component) {
-					var comp = new type(node, self._options[name]);
-					meta.addEvent(self, name, comp);
-				}
-			});
-
-			var result = new type.Components(nodes);
-			callback(result);
-		});
-	} else {
-		callback(null);
-	}
-};
-
 ComponentsMeta.prototype.select = function(self, name, made, callback) {
 
 	var selector = this.selector;
 	var nodes = null, comps = null;
+	var meta = this;
 
 	// 说明无所谓selector，生成什么就放什么就行
 	// 在强指定selector为false时，忽略options中配置的selector
@@ -310,12 +301,30 @@ ComponentsMeta.prototype.select = function(self, name, made, callback) {
 		}
 	}
 
-	this.wrap(self, name, nodes, function(comps) {
-		self.setComponent(name, comps);
-		if (callback) {
-			callback(comps);
+	if (nodes) {
+		// 返回的是数组，变成Elements
+		// 避免重复包装
+		// TODO 用addEvent避免重复包装的方法不优雅
+		if (!nodes.addEvent) {
+			nodes = new dom.Elements(nodes);
 		}
-	});
+
+		this.getType(self.getOption(name + '.meta'), function(type) {
+
+			nodes.forEach(function(node) {
+				meta.wrap(self, name, node, type);
+			});
+			comps = new type.Components(nodes);
+
+			meta.setComponent(self, name, comps, callback);
+		});
+
+	} else {
+		// 返回空Components而不是null
+		comps = new exports.Component.Components();
+		meta.setComponent(self, name, comps, callback);
+	}
+
 };
 
 function OptionMeta(defaultValue, getter) {
@@ -734,6 +743,10 @@ this.ComponentClass = new Class(Type, function() {
 		cls.set('Components', new exports.ComponentsClass(compsBase, function() {
 
 			this.initialize = function(self, nodes, options) {
+				// an empty Components
+				if (!nodes) {
+					return;
+				}
 				self._node = nodes;
 				self._node.component = self;
 				self._node.forEach(function(node) {
@@ -767,7 +780,10 @@ this.ComponentsClass = new Class(Type, function() {
 			if (typeof member == 'function') {
 				// 重新包装，避免名字不同导致warning
 				cls.set(item.name, function(self) {
-					return member.apply(self, arguments);
+					// 有可能是个空的Components
+					if (self._node) {
+						return member.apply(self, arguments);
+					}
 				});
 			}
 		});
@@ -800,8 +816,10 @@ this.Component = new exports.ComponentClass(function() {
 		self.__subEventsMap = {};
 
 		self._node = dom.wrap(node);
+		// 只提示错误，且自身的初始化全部终止。
+		// 但这并不影响其他组件获得本组件的引用及进行封装。
 		if (node.component) {
-			console.error('一个元素只可以作为一个组件', node);
+			console.error('一个元素只能被一个组件包装', node);
 			return;
 		}
 		self._node.component = self;

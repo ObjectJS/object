@@ -1,4 +1,3 @@
-
 module('basic');
 
 test('sub property', function() {
@@ -893,4 +892,85 @@ object.use('ui/ui2', function(ui) {
 
 });
 
+});
+
+test('different component using same node', function() {
+object.use('ui/ui2.js', function(ui) {
+
+	var eventCalled = 0;
+
+	var div = document.createElement('div');
+	div.innerHTML = '<div><div class="test"></div><div class="test2"></div></div>';
+
+	var Base1 = new Class(ui.Component, {});
+	var Base2 = new Class(ui.Component, {});
+
+	var A = new Class(ui.Component, function() {
+		this.test = ui.define1('.test');
+
+		this.test2 = ui.define1('.test2', Base1);
+
+		this.test_click = function() {
+			eventCalled++;
+		};
+	});
+
+	var B = new Class(ui.Component, function() {
+		this.test = ui.define1('.test');
+
+		this.test2 = ui.define1('.test2', Base2);
+
+		this.test_click = function() {
+			eventCalled++;
+		};
+	});
+
+	var a = new A(div);
+	var b = new B(div.getElementsByTagName('div')[0]);
+
+	// 检测是否确实是同一引用
+	strictEqual(a.test, b.test, 'using same node.');
+
+	// 事件绑定
+	a.test.fireEvent('click');
+	equal(eventCalled, 2, 'both event called.');
+
+	// 类型不同
+	notEqual(a.test2, b.test2, 'using same node with different type.');
+});
+});
+
+test('different components using same nodes', function() {
+object.use('ui/ui2.js', function(ui) {
+
+	var eventCalled = 0;
+
+	var div = document.createElement('div');
+	div.innerHTML = '<div><div class="test"></div><div class="test"></div><div class="test"></div></div>';
+
+	var A = new Class(ui.Component, function() {
+		this.test = ui.define('.test');
+		this.test_click = function() {
+			eventCalled++;
+		};
+	});
+
+	var B = new Class(ui.Component, function() {
+		this.test = ui.define('.test');
+		this.test_click = function() {
+			eventCalled++;
+		};
+	});
+
+	var a = new A(div);
+	var b = new B(div.getElementsByTagName('div')[0]);
+
+	// 检测是否确实是同一引用
+	strictEqual(a.test.length, b.test.length, 'using same node.');
+	strictEqual(a.test[0], b.test[0], 'using same node.');
+
+	// 事件绑定
+	a.test.fireEvent('click'); // 触发了3个节点的fireEvent
+	equal(eventCalled, 6, 'both event called.');
+});
 });
