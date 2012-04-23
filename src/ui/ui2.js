@@ -123,8 +123,11 @@ ComponentMeta.prototype.getAddonedType = function(cls, addons, callback) {
 		}
 		callback(addoned);
 	});
-}
+};
 
+/**
+ * 将生成或查询到的node进行包装
+ */
 ComponentMeta.prototype.wrap = function(self, name, node, callback) {
 	var meta = this;
 	var comp;
@@ -237,7 +240,7 @@ ComponentMeta.prototype.addEvent = function(self, name, obj) {
 			} else {
 				self[methodName](event);
 			}
-		})
+		});
 	});
 
 };
@@ -351,7 +354,7 @@ ParentComponentMeta.prototype.select = function(self, name, made, callback) {
 	}
 
 	var comp = null;
-	while (node = node.parentNode) {
+	while ((node = node.parentNode)) {
 		if (node.component && Class.instanceOf(node.component, type)) {
 			comp = node.component;
 			break;
@@ -430,13 +433,15 @@ function define(meta) {
  * 为一个Component定义一个components引用
  * 用法：
  * MyComponent = new Class(ui.Component, {
- *	refname: ui.define('css selector', ui.menu.Menu)
+ *	refname: ui.define('.css-selector', ui.menu.Menu, {
+ *		clickable: true
+ *	}, renderer)
  * });
  * 这样MyComponent实例的refname属性即为相对应selector获取到的节点引用
- * @param selector 选择器
- * @param type 构造类
- * @param options 可选
- * @param renderer 可选
+ * @param {String|Boolean} selector css选择器
+ * @param {Component|String} [type=Component] 构造类的引用或模块成员字符串
+ * @param {Object} [options] 默认配置
+ * @param {Function} [renderer] 渲染器
  */
 this.define = function(selector, type, options, renderer) {
 	if (type && typeof type !== 'string' && !Class.instanceOf(type, Type)) {
@@ -454,11 +459,11 @@ this.define = function(selector, type, options, renderer) {
 };
 
 /**
- * 定义唯一引用的component
- * @param selector 必选
- * @param type 可选
- * @param options 可选
- * @param renderer 可选
+ * 同define，不过是定义唯一引用的component
+ * @param {String|Boolean} selector css选择器
+ * @param {Component|String} [type=Component] 构造类的引用或模块成员字符串
+ * @param {Object} [options] 默认配置
+ * @param {Function} [renderer] 渲染器
  */
 this.define1 = function(selector, type, options, renderer) {
 	if (type && typeof type !== 'string' && !Class.instanceOf(type, Type)) {
@@ -476,7 +481,8 @@ this.define1 = function(selector, type, options, renderer) {
 };
 
 /**
- * 定义父元素的引用
+ * 定义父元素的引用，将在Component构造时遍历父节点直到找到相同类型的Component
+ * @param {Component} type
  */
 this.parent = function(type) {
 	if (!type) {
@@ -509,6 +515,11 @@ this.option = function(defaultValue, getter) {
 	return prop;
 };
 
+/**
+ * 声明一个request，可为其注册事件
+ * @param url
+ * @param [method='get']
+ */
 this.request = function(url, method) {
 	var meta = new RequestMeta(url, method);
 	var prop = property(function(self) {
@@ -530,14 +541,14 @@ this.subevent = function(name, gid) {
 		// 名字不匹配，返回的decorator返回空
 		return function(func) {
 			return null;
-		}
+		};
 	}
 	var sub = match[1];
 	var eventType = match[2];
 	return function(func) {
 		func.meta = new SubEventMeta(sub, eventType, gid);
 		return func;
-	}
+	};
 };
 
 /**
@@ -550,7 +561,7 @@ this.onevent = function(name, gid) {
 		// 名字不匹配，返回的decorator返回空
 		return function(func) {
 			return null;
-		}
+		};
 	}
 	var eventType = match[1];
 	eventType = eventType.slice(0, 1).toLowerCase() + eventType.slice(1);
@@ -561,7 +572,7 @@ this.onevent = function(name, gid) {
 };
 
 // metaclass
-this.ComponentFactory = new Class(Type, function() {
+this.ComponentClass = new Class(Type, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 
@@ -666,7 +677,7 @@ this.ComponentFactory = new Class(Type, function() {
 			Type.__setattr__(cls, name, member);
 
 		}
-		else if (newMember = (exports.subevent(name, gid)(member))) {
+		else if ((newMember = (exports.subevent(name, gid)(member)))) {
 			newName = name + '$' + gid;
 			if (meta.subEvents.indexOf(newName) == -1) {
 				meta.subEvents.push(newName);
@@ -674,7 +685,7 @@ this.ComponentFactory = new Class(Type, function() {
 			Type.__setattr__(cls, newName, newMember);
 
 		}
-		else if (newMember = (exports.onevent(name, gid)(member))) {
+		else if ((newMember = (exports.onevent(name, gid)(member)))) {
 			newName = name + '$' + gid;
 			if (meta.onEvents.indexOf(newName) == -1) {
 				meta.onEvents.push(newName);
@@ -721,7 +732,7 @@ this.ComponentFactory = new Class(Type, function() {
 		// Component则是Array，其他则是父类上的Components
 		var compsBase = base.Components || Array;
 
-		cls.set('Components', new exports.ComponentsFactory(compsBase, function() {
+		cls.set('Components', new exports.ComponentsClass(compsBase, function() {
 
 			this.initialize = function(self, nodes, options) {
 				self._node = nodes;
@@ -745,7 +756,7 @@ this.ComponentFactory = new Class(Type, function() {
 
 });
 
-this.ComponentsFactory = new Class(Type, function() {
+this.ComponentsClass = new Class(Type, function() {
 
 	this.initialize = function(cls, name, base, dict) {
 
@@ -770,9 +781,7 @@ this.ComponentsFactory = new Class(Type, function() {
 /**
  * UI模块基类，所有UI组件的基本类
  */
-this.Component = new Class(function() {
-
-	this.__metaclass__ = exports.ComponentFactory;
+this.Component = new exports.ComponentClass(function() {
 
 	/**
 	 * @param node 包装的节点
@@ -1130,7 +1139,7 @@ this.Component = new Class(function() {
 						node = self.createNode(template, newData || data);
 					} else {
 						console.error('no template specified for ' + name + '.');
-						return;
+						return null;
 					}
 					made.push(node);
 					self.__rendered.push(node);
@@ -1166,7 +1175,7 @@ this.Component = new Class(function() {
 });
 
 // metaclass 的 metaclass
-this.AddonFactoryFactory = new Class(Type, function() {
+this.AddonClassClass = new Class(Type, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 
@@ -1192,21 +1201,19 @@ this.AddonFactoryFactory = new Class(Type, function() {
 	};
 });
 
-// 继承于 ComponentFactory
-this.AddonFactory = new Class(exports.ComponentFactory, function() {
-
-	this.__metaclass__ = exports.AddonFactoryFactory;
+// 继承于 ComponentClass
+this.AddonClass = new exports.AddonClassClass(exports.ComponentClass, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 		// base是Component
 		if (base !== exports.Component) {
 			base = exports.Component;
 		}
-		return exports.ComponentFactory.get('__new__')(cls, name, base, dict);
+		return exports.ComponentClass.get('__new__')(cls, name, base, dict);
 	};
 
 	this.initialize = function(cls, name, base, dict) {
-		exports.ComponentFactory.get('initialize')(cls, name, base, dict);
+		exports.ComponentClass.get('initialize')(cls, name, base, dict);
 
 		var members = cls.get('__members');
 		var variables = cls.get('__variables');

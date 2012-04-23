@@ -81,16 +81,10 @@ test('parent property', function() {
 
 object.use('ui/ui2.js', function(ui) {
 
-	var eventCalled = 0;
-
 	var TestComponent = new Class(ui.Component, function() {
 		this.parent = ui.parent(function() {
 			return ParentComponent;
 		});
-
-		this.parent_click = function() {
-			eventCalled++;
-		};
 	});
 
 	var ParentComponent = new Class(ui.Component, function() {
@@ -102,9 +96,6 @@ object.use('ui/ui2.js', function(ui) {
 	var test = new ParentComponent(div);
 
 	ok(test.test.parent === test, 'parent component ok.');
-
-	test.fireEvent('click');
-	equal(eventCalled, 1, 'bind event called.');
 });
 });
 
@@ -495,7 +486,7 @@ object.use('ui/ui2.js', function(ui) {
 
 	var test = new TestComponent(div);
 
-	test.test.getNode().fireEvent('click');
+	test.test.getNode().click();
 	equals(clickEventCalled, 1, 'sub click event called.');
 
 	test.test.test('test');
@@ -726,7 +717,7 @@ object.use('ui/ui2.js', function(ui) {
 	equal(test.test.test, true, 'option pass to sub.');
 
 	// 事件
-	test.test.getNode().fireEvent('click');
+	test.test.getNode().click();
 	equal(renderedEventCalled, 1, 'rendered component event called.');
 
 	// 删除
@@ -798,7 +789,7 @@ object.use('ui/ui2', function(ui) {
 	var A = new Class(ui.Component, function() {
 	});
 
-	var BaseFactory = new Class(ui.AddonFactory, function() {
+	var BaseClass = new Class(ui.AddonClass, function() {
 
 		this.$trigger = '{{name}}Trigger';
 
@@ -811,7 +802,7 @@ object.use('ui/ui2', function(ui) {
 
 	});
 
-	var TestFactory = new Class(BaseFactory, function() {
+	var TestClass = new Class(BaseClass, function() {
 
 		this.$name = 'test';
 
@@ -824,7 +815,7 @@ object.use('ui/ui2', function(ui) {
 		});
 	});
 
-	var Test2Factory = new Class(BaseFactory, function() {
+	var Test2Class = new Class(BaseClass, function() {
 
 		this.$name = 'test2';
 
@@ -837,8 +828,8 @@ object.use('ui/ui2', function(ui) {
 		});
 	});
 
-	var Test = new TestFactory({});
-	var Test2 = new Test2Factory({});
+	var Test = new TestClass({});
+	var Test2 = new Test2Class({});
 
 	var test = new Test(document.createElement('div'));
 	var test2 = new Test2(document.createElement('div'));
@@ -848,11 +839,11 @@ object.use('ui/ui2', function(ui) {
 	});
 
 	test.render('testTrigger', function() {
-		test.testTrigger.getNode().fireEvent('click');
+		test.testTrigger.getNode().click();
 	});
 
 	test2.render('test2Trigger', function() {
-		test.testTrigger.getNode().fireEvent('click');
+		test.testTrigger.getNode().click();
 	});
 
 });
