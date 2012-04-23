@@ -802,7 +802,9 @@ this.ComponentsClass = new Class(Type, function() {
 			});
 		}
 		else {
-			Type.__setattr__(cls, name, member);
+			Type.__setattr__(cls, name, function(self) {
+				return member.apply(self, arguments);
+			});
 		}
 	};
 
