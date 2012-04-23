@@ -138,6 +138,15 @@ ComponentMeta.prototype.wrap = function(self, name, node, type) {
 		comp = new type(node, self._options[name]);
 		this.addEvent(self, name, comp);
 	}
+
+	// 注册dispose
+	if (self.__disposes.indexOf(comp) == -1) {
+		comp.addEvent('aftercomponentdispose', function(event) {
+			self.getMeta(name).select(self, name);
+		});
+		self.__disposes.push(comp);
+	}
+
 	return comp;
 };
 
@@ -980,16 +989,7 @@ this.Component = new exports.ComponentClass(function() {
 	 * 设置获取到的component
 	 */
 	this.setComponent = function(self, name, comp) {
-		var node = null;
-		if (comp) {
-			node = comp._node;
-			if (self.__disposes.indexOf(name) == -1) {
-				comp.addEvent('aftercomponentdispose', function(event) {
-					self.get(name);
-				});
-				self.__disposes.push(name);
-			}
-		}
+		var node = comp? comp._node : null;
 		self._set(name, comp);
 		self._set('_' + name, node);
 	};
