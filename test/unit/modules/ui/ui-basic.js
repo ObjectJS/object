@@ -894,7 +894,7 @@ object.use('ui/ui2', function(ui) {
 
 });
 
-test('different component using same node', function() {
+test('different component define same node', function() {
 object.use('ui/ui2.js', function(ui) {
 
 	var eventCalled = 0;
@@ -940,7 +940,7 @@ object.use('ui/ui2.js', function(ui) {
 });
 });
 
-test('different components using same nodes', function() {
+test('different components define same nodes', function() {
 object.use('ui/ui2.js', function(ui) {
 
 	var eventCalled = 0;
