@@ -232,15 +232,11 @@ ComponentMeta.prototype.getTemplate = function(metaOptions, relativeModule, call
 ComponentMeta.prototype.addEvent = function(self, name, comp) {
 
 	// comp可能会注册来自多个引用了它的其他的comp的事件注册
-	// 通过在eventBinds中保存已经注册过的其他组件，避免重复注册
-	if (!comp.eventBinds) {
-		comp.eventBinds = [];
-	}
-
-	if (comp.eventBinds.indexOf(self) != -1) {
+	// 通过在__bounds中保存已经注册过的其他组件，避免重复注册
+	if (self.__bounds.indexOf(comp) != -1) {
 		return;
 	} else {
-		comp.eventBinds.push(self);
+		self.__bounds.push(comp);
 	}
 
 	if (!(comp && comp.addEvent && self.__subEventsMap[name])) {
@@ -814,6 +810,8 @@ this.Component = new exports.ComponentClass(function() {
 		self.__rendered = []; // 后来被加入的，而不是首次通过selector选择的node的引用
 		// 存储subEvents，用于render时获取信息
 		self.__subEventsMap = {};
+		// 用于保存addEvent过的信息
+		self.__bounds = [];
 
 		self._node = dom.wrap(node);
 		// 只提示错误，且自身的初始化全部终止。
