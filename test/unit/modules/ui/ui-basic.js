@@ -45,6 +45,10 @@ object.use('ui/ui2.js', function(ui) {
 	// 修改selector
 	test.setOption('test.meta.selector', '.foo');
 	equal(test.get('test').getNode().className, 'foo', 'change selector ok.');
+
+	// dispose
+	test.test.dispose();
+	equal(test.test, null, 'disposed.');
 });
 
 });
@@ -53,8 +57,16 @@ test('mutiple sub property', function() {
 
 object.use('ui/ui2.js', function(ui) {
 
+	var methodCalled = 0;
+
+	var A = new Class(ui.Component, function() {
+		this._test = function() {
+			methodCalled++;
+		};
+	});
+
 	var TestComponent = new Class(ui.Component, function() {
-		this.test = ui.define('.test');
+		this.test = ui.define('.test', A);
 		this.test2 = ui.define('.test');
 	});
 	TestComponent.set('test3', ui.define('.test'));
@@ -72,6 +84,18 @@ object.use('ui/ui2.js', function(ui) {
 
 	// 下环线形式获取节点
 	equals(test._test, testNode, 'define components right when init.');
+
+	// 公用方法调用
+	test.test.test();
+	equal(methodCalled, 1, 'method called.');
+
+	// dispose
+	test.test[0].dispose();
+	equals(test.test.length, 3, 'dispose one component ok.');
+
+	// dispose all
+	test.test.dispose();
+	strictEqual(test.test.length, 0, 'dispose all ok.');
 });
 
 });

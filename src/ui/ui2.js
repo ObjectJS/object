@@ -781,19 +781,29 @@ this.ComponentsClass = new Class(Type, function() {
 
 		members.forEach(function(item) {
 			if (item.name === 'initialize') return;
-			var member = item.member;
-			if (typeof member == 'function') {
-				// 重新包装，避免名字不同导致warning
-				cls.set(item.name, function(self) {
-					// 有可能是个空的Components
-					if (self._node) {
-						return member.apply(self, arguments);
-					}
-				});
-			}
+			// 重新包装，避免名字不同导致warning
+			cls.set(item.name, item.member);
 		});
 
 		Type.__delattr__(cls, '__members');
+	};
+
+	this.__setattr__ = function(cls, name, member) {
+		// only method
+		if (typeof member != 'function' || Class.instanceOf(member, Type)) {
+			return;
+		}
+		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
+			Type.__setattr__(cls, name.slice(1), function(self) {
+				// 有可能是个空的Components
+				if (self._node) {
+					return member.apply(self, arguments);
+				}
+			});
+		}
+		else {
+			Type.__setattr__(cls, name, member);
+		}
 	};
 
 });
