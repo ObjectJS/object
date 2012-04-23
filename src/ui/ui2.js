@@ -571,7 +571,6 @@ this.onevent = function(name, gid) {
 	};
 };
 
-// metaclass
 this.ComponentClass = new Class(Type, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
@@ -784,8 +783,8 @@ this.ComponentsClass = new Class(Type, function() {
 this.Component = new exports.ComponentClass(function() {
 
 	/**
-	 * @param node 包装的节点
-	 * @param options 配置
+	 * @param {HTMLElement} node 包装的节点
+	 * @param {Object} options 配置
 	 */
 	this.initialize = function(self, node, options) {
 		// 可能是mixin addon
@@ -892,6 +891,9 @@ this.Component = new exports.ComponentClass(function() {
 		return node;
 	};
 
+	/**
+	 * 初始化所有Addons
+	 */
 	this.initAddons = classmethod(function(cls, self) {
 		var mixins = cls.get('__mixins__');
 		if (mixins) {
@@ -942,6 +944,9 @@ this.Component = new exports.ComponentClass(function() {
 		self.fireEvent('aftercomponentdispose');
 	};
 
+	/**
+	 * 获取一个通过ui.request定义的net.Request的实例
+	 */
 	this.getRequest = function(self, name) {
 		var pname = '_' + name;
 		var options = self.getOption(name) || {};
@@ -977,8 +982,8 @@ this.Component = new exports.ComponentClass(function() {
 	 * 获取option的值
 	 * 支持复杂name的查询
 	 * comp.getOption('xxx') 获取comp的xxx
-	 * comp.getOption('sub.xxx') 获取当前comp为sub准备的xxx。若要获取运行时的option，需要用com.sub.getOption('xxx');
-	 * @param name name
+	 * comp.getOption('sub.xxx') 获取当前comp为sub准备的xxx。若要获取运行时的option，请使用com.sub.getOption('xxx');
+	 * @param {string} name name
 	 */
 	this.getOption = function(self, name) {
 		var parts = name.split('.');
@@ -1036,6 +1041,9 @@ this.Component = new exports.ComponentClass(function() {
 
 	/**
 	 * 设置option的值
+	 * 支持复杂name的设置
+	 * comp.setOption('xxx', value) 设置comp的xxx
+	 * comp.setOption('sub.xxx', value) 若comp.sub已存在，则赋值到comp.sub，若未存在，则comp.sub在建立时会被赋值
 	 * @param name name
 	 * @param value value
 	 */
@@ -1069,6 +1077,9 @@ this.Component = new exports.ComponentClass(function() {
 		})(self, name, value);
 	});
 
+	/**
+	 * 获取成员的meta信息
+	 */
 	this.getMeta = function(self, name) {
 		var meta;
 
@@ -1089,11 +1100,10 @@ this.Component = new exports.ComponentClass(function() {
 	};
 
 	/**
-	 * 渲染一组component
-	 * 异步方法
-	 * @param name component名字
-	 * @param data 模板数据/初始化参数
-	 * @param callback render结束后的回调
+	 * 渲染一组component，渲染后执行callback
+	 * @param {String} name 子component名字
+	 * @param {Object} data 模板数据/初始化参数
+	 * @param {Function} callback render结束后的回调
 	 */
 	this.render = function(self, name, data, callback) {
 		// data可选
@@ -1174,7 +1184,6 @@ this.Component = new exports.ComponentClass(function() {
 
 });
 
-// metaclass 的 metaclass
 this.AddonClassClass = new Class(Type, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
@@ -1236,8 +1245,15 @@ this.AddonClass = new exports.AddonClassClass(exports.ComponentClass, function()
 	};
 });
 
+/**
+ * 一组Component的在页面上的集合，用于初始化页面
+ */
 this.Page = new Class(exports.Component, function() {
 
+	/**
+	 * @param {HTMLElement} [node=document.body] 页面的起始查询节点
+	 * @param {Object} options 配置页面组件的选项
+	 */
 	this.initialize = function(self, node, options) {
 
 		var window = require('window');
