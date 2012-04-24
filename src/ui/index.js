@@ -837,6 +837,16 @@ this.Component = new exports.ComponentClass(function() {
 		self.__bounds = [];
 
 		self._node = dom.wrap(node);
+
+		// 限定wrapper
+		if (self.allowTags && !self.allowTags.some(function(tag) {
+			// get('tagName') 返回的永远大写
+			return tag.toUpperCase() == self._node.get('tagName');
+		})) {
+			console.error('此节点限定了只允许包装 ' + self.allowTags);
+			return;
+		}
+
 		// 只提示错误，且自身的初始化全部终止。
 		// 但这并不影响其他组件获得本组件的引用及进行封装。
 		if (node.component) {
