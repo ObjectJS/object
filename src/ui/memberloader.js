@@ -17,8 +17,13 @@ function load(items, callback) {
 	});
 	require.async(dependencies, function() {
 		var members = [];
+		var member;
 		for (var i = 0; i < arguments.length; i++) {
-			members.push(arguments[i][memberNames[i]]);
+			member = arguments[i][memberNames[i]];
+			if (member === undefined) {
+				console.warn('can\'t find ' + memberNames[i] + ' in ' + dependencies[i]);
+			}
+			members.push(member);
 		}
 		callback.apply(null, members);
 	});
