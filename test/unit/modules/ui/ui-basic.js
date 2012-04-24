@@ -2,7 +2,7 @@ module('basic');
 
 test('sub property', function() {
 
-object.use('ui/ui2.js', function(ui) {
+object.use('ui', function(ui) {
 	var initCalled = 0;
 	var TestComponent = new Class(ui.Component, function() {
 		this.test = ui.define1('.test');
@@ -55,7 +55,7 @@ object.use('ui/ui2.js', function(ui) {
 
 test('mutiple sub property', function() {
 
-object.use('ui/ui2.js', function(ui) {
+object.use('ui', function(ui) {
 
 	var methodCalled = 0;
 
@@ -102,7 +102,7 @@ object.use('ui/ui2.js', function(ui) {
 
 test('parent property', function() {
 
-object.use('ui/ui2.js', function(ui) {
+object.use('ui', function(ui) {
 
 	var TestComponent = new Class(ui.Component, function() {
 		this.parent = ui.parent(function() {
@@ -124,7 +124,7 @@ object.use('ui/ui2.js', function(ui) {
 
 test('async load component', function() {
 
-object.use('ui/ui2.js', function(ui) {
+object.use('ui', function(ui) {
 	expect(2);
 
 	var script = document.createElement('script');
@@ -168,9 +168,9 @@ test('async load template', function() {
 	document.body.appendChild(script);
 	object._loader.buildFileLib();
 
-	object.define('test/index.js', 'ui/ui2', function(require) {
+	object.define('test/index.js', 'ui', function(require) {
 
-		var ui = require('ui/ui2');
+		var ui = require('ui');
 
 		var TestComponent = new Class(ui.Component, function() {
 			this.test = ui.define1('.test', function(self, make) {
@@ -212,7 +212,7 @@ test('async load template', function() {
 });
 
 test('option property', function() {
-object.use('ui/ui2.js', function(ui) {
+object.use('ui', function(ui) {
 
 	optionChangeFired = 0;
 
@@ -305,7 +305,7 @@ object.use('ui/ui2.js', function(ui) {
 });
 
 test('request property', function() {
-object.use('ui/ui2.js', function(ui) {
+object.use('ui', function(ui) {
 
 var errorCalled = 0;
 var successCalled = 0;
@@ -358,7 +358,7 @@ test.get('dataFetcher3').oncomplete = function() {
 });
 
 test('handle method', function() {
-object.use('ui/ui2.js', function(ui) {
+object.use('ui', function(ui) {
 
 	var methodCalled = 0;
 	var eventFired = 0;
@@ -391,7 +391,7 @@ object.use('ui/ui2.js', function(ui) {
 });
 
 test('on event method', function() {
-object.use('ui/ui2.js', function(ui) {
+object.use('ui', function(ui) {
 
 	var eventFired = 0;
 	var onEventCalled = 0;
@@ -444,7 +444,7 @@ object.use('ui/ui2.js', function(ui) {
 });
 
 test('extend on event method', function() {
-object.use('ui/ui2.js', function(ui) {
+object.use('ui', function(ui) {
 
 	var onEventCalled = 0;
 	var AddonComponent = new Class(ui.Component, function() {
@@ -469,7 +469,7 @@ object.use('ui/ui2.js', function(ui) {
 });
 
 test('sub event method', function() {
-object.use('ui/ui2.js', function(ui) {
+object.use('ui', function(ui) {
 
 
 	var clickEventCalled = 0;
@@ -518,7 +518,7 @@ object.use('ui/ui2.js', function(ui) {
 });
 
 test('addons', function() {
-object.use('ui/ui2.js', function(ui) {
+object.use('ui', function(ui) {
 
 	var addonInitCalled = 0;
 	var initCalled = 0;
@@ -563,8 +563,8 @@ object.use('ui/ui2.js', function(ui) {
 });
 
 test('custom addons', function() {
-object.define('test.test', 'ui/ui2', function(require) {
-	var ui = require('ui/ui2');
+object.define('test.test', 'ui', function(require) {
+	var ui = require('ui');
 	this.TestComponent = new Class(ui.Component, function() {
 		this.a = 1;
 	});
@@ -572,7 +572,7 @@ object.define('test.test', 'ui/ui2', function(require) {
 		this.b = 1;
 	});
 });
-object.use('ui/ui2.js', function(ui) {
+object.use('ui', function(ui) {
 
 	var A = new Class(ui.Component, function() {
 		this.foo = 1;
@@ -609,7 +609,7 @@ object.use('ui/ui2.js', function(ui) {
 });
 
 test('async custom addons', function() {
-object.use('ui/ui2.js', function(ui) {
+object.use('ui', function(ui) {
 
 	var script = document.createElement('script');
 	script.setAttribute('data-src', 'async-module.js');
@@ -668,7 +668,7 @@ object.use('ui/ui2.js', function(ui) {
 });
 
 test('render', function() {
-object.use('ui/ui2.js', function(ui) {
+object.use('ui', function(ui) {
 
 	var renderedEventCalled = 0;
 
@@ -761,7 +761,7 @@ object.use('ui/ui2.js', function(ui) {
 });
 
 test('render free component', function() {
-object.use('ui/ui2.js', function(ui) {
+object.use('ui', function(ui) {
 
 	var TestComponent = new Class(ui.Component, function() {
 		this.free = ui.define1(false);
@@ -805,7 +805,7 @@ object.use('ui/ui2.js', function(ui) {
 });
 
 test('addon factory', function() {
-object.use('ui/ui2', function(ui) {
+object.use('ui', function(ui) {
 
 	var eventFired = 0;
 
@@ -874,7 +874,7 @@ object.use('ui/ui2', function(ui) {
 
 test('page', function() {
 
-object.use('ui/ui2', function(ui) {
+object.use('ui', function(ui) {
 
 	var TestComponent = new Class(ui.Component, function() {
 	});
@@ -919,7 +919,7 @@ object.use('ui/ui2', function(ui) {
 });
 
 test('different component define same node', function() {
-object.use('ui/ui2.js', function(ui) {
+object.use('ui', function(ui) {
 
 	var eventCalled = 0;
 
@@ -965,7 +965,7 @@ object.use('ui/ui2.js', function(ui) {
 });
 
 test('different components define same nodes', function() {
-object.use('ui/ui2.js', function(ui) {
+object.use('ui', function(ui) {
 
 	var eventCalled = 0;
 
