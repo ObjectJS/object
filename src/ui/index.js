@@ -139,6 +139,7 @@ ComponentMeta.prototype.getAddonedType = function(cls, addons, callback) {
  */
 ComponentMeta.prototype.wrap = function(self, name, node, type) {
 	var comp = node.component;
+
 	// 此node已包装，但包装类不一定是type类型的，下面强制重新包装触发error
 	if (comp && Class.instanceOf(comp, type)) {
 		this.addEvent(self, name, comp);
@@ -147,7 +148,9 @@ ComponentMeta.prototype.wrap = function(self, name, node, type) {
 			comp.setOption(key, self._options[name][key]);
 		});
 
-	} else {
+	}
+	// 一个全新的未包装过的node
+	else {
 		comp = new type(node, self._options[name]);
 		this.addEvent(self, name, comp);
 	}
