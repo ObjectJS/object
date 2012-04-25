@@ -881,7 +881,7 @@ this.Component = new exports.ComponentClass(function() {
 
 		// 只提示错误，且自身的初始化全部终止。
 		// 但这并不影响其他组件获得本组件的引用及进行封装。
-		if (!self._options.virtual && node.component) {
+		if (node.component) {
 			console.error('一个元素只能被一个组件包装', node);
 			return;
 		}
@@ -904,8 +904,7 @@ this.Component = new exports.ComponentClass(function() {
 
 		// 初始化components
 		self.meta.components.forEach(function(name) {
-			var meta = self.getMeta(name);
-			meta.select(self, name, null, function(comp) {
+			self.getMeta(name).select(self, name, null, function(comp) {
 				inited++;
 				checkInit();
 			});
@@ -1322,7 +1321,6 @@ this.Page = new Class(exports.Component, function() {
 		if (!options) {
 			options = {};
 		}
-		options.virtual = true;
 		this.parent(self, node, options);
 
 		// node上不进行component的存储

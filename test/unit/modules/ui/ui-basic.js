@@ -10,14 +10,17 @@ object.use('ui', function(ui) {
 			return self._node.getElement('.test');
 		});
 		this.test3 = ui.define1('.test');
+		this.test4 = ui.define1('.test4', {
+			'meta.async': true
+		});
 		this._init = function(self) {
 			initCalled++;
 		};
 	});
-	TestComponent.set('test4', ui.define1('.test'));
+	TestComponent.set('test5', ui.define1('.test'));
 
 	var div = document.createElement('div');
-	div.innerHTML = '<div class="test">test</div><div class="foo"></div>';
+	div.innerHTML = '<div class="test">test</div><div class="foo"></div><div class="test4"></div>';
 
 	var test = new TestComponent(div);
 	var testComp = test.test;
@@ -35,12 +38,15 @@ object.use('ui', function(ui) {
 	// 引用相同，返回相同一个component引用
 	strictEqual(test.test2, testComp, 'using one same component when selector same.');
 	strictEqual(test.test3, testComp, 'using one same component when selector same.');
-	strictEqual(test.test4, testComp, 'component defined after class created.');
+	strictEqual(test.test5, testComp, 'component defined after class created.');
+
+	// 异步节点
+	strictEqual(test.test4, null, 'async node ok.');
 
 	// 直接获取节点方式
 	equals(test.test2.getNode(), testNode, 'using one same node when selector same.');
 	equals(test.test3.getNode(), testNode, 'using one same node when selector same.');
-	equals(test.test4.getNode(), testNode, 'component defined after class created.');
+	equals(test.test5.getNode(), testNode, 'component defined after class created.');
 
 	// 修改selector
 	test.setOption('test.meta.selector', '.foo');
@@ -72,7 +78,7 @@ object.use('ui', function(ui) {
 	TestComponent.set('test3', ui.define('.test'));
 
 	var div = document.createElement('div');
-	div.innerHTML = '<div class="test">test1</div><div class="test">test2</div><div class="test">test3</div><div class="test">test4</div>';
+	div.innerHTML = '<div class="test">test1</div><div class="test">test2</div><div class="test">test3</div><div class="test">test5</div>';
 
 	var test = new TestComponent(div);
 	var testComp = test.test;
@@ -266,6 +272,16 @@ object.use('ui', function(ui) {
 	// 普通设置
 	test.set('test', 2);
 	equals(test.test, 2, 'set option value ok.');
+
+	// 设置不存在的成员
+	test.set('nonexistent', 1);
+	equals(test.nonexistent, 1, 'set nonexistent ok.');
+	equals(test.getNode().nonexistent, 1, 'set nonexistent ok.');
+
+	// 设置同步到node
+	test.set('className', 'test');
+	equals(test.className, 'test', 'set to node ok.');
+	equals(test.getNode().className, 'test', 'set to node ok.');
 
 	// 设置会触发事件
 	equals(optionChangeFired, 1, 'set option fired change event.');
@@ -930,7 +946,9 @@ object.use('ui', function(ui) {
 	var Base2 = new Class(ui.Component, {});
 
 	var A = new Class(ui.Component, function() {
-		this.test = ui.define1('.test');
+		this.test = ui.define1('.test', {
+			a: 1
+		});
 
 		this.test2 = ui.define1('.test2', Base1);
 
@@ -940,7 +958,9 @@ object.use('ui', function(ui) {
 	});
 
 	var B = new Class(ui.Component, function() {
-		this.test = ui.define1('.test');
+		this.test = ui.define1('.test', {
+			a: 2
+		});
 
 		this.test2 = ui.define1('.test2', Base2);
 
@@ -950,7 +970,11 @@ object.use('ui', function(ui) {
 	});
 
 	var a = new A(div);
+	equal(a.test.getOption('a'), 1, 'default options ok.');
+
+	// b重新获取了test，并将其options赋值到了a
 	var b = new B(div.getElementsByTagName('div')[0]);
+	equal(a.test.getOption('a'), 2, 'change options ok.');
 
 	// 检测是否确实是同一引用
 	strictEqual(a.test, b.test, 'using same node.');
@@ -973,21 +997,33 @@ object.use('ui', function(ui) {
 	div.innerHTML = '<div><div class="test"></div><div class="test"></div><div class="test"></div></div>';
 
 	var A = new Class(ui.Component, function() {
-		this.test = ui.define('.test');
+		this.test = ui.define('.test', {
+			a: 1
+		});
 		this.test_click = function() {
 			eventCalled++;
 		};
 	});
 
 	var B = new Class(ui.Component, function() {
-		this.test = ui.define('.test');
+		this.test = ui.define('.test', {
+			a: 2
+		});
 		this.test_click = function() {
 			eventCalled++;
 		};
 	});
 
 	var a = new A(div);
+	equal(a.test[0].getOption('a'), 1, 'default options ok.');
+	equal(a.test[1].getOption('a'), 1, 'default options ok.');
+	equal(a.test[2].getOption('a'), 1, 'default options ok.');
+
+	// b重新获取了test，并将其options赋值到了a
 	var b = new B(div.getElementsByTagName('div')[0]);
+	equal(a.test[0].getOption('a'), 2, 'change options ok.');
+	equal(a.test[1].getOption('a'), 2, 'change options ok.');
+	equal(a.test[2].getOption('a'), 2, 'change options ok.');
 
 	// 检测是否确实是同一引用
 	strictEqual(a.test.length, b.test.length, 'using same node.');
