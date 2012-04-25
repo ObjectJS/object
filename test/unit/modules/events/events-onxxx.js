@@ -547,7 +547,7 @@ test('wrap DOM node', function() {
 	document.innerHTML = 'inner';
 	document.tagName = 'window';
 
-	Class.inject(wrapper, document, function(dest, src, prop) {
+	Class.inject(wrapper, document, function(prop, dest, src) {
 		// dest原有的属性中，function全部覆盖，属性不覆盖已有的
 		if (typeof src[prop] != 'function') {
 			if (!(prop in dest)) {
