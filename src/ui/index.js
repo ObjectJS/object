@@ -8,6 +8,17 @@ var optionsmod = require('./options');
 
 var globalid = 0;
 
+function getComponent(node, type) {
+	var gid = type.get('gid');
+	var comp ;
+	(node.components || []).some(function(component) {
+		if (component.gid === type.get('gid')) {
+			comp = component;
+		}
+	});
+	return comp;
+}
+
 /**
  * 用于存放每个Component的信息
  */
@@ -138,7 +149,7 @@ ComponentMeta.prototype.getAddonedType = function(cls, addons, callback) {
  * 将生成或查询到的node用type进行包装
  */
 ComponentMeta.prototype.wrap = function(self, name, node, type) {
-	var comp = node.component;
+	var comp = getComponent(node, type);
 
 	// 此node已包装，但包装类不一定是type类型的，下面强制重新包装触发error
 	if (comp && Class.instanceOf(comp, type)) {
@@ -277,6 +288,7 @@ ComponentMeta.prototype.addEvent = function(self, name, comp) {
 	self.__subEventsMap[name].forEach(function(eventMeta) {
 		var methodName = eventMeta.methodName;
 		comp.addEvent(eventMeta.eventType, function(event) {
+			event.targetComponent = comp;
 			var args;
 			// 将event._args pass 到函数后面
 			if (event._args) {
@@ -389,12 +401,18 @@ ParentComponentMeta.prototype.select = function(self, name, made, callback) {
 		type = this.type();
 	}
 
+	// 向上遍历所有node，找到其components中拥有与type相同gid的元素
 	var comp = null;
+	var components;
+	var gid = type.get('gid');
 	while ((node = node.parentNode)) {
-		if (node.component && Class.instanceOf(node.component, type)) {
-			comp = node.component;
-			break;
-		}
+		components = node? node.components : [];
+		components.some(function(component) {
+			if (component.gid === gid) {
+				comp = component;
+				return true;
+			}
+		})
 	}
 
 	this.addEvent(self, name, comp);
@@ -775,9 +793,8 @@ this.ComponentClass = new Class(Type, function() {
 					return;
 				}
 				self._node = nodes;
-				self._node.component = self;
 				self._node.forEach(function(node) {
-					var comp = node.component || new cls(node, options);
+					var comp = getComponent(node, cls) || new cls(node, options);
 					self.push(comp);
 				});
 			};
@@ -882,13 +899,21 @@ this.Component = new exports.ComponentClass(function() {
 		// 保存options，生成component时用于传递
 		self._options = optionsmod.parse(options);
 
-		// 只提示错误，且自身的初始化全部终止。
-		// 但这并不影响其他组件获得本组件的引用及进行封装。
-		if (node.component) {
-			console.error('一个元素只能被一个组件包装', node);
-			return;
+		if (!self._node.components) {
+			self._node.components = [];
 		}
-		self._node.component = self;
+		self._node.components.push(self);
+
+		// 做同继承链的检测
+		var lastType = self._node.componentType;
+		if (!lastType) {
+			self._node.componentType = self.__class__;
+		} else if (Class.getChain(lastType).indexOf(self.__class__) != -1) {
+		} else if (Class.getChain(self.__class__).indexOf(lastType) != -1) {
+			self._node.componentType = self.__class__;
+		} else {
+			console.error('node has already wrapped.');
+		}
 
 		// 记录已经获取完毕的components
 		var inited = 0;
@@ -1008,7 +1033,7 @@ this.Component = new exports.ComponentClass(function() {
 	 */
 	this._destory = function(self) {
 		self.__rendered.forEach(function(node) {
-			node.component.dispose();
+			getComponent(node, self.__class__).dispose();
 		});
 		self.__rendered = [];
 	};
@@ -1325,9 +1350,6 @@ this.Page = new Class(exports.Component, function() {
 			options = {};
 		}
 		this.parent(self, node, options);
-
-		// node上不进行component的存储
-		delete node.component;
 	};
 
 	this.fireEvent = function(self) {

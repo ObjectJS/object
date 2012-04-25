@@ -507,14 +507,14 @@ object.use('ui', function(ui) {
 			// 传递的是正确的事件
 			equals(event.type, 'click', 'arguments pass ok.');
 			// 从event上能够找到触发此事件的component信息。
-			equals(event.target.component, self.test, 'component arguments pass ok with click event.');
+			equals(event.targetComponent, self.test, 'component arguments pass ok with click event.');
 
 			clickEventCalled++;
 		};
 
 		this.test_test = function(self, event, a) {
 			// 从event上能够找到触发此事件的component信息。
-			equals(event.target.component, self.test, 'component arguments pass ok with custom event.');
+			equals(event.targetComponent, self.test, 'component arguments pass ok with custom event.');
 			// 自定义事件传递的参数可以获取
 			equals(a, 'test', 'custom arguments pass ok with custom event.');
 
@@ -994,9 +994,6 @@ object.use('ui', function(ui) {
 
 	// 类型不同
 	notEqual(a.test2, b.test2, 'using same node with different type.');
-
-	// virtual
-	// TODO
 });
 });
 
