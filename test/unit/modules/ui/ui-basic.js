@@ -696,7 +696,7 @@ object.use('ui', function(ui) {
 		});
 
 		this.test3 = ui.define1('.test3', SubComponent, {
-			'meta.template': '<div class="test3">old</div>',
+			'meta.template': '<div class="test3">old</div>'
 		}, function(self, make, data) {
 			self._node.appendChild(make({value:data.value + 1}));
 		});
@@ -715,7 +715,7 @@ object.use('ui', function(ui) {
 		'test.test': true,
 		'test.hello': 'test',
 		'test2.meta.template': '<div class="test2">foo:{{foo}},bar:{{bar}}</div>',
-		'test3.meta.template': '<div class="test3">{{value}}</div>',
+		'test3.meta.template': '<div class="test3">{{value}}</div>'
 	});
 
 	var renderCallbackCalled = 0;

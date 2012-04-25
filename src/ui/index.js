@@ -24,6 +24,15 @@ function RuntimeMeta() {
 	this.defaultOptions = {};
 }
 
+function extend(src, target, ov) {
+	for (var name in target) {
+		if (src[name] === undefined || ov !== false) {
+			src[name] = target[name];
+		}
+	}
+	return src;
+}
+
 /**
  * 将value转换成需要的type
  */
@@ -729,7 +738,7 @@ this.ComponentClass = new Class(Type, function() {
 		var meta = cls.get('meta');
 		var oMeta = other.get('meta');
 		// 合并defaultOptions
-		object.extend(meta.defaultOptions, oMeta.defaultOptions, false);
+		extend(meta.defaultOptions, oMeta.defaultOptions, false);
 		// 合并components
 		oMeta.components.forEach(function(name) {
 			if (meta.components.indexOf(name) == -1) meta.components.push(name);
@@ -865,12 +874,10 @@ this.Component = new exports.ComponentClass(function() {
 			return;
 		}
 
+		options = options || {};
+		extend(options, self.meta.defaultOptions, false);
 		// 保存options，生成component时用于传递
-		self._options = optionsmod.parse(options || {});
-		// 此时self.meta.defaultOptions已经有没有解析过的默认options了
-		Object.keys(self.meta.defaultOptions).forEach(function(key) {
-			optionsmod.setOptionTo(self._options, key, self.meta.defaultOptions[key], false);
-		});
+		self._options = optionsmod.parse(options);
 
 		// 只提示错误，且自身的初始化全部终止。
 		// 但这并不影响其他组件获得本组件的引用及进行封装。
@@ -952,7 +959,7 @@ this.Component = new exports.ComponentClass(function() {
 		self.meta.options.forEach(function(name) {
 			extendData[name] = self.get(name);
 		});
-		object.extend(data, extendData);
+		extend(data, extendData);
 		var result = string.substitute(template, data);
 		var node = dom.Element.fromString(result);
 
@@ -1045,18 +1052,14 @@ this.Component = new exports.ComponentClass(function() {
 	 * @param {string} name name
 	 */
 	this.getOption = function(self, name) {
-		var parts = name.split('.');
-		var value, current;
-
-		// 获取自己身上的option
-		// 三个获取级别，优先级：结构>用户设置>默认
-		if (parts.length == 1) {
-
+		var value = optionsmod.getOptionFrom(self._options, name, function(value) {
+			// 获取自己身上的option
+			// 三个获取级别，优先级：结构>用户设置>默认
 			var meta = self.getMeta(name);
 
 			// meta不存在表示在获取一个没有注册的option
 			if (!meta) {
-				return self._options[name];
+				return value;
 			}
 
 			// 默认getter是从结构中通过data-前缀获取
@@ -1083,18 +1086,10 @@ this.Component = new exports.ComponentClass(function() {
 			}
 			// 确保获取到的value得到更新
 			self._set(name, value);
-		}
-		// 获取为子引用准备的option
-		else {
-			current = self._options;
-			for (var i = 0, part; i < parts.length; i++) {
-				part = parts[i];
-				if (current) {
-					current = current[part];
-				}
-			}
-			value = current;
-		}
+
+			return value;
+		});
+
 		return value;
 	};
 
@@ -1107,40 +1102,29 @@ this.Component = new exports.ComponentClass(function() {
 	 * @param value value
 	 */
 	this.setOption = optionsmod.overloadsetter(function(self, name, value) {
-		// 由于overloadsetter是通过name是否为string来判断传递形式是name-value还是{name:value}的
-		// 在回调中为了性能需要直接传的parts，类型为数组，而不是字符串，因此无法通过回调用overloadsetter包装后的方法进行回调
-		(function(self, name, value) {
-			var parts = Array.isArray(name)? name : name.split('.');
 
-			// 为自己设置option
-			if (parts.length == 1) {
-				var oldValue = self.getOption(name);
-				self._options[parts[0]] = value;
-				// 若不是在设置定义的option，则调用self.set
-				if (self.meta.options.indexOf(name) == -1) {
-					self.set(name, value);
-				}
-				// 否则触发change
-				else {
-					(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
-						// 重新更新对象上的直接引用值
-						self.getOption(name);
-					}))(self, oldValue, value);
-				}
+		var oldValue = self.getOption(name);
+
+		optionsmod.setOptionTo(self._options, name, value, function() {
+			// 若不是在设置定义的option，则调用self.set
+			if (self.meta.options.indexOf(name) == -1) {
+				self.set(name, value);
 			}
-			// 为子引用设置option
+			// 否则触发change
 			else {
-				// 保存在_options中
-				optionsmod.setOptionTo(self._options, parts, value);
-
-				var sub = self[parts[0]];
-				// 子引用已经存在
-				if (sub && sub.setOption) {
-					sub.setOption(parts.slice(1).join('.'), value);
-				}
+				(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
+					// 重新更新对象上的直接引用值
+					self.getOption(name);
+				}))(self, oldValue, value);
 			}
+		}, function(prefix, surfix) {
+			var sub = self[prefix];
+			// 子引用已经存在
+			if (sub && sub.setOption) {
+				sub.setOption(surfix, value);
+			}
+		});
 
-		})(self, name, value);
 	});
 
 	/**
@@ -1204,7 +1188,7 @@ this.Component = new exports.ComponentClass(function() {
 			// data
 			data = data || {};
 			var options = self._options[name];
-			object.extend(data, options, false);
+			extend(data, options, false);
 
 			meta.getTemplate(metaOptions, self.__class__.__module__, function(template) {
 				var made = [];

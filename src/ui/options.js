@@ -1,45 +1,82 @@
 object.define('ui/options.js', 'events', function(require, exports) {
 
 /**
- * 用于承载options的空对象
- */
-function Options() {
-}
-
-/**
- * 向current这个对象的name成员设置value值
- * @param current 需要被设置的对象
- * @param name 一个通过.分开各个部分的名称
- * @param value 需要设置的值
- * @pram ov 是否覆盖已有值
- */
-this.setOptionTo = function(current, name, value, ov) {
-	var parts = Array.isArray(name)? name : name.split('.');
-	// 生成前缀对象
-	for (var i = 0, part; i < parts.length - 1; i++) {
-		part = parts[i];
-		if (current[part] === undefined) {
-			current[part] = new Options();
-		}
-		current = current[part];
-	}
-	var last = parts[parts.length - 1];
-	if (!current[last] || ov !== false) {
-		current[last] = value;
-	}
-};
-
-/**
  * {'a.b.c': 1, b: 2} ==> {a: {b.c:1}, b: 2}
  */
 this.parse = function(options) {
-	if (options.constructor == Options) return options;
-
-	var parsed = new Options();
+	var parsed = {};
 	Object.keys(options).forEach(function(name) {
 		exports.setOptionTo(parsed, name, options[name]);
 	});
 	return parsed;
+};
+
+/**
+ * 解析一个option项，若不是子元素则调用parser1，若存在子元素则调用paser
+ */
+this.setOptionTo = function(parsed, name, value, parser1, parser) {
+	var pointAt = name.indexOf('.');
+	var prefix, surfix;
+	// 直接name
+	if (pointAt == -1) {
+		parsed[name] = value;
+		if (parser1) {
+			parser1();
+		}
+	}
+	// 子option
+	else {
+		prefix = name.slice(0, pointAt);
+		surfix = name.slice(pointAt + 1);
+		if (!parsed[prefix]) {
+			parsed[prefix] = {};
+		}
+		parsed[prefix][surfix] = value;
+		if (parser) {
+			parser(prefix, surfix);
+		}
+	}
+};
+
+/**
+ * 从parsed中获取name的option
+ */
+this.getOptionFrom = function(parsed, name, getter1) {
+	var pointAt = name.indexOf('.');
+	var p, l;
+	var prefix, surfix;
+	var value;
+
+	// 直接找到
+	if (pointAt == -1) {
+		value = parsed[name];
+		// 定义查找
+		if (getter1) {
+			value = getter1(value);
+		}
+	}
+	// 多重名字
+	else {
+		prefix = name.slice(0, pointAt);
+		surfix = name.slice(pointAt + 1);
+		p = surfix + '.';
+		l = p.length;
+
+		if (parsed[prefix]) {
+			if (parsed[prefix][surfix] != undefined) {
+				value = parsed[prefix][surfix];
+			} else {
+				value = {};
+				Object.keys(parsed[prefix]).forEach(function(key) {
+					if (key.indexOf(p) == 0) {
+						value[key.slice(l)] = parsed[prefix][key];
+					}
+				});
+			}
+		}
+	}
+
+	return value;
 };
 
 // 仿照 mootools 的overloadSetter，返回一个 key/value 这种形式的function参数的包装，使其支持{key1: value1, key2: value2} 这种形式
