@@ -40,8 +40,11 @@ object.use('ui', function(ui) {
 	strictEqual(test.test3, testComp, 'using one same component when selector same.');
 	strictEqual(test.test5, testComp, 'component defined after class created.');
 
-	// 异步节点
+	// 异步节点，不初始化，render才生成
 	strictEqual(test.test4, null, 'async node ok.');
+	test.render('test4', function() {
+		equal(test.test4.getNode().tagName, 'DIV', 'async node ok.');
+	});
 
 	// 直接获取节点方式
 	equals(test.test2.getNode(), testNode, 'using one same node when selector same.');
@@ -934,7 +937,7 @@ object.use('ui', function(ui) {
 
 });
 
-test('different component define same node', function() {
+test('virtual component', function() {
 object.use('ui', function(ui) {
 
 	var eventCalled = 0;
@@ -952,6 +955,8 @@ object.use('ui', function(ui) {
 
 		this.test2 = ui.define1('.test2', Base1);
 
+		this.test3 = ui.define1('.test2', Base1);
+
 		this.test_click = function() {
 			eventCalled++;
 		};
@@ -963,6 +968,10 @@ object.use('ui', function(ui) {
 		});
 
 		this.test2 = ui.define1('.test2', Base2);
+
+		this.test3 = ui.define1('.test2', Base2, {
+			'meta.virtual': true
+		});
 
 		this.test_click = function() {
 			eventCalled++;
@@ -985,10 +994,13 @@ object.use('ui', function(ui) {
 
 	// 类型不同
 	notEqual(a.test2, b.test2, 'using same node with different type.');
+
+	// virtual
+	// TODO
 });
 });
 
-test('different components define same nodes', function() {
+test('virtual components', function() {
 object.use('ui', function(ui) {
 
 	var eventCalled = 0;
