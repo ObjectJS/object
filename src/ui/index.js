@@ -142,9 +142,9 @@ ComponentMeta.prototype.wrap = function(self, name, node, type) {
 	// 此node已包装，但包装类不一定是type类型的，下面强制重新包装触发error
 	if (comp && Class.instanceOf(comp, type)) {
 		this.addEvent(self, name, comp);
-		var defaultOptions = self.getMeta(name).defaultOptions;
-		Object.keys(defaultOptions).forEach(function(key) {
-			comp.setOption(key, defaultOptions[key]);
+		// 重新搜索，更新其options
+		Object.keys(self._options[name]).forEach(function(key) {
+			comp.setOption(key, self._options[name][key]);
 		});
 
 	} else {
