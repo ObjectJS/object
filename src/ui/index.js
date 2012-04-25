@@ -12,7 +12,7 @@ function getComponent(node, type) {
 	var gid = type.get('gid');
 	var comp ;
 	(node.components || []).some(function(component) {
-		if (component.gid === type.get('gid')) {
+		if (component.gid === gid) {
 			comp = component;
 		}
 	});
@@ -1033,7 +1033,7 @@ this.Component = new exports.ComponentClass(function() {
 	 */
 	this._destory = function(self) {
 		self.__rendered.forEach(function(node) {
-			getComponent(node, self.__class__).dispose();
+			getComponent(node, self).dispose();
 		});
 		self.__rendered = [];
 	};
