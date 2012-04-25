@@ -84,10 +84,6 @@ ComponentMeta.prototype.getType = function(metaOptions, callback) {
 	// async
 	if (typeof type == 'string') {
 		memberloader.load(type, function(cls) {
-			if (!cls) {
-				console.error('can\'t get type ' + type);
-				return;
-			}
 			meta.getAddonedType(cls, addons, callback);
 		});
 	}
@@ -890,7 +886,7 @@ this.Component = new exports.ComponentClass(function() {
 			// get('tagName') 返回的永远大写
 			return tag.toUpperCase() == self._node.get('tagName');
 		})) {
-			console.error('此节点限定了只允许包装 ' + self.allowTags);
+			console.error('just allow ' + self.allowTags + ' tags.');
 			return;
 		}
 
@@ -912,7 +908,7 @@ this.Component = new exports.ComponentClass(function() {
 		} else if (Class.getChain(self.__class__).indexOf(lastType) != -1) {
 			self._node.componentType = self.__class__;
 		} else {
-			console.error('node has already wrapped.');
+			console.warn('node has already wrapped.');
 		}
 
 		// 记录已经获取完毕的components
@@ -979,7 +975,7 @@ this.Component = new exports.ComponentClass(function() {
 	 */
 	this.createNode = function(self, template, data) {
 		if (!template) {
-			console.error('模板不存在');
+			console.error('no template specified for ' + name + '.');
 			return null;
 		}
 		var extendData = {};
@@ -1221,13 +1217,7 @@ this.Component = new exports.ComponentClass(function() {
 				var made = [];
 				// make方法仅仅返回node，这样在new comp时node已经在正确的位置，parent可以被正确的查找到
 				function make(newData) {
-					var node;
-					if (template) {
-						node = self.createNode(template, newData || data);
-					} else {
-						console.error('no template specified for ' + name + '.');
-						return null;
-					}
+					var node = self.createNode(template, newData || data);
 					made.push(node);
 					self.__rendered.push(node);
 					return node;
