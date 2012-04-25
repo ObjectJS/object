@@ -900,7 +900,7 @@ this.Component = new exports.ComponentClass(function() {
 			// option（会触发change事件）
 			// handle（会触发同名事件），但handle在此阶段已经无法控制了，只能要求开发者限制其使用
 			// onEvent（会为自己绑定事件）
-			self.__virtual = true;
+			self.__virtual = dom.wrap(document.createElement('div'));
 		}
 
 		// 限定wrapper
@@ -959,15 +959,15 @@ this.Component = new exports.ComponentClass(function() {
 	};
 
 	this.fireEvent = function(self) {
-		return self._node.fireEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
+		return (self.__virtual || self._node).fireEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
 	};
 
 	this.addEvent = function(self) {
-		return self._node.addEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
+		return (self.__virtual || self._node).addEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
 	};
 
 	this.removeEvent = function(self) {
-		return self._node.removeEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
+		return (self.__virtual || self._node).removeEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
 	};
 
 	this.show = function(self) {
