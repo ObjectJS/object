@@ -9,10 +9,11 @@ var optionsmod = require('./options');
 var globalid = 0;
 
 function getComponent(node, type) {
-	var gid = type.get('gid');
 	var comp ;
 	(node.components || []).some(function(component) {
-		if (component.gid === gid) {
+		// 用instanceOf判断，而不要通过gid
+		// 在多个use下gid有可能重复，可能会找到错误的对象
+		if (Class.instanceOf(component, type)) {
 			comp = component;
 		}
 	});
@@ -400,11 +401,10 @@ ParentComponentMeta.prototype.select = function(self, name, made, callback) {
 	// 向上遍历所有node，找到其components中拥有与type相同gid的元素
 	var comp = null;
 	var components;
-	var gid = type.get('gid');
 	while ((node = node.parentNode)) {
 		components = node? node.components : [];
 		components.some(function(component) {
-			if (component.gid === gid) {
+			if (Class.instanceOf(component, type)) {
 				comp = component;
 				return true;
 			}
@@ -1037,7 +1037,7 @@ this.Component = new exports.ComponentClass(function() {
 	 */
 	this._destory = function(self) {
 		self.__rendered.forEach(function(node) {
-			getComponent(node, self).dispose();
+			getComponent(node, self.__class__).dispose();
 		});
 		self.__rendered = [];
 	};
