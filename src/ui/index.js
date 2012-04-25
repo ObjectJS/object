@@ -133,6 +133,10 @@ ComponentMeta.prototype.wrap = function(self, name, node, type) {
 	// 此node已包装，但包装类不一定是type类型的，下面强制重新包装触发error
 	if (comp && Class.instanceOf(comp, type)) {
 		this.addEvent(self, name, comp);
+		var defaultOptions = self.getMeta(name).defaultOptions;
+		Object.keys(defaultOptions).forEach(function(key) {
+			comp.setOption(key, defaultOptions[key]);
+		});
 
 	} else {
 		comp = new type(node, self._options[name]);
@@ -173,6 +177,12 @@ ComponentMeta.prototype.select = function(self, name, made, callback) {
 	var selector = this.selector;
 	var meta = this;
 	var node;
+
+	// async
+	if (self[name] === undefined && metaOptions.async) {
+		meta.setComponent(self, name, null, callback);
+		return;
+	}
 
 	// 说明无所谓selector，生成什么就放什么就行
 	// 在强指定selector为false时，忽略meta中配置的selector
@@ -817,6 +827,14 @@ this.ComponentsClass = new Class(Type, function() {
  */
 this.Component = new exports.ComponentClass(function() {
 
+	this.__setattr__ = function(self, name, value) {
+		// 并非定义的property，直接同步到node上
+		if (!Class.hasProperty(self, name)) {
+			self._node.set(name, value);
+		}
+		Object.__setattr__(self, name, value);
+	};
+
 	/**
 	 * @param {HTMLElement} node 包装的节点
 	 * @param {Object} options 配置
@@ -847,20 +865,20 @@ this.Component = new exports.ComponentClass(function() {
 			return;
 		}
 
-		// 只提示错误，且自身的初始化全部终止。
-		// 但这并不影响其他组件获得本组件的引用及进行封装。
-		if (node.component) {
-			console.error('一个元素只能被一个组件包装', node);
-			return;
-		}
-		self._node.component = self;
-
 		// 保存options，生成component时用于传递
 		self._options = optionsmod.parse(options || {});
 		// 此时self.meta.defaultOptions已经有没有解析过的默认options了
 		Object.keys(self.meta.defaultOptions).forEach(function(key) {
 			optionsmod.setOptionTo(self._options, key, self.meta.defaultOptions[key], false);
 		});
+
+		// 只提示错误，且自身的初始化全部终止。
+		// 但这并不影响其他组件获得本组件的引用及进行封装。
+		if (!self._options.virtual && node.component) {
+			console.error('一个元素只能被一个组件包装', node);
+			return;
+		}
+		self._node.component = self;
 
 		// 记录已经获取完毕的components
 		var inited = 0;
@@ -879,7 +897,8 @@ this.Component = new exports.ComponentClass(function() {
 
 		// 初始化components
 		self.meta.components.forEach(function(name) {
-			self.getMeta(name).select(self, name, null, function(comp) {
+			var meta = self.getMeta(name);
+			meta.select(self, name, null, function(comp) {
 				inited++;
 				checkInit();
 			});
@@ -1097,10 +1116,17 @@ this.Component = new exports.ComponentClass(function() {
 			if (parts.length == 1) {
 				var oldValue = self.getOption(name);
 				self._options[parts[0]] = value;
-				(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
-					// 重新更新对象上的直接引用值
-					self.getOption(name);
-				}))(self, oldValue, value);
+				// 若不是在设置定义的option，则调用self.set
+				if (self.meta.options.indexOf(name) == -1) {
+					self.set(name, value);
+				}
+				// 否则触发change
+				else {
+					(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
+						// 重新更新对象上的直接引用值
+						self.getOption(name);
+					}))(self, oldValue, value);
+				}
 			}
 			// 为子引用设置option
 			else {
@@ -1152,34 +1178,34 @@ this.Component = new exports.ComponentClass(function() {
 			data = null;
 		}
 
-		var methodName = 'render_' + name;
-
-		// 如果已经存在结构了，则不用再render了
-		var comp = self.get(name);
-		if (comp && (!('length' in comp) || comp.length != 0)) {
-			if (callback) {
-				callback();
-			}
-			return;
-		}
-
-		var meta = self.getMeta(name);
-
-		var renderer = self[methodName];
-		if (!renderer) {
-			console.error('no renderer specified for ' + name + '.');
-			return;
-		}
-
-		// data
-		data = data || {};
-		var options = self._options[name];
-		object.extend(data, options, false);
-
 		var metaOptions = self.getOption(name + '.meta');
+		var meta = self.getMeta(name);
 
 		// TODO 用async维护两个异步
 		meta.getType(metaOptions, function(type) {
+
+			// 如果已经存在结构了，则不用再render了
+			// 需要确保这个get是同步的，因此在getType后执行
+			var comp = self.get(name);
+			if (comp && (!('length' in comp) || comp.length != 0)) {
+				if (callback) {
+					callback();
+				}
+				return;
+			}
+
+			var methodName = 'render_' + name;
+			var renderer = self[methodName];
+			if (!renderer) {
+				console.error('no renderer specified for ' + name + '.');
+				return;
+			}
+
+			// data
+			data = data || {};
+			var options = self._options[name];
+			object.extend(data, options, false);
+
 			meta.getTemplate(metaOptions, self.__class__.__module__, function(template) {
 				var made = [];
 				// make方法仅仅返回node，这样在new comp时node已经在正确的位置，parent可以被正确的查找到
@@ -1309,6 +1335,10 @@ this.Page = new Class(exports.Component, function() {
 		// Page触发的事件全都有一个隐含节点 delegateNode 来触发
 		self._delegateNode = dom.wrap(document.createElement('div'));
 
+		if (!options) {
+			options = {};
+		}
+		options.virtual = true;
 		this.parent(self, node, options);
 
 		// node上不进行component的存储
