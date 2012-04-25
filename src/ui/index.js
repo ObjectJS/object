@@ -881,20 +881,6 @@ this.Component = new exports.ComponentClass(function() {
 
 		self._node = dom.wrap(node);
 
-		// 限定wrapper
-		if (self.allowTags && !self.allowTags.some(function(tag) {
-			// get('tagName') 返回的永远大写
-			return tag.toUpperCase() == self._node.get('tagName');
-		})) {
-			console.error('just allow ' + self.allowTags + ' tags.');
-			return;
-		}
-
-		options = options || {};
-		extend(options, self.meta.defaultOptions, false);
-		// 保存options，生成component时用于传递
-		self._options = optionsmod.parse(options);
-
 		if (!self._node.components) {
 			self._node.components = [];
 		}
@@ -908,8 +894,28 @@ this.Component = new exports.ComponentClass(function() {
 		} else if (Class.getChain(self.__class__).indexOf(lastType) != -1) {
 			self._node.componentType = self.__class__;
 		} else {
-			console.warn('node has already wrapped.');
+			console.warn('node has already wrapped, auto changed to virtual mode.');
+			// 在virtual模式下，所有涉及到self._node触发事件的特性都不会有
+			// 包括：
+			// option（会触发change事件）
+			// handle（会触发同名事件），但handle在此阶段已经无法控制了，只能要求开发者限制其使用
+			// onEvent（会为自己绑定事件）
+			self.__virtual = true;
 		}
+
+		// 限定wrapper
+		if (self.allowTags && !self.allowTags.some(function(tag) {
+			// get('tagName') 返回的永远大写
+			return tag.toUpperCase() == self._node.get('tagName');
+		})) {
+			console.error('just allow ' + self.allowTags + ' tags.');
+			return;
+		}
+
+		options = options || {};
+		extend(options, self.meta.defaultOptions, false);
+		// 保存options，生成component时用于传递
+		self._options = optionsmod.parse(options);
 
 		// 记录已经获取完毕的components
 		var inited = 0;
@@ -934,16 +940,18 @@ this.Component = new exports.ComponentClass(function() {
 			});
 		});
 
-		// 初始化options
-		self.meta.options.forEach(function(name) {
-			self.getMeta(name).addEvent(self, name);
-			self.getOption(name);
-		});
+		if (!self.__virtual) {
+			// 初始化options
+			self.meta.options.forEach(function(name) {
+				self.getMeta(name).addEvent(self, name);
+				self.getOption(name);
+			});
 
-		// 初始化onEvents
-		self.meta.onEvents.forEach(function(name) {
-			self.getMeta(name).bindEvents(self, name);
-		});
+			// 初始化onEvents
+			self.meta.onEvents.forEach(function(name) {
+				self.getMeta(name).bindEvents(self, name);
+			});
+		}
 
 		self.initAddons(self);
 
@@ -1038,8 +1046,11 @@ this.Component = new exports.ComponentClass(function() {
 	 * 清空自身节点
 	 */
 	this._dispose = function(self) {
-		self._node.dispose();
-		self.fireEvent('aftercomponentdispose');
+		// virtual mode 无法触发事件，因此不执行dispose操作
+		if (!self.__virtual) {
+			self._node.dispose();
+			self.fireEvent('aftercomponentdispose');
+		}
 	};
 
 	/**
@@ -1331,27 +1342,12 @@ this.Page = new Class(exports.Component, function() {
 			node = window.document.body;
 		}
 
-		// Page不限制一个节点只能包装一个组件
-		// Component进行此限制是为了理解更简单，对于触发的事件也避免冲突
-		// Page触发的事件全都有一个隐含节点 delegateNode 来触发
-		self._delegateNode = dom.wrap(document.createElement('div'));
-
 		if (!options) {
 			options = {};
 		}
+
+		// 会自动进入virtual mode
 		this.parent(self, node, options);
-	};
-
-	this.fireEvent = function(self) {
-		return self._delegateNode.fireEvent.apply(self._delegateNode, Array.prototype.slice.call(arguments, 1));
-	};
-
-	this.addEvent = function(self) {
-		return self._delegateNode.addEvent.apply(self._delegateNode, Array.prototype.slice.call(arguments, 1));
-	};
-
-	this.removeEvent = function(self) {
-		return self._delegateNode.removeEvent.apply(self._delegateNode, Array.prototype.slice.call(arguments, 1));
 	};
 
 });
