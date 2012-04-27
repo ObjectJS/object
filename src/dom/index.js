@@ -1,4 +1,4 @@
-object.add('dom/index.js', 'ua, events, string, dom/dd, sys', function(exports, ua, events, string, dd, sys) {
+object.add('dom/index.js', 'ua, events, string, dom/dd, net', function(exports, ua, events, string, dd, net) {
 
 window.UID = 1;
 var storage = {};
@@ -1182,7 +1182,6 @@ this.FormElement = new Class(exports.Element, function() {
 		if (!params.onerror) params.onerror = function(event) {
 			self.fireEvent('requestError', {request: event.request});
 		};
-		var net = sys.modules['net'];
 		if (net) {
 			xhr = new net.Request(params);
 		} else {
