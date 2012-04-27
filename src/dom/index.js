@@ -1,10 +1,10 @@
-object.define('dom/index.js', 'ua, events, string, ./dd, sys', function(require, exports, module) {
+object.define('dom/index.js', 'ua, events, string, ./dd, net', function(require, exports, module) {
 
 var ua = require('ua');
 var events = require('events');
 var string = require('string');
 var dd = require('./dd');
-var sys = require('sys');
+var net = require('net');
 
 window.UID = 1;
 var storage = {};
@@ -1190,7 +1190,6 @@ this.FormElement = new Class(exports.Element, function() {
 		if (!params.onerror) params.onerror = function(event) {
 			self.fireEvent('requestError', {request: event.request});
 		};
-		var net = sys.modules['net'];
 		if (net) {
 			xhr = new net.Request(params);
 		} else {

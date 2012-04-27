@@ -85,6 +85,7 @@ this.ping = function(url) {
  * @param {string} options.method get/post
  * @param {function} options.onsuccess 请求成功后的回调,参数是封装过的ajax对象
  * @param {function} options.onerror 请求失败后的回调
+ * @param {int} options.timeout 请求的超时毫秒数
  */
 this.Request = new Class(function() {
 
@@ -94,6 +95,7 @@ this.Request = new Class(function() {
 		options = options || {};
 		self.url = options.url || '';
 		self.method = options.method || 'get';
+		self.timeout = options.timeout && options.timeout > 0 ? options.timeout : 0;
 		self.headers = {};
 		self.data = options.data || null;
 		self._xhr = null;
@@ -110,6 +112,12 @@ this.Request = new Class(function() {
 	 */
 	this.send = function(self, data) {
 		exports.ajaxRequest(self.url, function(xhr) {
+			// onreadystatechange和timer共同使用的标志
+			// 异常出现的情形：
+			// 	在设置timeout极短（1ms）时，timer首先执行，timeout事件触发，在abort执行之前，xhr已经成功返回结果，触发success
+			//  这样一个请求既触发timeout又触发success，不正确
+			// 增加callbackCalled就是为了避免上述情形的出现
+			var callbackCalled = false;
 			self._xhr = xhr;
 			var eventData = {request: self};
 
@@ -118,7 +126,18 @@ this.Request = new Class(function() {
 
 				if (xhr.readyState === 4) {
 
-					// IE6 dont's support getResponseHeader method
+
+					// 如果timer已经抢先执行，则直接返回
+					if (callbackCalled) {
+						return;
+					} 
+					// 如果timer还没有执行，则清除timer
+					else if (self._timer) {
+						clearTimeout(self._timer);
+						self._timer = null;
+					}
+
+					// IE6 don't support getResponseHeader method
 					// if (xhr.getResponseHeader('Content-Type') == 'text/json') {
 						//xhr.responseJSON = JSON.parse(xhr.responseText)
 					// }
@@ -161,6 +180,15 @@ this.Request = new Class(function() {
 				xhr.setRequestHeader(name, self.headers[name]);
 			}
 
+			if (self.timeout) {
+				self._timer = setTimeout(function() {
+					callbackCalled = true;
+					self.abort();
+					self.fireEvent('timeout', eventData);
+					self.fireEvent('complete', eventData);
+				}, self.timeout);
+			}
+
 			self._xhr.send(data);
 		});
 	};
@@ -170,6 +198,10 @@ this.Request = new Class(function() {
 	 */
 	this.abort = function(self) {
 		self._xhr.abort();
+		if (self._timer) {
+			clearTimeout(self._timer);
+			self._timer = null;
+		}
 	};
 
 	/**
