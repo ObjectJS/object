@@ -128,7 +128,7 @@ this.Component = new Class(dom.Element, function() {
 
 		// 1、待注入的属性值是否是undefined
 		// 2、属性是否已经在对象中存在（避免对innerHTML之类DOM节点属性进行设置）
-		Class.inject(cls, ele, function(dest, src, prop) {
+		Class.inject(cls, ele, function(prop, dest, src) {
 			// dest原有的属性中，function全部覆盖，属性不覆盖已有的
 			if (typeof src[prop] != 'function') {
 				if (!(prop in dest)) {
