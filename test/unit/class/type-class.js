@@ -81,11 +81,22 @@ test('base', function() {
 });
 
 test('classmethod/staticmethod called in metaclass', function() {
-	expect(2);
+	expect(7);
 	var Meta = new Class(Type, function() {
 		this.initialize = function(cls, name, base, dict) {
 			cls.get('makeElements')(name, base, dict);
 		};
+		this.a = 1;
+		this.b = {};
+		this.c = function(self) {
+			return 'c';
+		};
+		this.d = property(function(self) {
+			return 'd';
+		});
+		this.e = new Class(function() {
+			this.value = 1;
+		});
 		this.staticmethod = staticmethod(function() {
 			ok(true, 'staticmethod called');
 		});
@@ -95,8 +106,14 @@ test('classmethod/staticmethod called in metaclass', function() {
 		this.makeElements = function(cls, name, base, dict) {
 			cls.get('staticmethod')();
 			cls.get('classmethod')();
+			equal(cls.get('d').__class__, property, 'property is ok in metaclass');
+			equal(cls.get('c')(), 'c', 'instancemethod is ok in metaclass');
+			equal(cls.get('a'), 1, 'simple member is ok in metaclass');
+			equal(typeof cls.get('b'), 'object', 'simple object member is ok in metaclass');
+			equal(typeof cls.get('e'), 'function', 'class member of metaclass');
 		};
 	});
+
 	var Element = new Class(function() {
 		this.__metaclass__ = Meta;
 	});
