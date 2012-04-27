@@ -28,6 +28,7 @@ Object.keys = function(o) {
 };
 
 /**
+ * @method
  * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/isArray
  */
 Array.isArray = Array.isArray || function(o) {
@@ -35,6 +36,7 @@ Array.isArray = Array.isArray || function(o) {
 };
 
 /**
+ * @method
  * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/forEach
  */
 Array.prototype.forEach = Array.prototype.forEach || function(fn, bind) {
@@ -44,6 +46,7 @@ Array.prototype.forEach = Array.prototype.forEach || function(fn, bind) {
 };
 
 /**
+ * @method
  * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/indexOf
  */
 Array.prototype.indexOf = Array.prototype.indexOf || function(str) {
@@ -56,6 +59,7 @@ Array.prototype.indexOf = Array.prototype.indexOf || function(str) {
 };
 
 /**
+ * @method
  * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/some
  */
 Array.prototype.some = Array.prototype.some || function(fn, bind) {
@@ -66,6 +70,7 @@ Array.prototype.some = Array.prototype.some || function(fn, bind) {
 };
 
 /**
+ * @method
  * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/every
  */
 Array.prototype.every = Array.prototype.every || function(fn, bind) {
@@ -76,6 +81,7 @@ Array.prototype.every = Array.prototype.every || function(fn, bind) {
 };
 
 /**
+ * @method
  * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/map
  */
 Array.prototype.map = Array.prototype.map || function (fn, bind) {
@@ -87,6 +93,7 @@ Array.prototype.map = Array.prototype.map || function (fn, bind) {
 };
 
 /**
+ * @method
  * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/filter
  */
 Array.prototype.filter = Array.prototype.filter || function(fn, bind) {
@@ -98,6 +105,7 @@ Array.prototype.filter = Array.prototype.filter || function(fn, bind) {
 };
 
 /**
+ * @method
  * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/reduce
  */
 Array.prototype.reduce = Array.prototype.reduce || function(fun /*, initialValue */) {
@@ -144,6 +152,7 @@ Array.prototype.reduce = Array.prototype.reduce || function(fun /*, initialValue
 };
 
 /**
+ * @method
  * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Array/reduceRight
  */
 Array.prototype.reduceRight = Array.prototype.reduceRight || function(callbackfn /*, initialValue */) {
@@ -190,6 +199,7 @@ Array.prototype.reduceRight = Array.prototype.reduceRight || function(callbackfn
 };
 
 /**
+ * @method
  * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/trim
  */
 String.prototype.trim = String.prototype.trim || function() {
@@ -200,12 +210,14 @@ String.prototype.trim = String.prototype.trim || function() {
 // 有些老页面引用了js/compact.js，其中有一个错误的Function.prototype.bind
 if (!Function.prototype.bind || Function.prototype.bind === window.__hualuOldBind) {
 	/**
+ 	 * @method
 	 * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Function/bind
 	 */
 	Function.prototype.bind = function(object) {
 		var method = this;
+		var args = Array.prototype.slice.call(arguments, 1);
 		return function() {
-			method.apply(object, arguments); 
+			return method.apply(object, args.concat(Array.prototype.slice.call(arguments)));
 		};
 	};
 }

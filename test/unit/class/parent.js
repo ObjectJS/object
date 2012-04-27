@@ -314,3 +314,23 @@ test('parent with mixin', function() {
 	var c = new C();
 	c.m();
 });
+
+test('parent class has initialize, but sub does not', function() {
+	var counter = 0;
+	var A = new Class(function() {
+		this.initialize = function() {
+			counter ++;
+			equal(counter, 1, 'parent called in C');
+		}
+	});
+	var B = new Class(A, function() {
+		this.initialize = function() {
+			equal(counter, 0, 'before parent called in B, before');
+			this.parent();
+			counter++;
+			equal(counter, 2, 'after parent called in B, after');
+		}
+	});
+	var C = new Class(B, function() {});
+	var c = new C();
+});

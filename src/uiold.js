@@ -1,8 +1,4 @@
-/**
- * @namespace
- * @name uiold
- */
-object.add('uiold', 'dom', function(exports, dom) {
+object.add('./uiold.js', 'dom', function(exports, dom) {
 
 /**
  * UI模块基类
@@ -96,9 +92,6 @@ this.Component = new Class(dom.Element, function() {
 		self.fireEvent(name, arguments[0], self);
 	};
 
-	/**
-	 * makeOption
-	 */
 	this.makeOption = function(self, name, type) {
 		name = name.toLowerCase();
 		var value = self.getData(name);
@@ -128,7 +121,6 @@ this.Component = new Class(dom.Element, function() {
 
 			var classBases = Class.getChain(cls);
 
-			// 现有包装不在同一继承树上，报错
 			if (classBases.indexOf(ele._wrapper) === -1) {
 				throw '包装出错，一个元素只能有一个包装类';
 			}
@@ -136,7 +128,7 @@ this.Component = new Class(dom.Element, function() {
 
 		// 1、待注入的属性值是否是undefined
 		// 2、属性是否已经在对象中存在（避免对innerHTML之类DOM节点属性进行设置）
-		Class.inject(cls, ele, function(dest, src, prop) {
+		Class.inject(cls, ele, function(prop, dest, src) {
 			// dest原有的属性中，function全部覆盖，属性不覆盖已有的
 			if (typeof src[prop] != 'function') {
 				if (!(prop in dest)) {

@@ -249,8 +249,8 @@ test('mixin _ and __', function() {
 	var b = new B();
 	equal(b.a, 1, 'a is ok');
 	equal(b._a, 1, '_a is ok');
-	equal(b.__a, undefined, '__a can not be mixined');
-	equal(b.___a, undefined, '__a can not be mixined');
+	equal(b.__a, 1, '__a can mixined');
+	equal(b.___a, 1, '__a can mixined');
 });
 
 //mixin special method : set/get/initialize/__properties__

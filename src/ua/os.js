@@ -1,8 +1,10 @@
-object.add('ua.os', 'sys', function(exports, sys) {
+object.add('ua/os.js', 'sys', function(exports, sys) {
 
 var uamodule = sys.modules['ua'];
 
-//由于需要先替换下划线，与ua模块中的numberify不同，因此这里再定义此方法
+/**
+ * 由于需要先替换下划线，与ua模块中的numberify不同，因此这里再定义此方法
+ */
 var numberify = function(s) {
 	var c = 0;
 	// convert '1.2.3.4' to 1.234
@@ -40,12 +42,11 @@ function assertNotNull(obj, msg) {
 	}
 }
 
-//传入ua，便于模拟ua字符串进行单元测试
-//
-//http://forums.precentral.net/palm-pre-pre-plus/277613-webos-2-1-user-agent.html
-//what is the relationship between webos and palmos????
-//http://www.developer.nokia.com/Community/Wiki/User-Agent_headers_for_Nokia_devices
-//how to handle the NokiaXXXX?
+/**
+ * 传入ua，便于模拟ua字符串进行单元测试
+ * @see http://forums.precentral.net/palm-pre-pre-plus/277613-webos-2-1-user-agent.html
+ * @see http://www.developer.nokia.com/Community/Wiki/User-Agent_headers_for_Nokia_devices
+ */
 function detectOS(ua) {
 	ua = ua || navigator.userAgent;
 	ua = ua.toLowerCase();
@@ -210,13 +211,14 @@ function detectOS(ua) {
 	}
 
 	//检测屏幕方向，首先确保支持屏幕方向
-	var isMobile = typeof window.orientation != 'undefined' ? true : false;
-	if(isMobile) {
+	var supportOrientation = typeof window.orientation != 'undefined' ? true : false;
+	if(supportOrientation) {
 		if(window.innerWidth != undefined) {
 			//通过屏幕的高度和宽度的值大小，来判断是横向还是纵向
-			o.orientation = window.innerWidth > window.innerHeight ? 'profile' : 'landscape';
+			//如果是宽度大于高度，则是landscape，否则是profile
+			o.orientation = window.innerWidth > window.innerHeight ? 'landscape' : 'profile';
 		} else {
-			o.orientation = window.screen.width > window.screen.height ? 'profile' : 'landscape';
+			o.orientation = window.screen.width > window.screen.height ? 'landscape' : 'profile';
 		}
 	} else {
 		o.orientation = 'unknown';

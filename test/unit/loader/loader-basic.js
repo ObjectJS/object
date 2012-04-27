@@ -1,19 +1,14 @@
-var Loader = object.Loader;
+var loader = object._loader;
+var Loader = loader.constructor;
 
 // surround with closure
 (function() {
+
 function emptyCallback() {};
-if (isJsTestDriverRunning) {
-	var loc = window['location'];
-	var pageUrl = loc.protocol + '//' + loc.host;
-	var path = pageUrl + '/test/test/unit/loader/';
-} else {
-	var path = ($UNIT_TEST_CONFIG.needPath ? 'loader/': '');
-}
+var path = transTestDir('loader/');
 var emptyJS = path + 'empty.js';
+
 var head = document.getElementsByTagName('head')[0];
-// the only loader instance
-var loader = new Loader();
 
 module("loader-basic-buildFileLib", {
 	teardown: function() {
@@ -24,19 +19,10 @@ module("loader-basic-buildFileLib", {
 				if (document.head) document.head.removeChild(scripts[i]);
 			}
 		}
-		for (var prop in loader.lib) {
-			if (prop != 'sys') {
-				delete loader.lib[prop];
-			}
-		}
 	}
 });
 
 test('buildFileLib', function() {
-	//ok(false, 'what is the difference between self.scripts and cls.scripts in Loader? when to use??');
-	ok(Object.keys(loader.lib).length == 1, 'only sys in loader.lib');
-	loader.buildFileLib();
-	ok(Object.keys(loader.lib).length == 1, 'still only sys in loader.lib');
 	ok(loader.scripts != null, 'self.scripts should not be null');
 	var len1 = loader.scripts.length;
 
@@ -51,10 +37,10 @@ test('buildFileLib', function() {
 	var len3 = loader.scripts.length;
 	equal(len1 + 2, len3, 'when new script inserted, loader.scripts should be added automatically');
 	loader.buildFileLib();
-	ok(Object.keys(loader.fileLib).length == 1, 'new script tag inserted, new module loaded');
-	ok(loader.fileLib['test_module'] != null, 'module test_module is added');
-	ok(loader.fileLib['test_module'].id == 'test_module', 'module test_module is added, name is ok');
-	ok(loader.fileLib['test_module'].file == emptyJS, 'module test_module is added, file is ok');
+	var pkg = loader.getModule('test_module');
+	ok(pkg, 'new script tag inserted, new module loaded');
+	ok(pkg.id == loader.base + 'test_module.js', 'module test_module is added, id is ok');
+	ok(pkg.file == emptyJS, 'module test_module is added, file is ok');
 
 	var script = document.createElement('script');
 	script.setAttribute('data-src', 'test_module_null_data-module');
@@ -74,9 +60,9 @@ test('buildFileLib', function() {
 	script.setAttribute('data-module', 'test_module_wrong_data-src');
 	script.setAttribute('data-src', 'not-correct-js-file-url');
 	head.appendChild(script);
-	var oldLength = Object.keys(loader.fileLib).length;
+	var oldLength = Object.keys(loader.lib).length;
 	loader.buildFileLib();
-	equal(Object.keys(loader.fileLib).length, oldLength + 1, 'new script tag inserted, data-src is not end with .js');
+	equal(Object.keys(loader.lib).length, oldLength + 1, 'new script tag inserted, data-src is not end with .js');
 });
 
 module('loader-basic-getAbsolutePath');
@@ -100,34 +86,34 @@ function calculatePageDir() {
 var pageDir = calculatePageDir();
 
 test('getAbsolutePath', function() {
-	equal(Loader._getAbsolutePath('file://dir/a.js'), 'file://dir/a.js', 'return cleaned path');
-	equal(Loader._getAbsolutePath('http://host/a.js'), 'http://host/a.js', 'return cleaned absolute path');
-	equal(Loader._getAbsolutePath('http://host//b/c/../../a.js'), 'http://host/a.js', 'http://host//b/c/../../a.js -> http://host/a.js');
-	equal(Loader._getAbsolutePath('//a/b/c/../../a.js'), '//a/a.js', '//a/b/c/../../a.js -> //a/a.js');
+	equal(Loader.getAbsolutePath('file://dir/a.js'), 'file://dir/a.js', 'return cleaned path');
+	equal(Loader.getAbsolutePath('http://host/a.js'), 'http://host/a.js', 'return cleaned absolute path');
+	equal(Loader.getAbsolutePath('http://host//b/c/../../a.js'), 'http://host/a.js', 'http://host//b/c/../../a.js -> http://host/a.js');
+	equal(Loader.getAbsolutePath('//a/b/c/../../a.js'), '//a/a.js', '//a/b/c/../../a.js -> //a/a.js');
 
-	equal(Loader._getAbsolutePath('/a/b/c/../../a.js'), pageDir + 'a/a.js', '/a/b/c/../../a.js -> ' + pageDir + 'a/a/.js');
-	equal(Loader._getAbsolutePath('/a/b/c/../../a.js?a=1'), pageDir + 'a/a.js?a=1', '/a/b/c/../../a.js?a=1 -> ' + pageDir + 'a/a/.js?a=1');
-	equal(Loader._getAbsolutePath('/a/b/c/../../a.js?a=1#'), pageDir + 'a/a.js?a=1', '/a/b/c/../../a.js?a=1# -> ' + pageDir + 'a/a/.js?a=1');
-	equal(Loader._getAbsolutePath('http://hg.xnimg.cn/object/src/dom/index.js'), 'http://hg.xnimg.cn/object/src/dom/index.js', 'http://hg.xnimg.cn/object/src/dom/index.js -> http://hg.xnimg.cn/object/src/dom/index.js');
+	equal(Loader.getAbsolutePath('/a/b/c/../../a.js'), pageDir + 'a/a.js', '/a/b/c/../../a.js -> ' + pageDir + 'a/a/.js');
+	equal(Loader.getAbsolutePath('/a/b/c/../../a.js?a=1'), pageDir + 'a/a.js?a=1', '/a/b/c/../../a.js?a=1 -> ' + pageDir + 'a/a/.js?a=1');
+	equal(Loader.getAbsolutePath('/a/b/c/../../a.js?a=1#'), pageDir + 'a/a.js?a=1', '/a/b/c/../../a.js?a=1# -> ' + pageDir + 'a/a/.js?a=1');
+	equal(Loader.getAbsolutePath('http://hg.xnimg.cn/object/src/dom.js'), 'http://hg.xnimg.cn/object/src/dom.js', 'http://hg.xnimg.cn/object/src/dom.js -> http://hg.xnimg.cn/object/src/dom.js');
 });
 
 module('loader-basic-removeScript');
 
 test('removeScript', function() {
 	Loader.loadScript(emptyJS, function() {});
-	equal(Object.keys(Loader.get('_urlNodeMap')).length, 0, 'no cache, so will not add to _urlNodeMap');
-	Loader.removeScript(emptyJS);
+	equal(Object.keys(Loader._urlNodeMap).length, 0, 'no cache, so will not add to _urlNodeMap');
+	loader.removeScript(emptyJS);
 	Loader.loadScript(emptyJS, function() {}, true);
-	equal(Object.keys(Loader.get('_urlNodeMap')).length, 1, 'cache is true, so will add to _urlNodeMap');
+	equal(Object.keys(Loader._urlNodeMap).length, 1, 'cache is true, so will add to _urlNodeMap');
 	// if jsTestDriver is running, emptyJS contains url, so do not need to add pageDir
 	if (isJsTestDriverRunning) {
 		pageDir = '';
 	}
-	notEqual(Loader.get('_urlNodeMap')[pageDir + emptyJS], undefined, pageDir + emptyJS + ' is cached in _urlNodeMap');
-	Loader.removeScript('_' + emptyJS);
-	notEqual(Loader.get('_urlNodeMap')[pageDir + emptyJS], undefined, 'remove failed, but should not raise error');
-	Loader.removeScript(emptyJS);
-	equal(Loader.get('_urlNodeMap')[pageDir + emptyJS], undefined, pageDir + emptyJS + ' is remove from _urlNodeMap');
+	notEqual(Loader._urlNodeMap[pageDir + emptyJS], undefined, pageDir + emptyJS + ' is cached in _urlNodeMap');
+	loader.removeScript('_' + emptyJS);
+	notEqual(Loader._urlNodeMap[pageDir + emptyJS], undefined, 'remove failed, but should not raise error');
+	loader.removeScript(emptyJS);
+	equal(Loader._urlNodeMap[pageDir + emptyJS], undefined, pageDir + emptyJS + ' is remove from _urlNodeMap');
 });
 
 module("loader-basic-add");
@@ -137,42 +123,55 @@ test('add-basic', function() {
 		try {
 			loader.add(edges[prop], ['a']);
 			ok(true, 'loader.add(' + prop + ', [\'a\']) should be ok');
-			loader.remove(edges[prop]);
 		} catch(e) {
 			ok(false, 'loader.add(' + prop + ', [\'a\']) should be ok : ' + e);
 		}
+		loader.remove(edges[prop]);
 	}
 });
 
 test('add-usage', function() {
-	equal(Object.keys(loader.lib).length, 1, 'only sys in loader.lib');
 	loader.add('a', function() {});
-	equal(Object.keys(loader.lib).length, 2, 'a is added to loader.lib');
-	loader.add('b', 'a', function() {});
-	equal(Object.keys(loader.lib).length, 3, 'b is added to loader.lib');
-	loader.add('c', 'a,b', function() {});
-	equal(Object.keys(loader.lib).length, 4, 'c is added to loader.lib');
-	equal(loader.lib['c'].dependencies.length, 2, 'c dependencies a and b, so lib[c].dependencies.length = 2');
+	ok(loader.getModule('a'), 'a is added to loader.lib');
+	loader.remove('a');
 
-	loader.add('d.dd', 'a,b,c', function() {});
-	equal(Object.keys(loader.lib).length, 5, 'd.dd are added to loader.lib');
-	equal(loader.lib['d/dd'].dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
+	loader.add('b', 'a', function() {});
+	ok(loader.getModule('b'), 'b is added to loader.lib');
+	loader.remove('b');
+
+	loader.add('c', 'a,b', function() {});
+	ok(loader.getModule('c'), 'c is added to loader.lib');
+	equal(loader.getModule('c').dependencies.length, 2, 'c dependencies a and b, so lib[c].dependencies.length = 2');
+	loader.remove('c');
+
+	loader.add('d/dd', 'a,b,c', function() {});
+	ok(loader.getModule('d/dd'), 'd.dd are added to loader.lib');
+	equal(loader.getModule('d/dd.js').dependencies.length, 3, 'd.dd dependencies a ,b and c, so lib[d.dd].dependencies.length = 3');
+	loader.remove('d', true);
 
 	loader.add('error1', 'a,b');
-	ok(loader.lib['error1'], 'add module without context, should be added');
+	ok(loader.getModule('error1'), 'add module without context, should be added');
+	loader.remove('error1');
+
 	loader.add('error2', 'a', 'a');
-	ok(loader.lib['error2'], 'add module with not-function context, should be added');
+	ok(loader.getModule('error2'), 'add module with not-function context, should be added');
+	loader.remove('error2');
+
+	loader.add('a/b/index.js');
+	ok(loader.getModule('a/b'), 'add module with index.js, can get without index.js');
+
 });
 
 module('loader-basic-remove');
+
 test('remove-usage', function() {
 	loader.add('a', function() {});
 	loader.add('a/b', function() {});
 	loader.remove('a');
-	ok(!('a' in loader.lib), 'remove ok.');
-	ok('a/b' in loader.lib, 'sub not removed, ok');
+	equals(loader.getModule('a'), null, 'remove ok.');
+	ok(loader.getModule('a/b'), 'sub not removed, ok');
 	loader.remove('a', true);
-	ok(!('a/b' in loader.lib), 'sub removed, ok');
+	ok(!loader.getModule('a/b'), 'sub removed, ok');
 });
 
 module("loader-basic-use");
@@ -195,7 +194,9 @@ test('use-basic', function() {
 	} catch(e) {
 		ok(false, 'loader.use(str, str), context should be function : ' + e);
 	}
+	loader.remove('a');
 });
+
 test('use-usage', function() {
 	var loader = object._loader;
 	loader.add('a', function(exports) {
@@ -208,6 +209,8 @@ test('use-usage', function() {
 		equal(a.a, 1, 'module a used successfully');
 		equal(b.b, 1, 'module b used successfully');
 	});
+	loader.remove('a');
+	loader.remove('b');
 });
 
 module("loader-basic-execute");
@@ -227,8 +230,8 @@ test('execute-basic', function() {
 test('execute-usage', function() {
 	expect(2);
 	var loader = object._loader;
-	delete loader.lib['a'];
-	delete loader.lib['b'];
+	loader.remove('a');
+	loader.remove('b');
 	loader.add('a', function(exports) {
 		exports.a = 1;
 		ok(true, 'module a executed by loader.execute(a)');
@@ -237,8 +240,8 @@ test('execute-usage', function() {
 		ok(true, 'module b executed by loader.execute(b)');
 	});
 	loader.execute('b');
-	delete loader.lib['a'];
-	delete loader.lib['b'];
+	loader.remove('a');
+	loader.remove('b');
 });
 
 module('loader-basic-loadScript', {
@@ -261,48 +264,8 @@ test('loadScript basic test', function() {
 	equal(len2 - len1, 1, 'add one script tag in document after Loader.loadScript is called');
 });
 
-// if is executed by jsTestDriver
-if (isJsTestDriverRunning) {
-	// jsTestDriver testcases start
-	var AsynchronousTest_loadScriptWithUrl = AsyncTestCase('loadScriptBasicTest');
-
-	AsynchronousTest_loadScriptWithUrl.prototype.tearDown = function() {
-		var scripts = Sizzle('script');
-		for (var i = 0; i < scripts.length; i++) {
-			if (scripts[i].callbacks) {
-				head.removeChild(scripts[i]);
-			}
-		}	
-	}
-
-	AsynchronousTest_loadScriptWithUrl.prototype.testLoadScriptWithUrl = function(queue) {
-		var counter = 0;
-		queue.call('Step 1: loadScript.', function(callbacks) {
-			var onScriptLoaded = callbacks.add(function() {
-				counter = 1;
-			});
-			Loader.loadScript(emptyJS, function() {
-				onScriptLoaded();
-			});
-		});
-
-	  	queue.call('Step 2: assert counter', function() {
-			assertEquals('callback is called, script is loaded', 1, counter);
-	  	});
-	};
-	// jsTestDriver testcases end 
-} else {
 // normal qunit testcases
 test('loadScript with url', function() {
-	// null/''
-	// Loader.loadScript('',emptyCallback); will case error;
-	//ok(false, 'can not loadScript with null url, which will cause empty script tag');
-	//ok(false, 'can not loadScript with empty url, which will cause empty script tag');
-	//ok(false, 'can not loadScript with an non-javascript url');
-	//ok(false, 'can not loadScript with html/jsp/asp...');
-	//raises(function() {
-	//	Loader.loadScript('not-exists-url', emptyCallback);
-	//}, 'can not loadScript with not exists url');
 	var oldOnError = window.onerror;
 	window.onerror = function() {
 		ok(true, 'not-exists-url.js is not exist');
@@ -310,26 +273,20 @@ test('loadScript with url', function() {
 		return true;
 	};
 	Loader.loadScript('not-exists-url.js', emptyCallback);
-	//equal(Sizzle('script[src=not-exists-url.js]').length, 0, 'not exists url, script tag should be deleted');
 	stop();
-	// is js, and exists
 	Loader.loadScript(emptyJS, function() {
 		start();
 		ok(true, 'callback is called');
 	});
 });
 
-asyncTest('loadScript with/without callback', function() {
-	//ok(false, 'callback can not be null');
+test('loadScript with/without callback', function() {
+	stop();
 	Loader.loadScript(emptyJS, function() {
 		start();
 		ok(true, 'callback is called');
 	});
-	//Loader.loadScript('not-exists-url', function() {
-	//		ok(false, 'callback is called when not-exists-url loaded');
-	//});
-})
-}
+});
 
 test('loadScript with/without cache', function() {
 	var cacheIsOk = false;
@@ -337,7 +294,7 @@ test('loadScript with/without cache', function() {
 		Loader.loadScript(emptyJS, emptyCallback, true);
 		cacheIsOk = true;
 	} catch(e) {
-		ok(false, 'cache should work with Loader.loadScript(emptyJS, emptyCallback, true) : ' + e);
+		ok(false, 'cache should work with loader.loadScript(emptyJS, emptyCallback, true) : ' + e);
 	}
 
 	if (cacheIsOk) {
@@ -348,4 +305,5 @@ test('loadScript with/without cache', function() {
 		equal(len1, len2, 'cache works, load same script, get from cache');
 	}
 })
+
 })();

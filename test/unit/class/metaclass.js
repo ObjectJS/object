@@ -97,24 +97,13 @@ test('metaclass is not a class', function() {
 
 test('metaclass is a class without __new__ or initialize', function() {
 	//cls.__new__ = base.__new__; so without __new__ is still fine for metaclass;
-	var metaclass = new Class(function() {});
+	var metaclass = new Class(function() {
+		this.initialize = function(cls, name, base, dict) {};
+	});
+	metaclass.fda = 'a';
 	try {
 		var A = new Class(function() {
 			this.__metaclass__ = metaclass;
-		});
-		var a = new A();
-		ok(false, '__metaclass__ is a class without __new__ and initialize, which should cause error');
-	} catch (e) {
-		ok(true, '__metaclass__ is a class without __new__ and initialize, which should cause error : ' + e);
-	}
-
-	var metaclass2 = new Class(function() {
-		this.initialize = function(cls, name, base, dict) {};
-	});
-	metaclass2.fda = 'a';
-	try {
-		var A = new Class(function() {
-			this.__metaclass__ = metaclass2;
 		});
 		var a = new A();
 		ok(true, 'cls.__new__ = base.__new__; so without __new__ is still fine for metaclass');
@@ -122,12 +111,12 @@ test('metaclass is a class without __new__ or initialize', function() {
 		ok(true, 'cls.__new__ = base.__new__; so without __new__ is still fine for metaclass: ' + e);
 	}
 
-	var metaclass3 = new Class(function() {
+	var metaclass2 = new Class(function() {
 		this.__new__ = function(cls, name, base, dict) {};
 	});
 	try {
 		var A = new Class(function() {
-			this.__metaclass__ = metaclass3;
+			this.__metaclass__ = metaclass2;
 		});
 		var a = new A();
 		ok(false, '__metaclass__ is a class without initialize , which should cause error');

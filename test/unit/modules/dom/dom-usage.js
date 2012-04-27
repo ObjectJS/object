@@ -281,9 +281,16 @@ test('dom.getDom', function() {
 	});
 });
 
+
+var A = new Class(function() {
+	this.toString = function() { return 'a'; }
+});
+
+var a = new A();
+var canOverwriteToString = (a.toString() == 'a');
 //ElementClassList
 test('dom.ElementClassList', function() {
-	object.use('dom', function(exports, dom) {
+	object.use('dom, ua', function(exports, dom, ua) {
 		var node = document.createElement('input');
 		node.className = 'className1 className2';
 		var wrapped = new dom.ElementClassList(node);
@@ -345,7 +352,9 @@ test('dom.ElementClassList', function() {
 		equal(wrapped.item(0), 'className1', 'item(0) is className1');
 		equal(wrapped.item(1), null, 'className3 is removed, so item(1) should be null now');
 		
-		equal(wrapped.toString(), 'className1', 'toString() return ele.className, which should be trimmed');
+		if (canOverwriteToString) {
+			equal(wrapped.toString(), 'className1', 'toString() return ele.className, which should be trimmed');
+		}
 	});
 });
 
@@ -715,7 +724,9 @@ test('dom.FormElement', function() {
 		form.removeChild(disabledInput);
 
 		ok(form.checkValidity(), 'checkValidity is ok when no element in form');
-		var requiredInput = dom.wrap(document.createElement('input'));
+		var requiredInput = document.createElement('input');
+		dom.wrap(requiredInput);
+		//alert(requiredInput.classList._classes);
 		requiredInput.type = 'text';
 		requiredInput.name = 'name';
 		requiredInput.set('required', true);
@@ -726,7 +737,7 @@ test('dom.FormElement', function() {
 		document.body.appendChild(form);
 		equal(form.checkValidity(), false, 'value of required input is empty, checkValidity must be false');
 		ok(requiredInput.get('validationMessage').length != 0, 'validation message appears');
-		requiredInput.value = 'value';
+		requiredInput.set('value', 'value');
 		equal(form.checkValidity(), true, 'value of required input is not empty now, checkValidity should be true');
 		equal(requiredInput.get('validationMessage'), '', 'validation message is empty');
 		form.removeChild(requiredInput);
@@ -736,13 +747,14 @@ test('dom.FormElement', function() {
 		urlInput.type = 'text';
 		urlInput.name = 'urlInput';
 		urlInput.set('type', 'url');
-		urlInput.value = 'not-url';
+		urlInput.set('value','not-url');
 		form.appendChild(urlInput);
 
 		document.body.appendChild(form);
 		equal(form.checkValidity(), false, 'value of url input is not-url, checkValidity must be false');
 		ok(urlInput.get('validationMessage').length != 0, 'validation message appears');
-		urlInput.value = 'http://www.renren.com';
+		
+		urlInput.set('value','http://www.renren.com');
 		equal(form.checkValidity(), true, 'value of url input is http://www.renren.com now, checkValidity should be true');
 		equal(urlInput.get('validationMessage'), '', 'validation message is empty');
 		form.removeChild(urlInput);
@@ -752,13 +764,13 @@ test('dom.FormElement', function() {
 		emailInput.type = 'text';
 		emailInput.name = 'emailInput';
 		emailInput.set('type', 'email');
-		emailInput.value = 'not-email';
+		emailInput.set('value','not-email');
 		form.appendChild(emailInput);
 
 		document.body.appendChild(form);
 		equal(form.checkValidity(), false, 'value of email input is not-email, checkValidity must be false');
 		ok(emailInput.get('validationMessage').length != 0, 'validation message appears');
-		emailInput.value = 'abc@renren-inc.com';
+		emailInput.set('value','abc@renren-inc.com');
 		equal(form.checkValidity(), true, 'value of email input is abc@renren-inc.com now, checkValidity should be true');
 		equal(emailInput.get('validationMessage'), '', 'validation message is empty');
 		form.removeChild(emailInput);
@@ -768,7 +780,7 @@ test('dom.FormElement', function() {
 		telInput.type = 'text';
 		telInput.name = 'telInput';
 		telInput.set('type', 'tel');
-		telInput.value = 'not-tel';
+		telInput.set('value','not-tel');
 		form.appendChild(telInput);
 
 		document.body.appendChild(form);
@@ -776,7 +788,7 @@ test('dom.FormElement', function() {
 		// 电话号码的校验只是判断了\r\n，标准浏览器貌似也没判断...
 		equal(form.checkValidity(), true, 'value of tel input is not-tel, checkValidity must be false');
 		equal(telInput.get('validationMessage'), '', 'validation message is empty');
-		telInput.value = '010-15424515';
+		telInput.set('value','010-15424515');
 		equal(form.checkValidity(), true, 'value of tel input is 010-15424515 now, checkValidity should be true');
 		equal(telInput.get('validationMessage'), '', 'validation message is empty');
 		form.removeChild(telInput);
@@ -786,13 +798,13 @@ test('dom.FormElement', function() {
 		patternInput.type = 'text';
 		patternInput.name = 'patternInput';
 		patternInput.set('pattern', 'matched');
-		patternInput.value = 'not-matched';
+		patternInput.set('value','not-matched');
 		form.appendChild(patternInput);
 
 		document.body.appendChild(form);
 		equal(form.checkValidity(), false, 'value of pattern input is not matched, checkValidity must be false');
 		ok(patternInput.get('validationMessage').length != 0, 'validation message appears');
-		patternInput.value = 'matched';
+		patternInput.set('value','matched');
 		equal(form.checkValidity(), true, 'value of pattern input is matched now, checkValidity should be true');
 		equal(patternInput.get('validationMessage'), '', 'validation message is empty');
 		form.removeChild(patternInput);
@@ -820,7 +832,7 @@ test('dom.FormElement', function() {
 		var customErrorInput = dom.wrap(document.createElement('input'));
 		customErrorInput.type = 'text';
 		customErrorInput.name = 'customErrorInput';
-		customErrorInput.value = '1';
+		customErrorInput.set('value','1');
 		customErrorInput.setCustomValidity('customError');
 		form.appendChild(customErrorInput);
 
@@ -838,7 +850,26 @@ var ie = false;
 object.use('ua', function(exports, ua) {
 	ie = ua.ua.ie;
 });
+
+
+
 test('dom.FormItemElement - selectionStart/selectionEnd', function() {
+
+	// 特性检测：检测在输入域第一次获取focus时，光标是停留在第一位，还是最后一位
+	var autoGotoEnd = (function() {
+		var formItem = document.createElement('input');
+		document.body.appendChild(formItem);
+		formItem.value = '1234';
+		formItem.focus();
+		var autoEnd = false;
+		try {
+			autoEnd = formItem.selectionStart == 4;
+		} catch (e) {
+		}
+		document.body.removeChild(formItem);
+		return autoEnd;
+	})();
+
 	object.use('dom', function(exports, dom) {
 		var formItem = dom.wrap(document.createElement('input'));
 		document.body.appendChild(formItem);
@@ -854,8 +885,9 @@ test('dom.FormItemElement - selectionStart/selectionEnd', function() {
 			ok(false, 'get selectionEnd of hidden input element should not cause an error : ' + e);
 		}
 		try {
-			var start = ie ? 0 : 4;
-			var end = ie ? 0 : 4;
+			formItem.focus();
+			var start = autoGotoEnd ? 4 : 0;
+			var end = autoGotoEnd ? 4 : 0;
 			equal(formItem.get('selectionStart'), start, 'selectionStart is ' + start);
 			equal(formItem.get('selectionEnd'), end, 'selectionEnd is ' + end);
 		} catch (e) {
@@ -886,7 +918,7 @@ test('dom.FormItemElement', function() {
 		var formItem = dom.wrap(document.createElement('input'));
 		ok('selectionStart' in formItem.__properties__, 'formItem wrapped successfully');
 		document.body.appendChild(formItem);
-		formItem.value = '1234';
+		formItem.set('value', '1234');
 		try {
 			formItem.focus();
 			window.scrollTo(0, 0);
@@ -967,7 +999,8 @@ test('dom.Elements', function() {
 		inputs.focusToPosition(2);
 		window.scrollTo(0, 0);
 		try {
-			var result = ie ? 0 : 2;
+			var result = 2;
+			// IE下通过beforedeactivate事件保存了光标位置
 			equal(input1.get('selectionStart'), result, 'input1.get(selectionStart) should be ' + result);
 		} catch (e) {
 			ok(false, 'input1.get(selectionStart) after input1.focusToPosition(2), should not raise error : ' + e);
@@ -1007,3 +1040,20 @@ test('dom.Elements', function() {
 	});
 });
 
+test('dom.wrap error in IE when parent.innerHTML changed', function() {
+	object.use('dom', function(dom) {
+		var fragment = dom.getDom("<div id='outer'><div id='inner'></div></div>");
+		document.body.appendChild(fragment);
+		var outer = dom.id('outer');
+		var inner = document.getElementById('inner');
+		equal(typeof inner._wrapped, 'undefined', 'inner element is wrapped');
+		var inner = dom.id('inner');
+		equal(typeof inner._wrapped, 'object', 'inner element is wrapped');
+		ok(typeof inner.store == 'function', 'inner.store is a function');
+		outer.innerHTML += '';
+		var inner = dom.id('inner');
+		equal(typeof inner._wrapped, 'object', 'inner element is wrapped');
+		ok(typeof inner.store == 'function', 'inner.store is a function');
+		document.body.removeChild(outer);
+	});
+});

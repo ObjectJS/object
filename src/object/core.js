@@ -5,9 +5,10 @@
 /**@class Array*/
 /**@class String*/
 /**@class Function*/
-var object = new (function(globalHost) {
+var object = (function(globalHost) {
 
-var object = this;
+var object = function() {
+};
 
 // 获取function的name
 // 判断function TEST() 是否能取到name属性来选择不同的算法函数
@@ -32,22 +33,32 @@ else {
 /**
  * 为obj增加properties中的成员
  * @name object.extend
- * @param obj 源
- * @param properties 目标
- * @param ov 是否覆盖，默认true
+ * @param {Object} obj 被扩展的对象
+ * @param {Object} properties 扩展属性的来源对象
+ * @param {Boolean|Function} ov 是否覆盖obj对象中的原有成员，如果是true（默认），则覆盖，false则不覆盖原有成员
+ * 		如果传入的是function，则按照function的返回值来判断是否覆盖
+ * 		function的参数依次是：属性值、目标对象、源对象
  */
-this.extend = function(obj, properties, ov) {
-	if (typeof ov !== 'function') {
-		if (ov !== false) ov = true;
-		ov = function(dest, src, prop) {return ov};
+object.extend = function(obj, properties, ov) {
+	var filter = null;
+	if (typeof ov == 'function') {
+		filter = ov;
+	} else if (ov === true || typeof ov === 'undefined') {
+		filter = function(prop, dest, src) {
+			return true;
+		};
+	} else {
+		filter = function(prop, dest, src) {
+			return !(prop in dest);
+		};
 	}
 
 	for (var property in properties) {
-		if (ov(obj, properties, property)) {
+		if (filter(property, obj, properties)) {
 			obj[property] = properties[property];
 		}
 	}
-	if (properties && properties.hasOwnProperty('call') && ov(obj, properties, 'call')) {
+	if (properties && properties.hasOwnProperty('call') && filter(obj, properties, 'call')) {
 		obj.call = properties.call;
 	}
 
@@ -58,7 +69,7 @@ this.extend = function(obj, properties, ov) {
  * 浅拷贝
  * @name object.clone
  */
-this.clone = function(obj) {
+object.clone = function(obj) {
 	var clone = {};
 	for (var key in obj) clone[key] = obj[key];
 	return clone;
@@ -68,10 +79,12 @@ this.clone = function(obj) {
  * 将成员引用放到window上
  * @name object.bind
  */
-this.bind = function(host) {
+object.bind = function(host) {
 	object.extend(host, object);
 };
 
-this._loader = null;
+object._loader = null;
+
+return object;
 
 })(window);

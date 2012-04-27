@@ -45,7 +45,7 @@ test('add and use, basic', function() {
 		equal(a.a, 1, 'module add and use successfully');
 	});
 	try {
-		object.add('sys', function(exports) {});
+		//object.add('sys', function(exports) {});
 		ok(true, 'object.add(sys) is ok, though nothing happened');
 	} catch (e) {}
 

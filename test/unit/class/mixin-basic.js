@@ -53,11 +53,6 @@ test('mixin object.js', function() {
 		catch(e) {ok(false, 'Class.mixin(this,object) should be considered');}
 	try {new Class(function(){Class.mixin(this,Class)});} 
 		catch(e) {ok(false, 'Class.mixin(this,Class) should be considered');}
-	try {
-		new Class(function(){Class.mixin(this, object.Loader)});
-	} catch(e){
-		ok(false, 'Class.mixin(this, Loader), Loader should not be mixined : ' + e);
-	};
 });
 
 test('mixin at the outside of class', function() {

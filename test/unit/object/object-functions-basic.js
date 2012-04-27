@@ -2,26 +2,6 @@ module("object-functions-basic");
 
 test('extend', function() {
 	var values = $UNIT_TEST_CONFIG.testEdges;
-	for(var prop in values) {
-		try {
-			var result = object.extend(values[prop], {a:1});
-			var type = typeof values[prop];
-		} catch (e) {
-			if (values[prop] === undefined || values[prop] == null) {
-			} else {
-				ok(false, 'object.extend(' + prop + ') should be considered : ' + e);
-			}
-		};
-		try {
-			var result = object.extend({}, values[prop]);
-			var type = typeof values[prop];
-		} catch (e) {
-			// RegExp : illegal access
-			if (prop != 'RegExp') {
-				ok(false, 'object.extend({}, ' + prop + ') should be considered : ' + e);
-			}
-		};
-	};
 
 	var a = {a:1,b:2};
 	var b = {a:3,c:4};
@@ -56,7 +36,7 @@ test('clone', function() {
 			var result = object.clone(values[prop]);
 			var type = typeof values[prop];
 		} catch (e) {
-			if (values[prop] === undefined || values[prop] == null) {
+			if (values[prop] === undefined || values[prop] == null || values[prop] == RegExp) {
 			} else {
 				ok(false, 'object.clone(' + prop + ') should be considered : ' + e);
 			}
@@ -65,19 +45,6 @@ test('clone', function() {
 });
 
 test('bind', function() {
-	QUnit.reset();
-	var values = $UNIT_TEST_CONFIG.testEdges;
-	for(var prop in values) {
-		try {
-			object.bind(values[prop]);
-			var type = typeof values[prop];
-		} catch (e) {
-			if (values[prop] === undefined || values[prop] == null) {
-			} else {
-				ok(false, 'object.bind(' + prop + ') should be considered : ' + e);
-			}
-		};
-	};
 });
 
 test('use', function() {
