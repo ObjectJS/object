@@ -1037,7 +1037,7 @@ this.Component = new exports.ComponentClass(function() {
 	 */
 	this._destory = function(self) {
 		self.__rendered.forEach(function(node) {
-			getComponent(node, self.__class__).dispose();
+			node.dispose();
 		});
 		self.__rendered = [];
 	};
