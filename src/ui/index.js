@@ -148,30 +148,34 @@ ComponentMeta.prototype.getAddonedType = function(cls, addons, callback) {
 ComponentMeta.prototype.wrap = function(self, name, node, type) {
 	var comp = getComponent(node, type);
 
-	// 此node已包装，但包装类不一定是type类型的，下面强制重新包装触发error
+	// 此node已包装，但包装类不一定是type类型的，下面强制重新包装触发virtual
 	if (comp && Class.instanceOf(comp, type)) {
-		this.addEvent(self, name, comp);
-		// 重新搜索，更新其options
-		Object.keys(self._options[name]).forEach(function(key) {
-			comp.setOption(key, self._options[name][key]);
-		});
-
+		// 已经wrap过
+		this.register(self, name, comp);
 	}
 	// 一个全新的未包装过的node
 	else {
 		comp = new type(node, self._options[name]);
 		this.addEvent(self, name, comp);
-	}
 
-	// 注册dispose
-	if (self.__disposes.indexOf(comp) == -1) {
-		comp.addEvent('aftercomponentdispose', function(event) {
-			self.getMeta(name).select(self, name);
-		});
-		self.__disposes.push(comp);
+		// 注册dispose
+		if (self.__disposes.indexOf(comp) == -1) {
+			comp.addEvent('aftercomponentdispose', function(event) {
+				self.getMeta(name).select(self, name);
+			});
+			self.__disposes.push(comp);
+		}
 	}
 
 	return comp;
+};
+
+ComponentMeta.prototype.register = function(self, name, comp) {
+	this.addEvent(self, name, comp);
+	// 重新搜索，更新其options
+	Object.keys(self._options[name]).forEach(function(key) {
+		comp.setOption(key, self._options[name][key]);
+	});
 };
 
 /**
@@ -210,27 +214,16 @@ ComponentMeta.prototype.select = function(self, name, made, callback) {
 
 	if (isParent) {
 		this.getType(metaOptions, function(type) {
+			var node = self._node;
 			var comp = null;
-			var components;
-			node = self._node;
 			while ((node = node.parentNode)) {
-				components = (node && node.components) ? node.components : [];
-				if (components.some(function(component) {
-					if (Class.instanceOf(component, type)) {
-						comp = component;
-						return true;
-					}
-				})) {
+				if (comp = getComponent(node, type)) {
 					break;
 				}
 			}
 
-			meta.addEvent(self, name, comp);
-			self.setComponent(name, comp);
-
-			if (callback) {
-				callback(comp);
-			}
+			meta.register(self, name, comp);
+			meta.setComponent(self, name, comp, callback);
 		});
 
 	} else {
@@ -340,6 +333,7 @@ ComponentsMeta.prototype.select = function(self, name, made, callback) {
 	var selector = this.selector;
 	var nodes = null, comps = null;
 	var meta = this;
+	var metaOptions = self.getOption(name + '.meta');
 
 	// 说明无所谓selector，生成什么就放什么就行
 	// 在强指定selector为false时，忽略options中配置的selector
@@ -375,13 +369,11 @@ ComponentsMeta.prototype.select = function(self, name, made, callback) {
 			nodes = new dom.Elements(nodes);
 		}
 
-		this.getType(self.getOption(name + '.meta'), function(type) {
-
+		this.getType(metaOptions, function(type) {
 			nodes.forEach(function(node) {
 				meta.wrap(self, name, node, type);
 			});
 			comps = new type.Components(nodes);
-
 			meta.setComponent(self, name, comps, callback);
 		});
 
