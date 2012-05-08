@@ -1302,12 +1302,18 @@ this.AddonClass = new exports.AddonClassClass(exports.ComponentClass, function()
 		});
 		// 变量递归，支持变量中引用变量
 		variables.forEach(function(name) {
-			vars[name.slice(1)] = string.substitute(cls.get(name), vars);
+			var member = cls.get(name);
+			if (typeof member == 'string') {
+				vars[name.slice(1)] = string.substitute(member, vars);
+			}
 		});
 
 		members.forEach(function(nameTpl) {
 			var name = string.substitute(nameTpl, vars);
-			var member = cls.get(nameTpl);
+			var member = cls.get(nameTpl, false);
+			if (typeof member == 'function') {
+				member = member.bind(cls)();
+			}
 			cls.set(name, member);
 		});
 		cls.set('__vars', vars);

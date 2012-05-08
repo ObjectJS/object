@@ -851,7 +851,7 @@ object.use('ui', function(ui) {
 });
 });
 
-test('addon factory', function() {
+test('addon class', function() {
 object.use('ui', function(ui) {
 
 	var eventFired = 0;
@@ -864,10 +864,12 @@ object.use('ui', function(ui) {
 		this.$trigger = '{{name}}Trigger';
 
 		this['{{trigger}}_click'] = function(cls, self) {
-			ok(self.test, 'arguments ok.');
 			var $name = cls.get('$name');
-			equal($name, 'test', 'variable ok.');
-			eventFired++;
+			return function(self) {
+				ok(self.test, 'arguments ok.');
+				equal($name, 'test', 'variable ok.');
+				eventFired++;
+			}
 		};
 
 	});
