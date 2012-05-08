@@ -197,6 +197,10 @@ ComponentMeta.prototype.select = function(self, name, made, callback) {
 	var selector = this.selector;
 	var meta = this;
 	var node;
+	var isParent = this.parent;
+	if (metaOptions.parent !== undefined) {
+		isParent = metaOptions.parent;
+	}
 
 	// async
 	if (self[name] === undefined && metaOptions.async) {
@@ -204,54 +208,64 @@ ComponentMeta.prototype.select = function(self, name, made, callback) {
 		return;
 	}
 
-	// 说明无所谓selector，生成什么就放什么就行
-	// 在强指定selector为false时，忽略meta中配置的selector
-	if (selector === false) {
-		// 不应该是一组成员，却是数组
-		if (Array.isArray(made)) {
-			node = made[0];
-		} else {
-			node = made;
-		}
-	}
-	else if (metaOptions.parent) {
-		var comp = null;
-		var components;
-		var type = this.type;
-		node = self._node;
-		while ((node = node.parentNode)) {
-			components = (node && node.components) ? node.components : [];
-			if (components.some(function(component) {
-				if (Class.instanceOf(component, type)) {
-					return true;
+	if (isParent) {
+		this.getType(metaOptions, function(type) {
+			var comp = null;
+			var components;
+			node = self._node;
+			while ((node = node.parentNode)) {
+				components = (node && node.components) ? node.components : [];
+				if (components.some(function(component) {
+					if (Class.instanceOf(component, type)) {
+						comp = component;
+						return true;
+					}
+				})) {
+					break;
 				}
-			})) {
-				break;
 			}
-		}
-	}
-	// 重建引用，若render正常，刚刚创建的节点会被找到并包装
-	else {
-		selector = metaOptions.selector || selector;
 
-		if (typeof selector == 'function') {
-			node = dom.wrap(selector(self));
-		} else {
-			node = self._node.getElement(selector);
-		}
+			meta.addEvent(self, name, comp);
+			self.setComponent(name, comp);
 
-	}
-
-	if (node) {
-		this.getType(self.getOption(name + '.meta'), function(type) {
-			var comp = meta.wrap(self, name, node, type);
-			meta.setComponent(self, name, comp, callback);
+			if (callback) {
+				callback(comp);
+			}
 		});
 
 	} else {
-		meta.setComponent(self, name, null, callback);
-	}
+		// 说明无所谓selector，生成什么就放什么就行
+		// 在强指定selector为false时，忽略meta中配置的selector
+		if (selector === false) {
+			// 不应该是一组成员，却是数组
+			if (Array.isArray(made)) {
+				node = made[0];
+			} else {
+				node = made;
+			}
+		}
+		// 重建引用，若render正常，刚刚创建的节点会被找到并包装
+		else {
+			selector = metaOptions.selector || selector;
 
+			if (typeof selector == 'function') {
+				node = dom.wrap(selector(self));
+			} else {
+				node = self._node.getElement(selector);
+			}
+
+		}
+
+		if (node) {
+			this.getType(metaOptions, function(type) {
+				var comp = meta.wrap(self, name, node, type);
+				meta.setComponent(self, name, comp, callback);
+			});
+
+		} else {
+			meta.setComponent(self, name, null, callback);
+		}
+	}
 
 };
 
@@ -397,44 +411,6 @@ OptionMeta.prototype.addEvent = function(self, name) {
 	});
 };
 
-function ParentComponentMeta(type) {
-	this.type = type;
-}
-
-ParentComponentMeta.prototype = new ComponentMeta();
-
-ParentComponentMeta.prototype.select = function(self, name, made, callback) {
-	var node = self._node;
-	var type;
-
-	if (Class.instanceOf(this.type, Type)) {
-		type = this.type;
-	}
-	else if (typeof this.type == 'function') {
-		type = this.type();
-	}
-
-	// 向上遍历所有node，找到其components中拥有与type相同gid的元素
-	var comp = null;
-	var components;
-	while ((node = node.parentNode)) {
-		components = (node && node.components) ? node.components : [];
-		components.some(function(component) {
-			if (Class.instanceOf(component, type)) {
-				comp = component;
-				return true;
-			}
-		})
-	}
-
-	this.addEvent(self, name, comp);
-	self.setComponent(name, comp);
-
-	if (callback) {
-		callback(comp);
-	}
-};
-
 function SubEventMeta(sub, eventType, gid) {
 	this.sub = sub;
 	this.eventType = eventType;
@@ -504,7 +480,7 @@ function define(meta) {
  *	}, renderer)
  * });
  * 这样MyComponent实例的refname属性即为相对应selector获取到的节点引用
- * @param {String|Boolean} selector css选择器
+ * @param {String|false} selector css选择器
  * @param {Component|String} [type=Component] 构造类的引用或模块成员字符串
  * @param {Object} [options] 默认配置
  * @param {Function} [renderer] 渲染器
@@ -526,7 +502,7 @@ this.define = function(selector, type, options, renderer) {
 
 /**
  * 同define，不过是定义唯一引用的component
- * @param {String|Boolean} selector css选择器
+ * @param {String|false} selector css选择器
  * @param {Component|String} [type=Component] 构造类的引用或模块成员字符串
  * @param {Object} [options] 默认配置
  * @param {Function} [renderer] 渲染器
@@ -550,12 +526,15 @@ this.define1 = function(selector, type, options, renderer) {
  * 定义父元素的引用，将在Component构造时遍历父节点直到找到相同类型的Component
  * @param {Component} type
  */
-this.parent = function(type) {
+this.parent = function(type, options) {
 	if (!type) {
 		throw new Error('arguments error.');
 	}
 
-	return define(new ParentComponentMeta(type));
+	var meta = new ComponentMeta(null, type, options, null);
+	meta.parent = true;
+
+	return define(meta);
 };
 
 /**

@@ -127,8 +127,36 @@ object.use('ui', function(ui) {
 	div.innerHTML = '<div class="test"></div>';
 	var test = new ParentComponent(div);
 
-	ok(test.test.parent === test, 'parent component ok.');
+	strictEqual(test.test.parent, test, 'parent component ok.');
 });
+});
+
+test('deep parent property', function() {
+
+object.use('ui', function(ui) {
+
+	var TestComponent = new Class(ui.Component, function() {
+		this.parent = ui.parent(function() {
+			return ParentComponent;
+		});
+	});
+
+	var ParentComponent = new Class(ui.Component, function() {
+	});
+
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="parent"><div class="test"></div></div>';
+
+	// div和parent都包装为ParentComponent
+	var parent1 = new ParentComponent(div);
+	var parent2 = new ParentComponent(div.getElement('div.parent'));
+
+	var test = new TestComponent(div.getElement('div.test'));
+
+	// parent1 包装 parent2，都是ParentComponent，向上查找时应该找到第一个找到的parent2
+	strictEqual(test.parent, parent2, 'found right parent.');
+});
+
 });
 
 test('async load component', function() {
