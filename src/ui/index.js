@@ -214,6 +214,22 @@ ComponentMeta.prototype.select = function(self, name, made, callback) {
 			node = made;
 		}
 	}
+	else if (metaOptions.parent) {
+		var comp = null;
+		var components;
+		var type = this.type;
+		node = self._node;
+		while ((node = node.parentNode)) {
+			components = (node && node.components) ? node.components : [];
+			if (components.some(function(component) {
+				if (Class.instanceOf(component, type)) {
+					return true;
+				}
+			})) {
+				break;
+			}
+		}
+	}
 	// 重建引用，若render正常，刚刚创建的节点会被找到并包装
 	else {
 		selector = metaOptions.selector || selector;
@@ -402,7 +418,7 @@ ParentComponentMeta.prototype.select = function(self, name, made, callback) {
 	var comp = null;
 	var components;
 	while ((node = node.parentNode)) {
-		components = node? node.components : [];
+		components = (node && node.components) ? node.components : [];
 		components.some(function(component) {
 			if (Class.instanceOf(component, type)) {
 				comp = component;
