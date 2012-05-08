@@ -337,7 +337,10 @@ Object.__new__ = function(cls) {
 	return instance;
 };
 
-// this.type 为兼容处理
+/**
+ * @class
+ * 小写type为兼容处理
+ */
 var Type = this.Type = this.type = function() {
 };
 
