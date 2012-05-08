@@ -1246,11 +1246,6 @@ this.Component = new exports.ComponentClass(function() {
 
 				meta.select(self, name, made);
 
-				// 更新所有sub component
-				self.meta.components.forEach(function(name) {
-					self.getMeta(name).select(self, name);
-				});
-
 				if (callback) {
 					callback();
 				}
