@@ -197,7 +197,9 @@ this.Request = new Class(function() {
 	 * 中断请求
 	 */
 	this.abort = function(self) {
-		self._xhr.abort();
+		if (self._xhr) {
+			self._xhr.abort();
+		}
 		if (self._timer) {
 			clearTimeout(self._timer);
 			self._timer = null;
