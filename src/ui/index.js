@@ -8,6 +8,9 @@ var optionsmod = require('./options');
 
 var globalid = 0;
 
+/**
+ * 获取node节点已经被type包装过的实例
+ */
 function getComponent(node, type) {
 	var comp ;
 	(node.components || []).some(function(component) {
@@ -15,6 +18,7 @@ function getComponent(node, type) {
 		// 在多个use下gid有可能重复，可能会找到错误的对象
 		if (Class.instanceOf(component, type)) {
 			comp = component;
+			return true;
 		}
 	});
 	return comp;
@@ -148,12 +152,11 @@ ComponentMeta.prototype.getAddonedType = function(cls, addons, callback) {
 ComponentMeta.prototype.wrap = function(self, name, node, type) {
 	var comp = getComponent(node, type);
 
-	// 此node已包装，但包装类不一定是type类型的，下面强制重新包装触发virtual
-	if (comp && Class.instanceOf(comp, type)) {
-		// 已经wrap过
+	// 此node已经被type类型包装过
+	if (comp) {
 		this.register(self, name, comp);
 	}
-	// 一个全新的未包装过的node
+	// 一个未被type包装过的node
 	else {
 		comp = new type(node, self._options[name]);
 		this.addEvent(self, name, comp);
