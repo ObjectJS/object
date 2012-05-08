@@ -1052,10 +1052,10 @@ this.Component = new exports.ComponentClass(function() {
 		var request;
 		if (!self[pname]) {
 			request = new net.Request(options);
-			self._set(name, request);
 			self.getMeta(name).addEvent(self, name, request);
 			self[pname] = request;
 		}
+		self._set(name, self[pname]);
 		return self[pname];
 	};
 
