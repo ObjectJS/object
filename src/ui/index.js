@@ -1039,9 +1039,6 @@ this.Component = new exports.ComponentClass(function() {
 	 * 所有注册的事件会被移除
 	 */
 	this._destroy = function(self) {
-
-		self.fireEvent('aftercomponentdispose');
-
 		// 删除所有render的元素
 		self.__rendered.forEach(function(node) {
 			node.dispose();
