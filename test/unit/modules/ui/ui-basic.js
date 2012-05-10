@@ -69,7 +69,7 @@ object.use('ui', function(ui) {
 	var methodCalled = 0;
 
 	var A = new Class(ui.Component, function() {
-		this._test = function() {
+		this._test = function(self) {
 			methodCalled++;
 		};
 	});
@@ -92,11 +92,11 @@ object.use('ui', function(ui) {
 	equals(test.test.getNode().length, 4, 'define components node ok.');
 
 	// 下环线形式获取节点
-	equals(test._test, testNode, 'define components right when init.');
+	strictEqual(test._test, testNode, 'define components right when init.');
 
 	// 公用方法调用
 	test.test.test();
-	equal(methodCalled, 1, 'method called.');
+	equal(methodCalled, 4, 'method called.');
 
 	// dispose
 	test.test[0].dispose();
@@ -518,9 +518,13 @@ object.use('ui', function(ui) {
 test('sub event method', function() {
 object.use('ui', function(ui) {
 
-
 	var clickEventCalled = 0;
 	var customEventCalled = 0;
+
+	var Test1Component = new Class(ui.Component, function() {
+		this._test = function(self, a) {
+		}
+	});
 
 	var Test2Component = new Class(ui.Component, function() {
 		this._test = function(self, a) {
@@ -529,7 +533,9 @@ object.use('ui', function(ui) {
 
 	var TestComponent = new Class(ui.Component, function() {
 
-		this.test = ui.define1('.test', Test2Component);
+		this.test = ui.define1('.test', Test1Component);
+
+		this.test2 = ui.define('.test2', Test2Component);
 
 		this.test_click = function(self, event) {
 			// 传递的是正确的事件
@@ -549,18 +555,44 @@ object.use('ui', function(ui) {
 			customEventCalled++;
 		};
 
+		this.test2_click = function(self, event) {
+			// 传递的是正确的事件
+			equals(event.type, 'click', 'arguments pass ok.');
+			// 从event上能够找到触发此事件的component信息。
+			equals(event.targetComponent, self.test2[0], 'component arguments pass ok with click event.');
+
+			clickEventCalled++;
+		};
+
+		this.test2_test = function(self, event, a) {
+			// 自定义事件传递的参数可以获取
+			equals(a, 'test', 'custom arguments pass ok with custom event.');
+
+			customEventCalled++;
+		};
+
 	});
 
 	var div = document.createElement('div');
-	div.innerHTML = '<div class="test">test</div>';
+	div.innerHTML = '<div class="test">test</div><div class="test2"></div><div class="test2"></div>';
 
 	var test = new TestComponent(div);
 
+	// 单个引用，内置事件
 	test.test.getNode().click();
 	equals(clickEventCalled, 1, 'sub click event called.');
 
+	// 单个引用，自定义事件
 	test.test.test('test');
 	equals(customEventCalled, 1, 'sub custom event called.');
+
+	// 多个引用，内置事件
+	test.test2[0].getNode().click();
+	equals(clickEventCalled, 2, 'sub click event called.');
+
+	// 多个引用，自定义事件
+	test.test2.test('test');
+	equals(customEventCalled, 3, 'sub custom event called.');
 });
 });
 

@@ -310,7 +310,8 @@ ComponentMeta.prototype.addEvent = function(self, name, comp) {
 
 	self.__subEventsMap[name].forEach(function(eventMeta) {
 		var methodName = eventMeta.methodName;
-		comp.addEvent(eventMeta.eventType, function(event) {
+		var eventType = eventMeta.eventType;
+		var func = function(event) {
 			event.targetComponent = comp;
 			var args;
 			// 将event._args pass 到函数后面
@@ -320,7 +321,9 @@ ComponentMeta.prototype.addEvent = function(self, name, comp) {
 			} else {
 				self[methodName](event);
 			}
-		});
+		};
+		comp.addEvent(eventType, func);
+		//self.__events.push([comp, eventType, func]);
 	});
 
 };
@@ -814,18 +817,28 @@ this.ComponentsClass = new Class(Type, function() {
 	};
 
 	this.__setattr__ = function(cls, name, member) {
+		var newName = name.slice(1);
 		// only method
 		if (typeof member != 'function' || Class.instanceOf(member, Type)) {
 			return;
 		}
 		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
 			// 重新包装，避免名字不同导致warning
-			Type.__setattr__(cls, name.slice(1), function(self) {
+			Type.__setattr__(cls, newName, function(self) {
+				var results = [];
+				var args = Array.prototype.slice.call(arguments, 1);
 				// 有可能是个空的Components
 				if (self._node) {
-					return member.apply(self, arguments);
+					self._node.forEach(function(node, i) {
+						// 将每个的执行结果返回组成数组
+						var result = self[i][newName].apply(self[i], args);
+						results.push(result);
+					});
 				}
+				return results;
 			});
+			// _xxx
+			Type.__setattr__(cls, name, member);
 		}
 		else {
 			// 重新包装，避免名字不同导致warning
@@ -864,6 +877,8 @@ this.Component = new exports.ComponentClass(function() {
 		self.__disposes = [];
 		// 存储make的新元素
 		self.__rendered = []; // 后来被加入的，而不是首次通过selector选择的node的引用
+		// 存储所有注册的事件
+		//self.__events = [];
 		// 存储subEvents，用于render时获取信息
 		self.__subEventsMap = {};
 		// 用于保存addEvent过的信息
@@ -952,8 +967,10 @@ this.Component = new exports.ComponentClass(function() {
 		return (self.__virtual || self._node).fireEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
 	};
 
-	this.addEvent = function(self) {
-		return (self.__virtual || self._node).addEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
+	this.addEvent = function(self, eventType, func) {
+		//self.__events.push(arguments);
+		var boss = self.__virtual || self._node;
+		return boss.addEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
 	};
 
 	this.removeEvent = function(self) {
@@ -1023,13 +1040,19 @@ this.Component = new exports.ComponentClass(function() {
 	};
 
 	/**
-	 * 重置一个component，回到初始状态，删除所有render的元素。
+	 * 重置一个component
 	 */
 	this._destory = function(self) {
+		// 删除所有render的元素
 		self.__rendered.forEach(function(node) {
 			node.dispose();
 		});
 		self.__rendered = [];
+
+		// 清除所有注册的事件
+		//self.__events.forEach(function(item) {
+			//item[0].removeEvent(item[1], item[2], item[3]);
+		//});
 	};
 
 	/**
