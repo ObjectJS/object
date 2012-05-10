@@ -879,8 +879,6 @@ this.Component = new exports.ComponentClass(function() {
 		self.__rendered = []; // 后来被加入的，而不是首次通过selector选择的node的引用
 		// 存储所有注册的事件
 		//self.__events = [];
-		// 存储subEvents，用于render时获取信息
-		self.__subEventsMap = {};
 		// 用于保存addEvent过的信息
 		self.__bounds = [];
 
@@ -924,7 +922,6 @@ this.Component = new exports.ComponentClass(function() {
 
 		// 记录已经获取完毕的components
 		var inited = 0;
-
 		function checkInit() {
 			if (inited == self.meta.components.length) {
 				inited = -1; // reset
@@ -932,6 +929,8 @@ this.Component = new exports.ComponentClass(function() {
 			}
 		}
 
+		// 存储subEvents，用于render时获取信息
+		self.__subEventsMap = {};
 		// 初始化subEventsMap
 		self.meta.subEvents.forEach(function(name) {
 			self.getMeta(name).init(self, name);
@@ -958,7 +957,17 @@ this.Component = new exports.ComponentClass(function() {
 			});
 		}
 
-		self.initAddons(self);
+		// 初始化addons
+		var mixins = self.__class__.get('__mixins__');
+		if (mixins) {
+			mixins.forEach(function(mixin) {
+				if (!mixin.get('gid')) {
+					// 不是addon
+					return;
+				}
+				mixin.get('init')(self);
+			}); 
+		}
 
 		checkInit();
 	};
@@ -1003,22 +1012,6 @@ this.Component = new exports.ComponentClass(function() {
 
 		return node;
 	};
-
-	/**
-	 * 初始化所有Addons
-	 */
-	this.initAddons = classmethod(function(cls, self) {
-		var mixins = cls.get('__mixins__');
-		if (mixins) {
-			mixins.forEach(function(mixin) {
-				if (!mixin.get('gid')) {
-					// 不是addon
-					return;
-				}
-				mixin.get('init')(self);
-			}); 
-		}
-	});
 
 	this._init = function(self) {
 	};
