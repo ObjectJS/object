@@ -168,6 +168,9 @@ ComponentMeta.prototype.wrap = function(self, name, node, type) {
 	return comp;
 };
 
+/**
+ * 将查询到的comp用type进行包装
+ */
 ComponentMeta.prototype.register = function(self, name, comp) {
 	this.addEvent(self, name, comp);
 	// 重新搜索，更新其options
@@ -1025,7 +1028,9 @@ this.Component = new exports.ComponentClass(function() {
 	};
 
 	/**
-	 * 重置一个component
+	 * 重置组件
+	 * 所有渲染出来的节点会被删除
+	 * 所有注册的事件会被移除
 	 */
 	this._destory = function(self) {
 		// 删除所有render的元素
@@ -1042,6 +1047,8 @@ this.Component = new exports.ComponentClass(function() {
 
 	/**
 	 * 清空自身节点
+	 * 节点会被删除
+	 * 注册的事件也会被移除
 	 */
 	this._dispose = function(self) {
 		// virtual mode 无法触发事件，因此不执行dispose操作
@@ -1056,9 +1063,9 @@ this.Component = new exports.ComponentClass(function() {
 	 */
 	this.getRequest = function(self, name) {
 		var pname = '_' + name;
-		var options = self.getOption(name) || {};
-		var request;
+		var options, request;
 		if (!self[pname]) {
+			options = self.getOption(name) || {};
 			request = new net.Request(options);
 			self.getMeta(name).addEvent(self, name, request);
 			self[pname] = request;
@@ -1080,7 +1087,7 @@ this.Component = new exports.ComponentClass(function() {
 	 * 获取option的值
 	 * 支持复杂name的查询
 	 * comp.getOption('xxx') 获取comp的xxx
-	 * comp.getOption('sub.xxx') 获取当前comp为sub准备的xxx。若要获取运行时的option，请使用com.sub.getOption('xxx');
+	 * comp.getOption('sub.xxx') 获取当前comp为sub准备的xxx。若要获取运行时的option，请使用comp.sub.getOption('xxx');
 	 * @param {string} name name
 	 */
 	this.getOption = function(self, name) {
@@ -1197,7 +1204,6 @@ this.Component = new exports.ComponentClass(function() {
 		var metaOptions = self.getOption(name + '.meta');
 		var meta = self.getMeta(name);
 
-		// TODO 用async维护两个异步
 		meta.getType(metaOptions, function(type) {
 
 			// 如果已经存在结构了，则不用再render了

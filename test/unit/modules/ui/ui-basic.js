@@ -886,6 +886,9 @@ object.use('ui', function(ui) {
 test('destory', function() {
 object.use('ui', function(ui) {
 
+	var A = new Class(ui.Component, function() {
+	});
+
 });
 });
 
