@@ -883,11 +883,32 @@ object.use('ui', function(ui) {
 });
 });
 
-test('destory', function() {
+test('destroy', function() {
 object.use('ui', function(ui) {
 
+	var eventCalled = 0;
+
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="a"></div>';
+
 	var A = new Class(ui.Component, function() {
+		this._test = function(self) {
+		};
 	});
+
+	var Test = new Class(ui.Component, function() {
+		this.a = ui.define1('.a', A);
+		this.a_test = function(self) {
+			eventCalled++;
+		};
+	});
+
+	var test = new Test(div);
+	test.a.test();
+	test.destroy();
+	test.a.test();
+
+	equal(eventCalled, 1, 'event not called after destroyed.');
 
 });
 });

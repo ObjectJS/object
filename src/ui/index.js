@@ -160,9 +160,9 @@ ComponentMeta.prototype.wrap = function(self, name, node, type) {
 	else {
 		comp = new type(node, self._options[name]);
 		this.addEvent(self, name, comp);
-		comp.addEvent('aftercomponentdispose', function(event) {
+		self.addEventTo(comp, 'aftercomponentdispose', function(event) {
 			self.getMeta(name).select(self, name);
-		});
+		})
 	}
 
 	return comp;
@@ -309,8 +309,7 @@ ComponentMeta.prototype.addEvent = function(self, name, comp) {
 
 	self.__subEventsMap[name].forEach(function(eventMeta) {
 		var methodName = eventMeta.methodName;
-		var eventType = eventMeta.eventType;
-		var func = function(event) {
+		self.addEventTo(comp, eventMeta.eventType, function(event) {
 			event.targetComponent = comp;
 			var args;
 			// 将event._args pass 到函数后面
@@ -320,9 +319,7 @@ ComponentMeta.prototype.addEvent = function(self, name, comp) {
 			} else {
 				self[methodName](event);
 			}
-		};
-		comp.addEvent(eventType, func);
-		self.__events.push([comp, eventType, func]);
+		});
 	});
 
 };
@@ -402,7 +399,7 @@ OptionMeta.prototype.addEvent = function(self, name) {
 	self.__subEventsMap[name].forEach(function(eventMeta) {
 		var methodName = eventMeta.methodName;
 		var fakeEventType = '__option_' + eventMeta.eventType + '_' + eventMeta.sub;
-		self.addEvent(fakeEventType, function(event) {
+		self.addEventTo(self, fakeEventType, function(event) {
 			self[methodName](event);
 		});
 	});
@@ -432,7 +429,7 @@ function OnEventMeta(eventType, gid) {
 OnEventMeta.prototype.bindEvents = function(self, name) {
 	var eventType = this.eventType;
 
-	self.addEvent(eventType, function(event) {
+	self.addEventTo(self, eventType, function(event) {
 		var args = [event];
 		//将event._args pass 到函数后面
 		if (event._args) {
@@ -969,6 +966,15 @@ this.Component = new exports.ComponentClass(function() {
 		checkInit();
 	};
 
+	/**
+	 * 统一的注册事件入口，当一个组件需要给自己或其子成员注册事件时使用
+	 * 统一入口可统一记录所有事件注册，在destroy时统一清除
+	 */
+	this.addEventTo = function(self, comp, type, func, cap) {
+		comp.addEvent(type, func, cap);
+		self.__events.push([comp, type, func, cap]);
+	};
+
 	this.fireEvent = function(self) {
 		return (self.__virtual || self._node).fireEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
 	};
@@ -1032,7 +1038,10 @@ this.Component = new exports.ComponentClass(function() {
 	 * 所有渲染出来的节点会被删除
 	 * 所有注册的事件会被移除
 	 */
-	this._destory = function(self) {
+	this._destroy = function(self) {
+
+		self.fireEvent('aftercomponentdispose');
+
 		// 删除所有render的元素
 		self.__rendered.forEach(function(node) {
 			node.dispose();
@@ -1043,6 +1052,14 @@ this.Component = new exports.ComponentClass(function() {
 		self.__events.forEach(function(item) {
 			item[0].removeEvent(item[1], item[2], item[3]);
 		});
+
+		// 将node上保存的自己的引用删掉
+		// 恢复现场self包装node的所有痕迹
+		for (var i = 0; i < self._node.components.length; i++) {
+			if (self._node.components[i] === self) {
+				self._node.components.splice(i, 1);
+			}
+		}
 	};
 
 	/**
