@@ -215,6 +215,7 @@ ComponentMeta.prototype.select = function(self, name, made, callback) {
 
 	if (isParent) {
 		this.getType(metaOptions, function(type) {
+			console.log(type.get('gid'));
 			var node = self._node;
 			var comp = null;
 			while ((node = node.parentNode)) {
@@ -223,7 +224,9 @@ ComponentMeta.prototype.select = function(self, name, made, callback) {
 				}
 			}
 
-			meta.register(self, name, comp);
+			if (comp) {
+				meta.register(self, name, comp);
+			}
 			meta.setComponent(self, name, comp, callback);
 		});
 
@@ -850,6 +853,8 @@ this.ComponentsClass = new Class(Type, function() {
  * UI模块基类，所有UI组件的基本类
  */
 this.Component = new exports.ComponentClass(function() {
+
+	this.debugMode = exports.option(false);
 
 	this.__setattr__ = function(self, name, value) {
 		// 并非定义的property，直接同步到node上
