@@ -215,7 +215,6 @@ ComponentMeta.prototype.select = function(self, name, made, callback) {
 
 	if (isParent) {
 		this.getType(metaOptions, function(type) {
-			console.log(type.get('gid'));
 			var node = self._node;
 			var comp = null;
 			while ((node = node.parentNode)) {
@@ -935,14 +934,6 @@ this.Component = new exports.ComponentClass(function() {
 			self.getMeta(name).init(self, name);
 		});
 
-		// 初始化components
-		self.meta.components.forEach(function(name) {
-			self.getMeta(name).select(self, name, null, function(comp) {
-				inited++;
-				checkInit();
-			});
-		});
-
 		if (!self.__virtual) {
 			// 初始化options
 			self.meta.options.forEach(function(name) {
@@ -955,6 +946,14 @@ this.Component = new exports.ComponentClass(function() {
 				self.getMeta(name).bindEvents(self, name);
 			});
 		}
+
+		// 初始化components
+		self.meta.components.forEach(function(name) {
+			self.getMeta(name).select(self, name, null, function(comp) {
+				inited++;
+				checkInit();
+			});
+		});
 
 		// 初始化addons
 		var mixins = self.__class__.get('__mixins__');
