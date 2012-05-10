@@ -883,6 +883,11 @@ object.use('ui', function(ui) {
 });
 });
 
+test('destory', function() {
+object.use('ui', function(ui) {
+});
+});
+
 test('addon class', function() {
 object.use('ui', function(ui) {
 

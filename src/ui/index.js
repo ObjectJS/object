@@ -160,14 +160,9 @@ ComponentMeta.prototype.wrap = function(self, name, node, type) {
 	else {
 		comp = new type(node, self._options[name]);
 		this.addEvent(self, name, comp);
-
-		// 注册dispose
-		if (self.__disposes.indexOf(comp) == -1) {
-			comp.addEvent('aftercomponentdispose', function(event) {
-				self.getMeta(name).select(self, name);
-			});
-			self.__disposes.push(comp);
-		}
+		comp.addEvent('aftercomponentdispose', function(event) {
+			self.getMeta(name).select(self, name);
+		});
 	}
 
 	return comp;
@@ -873,12 +868,10 @@ this.Component = new exports.ComponentClass(function() {
 			return;
 		}
 
-		// 存储dispose事件的注册情况
-		self.__disposes = [];
 		// 存储make的新元素
 		self.__rendered = []; // 后来被加入的，而不是首次通过selector选择的node的引用
 		// 存储所有注册的事件
-		//self.__events = [];
+		self.__events = [];
 		// 用于保存addEvent过的信息
 		self.__bounds = [];
 
