@@ -885,6 +885,7 @@ object.use('ui', function(ui) {
 
 test('destory', function() {
 object.use('ui', function(ui) {
+
 });
 });
 

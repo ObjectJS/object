@@ -299,6 +299,7 @@ ComponentMeta.prototype.addEvent = function(self, name, comp) {
 		self.__bounds.push(comp);
 	}
 
+	// 此组件没有给这个sub定义事件
 	if (!(comp && comp.addEvent && self.__subEventsMap[name])) {
 		return;
 	}
@@ -318,7 +319,7 @@ ComponentMeta.prototype.addEvent = function(self, name, comp) {
 			}
 		};
 		comp.addEvent(eventType, func);
-		//self.__events.push([comp, eventType, func]);
+		self.__events.push([comp, eventType, func]);
 	});
 
 };
@@ -872,7 +873,7 @@ this.Component = new exports.ComponentClass(function() {
 		self.__rendered = []; // 后来被加入的，而不是首次通过selector选择的node的引用
 		// 存储所有注册的事件
 		self.__events = [];
-		// 用于保存addEvent过的信息
+		// 记录本comp上的subevents已经被注册到了哪些sub comp上
 		self.__bounds = [];
 
 		self._node = dom.wrap(node);
@@ -970,9 +971,7 @@ this.Component = new exports.ComponentClass(function() {
 	};
 
 	this.addEvent = function(self, eventType, func) {
-		//self.__events.push(arguments);
-		var boss = self.__virtual || self._node;
-		return boss.addEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
+		return (self.__virtual || self._node).addEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
 	};
 
 	this.removeEvent = function(self) {
@@ -1036,9 +1035,9 @@ this.Component = new exports.ComponentClass(function() {
 		self.__rendered = [];
 
 		// 清除所有注册的事件
-		//self.__events.forEach(function(item) {
-			//item[0].removeEvent(item[1], item[2], item[3]);
-		//});
+		self.__events.forEach(function(item) {
+			item[0].removeEvent(item[1], item[2], item[3]);
+		});
 	};
 
 	/**
