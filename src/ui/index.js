@@ -1054,7 +1054,7 @@ this.Component = new exports.ComponentClass(function() {
 		});
 
 		// 将node上保存的自己的引用删掉
-		// 恢复现场self包装node的所有痕迹
+		// 恢复self包装过node的所有痕迹
 		for (var i = 0; i < self._node.components.length; i++) {
 			if (self._node.components[i] === self) {
 				self._node.components.splice(i, 1);
@@ -1064,8 +1064,6 @@ this.Component = new exports.ComponentClass(function() {
 
 	/**
 	 * 清空自身节点
-	 * 节点会被删除
-	 * 注册的事件也会被移除
 	 */
 	this._dispose = function(self) {
 		// virtual mode 无法触发事件，因此不执行dispose操作
