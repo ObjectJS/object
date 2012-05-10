@@ -34,7 +34,7 @@ test('sys.molules - submodule by use', function() {
 	object.add('test3', './test3/c', function(exports, c) {});
 
 	object.add('test4.a.b.c', function(exports) {
-		equal(this.__name__, 'test4/a/b/c.js');
+		equal(this.__name__, 'test4/a/b/c');
 	});
     
 	object.add('test4.a', './a/b/c, sys', function(exports, c, sys) {
@@ -50,7 +50,7 @@ test('sys.molules - submodule by use', function() {
 		ok(sys.modules['test4/a'] != null, 'test4.a is used by ./a, so a is in sys.modules');
 		ok(sys.modules['test4/a/b'] == null, 'a.b is not in sys.modules');
 		ok(sys.modules['test3'] != null, 'test3 is in sys.modules');
-		ok(sys.modules['test3/c.js'] != null, 'test3.c is in sys.modules');
+		ok(sys.modules['test3/c'] != null, 'test3.c is in sys.modules');
 	});
 	object.remove('test3', true);
 	object.remove('test4', true);
@@ -114,18 +114,18 @@ test('relative module - use', function() {
 
 	object.add('foo2.c', function() {});
 	object.add('foo2', './foo2/c', function(exports, c) {
-		equal(c.__name__, 'foo2/c.js', 'module name with same prefix.');
+		equal(c.__name__, 'foo2/c', 'module name with same prefix.');
 	});
 	object.add('foo.a.b.c', function(exports) { });
 	object.add('foo.a', './a/b/c, sys', function(exports, c, sys) {
-		equal(c.__name__, 'foo/a/b/c.js', 'relative submodule name.');
+		equal(c.__name__, 'foo/a/b/c', 'relative submodule name.');
 	});
 	object.add('foo.b', function(exports) {
 	});
 	object.add('foo.c', function(exports) {
 	});
 	object.add('foo', './foo/a, ./foo/b, ./foo/c, foo2, sys', function(exports, a, b, c, foo2, sys) {
-		ok(a.__name__ == 'foo/a.js' && b.__name__ == 'foo/b.js' && c.__name__ == 'foo/c.js', 'arguments pass.');
+		ok(a.__name__ == 'foo/a' && b.__name__ == 'foo/b' && c.__name__ == 'foo/c', 'arguments pass.');
 	});
 	object.use('foo', function() {
 	});
@@ -135,7 +135,7 @@ test('relative module - use', function() {
 	object.add('foo.a.b.c', function(exports) {
 	});
 	object.add('foo.a', './a/b/c, sys', function(exports, c, sys) {
-		equal(c.__name__, 'foo/a/b/c.js', 'relative submodule name.');
+		equal(c.__name__, 'foo/a/b/c', 'relative submodule name.');
 	});
 	object.add('foo', './foo/a', function(exports, a) {
 	});
