@@ -615,7 +615,9 @@ this.Element = new Class(function() {
 	/**
 	 * @borrows dom.Element.setHTML
 	 */
-	this.setContent = this.setHTML;
+	this.setContent = function(self, str) {
+		self.setHTML(str);
+	};
 
 	/**
 	 * 根据选择器返回第一个符合selector的元素

@@ -288,3 +288,32 @@ test('speed test', function() {
 	var time = new Date().getTime() - st;
 	ok(time < 100, 'total time(10000 times) is less than 100ms : ' + time + 'ms');
 });
+
+test('duplicate assignment', function() {
+	// backup console.warn
+	if (typeof console == 'undefined') {
+		console = {};
+		console.warn = function() {};
+	}
+	var old = console.warn;
+
+	console.warn = function() {
+		ok(true, arguments[0]);
+	};
+	var A = new Class(function() {
+		this.a = function(self) {};
+		this.b = this.a;
+
+		this.c = classmethod(function(cls) {});
+		this.d = this.c;
+
+		this.e = staticmethod(function() {});
+		this.f = this.e;
+
+		this.g = property(function(self) {});
+		this.h = this.g;
+	});
+	
+	// recover
+	console.warn = old;
+});

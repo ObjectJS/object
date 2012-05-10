@@ -54,18 +54,12 @@ test('mixin normal class', function() {
 
 	ok(typeof b.d == 'function', 'normal function is inherited');
 	equal(b.d(), 1, 'function inherited execute correctly');
-	if(typeof instancemethod != 'undefined') {
-		equal(a.d.__class__, instancemethod, 'instancemethod in parent');
-		equal(b.d.__class__, instancemethod, 'instancemethod in sub');
-	}
 
 	b.e();
 	equal(staticValue, 2, 'staticmethod execute correctly');
 
 	equal(A.f(), 'A', 'classmethod execute correctly in parent');
 	equal(B.f(), 'B', 'classmethod execute correctly in sub');
-	equal(A.f.__class__, classmethod, 'classmethod in parent');
-	equal(B.f.__class__, classmethod, 'classmethod in sub');
 
 	a.classProperty = 'a';
 	//equal(a.f(), 'a', 'should return a.classProperty in python???');
@@ -394,4 +388,34 @@ test('initialize in mixin should be called in parent and all subclasses', functi
 	equal(counter, 2, 'mixin.initialize called from sub class B');
 	var c = new C();
 	equal(counter, 3, 'mixin.initialize called from sub class C');
+});
+
+test('initialize in mixin, considering the mixining property', function() {
+	expect(4);
+	var mixin = new Class(function() {
+		this.initialize = function(self) {
+			equal(this.mixining, true, 'this.mixining can be used to recongnize whether initialize is called when mixin');
+		};
+	});
+	var counter = 0;
+	var MixinAndUse = new Class(function() {
+		this.initialize = function(self) {
+			if (this.mixining) {
+				ok(true, 'initialize called when mixining');
+				counter += 1;
+			} else {
+				ok(true, 'initialize called when creating new instance of class');
+				counter += 2;
+			}
+		};
+	});
+
+	var A = new Class(function() {
+		Class.mixin(this, mixin);
+		Class.mixin(this, MixinAndUse);
+	});
+
+	var a = new A();
+	var b = new MixinAndUse();
+	equal(counter, 3, 'initialize in mixined class called when mixining and creating new instance');
 });
