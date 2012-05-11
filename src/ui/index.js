@@ -587,8 +587,11 @@ this.subevent = function(name, gid) {
 	var sub = match[1];
 	var eventType = match[2];
 	return function(func) {
-		func.meta = new SubEventMeta(sub, eventType, gid);
-		return func;
+		function subevent() {
+			func.apply(this, arguments);
+		}
+		subevent.meta = new SubEventMeta(sub, eventType, gid);
+		return subevent;
 	};
 };
 
@@ -607,8 +610,11 @@ this.onevent = function(name, gid) {
 	var eventType = match[1];
 	eventType = eventType.slice(0, 1).toLowerCase() + eventType.slice(1);
 	return function(func) {
-		func.meta = new OnEventMeta(eventType, gid);
-		return func;
+		function onevent() {
+			func.apply(this, arguments);
+		}
+		onevent.meta = new OnEventMeta(eventType, gid);
+		return onevent;
 	};
 };
 
@@ -689,21 +695,22 @@ this.ComponentClass = new Class(Type, function() {
 
 		}
 		else if (member.__class__ == property && memberMeta instanceof OptionMeta) {
+			Type.__setattr__(cls, name, member);
 			if (meta.options.indexOf(name) == -1) {
 				meta.options.push(name);
 			}
-			Type.__setattr__(cls, name, member);
 
 		}
 		else if (member.__class__ == property && memberMeta instanceof ComponentMeta) {
+			Type.__setattr__(cls, name, member);
 			if (meta.components.indexOf(name) == -1) {
 				meta.components.push(name);
 			}
 			Type.__setattr__(cls, 'render_' + name, memberMeta.renderer);
-			Type.__setattr__(cls, name, member);
 
 		}
 		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
+			Type.__setattr__(cls, name, member);
 			newName = name.slice(1);
 			Type.__setattr__(cls, newName, events.fireevent(function(self) {
 				var method = cls.get(name);
@@ -714,10 +721,10 @@ this.ComponentClass = new Class(Type, function() {
 					return method.apply(self, args);
 				}
 			}));
-			Type.__setattr__(cls, name, member);
 
 		}
 		else if ((newMember = (exports.subevent(name, gid)(member)))) {
+			Type.__setattr__(cls, name, member);
 			newName = name + '$' + gid;
 			if (meta.subEvents.indexOf(newName) == -1) {
 				meta.subEvents.push(newName);
@@ -726,6 +733,7 @@ this.ComponentClass = new Class(Type, function() {
 
 		}
 		else if ((newMember = (exports.onevent(name, gid)(member)))) {
+			Type.__setattr__(cls, name, member);
 			newName = name + '$' + gid;
 			if (meta.onEvents.indexOf(newName) == -1) {
 				meta.onEvents.push(newName);
@@ -742,7 +750,7 @@ this.ComponentClass = new Class(Type, function() {
 	/**
 	 * 将other中的meta信息合并到cls
 	 */
-	this.mixMeta = function(cls, other, extending) {
+	this.mixMeta = function(cls, other) {
 		var meta = cls.get('meta');
 		var oMeta = other.get('meta');
 		// 合并defaultOptions
@@ -755,15 +763,14 @@ this.ComponentClass = new Class(Type, function() {
 		oMeta.options.forEach(function(name) {
 			if (meta.options.indexOf(name) == -1) meta.options.push(name);
 		});
+
 		// 合并onevent
 		oMeta.onEvents.forEach(function(name) {
 			if (meta.onEvents.indexOf(name) == -1) meta.onEvents.push(name);
 		});
 		// 合并subevent
 		oMeta.subEvents.forEach(function(name) {
-			if (!extending) {
 			if (meta.subEvents.indexOf(name) == -1) meta.subEvents.push(name);
-			}
 		});
 	};
 

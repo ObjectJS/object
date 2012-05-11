@@ -596,20 +596,30 @@ object.use('ui', function(ui) {
 });
 });
 
-test('extend sub event method', function() {
+test('extend component', function() {
 object.use('ui', function(ui) {
 
 	var eventCalled = 0;
+	var methodCalled = 0;
 
 	var A = new Class(ui.Component, function() {
 		this.test = ui.define1('.test');
+		this.a = function(self) {
+			ok(true, 'parent called in method.');
+			methodCalled++;
+		};
 		this.test_click = function(self) {
 			eventCalled++;
 		};
 	});
 
 	var AA = new Class(A, function() {
+		this.a = function(self) {
+			this.parent(self);
+			methodCalled++;
+		};
 		this.test_click = function(self) {
+			this.parent(self);
 			eventCalled++;
 		};
 	});
@@ -619,8 +629,10 @@ object.use('ui', function(ui) {
 
 	var aa = new AA(div);
 	aa.test.getNode().click();
+	aa.a();
 
-	equal(eventCalled, 1, 'override parent sub event.');
+	equal(eventCalled, 2, 'override parent sub event.');
+	equal(methodCalled, 2, 'override parent method.');
 
 });
 });
