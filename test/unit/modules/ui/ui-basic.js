@@ -596,6 +596,35 @@ object.use('ui', function(ui) {
 });
 });
 
+test('extend sub event method', function() {
+object.use('ui', function(ui) {
+
+	var eventCalled = 0;
+
+	var A = new Class(ui.Component, function() {
+		this.test = ui.define1('.test');
+		this.test_click = function(self) {
+			eventCalled++;
+		};
+	});
+
+	var AA = new Class(A, function() {
+		this.test_click = function(self) {
+			eventCalled++;
+		};
+	});
+
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="test"></div>';
+
+	var aa = new AA(div);
+	aa.test.getNode().click();
+
+	equal(eventCalled, 1, 'override parent sub event.');
+
+});
+});
+
 test('addons', function() {
 object.use('ui', function(ui) {
 

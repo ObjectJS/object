@@ -651,10 +651,10 @@ this.ComponentClass = new Class(Type, function() {
 
 		Type.__delattr__(cls, '__members');
 
-		var mix = cls.get('mixMeta');
+		var mixer = cls.get('mixMeta');
 		// 合并base的meta
 		if (base != Object) {
-			mix(base);
+			mixer(base, true);
 		}
 		// 合并mixin的meta
 		;(cls.__mixins__ || []).forEach(function(mixin) {
@@ -662,7 +662,7 @@ this.ComponentClass = new Class(Type, function() {
 			if (!mixin.get('gid')) {
 				return;
 			}
-			mix(mixin);
+			mixer(mixin);
 		});
 
 		// 生成Components
@@ -742,7 +742,7 @@ this.ComponentClass = new Class(Type, function() {
 	/**
 	 * 将other中的meta信息合并到cls
 	 */
-	this.mixMeta = function(cls, other) {
+	this.mixMeta = function(cls, other, extending) {
 		var meta = cls.get('meta');
 		var oMeta = other.get('meta');
 		// 合并defaultOptions
@@ -761,7 +761,9 @@ this.ComponentClass = new Class(Type, function() {
 		});
 		// 合并subevent
 		oMeta.subEvents.forEach(function(name) {
+			if (!extending) {
 			if (meta.subEvents.indexOf(name) == -1) meta.subEvents.push(name);
+			}
 		});
 	};
 
