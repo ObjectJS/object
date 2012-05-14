@@ -562,7 +562,7 @@ this.option = function(defaultValue, getter) {
  * @param [method='get']
  */
 this.request = function(url, method) {
-	var meta = new RequestMeta(url, method);
+	var meta = new RequestMeta(url, method || 'get');
 	var prop = property(function(self) {
 		var name = prop.__name__;
 		return self.getRequest(name);
@@ -1086,17 +1086,24 @@ this.Component = new exports.ComponentClass(function() {
 	/**
 	 * 获取一个通过ui.request定义的net.Request的实例
 	 */
-	this.getRequest = function(self, name) {
+	this.getRequest = function(self, name, data) {
 		var pname = '_' + name;
-		var options, request;
+		var options = self.getOption(name) || {};
+		if (data) {
+			options = object.clone(options);
+			options.url = string.substitute(options.url, data);
+		}
+		var request;
 		if (!self[pname]) {
-			options = self.getOption(name) || {};
-			request = new net.Request(options);
+			request = new net.Request();
 			self.getMeta(name).addEvent(self, name, request);
 			self[pname] = request;
+		} else {
+			request = self[pname];
 		}
-		self._set(name, self[pname]);
-		return self[pname];
+		request.setOption(options);
+		self._set(name, request);
+		return request;
 	};
 
 	/**
