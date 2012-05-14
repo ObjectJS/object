@@ -407,11 +407,10 @@ OptionMeta.prototype.addEvent = function(self, name) {
 	});
 };
 
-function SubEventMeta(sub, eventType, gid) {
+function SubEventMeta(sub, eventType) {
 	this.sub = sub;
 	this.eventType = eventType;
-	this.gid = gid;
-	this.methodName = sub + '_' + eventType + '$' + gid;
+	this.methodName = sub + '_' + eventType;
 }
 
 SubEventMeta.prototype.init = function(self, name) {
@@ -423,9 +422,8 @@ SubEventMeta.prototype.init = function(self, name) {
 	self.__subEventsMap[sub].push(this);
 };
 
-function OnEventMeta(eventType, gid) {
+function OnEventMeta(eventType) {
 	this.eventType = eventType;
-	this.gid = gid;
 }
 
 OnEventMeta.prototype.bindEvents = function(self, name) {
@@ -587,10 +585,11 @@ this.subevent = function(name, gid) {
 	var sub = match[1];
 	var eventType = match[2];
 	return function(func) {
+		var meta = new SubEventMeta(sub, eventType);
 		function subevent() {
 			func.apply(this, arguments);
 		}
-		subevent.meta = new SubEventMeta(sub, eventType, gid);
+		func.meta = subevent.meta = meta;
 		return subevent;
 	};
 };
@@ -610,10 +609,11 @@ this.onevent = function(name, gid) {
 	var eventType = match[1];
 	eventType = eventType.slice(0, 1).toLowerCase() + eventType.slice(1);
 	return function(func) {
+		var meta = new OnEventMeta(eventType);
 		function onevent() {
 			func.apply(this, arguments);
 		}
-		onevent.meta = new OnEventMeta(eventType, gid);
+		func.meta = onevent.meta = meta;
 		return onevent;
 	};
 };
@@ -690,59 +690,46 @@ this.ComponentClass = new Class(Type, function() {
 			});
 		}
 
-		if (member == null) {
-			Type.__setattr__(cls, name, member);
+		Type.__setattr__(cls, name, member);
+
+		if (!member) {
+			return;
 
 		}
 		else if (member.__class__ == property && memberMeta instanceof OptionMeta) {
-			Type.__setattr__(cls, name, member);
 			if (meta.options.indexOf(name) == -1) {
 				meta.options.push(name);
 			}
 
 		}
 		else if (member.__class__ == property && memberMeta instanceof ComponentMeta) {
-			Type.__setattr__(cls, name, member);
 			if (meta.components.indexOf(name) == -1) {
 				meta.components.push(name);
 			}
-			Type.__setattr__(cls, 'render_' + name, memberMeta.renderer);
+			Type.__setattr__(cls, '__render_' + name, memberMeta.renderer);
 
 		}
 		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
-			Type.__setattr__(cls, name, member);
 			newName = name.slice(1);
 			Type.__setattr__(cls, newName, events.fireevent(function(self) {
-				var method = cls.get(name);
-				var args;
-				if (method) {
-					args = Array.prototype.slice.call(arguments, 1);
-					args.unshift(self);
-					return method.apply(self, args);
-				}
+				return member.apply(self, arguments);
 			}));
 
 		}
 		else if ((newMember = (exports.subevent(name, gid)(member)))) {
-			Type.__setattr__(cls, name, member);
 			newName = name + '$' + gid;
-			if (meta.subEvents.indexOf(newName) == -1) {
-				meta.subEvents.push(newName);
+			if (meta.subEvents.indexOf(name) == -1) {
+				meta.subEvents.push(name);
 			}
 			Type.__setattr__(cls, newName, newMember);
 
 		}
 		else if ((newMember = (exports.onevent(name, gid)(member)))) {
-			Type.__setattr__(cls, name, member);
 			newName = name + '$' + gid;
-			if (meta.onEvents.indexOf(newName) == -1) {
-				meta.onEvents.push(newName);
+			if (meta.onEvents.indexOf(name) == -1) {
+				meta.onEvents.push(name);
 			}
 			Type.__setattr__(cls, newName, newMember);
-
-		}
-		else {
-			Type.__setattr__(cls, name, member);
 
 		}
 	};
@@ -750,9 +737,11 @@ this.ComponentClass = new Class(Type, function() {
 	/**
 	 * 将other中的meta信息合并到cls
 	 */
-	this.mixMeta = function(cls, other) {
+	this.mixMeta = function(cls, other, extending) {
 		var meta = cls.get('meta');
 		var oMeta = other.get('meta');
+		var surfix = '$' + other.get('gid');
+
 		// 合并defaultOptions
 		extend(meta.defaultOptions, oMeta.defaultOptions, false);
 		// 合并components
@@ -763,14 +752,21 @@ this.ComponentClass = new Class(Type, function() {
 		oMeta.options.forEach(function(name) {
 			if (meta.options.indexOf(name) == -1) meta.options.push(name);
 		});
-
 		// 合并onevent
 		oMeta.onEvents.forEach(function(name) {
-			if (meta.onEvents.indexOf(name) == -1) meta.onEvents.push(name);
+			if (meta.onEvents.indexOf(name) == -1) {
+				meta.onEvents.push(name);
+			} else if (!extending) {
+				meta.onEvents.push(name + surfix);
+			}
 		});
 		// 合并subevent
 		oMeta.subEvents.forEach(function(name) {
-			if (meta.subEvents.indexOf(name) == -1) meta.subEvents.push(name);
+			if (meta.subEvents.indexOf(name) == -1) {
+				meta.subEvents.push(name);
+			} else if (!extending) {
+				meta.onEvents.push(name + surfix);
+			}
 		});
 	};
 
@@ -1248,7 +1244,7 @@ this.Component = new exports.ComponentClass(function() {
 				return;
 			}
 
-			var methodName = 'render_' + name;
+			var methodName = '__render_' + name;
 			var renderer = self[methodName];
 			if (!renderer) {
 				console.error('no renderer specified for ' + name + '.');
