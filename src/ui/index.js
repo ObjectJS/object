@@ -742,28 +742,30 @@ this.ComponentClass = new Class(Type, function() {
 		oMeta.onEvents.forEach(function(name) {
 			var newName = name + surfix;
 
-			if (meta.onEvents.indexOf(name) == -1) {
-				meta.onEvents.push(name);
-			} else if (isAddon) {
+			if (isAddon) {
 				var func = other.get(name, false).im_func;
 				Type.__setattr__(cls, newName, exports.onevent(name)(function(self) {
 					func.apply(self, arguments);
 				}));
 				meta.onEvents.push(newName);
 			}
+			else if (meta.onEvents.indexOf(name) == -1) {
+				meta.onEvents.push(name);
+			}
 		});
 		// 合并subevent
 		oMeta.subEvents.forEach(function(name) {
 			var newName = name + surfix;
 
-			if (meta.subEvents.indexOf(name) == -1) {
-				meta.subEvents.push(name);
-			} else if (isAddon) {
+			if (isAddon) {
 				var func = other.get(name, false).im_func;
 				Type.__setattr__(cls, newName, exports.subevent(name)(function(self) {
 					func.apply(self, arguments);
 				}));
-				meta.onEvents.push(newName);
+				meta.subEvents.push(newName);
+			}
+			else if (meta.subEvents.indexOf(name) == -1) {
+				meta.subEvents.push(name);
 			}
 		});
 	};
