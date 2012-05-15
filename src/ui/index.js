@@ -670,7 +670,6 @@ this.ComponentClass = new Class(Type, function() {
 	this.__setattr__ = function(cls, name, member) {
 		var gid = cls.get('gid');
 		var meta = cls.get('meta');
-		var newName, newMeta;
 		var memberMeta = member? member.meta : null;
 
 		// 生成meta.defaultOptions
@@ -702,21 +701,18 @@ this.ComponentClass = new Class(Type, function() {
 
 		}
 		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
-			newName = name.slice(1);
-			Type.__setattr__(cls, newName, events.fireevent(function(self) {
+			Type.__setattr__(cls, name.slice(1), events.fireevent(function(self) {
 				return member.apply(self, arguments);
 			}));
 
 		}
-		else if ((newMeta = (exports.subevent(name)(member)))) {
-			newName = name + '$' + gid;
+		else if (exports.subevent(name)(member)) {
 			if (meta.subEvents.indexOf(name) == -1) {
 				meta.subEvents.push(name);
 			}
 
 		}
-		else if ((newMeta = (exports.onevent(name)(member)))) {
-			newName = name + '$' + gid;
+		else if (exports.onevent(name)(member)) {
 			if (meta.onEvents.indexOf(name) == -1) {
 				meta.onEvents.push(name);
 			}
