@@ -625,11 +625,10 @@ this.ComponentClass = new Class(Type, function() {
 		// 处理定义的成员
 		Object.keys(dict).forEach(function(name) {
 			var member = dict[name];
+			var memberMeta = member? member.meta : null;
 			if (name.slice(0, 2) == '__') {
 				return;
 			}
-
-			var memberMeta = member? member.meta : null;
 
 			// 生成meta.defaultOptions
 			// 从meta中获取defaultOptions属性并合并到此组件的meta.defaultOptions中
@@ -1324,11 +1323,6 @@ this.AddonClass = new exports.AddonClassClass(exports.ComponentClass, function()
 		if (base !== exports.Component) {
 			base = exports.Component;
 		}
-		return exports.ComponentClass.get('__new__')(cls, name, base, dict);
-	};
-
-	this.initialize = function(cls, name, base, dict) {
-		exports.ComponentClass.get('initialize')(cls, name, base, dict);
 
 		var members = cls.get('__addonmembers');
 		var variables = cls.get('__variables');
@@ -1337,6 +1331,7 @@ this.AddonClass = new exports.AddonClassClass(exports.ComponentClass, function()
 		variables.forEach(function(name) {
 			vars[name.slice(1)] = cls.get(name);
 		});
+
 		// 变量递归，支持变量中引用变量
 		variables.forEach(function(name) {
 			var member = cls.get(name);
@@ -1347,14 +1342,16 @@ this.AddonClass = new exports.AddonClassClass(exports.ComponentClass, function()
 
 		members.forEach(function(nameTpl) {
 			var name = string.substitute(nameTpl, vars);
-			var member = cls.get(nameTpl, false);
+			var member = cls.get(nameTpl);
 			if (typeof member == 'function') {
-				member = member.bind(cls)();
+				member = member(cls, vars);
 			}
-			cls.set(name, member);
+			dict[name] = member;
 		});
-		cls.set('__vars', vars);
+
+		return Type.__new__(cls, name, base, dict);
 	};
+
 });
 
 /**
