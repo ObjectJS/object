@@ -278,8 +278,10 @@ object.use('ui', function(ui) {
 		});
 
 		this.test_change = function(self, event) {
-			equal(event.oldValue, 1, 'old value ok.');
-			equal(event.value, 2, 'new value set.');
+			if (event.value == 2) {
+				equal(event.oldValue, 1, 'old value ok.');
+				equal(event.value, 2, 'new value set.');
+			}
 			optionChangeFired++;
 		};
 
@@ -304,6 +306,14 @@ object.use('ui', function(ui) {
 	test.set('test', 2);
 	equals(test.test, 2, 'set option value ok.');
 
+	// 设置会触发事件
+	equals(optionChangeFired, 1, 'set option fired change event.');
+
+	test.set('test', 2);
+
+	// 设置相同的value不会触发事件
+	equals(optionChangeFired, 1, 'set same value to option wont fired change event.');
+
 	// 设置不存在的成员
 	test.set('nonexistent', 1);
 	equals(test.nonexistent, 1, 'set nonexistent ok.');
@@ -313,9 +323,6 @@ object.use('ui', function(ui) {
 	test.set('className', 'test');
 	equals(test.className, 'test', 'set to node ok.');
 	equals(test.getNode().className, 'test', 'set to node ok.');
-
-	// 设置会触发事件
-	equals(optionChangeFired, 1, 'set option fired change event.');
 
 	// 阻止option设置
 	test.set('test2', 'xxx');

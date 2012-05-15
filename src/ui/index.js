@@ -1173,10 +1173,12 @@ this.Component = new exports.ComponentClass(function() {
 			}
 			// 否则触发change
 			else {
-				(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
-					// 重新更新对象上的直接引用值
-					self.getOption(name);
-				}))(self, oldValue, value);
+				if (oldValue !== value) {
+					(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
+						// 重新更新对象上的直接引用值
+						self.getOption(name);
+					}))(self, oldValue, value);
+				}
 			}
 		}, function(prefix, surfix) {
 			var sub = self[prefix];
