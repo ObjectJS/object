@@ -574,7 +574,7 @@ this.request = function(url, method) {
  * @decorator
  * @param name 一个函数名字
  */
-this.subevent = function(name, gid) {
+this.subevent = function(name) {
 	var match = name.match(/^(_?\w+)_(\w+)$/);
 	if (!match) {
 		// 名字不匹配，返回的decorator返回空
@@ -585,12 +585,8 @@ this.subevent = function(name, gid) {
 	var sub = match[1];
 	var eventType = match[2];
 	return function(func) {
-		var meta = new SubEventMeta(sub, eventType);
-		function subevent() {
-			func.apply(this, arguments);
-		}
-		func.meta = subevent.meta = meta;
-		return subevent;
+		func.meta = new SubEventMeta(sub, eventType);
+		return func;
 	};
 };
 
@@ -598,7 +594,7 @@ this.subevent = function(name, gid) {
  * 定义一个扩展向宿主元素定义事件的方法
  * @decorator
  */
-this.onevent = function(name, gid) {
+this.onevent = function(name) {
 	var match = name.match(/^on(\w+)$/);
 	if (!match) {
 		// 名字不匹配，返回的decorator返回空
@@ -609,12 +605,8 @@ this.onevent = function(name, gid) {
 	var eventType = match[1];
 	eventType = eventType.slice(0, 1).toLowerCase() + eventType.slice(1);
 	return function(func) {
-		var meta = new OnEventMeta(eventType);
-		function onevent() {
-			func.apply(this, arguments);
-		}
-		func.meta = onevent.meta = meta;
-		return onevent;
+		func.meta = new OnEventMeta(eventType);
+		return func;
 	};
 };
 
@@ -660,7 +652,7 @@ this.ComponentClass = new Class(Type, function() {
 		var mixer = cls.get('mixMeta');
 		// 合并base的meta
 		if (base != Object) {
-			mixer(base, true);
+			mixer(base);
 		}
 		// 合并mixin的meta
 		;(cls.__mixins__ || []).forEach(function(mixin) {
@@ -668,7 +660,7 @@ this.ComponentClass = new Class(Type, function() {
 			if (!mixin.get('gid')) {
 				return;
 			}
-			mixer(mixin);
+			mixer(mixin, true);
 		});
 
 		// 生成Components
@@ -678,7 +670,7 @@ this.ComponentClass = new Class(Type, function() {
 	this.__setattr__ = function(cls, name, member) {
 		var gid = cls.get('gid');
 		var meta = cls.get('meta');
-		var newName, newMember;
+		var newName, newMeta;
 		var memberMeta = member? member.meta : null;
 
 		// 生成meta.defaultOptions
@@ -716,20 +708,18 @@ this.ComponentClass = new Class(Type, function() {
 			}));
 
 		}
-		else if ((newMember = (exports.subevent(name, gid)(member)))) {
+		else if ((newMeta = (exports.subevent(name)(member)))) {
 			newName = name + '$' + gid;
 			if (meta.subEvents.indexOf(name) == -1) {
 				meta.subEvents.push(name);
 			}
-			Type.__setattr__(cls, newName, newMember);
 
 		}
-		else if ((newMember = (exports.onevent(name, gid)(member)))) {
+		else if ((newMeta = (exports.onevent(name)(member)))) {
 			newName = name + '$' + gid;
 			if (meta.onEvents.indexOf(name) == -1) {
 				meta.onEvents.push(name);
 			}
-			Type.__setattr__(cls, newName, newMember);
 
 		}
 	};
@@ -737,7 +727,7 @@ this.ComponentClass = new Class(Type, function() {
 	/**
 	 * 将other中的meta信息合并到cls
 	 */
-	this.mixMeta = function(cls, other, extending) {
+	this.mixMeta = function(cls, other, isAddon) {
 		var meta = cls.get('meta');
 		var oMeta = other.get('meta');
 		var surfix = '$' + other.get('gid');
@@ -754,18 +744,30 @@ this.ComponentClass = new Class(Type, function() {
 		});
 		// 合并onevent
 		oMeta.onEvents.forEach(function(name) {
+			var newName = name + surfix;
+
 			if (meta.onEvents.indexOf(name) == -1) {
 				meta.onEvents.push(name);
-			} else if (!extending) {
-				meta.onEvents.push(name + surfix);
+			} else if (isAddon) {
+				var func = other.get(name, false).im_func;
+				Type.__setattr__(cls, newName, exports.onevent(name)(function(self) {
+					func.apply(self, arguments);
+				}));
+				meta.onEvents.push(newName);
 			}
 		});
 		// 合并subevent
 		oMeta.subEvents.forEach(function(name) {
+			var newName = name + surfix;
+
 			if (meta.subEvents.indexOf(name) == -1) {
 				meta.subEvents.push(name);
-			} else if (!extending) {
-				meta.onEvents.push(name + surfix);
+			} else if (isAddon) {
+				var func = other.get(name, false).im_func;
+				Type.__setattr__(cls, newName, exports.subevent(name)(function(self) {
+					func.apply(self, arguments);
+				}));
+				meta.onEvents.push(newName);
 			}
 		});
 	};
