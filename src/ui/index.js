@@ -1319,6 +1319,7 @@ this.AddonClassClass = new Class(Type, function() {
 this.AddonClass = new exports.AddonClassClass(exports.ComponentClass, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
+
 		// base是Component
 		if (base !== exports.Component) {
 			base = exports.Component;
@@ -1327,11 +1328,11 @@ this.AddonClass = new exports.AddonClassClass(exports.ComponentClass, function()
 		var members = cls.get('__members');
 		var variables = cls.get('__variables');
 
+		// 生成vars
 		var vars = {};
 		variables.forEach(function(name) {
 			vars[name.slice(1)] = cls.get(name);
 		});
-
 		// 变量递归，支持变量中引用变量
 		variables.forEach(function(name) {
 			var member = cls.get(name);
@@ -1340,6 +1341,7 @@ this.AddonClass = new exports.AddonClassClass(exports.ComponentClass, function()
 			}
 		});
 
+		// 生成member
 		members.forEach(function(nameTpl) {
 			var name = string.substitute(nameTpl, vars);
 			var member = cls.get(nameTpl);
