@@ -612,47 +612,43 @@ this.onevent = function(name) {
 
 this.ComponentClass = new Class(Type, function() {
 
-	this.__new__ = function(cls, name, base, dict) {
+	this.initialize = function(cls, name, base, dict) {
+		var gid = globalid++;
+		var meta = new RuntimeMeta();
+		var options = {};
+		var memberSetter = cls.get('setMember');
+		var mixer = cls.get('mixMeta');
 
-		var members = [];
+		cls.set('gid', gid);
+		cls.set('meta', meta);
 
+		// 处理定义的成员
 		Object.keys(dict).forEach(function(name) {
 			var member = dict[name];
 			if (name.slice(0, 2) == '__') {
 				return;
 			}
-			members.push({
-				name: name,
-				member: member
-			});
+
+			var memberMeta = member? member.meta : null;
+
+			// 生成meta.defaultOptions
+			// 从meta中获取defaultOptions属性并合并到此组件的meta.defaultOptions中
+			// 组件并不支持实例产生后同步其类的修改，因此meta.defualtOptions只在类的初始化函数中合并一次即可
+			// 不需要在__setattr__中调用
+			if (memberMeta && memberMeta.defaultOptions) {
+				Object.keys(memberMeta.defaultOptions).forEach(function(key) {
+					meta.defaultOptions[name + '.' + key] = memberMeta.defaultOptions[key];
+				});
+			}
+
+			memberSetter(name, member);
 		});
 
-		dict.__members = members;
-
-		return Type.__new__(cls, name, base, dict);
-	};
-
-	this.initialize = function(cls, name, base, dict) {
-		var gid = globalid++;
-		var meta = new RuntimeMeta();
-		var options = {};
-
-		cls.set('gid', gid);
-		cls.set('meta', meta);
-
-		var members = cls.get('__members');
-
-		members.forEach(function(item) {
-			cls.set(item.name, item.member);
-		});
-
-		Type.__delattr__(cls, '__members');
-
-		var mixer = cls.get('mixMeta');
 		// 合并base的meta
 		if (base != Object) {
 			mixer(base);
 		}
+
 		// 合并mixin的meta
 		;(cls.__mixins__ || []).forEach(function(mixin) {
 			// mixin的有可能不是addon
@@ -667,36 +663,31 @@ this.ComponentClass = new Class(Type, function() {
 	};
 
 	this.__setattr__ = function(cls, name, member) {
-		var gid = cls.get('gid');
-		var meta = cls.get('meta');
-		var memberMeta = member? member.meta : null;
-
-		// 生成meta.defaultOptions
-		// 从meta中获取defaultOptions属性并合并到此组件的meta.defaultOptions中
-		// 组件并不支持实例产生后同步其类的修改，因此meta.defualtOptions只在类的初始化函数中合并一次即可。
-		if (member && memberMeta && memberMeta.defaultOptions) {
-			Object.keys(memberMeta.defaultOptions).forEach(function(key) {
-				meta.defaultOptions[name + '.' + key] = memberMeta.defaultOptions[key];
-			});
-		}
-
 		Type.__setattr__(cls, name, member);
+		cls.get('setMember')(name, member);
+	};
+
+	/**
+	 * 处理每一个component的成员
+	 */
+	this.setMember = function(cls, name, member) {
+		var meta = cls.get('meta');
 
 		if (!member) {
 			return;
 
 		}
-		else if (member.__class__ == property && memberMeta instanceof OptionMeta) {
+		else if (member.__class__ == property && member.meta instanceof OptionMeta) {
 			if (meta.options.indexOf(name) == -1) {
 				meta.options.push(name);
 			}
 
 		}
-		else if (member.__class__ == property && memberMeta instanceof ComponentMeta) {
+		else if (member.__class__ == property && member.meta instanceof ComponentMeta) {
 			if (meta.components.indexOf(name) == -1) {
 				meta.components.push(name);
 			}
-			Type.__setattr__(cls, '__render_' + name, memberMeta.renderer);
+			Type.__setattr__(cls, '__render_' + name, member.meta.renderer);
 
 		}
 		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
@@ -729,14 +720,21 @@ this.ComponentClass = new Class(Type, function() {
 
 		// 合并defaultOptions
 		extend(meta.defaultOptions, oMeta.defaultOptions, false);
+
 		// 合并components
 		oMeta.components.forEach(function(name) {
-			if (meta.components.indexOf(name) == -1) meta.components.push(name);
+			if (meta.components.indexOf(name) == -1) {
+				meta.components.push(name);
+			}
 		});
+
 		// 合并options
 		oMeta.options.forEach(function(name) {
-			if (meta.options.indexOf(name) == -1) meta.options.push(name);
+			if (meta.options.indexOf(name) == -1) {
+				meta.options.push(name);
+			}
 		});
+
 		// 合并onevent
 		oMeta.onEvents.forEach(function(name) {
 			var newName, func;
@@ -753,6 +751,7 @@ this.ComponentClass = new Class(Type, function() {
 				meta.onEvents.push(name);
 			}
 		});
+
 		// 合并subevent
 		oMeta.subEvents.forEach(function(name) {
 			var newName, func;
