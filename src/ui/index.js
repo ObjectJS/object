@@ -740,10 +740,11 @@ this.ComponentClass = new Class(Type, function() {
 		});
 		// 合并onevent
 		oMeta.onEvents.forEach(function(name) {
-			var newName = name + surfix;
+			var newName, func;
 
 			if (isAddon) {
-				var func = other.get(name, false).im_func;
+				newName = name + surfix;
+				func = other.get(name, false).im_func;
 				Type.__setattr__(cls, newName, exports.onevent(name)(function() {
 					func.apply(this, arguments);
 				}));
@@ -755,10 +756,11 @@ this.ComponentClass = new Class(Type, function() {
 		});
 		// 合并subevent
 		oMeta.subEvents.forEach(function(name) {
-			var newName = name + surfix;
+			var newName, func;
 
 			if (isAddon) {
-				var func = other.get(name, false).im_func;
+				newName = name + surfix;
+				func = other.get(name, false).im_func;
 				Type.__setattr__(cls, newName, exports.subevent(name)(function() {
 					func.apply(this, arguments);
 				}));

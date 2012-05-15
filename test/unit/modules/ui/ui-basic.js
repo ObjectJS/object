@@ -601,6 +601,7 @@ object.use('ui', function(ui) {
 
 	var eventCalled = 0;
 	var methodCalled = 0;
+	var onEventCalled = 0;
 
 	var A = new Class(ui.Component, function() {
 		this.test = ui.define1('.test');
@@ -609,7 +610,12 @@ object.use('ui', function(ui) {
 			methodCalled++;
 		};
 		this.test_click = function(self) {
+			ok(true, 'parent called in sub event.');
 			eventCalled++;
+		};
+		this.onA = function(self) {
+			ok(true, 'parent called in on event.');
+			onEventCalled++;
 		};
 	});
 
@@ -622,6 +628,10 @@ object.use('ui', function(ui) {
 			this.parent(self);
 			eventCalled++;
 		};
+		this.onA = function(self) {
+			this.parent(self);
+			onEventCalled++;
+		};
 	});
 
 	var div = document.createElement('div');
@@ -633,6 +643,7 @@ object.use('ui', function(ui) {
 
 	equal(eventCalled, 2, 'override parent sub event.');
 	equal(methodCalled, 2, 'override parent method.');
+	equal(onEventCalled, 2, 'override parent on event.');
 
 });
 });
