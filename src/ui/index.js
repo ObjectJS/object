@@ -625,7 +625,6 @@ this.ComponentClass = new Class(Type, function() {
 				name: name,
 				member: member
 			});
-			delete dict[name];
 		});
 
 		dict.__members = members;
@@ -795,7 +794,7 @@ this.ComponentClass = new Class(Type, function() {
 
 			Object.keys(dict).forEach(function(name) {
 				var member = dict[name];
-				if (name == '__metaclass__') {
+				if (name == '__metaclass__' || name == 'initialize') {
 					return;
 				}
 				this[name] = member;
@@ -810,15 +809,12 @@ this.ComponentsClass = new Class(Type, function() {
 
 	this.initialize = function(cls, name, base, dict) {
 
-		var members = cls.get('__members');
-
-		members.forEach(function(item) {
+		Object.keys(dict).forEach(function(name) {
+			var member = dict[name];
 			// 暂时忽略setOption
-			if (item.name == 'initialize' || item.name == 'setOption') return;
-			cls.set(item.name, item.member);
+			if (name == 'initialize' || name == 'setOption') return;
+			cls.set(name, member);
 		});
-
-		Type.__delattr__(cls, '__members');
 	};
 
 	this.__setattr__ = function(cls, name, member) {
@@ -1299,7 +1295,7 @@ this.AddonClassClass = new Class(Type, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 
-		var members = (base.get('__members') || []).slice();
+		var members = (base.get('__addonmembers') || []).slice();
 		var variables = (base.get('__variables') || []).slice();
 
 		Object.keys(dict).forEach(function(name) {
@@ -1315,7 +1311,7 @@ this.AddonClassClass = new Class(Type, function() {
 		});
 		// 如果不带下划线，就有可能覆盖掉自定义的方法，也就意味着开发者不能定义这些名字的成员
 		dict.__variables = variables;
-		dict.__members = members;
+		dict.__addonmembers = members;
 
 		return Type.__new__(cls, name, base, dict);
 	};
@@ -1335,7 +1331,7 @@ this.AddonClass = new exports.AddonClassClass(exports.ComponentClass, function()
 	this.initialize = function(cls, name, base, dict) {
 		exports.ComponentClass.get('initialize')(cls, name, base, dict);
 
-		var members = cls.get('__members');
+		var members = cls.get('__addonmembers');
 		var variables = cls.get('__variables');
 
 		var vars = {};
