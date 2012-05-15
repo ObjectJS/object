@@ -159,7 +159,7 @@ ComponentMeta.prototype.wrap = function(self, name, node, type) {
 	// 一个未被type包装过的node
 	else {
 		comp = new type(node, self._options[name]);
-		this.addEvent(self, name, comp);
+		this.bindEvents(self, name, comp);
 		self.addEventTo(comp, 'aftercomponentdispose', function(event) {
 			self.getMeta(name).select(self, name);
 		})
@@ -172,7 +172,7 @@ ComponentMeta.prototype.wrap = function(self, name, node, type) {
  * 将查询到的comp用type进行包装
  */
 ComponentMeta.prototype.register = function(self, name, comp) {
-	this.addEvent(self, name, comp);
+	this.bindEvents(self, name, comp);
 	// 重新搜索，更新其options
 	Object.keys(self._options[name]).forEach(function(key) {
 		comp.setOption(key, self._options[name][key]);
@@ -294,7 +294,7 @@ ComponentMeta.prototype.getTemplate = function(metaOptions, relativeModule, call
 
 };
 
-ComponentMeta.prototype.addEvent = function(self, name, comp) {
+ComponentMeta.prototype.bindEvents = function(self, name, comp) {
 
 	// comp可能会注册来自多个引用了它的其他的comp的事件注册
 	// 通过在__bounds中保存已经注册过的其他组件，避免重复注册
@@ -394,7 +394,7 @@ function OptionMeta(defaultValue, getter) {
 	this.getter = getter;
 }
 
-OptionMeta.prototype.addEvent = function(self, name) {
+OptionMeta.prototype.bindEvents = function(self, name) {
 	if (!self.__subEventsMap[name]) {
 		return;
 	}
@@ -446,7 +446,7 @@ function RequestMeta(url, method) {
 	};
 }
 
-RequestMeta.prototype.addEvent = ComponentMeta.prototype.addEvent;
+RequestMeta.prototype.bindEvents = ComponentMeta.prototype.bindEvents;
 
 /**
  * 帮助定义一个生成组件间联系的方法
@@ -701,7 +701,7 @@ this.ComponentClass = new Class(Type, function() {
 
 		}
 		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
-			Type.__setattr__(cls, name.slice(1), events.fireevent(function() {
+			Type.__setattr__(cls, name.slice(1), events.fireevent(function(self) {
 				return member.apply(this, arguments);
 			}));
 
@@ -746,7 +746,7 @@ this.ComponentClass = new Class(Type, function() {
 				newName = name + surfix;
 				func = other.get(name, false).im_func;
 				Type.__setattr__(cls, newName, exports.onevent(name)(function() {
-					func.apply(this, arguments);
+					return func.apply(this, arguments);
 				}));
 				meta.onEvents.push(newName);
 			}
@@ -762,7 +762,7 @@ this.ComponentClass = new Class(Type, function() {
 				newName = name + surfix;
 				func = other.get(name, false).im_func;
 				Type.__setattr__(cls, newName, exports.subevent(name)(function() {
-					func.apply(this, arguments);
+					return func.apply(this, arguments);
 				}));
 				meta.subEvents.push(newName);
 			}
@@ -944,7 +944,7 @@ this.Component = new exports.ComponentClass(function() {
 		if (!self.__virtual) {
 			// 初始化options
 			self.meta.options.forEach(function(name) {
-				self.getMeta(name).addEvent(self, name);
+				self.getMeta(name).bindEvents(self, name);
 				self.getOption(name);
 			});
 
@@ -1094,7 +1094,7 @@ this.Component = new exports.ComponentClass(function() {
 		var request;
 		if (!self[pname]) {
 			request = new net.Request();
-			self.getMeta(name).addEvent(self, name, request);
+			self.getMeta(name).bindEvents(self, name, request);
 			self[pname] = request;
 		} else {
 			request = self[pname];
