@@ -977,11 +977,10 @@ object.use('ui', function(ui) {
 
 		this.$trigger = '{{name}}Trigger';
 
-		this['{{trigger}}_click'] = function(cls, self) {
-			var $name = cls.get('$name');
+		this['{{trigger}}_click'] = function(cls, vars) {
 			return function(self) {
 				ok(self.test, 'arguments ok.');
-				equal($name, 'test', 'variable ok.');
+				equal(vars.name, 'test', 'variable ok.');
 				eventFired++;
 			}
 		};

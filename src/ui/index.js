@@ -1293,7 +1293,7 @@ this.AddonClassClass = new Class(Type, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
 
-		var members = (base.get('__addonmembers') || []).slice();
+		var members = (base.get('__members') || []).slice();
 		var variables = (base.get('__variables') || []).slice();
 
 		Object.keys(dict).forEach(function(name) {
@@ -1309,7 +1309,7 @@ this.AddonClassClass = new Class(Type, function() {
 		});
 		// 如果不带下划线，就有可能覆盖掉自定义的方法，也就意味着开发者不能定义这些名字的成员
 		dict.__variables = variables;
-		dict.__addonmembers = members;
+		dict.__members = members;
 
 		return Type.__new__(cls, name, base, dict);
 	};
@@ -1324,7 +1324,7 @@ this.AddonClass = new exports.AddonClassClass(exports.ComponentClass, function()
 			base = exports.Component;
 		}
 
-		var members = cls.get('__addonmembers');
+		var members = cls.get('__members');
 		var variables = cls.get('__variables');
 
 		var vars = {};
