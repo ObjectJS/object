@@ -860,8 +860,6 @@ this.ComponentsClass = new Class(Type, function() {
  */
 this.Component = new exports.ComponentClass(function() {
 
-	this.debugMode = exports.option(false);
-
 	this.__setattr__ = function(self, name, value) {
 		// 并非定义的property，直接同步到node上
 		if (!Class.hasProperty(self, name)) {
