@@ -317,12 +317,12 @@ object.use('ui', function(ui) {
 	// 设置不存在的成员
 	test.set('nonexistent', 1);
 	equals(test.nonexistent, 1, 'set nonexistent ok.');
-	equals(test.getNode().nonexistent, 1, 'set nonexistent ok.');
+	strictEqual(test.getNode().nonexistent, undefined, 'set nonexistent not passed to node.');
 
-	// 设置同步到node
+	// 设置node存在的成员
 	test.set('className', 'test');
 	equals(test.className, 'test', 'set to node ok.');
-	equals(test.getNode().className, 'test', 'set to node ok.');
+	equals(test.getNode().className, '', 'set node not passed to node.');
 
 	// 阻止option设置
 	test.set('test2', 'xxx');
@@ -336,6 +336,10 @@ object.use('ui', function(ui) {
 
 	// option传递
 	equals(test.sub.test, true, 'option pass to sub.');
+
+	// setOption到node
+	test.setOption('placeholder', 'test');
+	equal(test.getNode().placeholder, 'test', 'set option passed to node.');
 
 	// setOption给未定义引用
 	test.setOption('a.b.c', 1);

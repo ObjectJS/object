@@ -854,14 +854,6 @@ this.ComponentsClass = new Class(Type, function() {
  */
 this.Component = new exports.ComponentClass(function() {
 
-	this.__setattr__ = function(self, name, value) {
-		// 并非定义的property，直接同步到node上
-		if (!Class.hasProperty(self, name)) {
-			self._node.set(name, value);
-		}
-		Object.__setattr__(self, name, value);
-	};
-
 	/**
 	 * @param {HTMLElement} node 包装的节点
 	 * @param {Object} options 配置
@@ -912,10 +904,15 @@ this.Component = new exports.ComponentClass(function() {
 			return;
 		}
 
-		options = options || {};
-		extend(options, self.meta.defaultOptions, false);
+		//options = options || {};
+		//extend(options, self.meta.defaultOptions, false);
 		// 保存options，生成component时用于传递
-		self._options = optionsmod.parse(options);
+		//self._options = optionsmod.parse(options);
+		self._options = optionsmod.parse(self.meta.defaultOptions);
+		Object.keys(options).forEach(function(key) {
+			var value = options[key];
+			self.setOption(key, value);
+		});
 
 		// 记录已经获取完毕的components
 		var inited = 0;
@@ -1167,9 +1164,9 @@ this.Component = new exports.ComponentClass(function() {
 		var oldValue = self.getOption(name);
 
 		optionsmod.setOptionTo(self._options, name, value, function() {
-			// 若不是在设置定义的option，则调用self.set
+			// 若不是在设置定义的option，则设置到node
 			if (self.meta.options.indexOf(name) == -1) {
-				self.set(name, value);
+				self._node.set(name, value);
 			}
 			// 否则触发change
 			else {
