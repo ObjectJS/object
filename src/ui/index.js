@@ -701,8 +701,8 @@ this.ComponentClass = new Class(Type, function() {
 
 		}
 		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
-			Type.__setattr__(cls, name.slice(1), events.fireevent(function(self) {
-				return member.apply(self, arguments);
+			Type.__setattr__(cls, name.slice(1), events.fireevent(function() {
+				return member.apply(this, arguments);
 			}));
 
 		}
@@ -744,8 +744,8 @@ this.ComponentClass = new Class(Type, function() {
 
 			if (isAddon) {
 				var func = other.get(name, false).im_func;
-				Type.__setattr__(cls, newName, exports.onevent(name)(function(self) {
-					func.apply(self, arguments);
+				Type.__setattr__(cls, newName, exports.onevent(name)(function() {
+					func.apply(this, arguments);
 				}));
 				meta.onEvents.push(newName);
 			}
@@ -759,8 +759,8 @@ this.ComponentClass = new Class(Type, function() {
 
 			if (isAddon) {
 				var func = other.get(name, false).im_func;
-				Type.__setattr__(cls, newName, exports.subevent(name)(function(self) {
-					func.apply(self, arguments);
+				Type.__setattr__(cls, newName, exports.subevent(name)(function() {
+					func.apply(this, arguments);
 				}));
 				meta.subEvents.push(newName);
 			}
@@ -845,8 +845,8 @@ this.ComponentsClass = new Class(Type, function() {
 		}
 		else {
 			// 重新包装，避免名字不同导致warning
-			Type.__setattr__(cls, name, function(self) {
-				return member.apply(self, arguments);
+			Type.__setattr__(cls, name, function() {
+				return member.apply(this, arguments);
 			});
 		}
 	};

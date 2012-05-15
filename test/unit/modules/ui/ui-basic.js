@@ -604,7 +604,7 @@ object.use('ui', function(ui) {
 
 	var A = new Class(ui.Component, function() {
 		this.test = ui.define1('.test');
-		this.a = function(self) {
+		this._a = function(self) {
 			ok(true, 'parent called in method.');
 			methodCalled++;
 		};
@@ -614,7 +614,7 @@ object.use('ui', function(ui) {
 	});
 
 	var AA = new Class(A, function() {
-		this.a = function(self) {
+		this._a = function(self) {
 			this.parent(self);
 			methodCalled++;
 		};
