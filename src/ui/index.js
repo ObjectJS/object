@@ -851,13 +851,6 @@ this.ComponentsClass = new Class(Type, function() {
 
 this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
 
-	/**
-	 * 获取option的值
-	 * 支持复杂name的查询
-	 * comp.getOption('xxx') 获取comp的xxx
-	 * comp.getOption('sub.xxx') 获取当前comp为sub准备的xxx。若要获取运行时的option，请使用comp.sub.getOption('xxx');
-	 * @param {string} name name
-	 */
 	this.getter1 = function(cls, self, name, value) {
 		// 获取自己身上的option
 		// 三个获取级别，优先级：结构>用户设置>默认
