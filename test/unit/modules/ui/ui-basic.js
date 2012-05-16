@@ -279,7 +279,7 @@ object.use('ui', function(ui) {
 
 		this.test_change = function(self, event) {
 			if (event.value == 2) {
-				equal(event.oldValue, 1, 'old value ok.');
+				equal(event.oldValue, 10, 'old value ok.');
 				equal(event.value, 2, 'new value set.');
 			}
 			optionChangeFired++;
@@ -296,33 +296,31 @@ object.use('ui', function(ui) {
 	div.innerHTML = '<div class="test"></div>';
 
 	var test = new TestComponent(div, {
+		'test': 10,
 		'sub.test': true
 	});
 
+	// 初始化传递参数会触发setOption
+	equals(optionChangeFired, 1, 'set option fired on init.');
+
 	// 默认属性
-	equals(test.test, 1, 'default option value ok.');
+	equals(test.test, 10, 'default option value ok.');
 
 	// 普通设置
 	test.set('test', 2);
 	equals(test.test, 2, 'set option value ok.');
 
 	// 设置会触发事件
-	equals(optionChangeFired, 1, 'set option fired change event.');
-
-	test.set('test', 2);
+	equals(optionChangeFired, 2, 'set option fired change event.');
 
 	// 设置相同的value不会触发事件
-	equals(optionChangeFired, 1, 'set same value to option wont fired change event.');
+	test.set('test', 2);
+	equals(optionChangeFired, 2, 'set same value to option wont fired change event.');
 
 	// 设置不存在的成员
 	test.set('nonexistent', 1);
 	equals(test.nonexistent, 1, 'set nonexistent ok.');
 	strictEqual(test.getNode().nonexistent, undefined, 'set nonexistent not passed to node.');
-
-	// 设置node存在的成员
-	test.set('className', 'test');
-	equals(test.className, 'test', 'set to node ok.');
-	equals(test.getNode().className, '', 'set node not passed to node.');
 
 	// 阻止option设置
 	test.set('test2', 'xxx');
@@ -338,7 +336,7 @@ object.use('ui', function(ui) {
 	equals(test.sub.test, true, 'option pass to sub.');
 
 	// setOption到node
-	test.setOption('placeholder', 'test');
+	test.setOption('node.placeholder', 'test');
 	equal(test.getNode().placeholder, 'test', 'set option passed to node.');
 
 	// setOption给未定义引用

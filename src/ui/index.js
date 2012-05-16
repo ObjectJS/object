@@ -904,16 +904,6 @@ this.Component = new exports.ComponentClass(function() {
 			return;
 		}
 
-		//options = options || {};
-		//extend(options, self.meta.defaultOptions, false);
-		// 保存options，生成component时用于传递
-		//self._options = optionsmod.parse(options);
-		self._options = optionsmod.parse(self.meta.defaultOptions);
-		Object.keys(options).forEach(function(key) {
-			var value = options[key];
-			self.setOption(key, value);
-		});
-
 		// 记录已经获取完毕的components
 		var inited = 0;
 		function checkInit() {
@@ -931,10 +921,9 @@ this.Component = new exports.ComponentClass(function() {
 		});
 
 		if (!self.__virtual) {
-			// 初始化options
+			// 初始化options事件
 			self.meta.options.forEach(function(name) {
 				self.getMeta(name).bindEvents(self, name);
-				self.getOption(name);
 			});
 
 			// 初始化onEvents
@@ -942,6 +931,19 @@ this.Component = new exports.ComponentClass(function() {
 				self.getMeta(name).bindEvents(self, name);
 			});
 		}
+
+		self._options = {};
+		options = options || {};
+		extend(options, self.meta.defaultOptions, false);
+		Object.keys(options).forEach(function(key) {
+			var value = options[key];
+			self.setOption(key, value);
+		});
+
+		// 初始化options
+		self.meta.options.forEach(function(name) {
+			self.getOption(name);
+		});
 
 		// 初始化components
 		self.meta.components.forEach(function(name) {
@@ -1164,24 +1166,21 @@ this.Component = new exports.ComponentClass(function() {
 		var oldValue = self.getOption(name);
 
 		optionsmod.setOptionTo(self._options, name, value, function() {
-			// 若不是在设置定义的option，则设置到node
-			if (self.meta.options.indexOf(name) == -1) {
-				self._node.set(name, value);
-			}
-			// 否则触发change
-			else {
-				if (oldValue !== value) {
-					(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
-						// 重新更新对象上的直接引用值
-						self.getOption(name);
-					}))(self, oldValue, value);
-				}
+			// 是option且修改了value，发出change事件
+			if (self.meta.options.indexOf(name) != -1 && oldValue !== value) {
+				(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
+					// 重新更新对象上的直接引用值
+					self.getOption(name);
+				}))(self, oldValue, value);
 			}
 		}, function(prefix, surfix) {
 			var sub = self[prefix];
 			// 子引用已经存在
 			if (sub && sub.setOption) {
 				sub.setOption(surfix, value);
+			}
+			else if (prefix == '_node' || prefix == 'node') {
+				self._node.set(surfix, value);
 			}
 		});
 
