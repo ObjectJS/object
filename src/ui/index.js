@@ -858,7 +858,7 @@ this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
 	 * comp.getOption('sub.xxx') 获取当前comp为sub准备的xxx。若要获取运行时的option，请使用comp.sub.getOption('xxx');
 	 * @param {string} name name
 	 */
-	this.optionGetter1 = function(self, name, value) {
+	this.getter1 = function(cls, self, name, value) {
 		// 获取自己身上的option
 		// 三个获取级别，优先级：结构>用户设置>默认
 		var meta = self.getMeta(name);
@@ -896,7 +896,7 @@ this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
 		return value;
 	};
 
-	this.optionSetter1 = function(self, name, value, oldValue) {
+	this.setter1 = function(cls, self, name, value, oldValue) {
 		// 是option且修改了value，发出change事件
 		if (self.meta.options.indexOf(name) != -1 && oldValue !== value) {
 			(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
@@ -906,7 +906,7 @@ this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
 		}
 	};
 
-	this.optionSetter = function(self, prefix, surfix, value) {
+	this.setter = function(cls, self, prefix, surfix, value) {
 		var sub = self[prefix];
 		// 子引用已经存在
 		if (sub && sub.setOption) {

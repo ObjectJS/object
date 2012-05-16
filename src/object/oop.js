@@ -177,7 +177,8 @@ var instancemethod = function(func, self) {
 
 	// 意味着不绑定，传参时需要手工传im_self进去
 	if (self === false) {
-		_instancemethod = function() {
+		_instancemethod = function(self) {
+			// TODO 检测self是否是正确的类型
 			return this.prototype[func.__name__].im_func.apply(this.__this__, arguments);
 		}
 	}
