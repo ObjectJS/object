@@ -610,6 +610,69 @@ this.onevent = function(name) {
 	};
 };
 
+this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
+
+	this.getter1 = function(cls, self, name, value) {
+		// 获取自己身上的option
+		// 三个获取级别，优先级：结构>用户设置>默认
+		var meta = self.getMeta(name);
+
+		// meta不存在表示在获取一个没有注册的option
+		if (!meta) {
+			return value;
+		}
+
+		// 默认getter是从结构中通过data-前缀获取
+		var getter = meta.getter || function(self) {
+			if (!self._node) return undefined;
+			var value = self._node.getData(name.toLowerCase());
+			if (value != undefined) {
+				return ensureTypedValue(value, typeof meta.defaultValue);
+			}
+		};
+
+		var getterValue = getter(self, name);
+		// 优先从结构中获取
+		if (getterValue != undefined) {
+			value = getterValue;
+		}
+		// 其次用户设置中获取
+		else if (self._options[name]) {
+			value = self._options[name];
+		}
+		// 最后是defaultValue
+		else {
+			value = meta.defaultValue;
+		}
+		// 确保获取到的value得到更新
+		self._set(name, value);
+
+		return value;
+	};
+
+	this.setter1 = function(cls, self, name, value, oldValue) {
+		// 是option且修改了value，发出change事件
+		if (self.meta.options.indexOf(name) != -1 && oldValue !== value) {
+			(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
+				// 重新更新对象上的直接引用值
+				self.getOption(name);
+			}))(self, oldValue, value);
+		}
+	};
+
+	this.setter = function(cls, self, prefix, surfix, value) {
+		var sub = self[prefix];
+		// 子引用已经存在
+		if (sub && sub.setOption) {
+			sub.setOption(surfix, value);
+		}
+		else if (prefix == '_node' || prefix == 'node') {
+			self._node.set(surfix, value);
+		}
+	};
+
+});
+
 this.ComponentClass = new Class(Type, function() {
 
 	this.initialize = function(cls, name, base, dict) {
@@ -844,69 +907,6 @@ this.ComponentsClass = new Class(Type, function() {
 			Type.__setattr__(cls, name, function() {
 				return member.apply(this, arguments);
 			});
-		}
-	};
-
-});
-
-this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
-
-	this.getter1 = function(cls, self, name, value) {
-		// 获取自己身上的option
-		// 三个获取级别，优先级：结构>用户设置>默认
-		var meta = self.getMeta(name);
-
-		// meta不存在表示在获取一个没有注册的option
-		if (!meta) {
-			return value;
-		}
-
-		// 默认getter是从结构中通过data-前缀获取
-		var getter = meta.getter || function(self) {
-			if (!self._node) return undefined;
-			var value = self._node.getData(name.toLowerCase());
-			if (value != undefined) {
-				return ensureTypedValue(value, typeof meta.defaultValue);
-			}
-		};
-
-		var getterValue = getter(self, name);
-		// 优先从结构中获取
-		if (getterValue != undefined) {
-			value = getterValue;
-		}
-		// 其次用户设置中获取
-		else if (self._options[name]) {
-			value = self._options[name];
-		}
-		// 最后是defaultValue
-		else {
-			value = meta.defaultValue;
-		}
-		// 确保获取到的value得到更新
-		self._set(name, value);
-
-		return value;
-	};
-
-	this.setter1 = function(cls, self, name, value, oldValue) {
-		// 是option且修改了value，发出change事件
-		if (self.meta.options.indexOf(name) != -1 && oldValue !== value) {
-			(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
-				// 重新更新对象上的直接引用值
-				self.getOption(name);
-			}))(self, oldValue, value);
-		}
-	};
-
-	this.setter = function(cls, self, prefix, surfix, value) {
-		var sub = self[prefix];
-		// 子引用已经存在
-		if (sub && sub.setOption) {
-			sub.setOption(surfix, value);
-		}
-		else if (prefix == '_node' || prefix == 'node') {
-			self._node.set(surfix, value);
 		}
 	};
 
