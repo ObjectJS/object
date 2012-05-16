@@ -56,22 +56,27 @@ test('base', function() {
 	var M = new Class(Type, function() {
 		this.__new__ = function(cls, name, base, dict) {
 			baseNewCalled++;
-			//ok(cls.get('a'), 'type-class member get.');
 			return Type.__new__(cls, name, base, dict);
 		};
 
-		this.a = function(cls) {
-		}
+		this.a = function(cls, value) {
+			equal(value, 1, 'arguments ok.');
+		};
 
 		this.initialize = function(cls, name, base, dict) {
+			cls.get('a')(1);
+			cls.get('b')(1);
 			baseInitCalled++;
 		};
 	});
 
 	var MM = new Class(M, function() {
+		this.b = function(cls, value) {
+			equal(value, 1, 'arguments ok in extend.');
+		};
 	});
 
-	var A = new Class(object, function() {
+	var A = new Class(Object, function() {
 		this.__metaclass__ = MM;
 	});
 

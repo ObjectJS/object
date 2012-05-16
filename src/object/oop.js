@@ -175,11 +175,10 @@ var instancemethod = function(func, self) {
 	var _instancemethod;
 	var im_self;
 
-	// 意味着不绑定
+	// 意味着不绑定，传参时需要手工传im_self进去
 	if (self === false) {
 		_instancemethod = function() {
-			im_self = this.__this__;
-			return this.prototype[func.__name__].im_func.apply(im_self, arguments);
+			return this.prototype[func.__name__].im_func.apply(this.__this__, arguments);
 		}
 	}
 	// 绑定self，若为undefined，则在运行时使用this
@@ -603,46 +602,49 @@ Type.__delattr__ = function(cls, name) {
  * 从类上获取成员
  */
 Type.__getattribute__ = function(cls, name) {
-	if (name == '@mixins') name = '__mixins__';
+	if (name == '@mixins') {
+		name = '__mixins__';
+	}
 	var proto = cls.prototype;
 	var properties = proto.__properties__;
 	var metaclass = cls.__metaclass__;
 	var member;
+
 	// 直接在自己身上找
-	if (name in cls) return cls[name];
-	// 找property
-	if (properties && name in properties) {
-		return properties[name];
+	if (name in cls) {
+		member = cls[name];
 	}
+
+	// 找property
+	else if (properties && properties[name] !== undefined) {
+		member = properties[name];
+	}
+
 	// 找到instancemethod
-	if (proto[name] && proto[name].__class__ == instancemethod) {
+	else if (proto[name] && proto[name].__class__ == instancemethod) {
 		// 对于instancemethod，需要返回重新bind的方法
 		// 为保证每次都能取到相同的成员，保存在cls[name]上，下次直接就在cls上找到了
-		cls[name] = instancemethod(proto[name].im_func, false);
-		return cls[name];
+		cls[name] = member = instancemethod(proto[name].im_func, false);
 	}
 
 	// 去其metaclass中找
 	// Type也要找，可以找到initialize
-	if (metaclass) {
-		member = Type.__getattribute__(metaclass, name);
-		if (member !== undefined) {
-			// 将metaclass上的成员重新包装后放到cls上，需要把cls当成一个instance
-			if (member.__class__ === instancemethod) {
-				// 这里把cls当成一个instance了（metaclass的instance）
-				// 重新绑定
-				cls[name] = instancemethod(member.im_func, true);
-			}
-			else {
-				cls[name] = member;
-			}
-			return cls[name];
+	else if (metaclass && (member = Type.__getattribute__(metaclass, name)) !== undefined) {
+		// 将metaclass上的成员重新包装后放到cls上，需要把cls当成一个instance
+		if (member.__class__ === instancemethod) {
+			// 这里把cls当成一个instance了（metaclass的instance）
+			// 重新绑定
+			member = instancemethod(member.im_func, true);
 		}
+		cls[name] = member;
 	}
-	// 没找到
-	if (!name in proto) throw new Error('no member named ' + name + '.');
+
 	// 找到普通成员
-	return proto[name];
+	else {
+		member = proto[name];
+	}
+
+	return member;
 };
 
 /**
