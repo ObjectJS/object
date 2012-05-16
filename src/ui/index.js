@@ -849,10 +849,85 @@ this.ComponentsClass = new Class(Type, function() {
 
 });
 
+this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
+
+	/**
+	 * 获取option的值
+	 * 支持复杂name的查询
+	 * comp.getOption('xxx') 获取comp的xxx
+	 * comp.getOption('sub.xxx') 获取当前comp为sub准备的xxx。若要获取运行时的option，请使用comp.sub.getOption('xxx');
+	 * @param {string} name name
+	 */
+	this.optionGetter1 = function(self, name, value) {
+		// 获取自己身上的option
+		// 三个获取级别，优先级：结构>用户设置>默认
+		var meta = self.getMeta(name);
+
+		// meta不存在表示在获取一个没有注册的option
+		if (!meta) {
+			return value;
+		}
+
+		// 默认getter是从结构中通过data-前缀获取
+		var getter = meta.getter || function(self) {
+			if (!self._node) return undefined;
+			var value = self._node.getData(name.toLowerCase());
+			if (value != undefined) {
+				return ensureTypedValue(value, typeof meta.defaultValue);
+			}
+		};
+
+		var getterValue = getter(self, name);
+		// 优先从结构中获取
+		if (getterValue != undefined) {
+			value = getterValue;
+		}
+		// 其次用户设置中获取
+		else if (self._options[name]) {
+			value = self._options[name];
+		}
+		// 最后是defaultValue
+		else {
+			value = meta.defaultValue;
+		}
+		// 确保获取到的value得到更新
+		self._set(name, value);
+
+		return value;
+	};
+
+	this.optionSetter1 = function(self, name, value, oldValue) {
+		// 是option且修改了value，发出change事件
+		if (self.meta.options.indexOf(name) != -1 && oldValue !== value) {
+			(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
+				// 重新更新对象上的直接引用值
+				self.getOption(name);
+			}))(self, oldValue, value);
+		}
+	};
+
+	this.optionSetter = function(self, prefix, surfix, value) {
+		var sub = self[prefix];
+		// 子引用已经存在
+		if (sub && sub.setOption) {
+			sub.setOption(surfix, value);
+		}
+		else if (prefix == '_node' || prefix == 'node') {
+			self._node.set(surfix, value);
+		}
+	};
+
+});
+
+this.Options = new exports.OptionsClass(function() {
+});
+
 /**
  * UI模块基类，所有UI组件的基本类
  */
 this.Component = new exports.ComponentClass(function() {
+
+	this.__mixins__ = [exports.Options];
 
 	/**
 	 * @param {HTMLElement} node 包装的节点
@@ -1103,88 +1178,6 @@ this.Component = new exports.ComponentClass(function() {
 		self._set(name, comp);
 		self._set('_' + name, node);
 	};
-
-	/**
-	 * 获取option的值
-	 * 支持复杂name的查询
-	 * comp.getOption('xxx') 获取comp的xxx
-	 * comp.getOption('sub.xxx') 获取当前comp为sub准备的xxx。若要获取运行时的option，请使用comp.sub.getOption('xxx');
-	 * @param {string} name name
-	 */
-	this.getOption = function(self, name) {
-		var value = optionsmod.getOptionFrom(self._options, name, function(value) {
-			// 获取自己身上的option
-			// 三个获取级别，优先级：结构>用户设置>默认
-			var meta = self.getMeta(name);
-
-			// meta不存在表示在获取一个没有注册的option
-			if (!meta) {
-				return value;
-			}
-
-			// 默认getter是从结构中通过data-前缀获取
-			var getter = meta.getter || function(self) {
-				if (!self._node) return undefined;
-				var value = self._node.getData(name.toLowerCase());
-				if (value != undefined) {
-					return ensureTypedValue(value, typeof meta.defaultValue);
-				}
-			};
-
-			var getterValue = getter(self, name);
-			// 优先从结构中获取
-			if (getterValue != undefined) {
-				value = getterValue;
-			}
-			// 其次用户设置中获取
-			else if (self._options[name]) {
-				value = self._options[name];
-			}
-			// 最后是defaultValue
-			else {
-				value = meta.defaultValue;
-			}
-			// 确保获取到的value得到更新
-			self._set(name, value);
-
-			return value;
-		});
-
-		return value;
-	};
-
-	/**
-	 * 设置option的值
-	 * 支持复杂name的设置
-	 * comp.setOption('xxx', value) 设置comp的xxx
-	 * comp.setOption('sub.xxx', value) 若comp.sub已存在，则赋值到comp.sub，若未存在，则comp.sub在建立时会被赋值
-	 * @param name name
-	 * @param value value
-	 */
-	this.setOption = optionsmod.overloadsetter(function(self, name, value) {
-
-		var oldValue = self.getOption(name);
-
-		optionsmod.setOptionTo(self._options, name, value, function() {
-			// 是option且修改了value，发出change事件
-			if (self.meta.options.indexOf(name) != -1 && oldValue !== value) {
-				(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
-					// 重新更新对象上的直接引用值
-					self.getOption(name);
-				}))(self, oldValue, value);
-			}
-		}, function(prefix, surfix) {
-			var sub = self[prefix];
-			// 子引用已经存在
-			if (sub && sub.setOption) {
-				sub.setOption(surfix, value);
-			}
-			else if (prefix == '_node' || prefix == 'node') {
-				self._node.set(surfix, value);
-			}
-		});
-
-	});
 
 	/**
 	 * 获取成员的meta信息

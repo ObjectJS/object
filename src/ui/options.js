@@ -1,84 +1,5 @@
 object.define('ui/options.js', 'events', function(require, exports) {
 
-/**
- * {'a.b.c': 1, b: 2} ==> {a: {b.c:1}, b: 2}
- */
-this.parse = function(options) {
-	var parsed = {};
-	Object.keys(options).forEach(function(name) {
-		exports.setOptionTo(parsed, name, options[name]);
-	});
-	return parsed;
-};
-
-/**
- * 解析一个option项，若不是子元素则调用parser1，若存在子元素则调用paser
- */
-this.setOptionTo = function(parsed, name, value, parser1, parser) {
-	var pointAt = name.indexOf('.');
-	var prefix, surfix;
-	// 直接name
-	if (pointAt == -1) {
-		parsed[name] = value;
-		if (parser1) {
-			parser1();
-		}
-	}
-	// 子option
-	else {
-		prefix = name.slice(0, pointAt);
-		surfix = name.slice(pointAt + 1);
-		if (!parsed[prefix]) {
-			parsed[prefix] = {};
-		}
-		parsed[prefix][surfix] = value;
-		if (parser) {
-			parser(prefix, surfix);
-		}
-	}
-};
-
-/**
- * 从parsed中获取name的option
- */
-this.getOptionFrom = function(parsed, name, getter1) {
-	var pointAt = name.indexOf('.');
-	var p, l;
-	var prefix, surfix;
-	var value;
-
-	// 直接找到
-	if (pointAt == -1) {
-		value = parsed[name];
-		// 定义查找
-		if (getter1) {
-			value = getter1(value);
-		}
-	}
-	// 多重名字
-	else {
-		prefix = name.slice(0, pointAt);
-		surfix = name.slice(pointAt + 1);
-		p = surfix + '.';
-		l = p.length;
-
-		if (parsed[prefix]) {
-			if (parsed[prefix][surfix] != undefined) {
-				value = parsed[prefix][surfix];
-			} else {
-				value = {};
-				Object.keys(parsed[prefix]).forEach(function(key) {
-					if (key.indexOf(p) == 0) {
-						value[key.slice(l)] = parsed[prefix][key];
-					}
-				});
-			}
-		}
-	}
-
-	return value;
-};
-
 // 仿照 mootools 的overloadSetter，返回一个 key/value 这种形式的function参数的包装，使其支持{key1: value1, key2: value2} 这种形式
 var enumerables = true, APslice = Array.prototype.slice;
 for (var i in {toString: 1}) enumerables = null;
@@ -113,24 +34,102 @@ this.overloadsetter = function(func) {
 	};
 };
 
-// 暂时放在ui/options.js ，待搞清options.js的依赖后用这个替换之
+this.OptionsClass = new Class(Type, function() {
 
-this.Options = new Class(function() {
+	this.__new__ = function(cls, name, base, dict) {
 
-	this.getOption = function(self, name) {
-		// TODO
+		var optionGetter1 = cls.get('optionGetter1');
+		var optionSetter1 = cls.get('optionSetter1');
+		var optionSetter = cls.get('optionSetter');
+
+		dict.initialize = function(self) {
+			self._options = {};
+		};
+
+		/**
+		 * 设置option的值
+		 * 支持复杂name的设置
+		 * comp.setOption('xxx', value) 设置comp的xxx
+		 * comp.setOption('sub.xxx', value) 若comp.sub已存在，则赋值到comp.sub，若未存在，则comp.sub在建立时会被赋值
+		 * @param name name
+		 * @param value value
+		 */
+		dict.getOption = function(self, name) {
+			var parsed = self._options;
+			var pointAt = name.indexOf('.');
+			var p, l;
+			var prefix, surfix;
+			var value;
+
+			// 直接找到
+			if (pointAt == -1) {
+				value = parsed[name];
+				// 定义查找
+				if (optionGetter1) {
+					value = optionGetter1(self, name, value);
+				}
+			}
+			// 多重名字
+			else {
+				prefix = name.slice(0, pointAt);
+				surfix = name.slice(pointAt + 1);
+				p = surfix + '.';
+				l = p.length;
+
+				if (parsed[prefix]) {
+					if (parsed[prefix][surfix] != undefined) {
+						value = parsed[prefix][surfix];
+					} else {
+						value = {};
+						Object.keys(parsed[prefix]).forEach(function(key) {
+							if (key.indexOf(p) == 0) {
+								value[key.slice(l)] = parsed[prefix][key];
+							}
+						});
+					}
+				}
+			}
+
+			return value;
+		};
+
+		/**
+		 * 设置option的值
+		 * @param name name
+		 * @param value value
+		 */
+		dict.setOption = exports.overloadsetter(function(self, name, value) {
+			var oldValue = self.getOption(name);
+			var parsed = self._options;
+			var pointAt = name.indexOf('.');
+			var prefix, surfix;
+			// 直接name
+			if (pointAt == -1) {
+				parsed[name] = value;
+				if (optionSetter1) {
+					optionSetter1(self, name, value, oldValue);
+				}
+			}
+			// 子option
+			else {
+				prefix = name.slice(0, pointAt);
+				surfix = name.slice(pointAt + 1);
+				if (!parsed[prefix]) {
+					parsed[prefix] = {};
+				}
+				parsed[prefix][surfix] = value;
+				if (optionSetter) {
+					optionSetter(self, prefix, surfix, value);
+				}
+			}
+
+		});
+
+		return Type.__new__(cls, name, base, dict);
 	};
-
-	/**
-	 * 设置option的值
-	 * @param name name
-	 * @param value value
-	 */
-	this.setOption = exports.overloadsetter(function(self, name, value) {
-		// TODO
-	});
-
 });
 
+// 暂时放在ui/options.js ，待搞清options.js的依赖后用这个替换之
+//this.Options = new exports.OptionsClass(function() {});
 
 });
