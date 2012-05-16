@@ -129,15 +129,18 @@ this.Options = new Class(function() {
 			setter = self.__optionsProvider.setter;
 		}
 
-		var oldValue = self.getOption(name);
 		var parsed = self._options;
 		var pointAt = name.indexOf('.');
 		var prefix, surfix;
+		var prevented;
+
 		// 直接name
 		if (pointAt == -1) {
-			parsed[name] = value;
 			if (setter1) {
-				setter1(self, name, value, oldValue);
+				prevented = setter1(self, name, value);
+			}
+			if (!prevented) {
+				parsed[name] = value;
 			}
 		}
 		// 子option
@@ -147,9 +150,11 @@ this.Options = new Class(function() {
 			if (!parsed[prefix]) {
 				parsed[prefix] = {};
 			}
-			parsed[prefix][surfix] = value;
 			if (setter) {
-				setter(self, prefix, surfix, value);
+				prevented = setter(self, prefix, surfix, value);
+			}
+			if (!prevented) {
+				parsed[prefix][surfix] = value;
 			}
 		}
 

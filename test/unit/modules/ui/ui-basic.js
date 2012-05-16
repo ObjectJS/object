@@ -288,6 +288,10 @@ object.use('ui', function(ui) {
 		this.test2_change = function(self, event) {
 			event.preventDefault();
 		};
+
+		this.test3_change = function(self) {
+			optionChangeFired++;
+		};
 	});
 
 	var div = document.createElement('div');
@@ -325,9 +329,17 @@ object.use('ui', function(ui) {
 	// 阻止option设置
 	test.set('test2', 'xxx');
 	equals(test.test2, 'string', 'set option prevented.');
+	equals(test.getOption('test2'), 'string', 'set option prevented.');
 
-	// 从属性获取option
-	equals(test.test3, false, 'get option from node.');
+	// 从node获取option
+	strictEqual(test.test3, false, 'get option from node.');
+
+	// node定义的option无法通过setOption覆盖
+	test.setOption('test3', true);
+	strictEqual(test.test3, false, 'not override option value from node.');
+
+	// node定义的option被修改不会触发change
+	equal(optionChangeFired, 2, 'change not fired when option from node.');
 
 	// 自定义属性getter取代从属性获取
 	equals(test.test4, 'custom-value', 'get option from custom getter.');

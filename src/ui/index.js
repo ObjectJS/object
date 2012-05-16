@@ -49,15 +49,6 @@ function extend(src, target, ov) {
 	return src;
 }
 
-/**
- * 将value转换成需要的type
- */
-function ensureTypedValue(value, type) {
-	if (type === 'number') return Number(value);
-	else if (type === 'string') return String(value);
-	else if (type === 'boolean') return Boolean(value);
-};
-
 function ComponentMeta(selector, type, options, renderer) {
 	this.selector = selector;
 	this.type = type;
@@ -394,6 +385,17 @@ function OptionMeta(defaultValue, getter) {
 	this.getter = getter;
 }
 
+/**
+ * 将value转换成需要的type
+ */
+OptionMeta.prototype.ensureTypedValue = function(value) {
+	var type = typeof this.defaultValue;
+
+	if (type === 'number') return Number(value);
+	else if (type === 'string') return String(value);
+	else if (type === 'boolean') return Boolean(value);
+};
+
 OptionMeta.prototype.bindEvents = function(self, name) {
 	if (!self.__subEventsMap[name]) {
 		return;
@@ -612,6 +614,27 @@ this.onevent = function(name) {
 
 this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
 
+	this.customGetter = function(cls, self, name) {
+		var meta = self.getMeta(name);
+		if (!meta) {
+			return;
+		}
+
+		// 默认getter是从结构中通过data-前缀获取
+		var getter = meta.getter || function(self) {
+			if (!self._node) {
+				return undefined;
+			}
+			var value = self._node.getData(name.toLowerCase());
+			if (value != undefined) {
+				return meta.ensureTypedValue(value);
+			}
+		};
+
+		var getterValue = getter(self, name);
+		return getterValue;
+	};
+
 	this.getter1 = function(cls, self, name, value) {
 		// 获取自己身上的option
 		// 三个获取级别，优先级：结构>用户设置>默认
@@ -619,29 +642,18 @@ this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
 
 		// meta不存在表示在获取一个没有注册的option
 		if (!meta) {
+			// _options上的value
 			return value;
 		}
 
-		// 默认getter是从结构中通过data-前缀获取
-		var getter = meta.getter || function(self) {
-			if (!self._node) return undefined;
-			var value = self._node.getData(name.toLowerCase());
-			if (value != undefined) {
-				return ensureTypedValue(value, typeof meta.defaultValue);
-			}
-		};
+		var getterValue = cls.get('customGetter')(self, name);
 
-		var getterValue = getter(self, name);
 		// 优先从结构中获取
 		if (getterValue != undefined) {
 			value = getterValue;
 		}
-		// 其次用户设置中获取
-		else if (self._options[name]) {
-			value = self._options[name];
-		}
 		// 最后是defaultValue
-		else {
+		if (value == undefined) {
 			value = meta.defaultValue;
 		}
 		// 确保获取到的value得到更新
@@ -650,13 +662,19 @@ this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
 		return value;
 	};
 
-	this.setter1 = function(cls, self, name, value, oldValue) {
-		// 是option且修改了value，发出change事件
-		if (self.meta.options.indexOf(name) != -1 && oldValue !== value) {
+	this.setter1 = function(cls, self, name, value) {
+		var oldValue = cls.get('getter1')(self, name, self._options[name]);
+		// 是option且修改了value且oldValue不是从node节点获取的，发出change事件
+		if (self.meta.options.indexOf(name) != -1 && oldValue !== value && cls.get('customGetter')(self, name) === undefined) {
+			// 假设会prevent，阻止更新
+			// 若没有prevent，fireevent的default会置prevented为false
+			var prevented = true;
 			(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
+				prevented = false;
 				// 重新更新对象上的直接引用值
-				self.getOption(name);
+				self._set(name, value);
 			}))(self, oldValue, value);
+			return prevented;
 		}
 	};
 
