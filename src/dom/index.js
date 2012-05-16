@@ -1,4 +1,4 @@
-object.add('dom/index.js', 'ua, events, string, dom/dd, sys', function(exports, ua, events, string, dd, sys) {
+object.add('dom/index.js', 'ua, events, string, dom/dd, net', function(exports, ua, events, string, dd, net) {
 
 window.UID = 1;
 var storage = {};
@@ -144,7 +144,7 @@ var wrap = this.wrap = function(node) {
 
 		// 为了解决子类property覆盖父类instancemethod/classmethod等的问题，需要将property同名的prototype上的属性改为undefined
 		// Class.inject对node赋值时，会将undefined的值也进行赋值，而innerHTML、value等值，不能设置为undefined
-		Class.inject(wrapper, node, function(dest, src, prop) {
+		Class.inject(wrapper, node, function(prop, dest, src) {
 			// dest原有的属性中，function全部覆盖，属性不覆盖已有的
 			if (typeof src[prop] != 'function') {
 				if (!(prop in dest)) {
@@ -1184,7 +1184,6 @@ this.FormElement = new Class(exports.Element, function() {
 		if (!params.onerror) params.onerror = function(event) {
 			self.fireEvent('requestError', {request: event.request});
 		};
-		var net = sys.modules['net'];
 		if (net) {
 			xhr = new net.Request(params);
 		} else {
