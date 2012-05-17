@@ -74,7 +74,7 @@ ComponentMeta.prototype.getType = function(metaOptions, callback) {
 
 	var meta = this;
 	var type = metaOptions.type || this.type;
-	var addons = metaOptions.addons || this.addons;
+	var addons = metaOptions.addons;
 	var cls;
 
 	var memberloader = require('./memberloader');
