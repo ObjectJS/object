@@ -672,8 +672,8 @@ this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
 		return [from, value]
 	};
 
-	this.setter1 = function(cls, self, name, value, oldValue) {
-		var valueInfo = cls.get('getter1')(self, name, oldValue);
+	this.setter1 = function(cls, self, name, value, seted) {
+		var valueInfo = cls.get('getter1')(self, name, seted);
 		var from = valueInfo[0];
 		var oldValue = valueInfo[1];
 
