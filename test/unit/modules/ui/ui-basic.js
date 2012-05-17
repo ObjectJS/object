@@ -475,24 +475,7 @@ object.use('ui', function(ui) {
 	var onEventCalled = 0;
 	var fireEventCalled = 0;
 
-	var AddonComponent = new Class(ui.Component, function() {
-
-		this.onTest = function(self, event) {
-			// 不应该被执行，因为被下面覆盖掉了
-			onEventCalled++;
-			ok(false, 'on event override failed.');
-		};
-
-	});
-	AddonComponent.set('onTest', function() {
-		ok(true, 'on event override ok.');
-		// 应该被执行
-		onEventCalled++;
-	});
-
 	var TestComponent = new Class(ui.Component, function() {
-
-		this.__mixins__ = [AddonComponent];
 
 		this._test = function(self) {
 			eventFired++;
@@ -508,41 +491,22 @@ object.use('ui', function(ui) {
 		};
 
 	});
+	TestComponent.set('onTest', function() {
+		ok(true, 'on event override ok.');
+		// 应该被执行
+		onEventCalled++;
+	});
+
 
 	var div = document.createElement('div');
 	var test = new TestComponent(div);
 	test.test();
 	equal(eventFired, 1, 'event fired.');
-	equal(onEventCalled, 2, 'on event called.');
+	equal(onEventCalled, 1, 'on event called.');
 
 	test.fireEvent('test2');
 	equal(fireEventCalled, 1, 'on event called by fireEvent.');
 
-});
-});
-
-test('extend on event method', function() {
-object.use('ui', function(ui) {
-
-	var onEventCalled = 0;
-	var AddonComponent = new Class(ui.Component, function() {
-		this.onTest = function(self) {
-			onEventCalled++;
-		};
-	});
-	var TestComponent = new Class(ui.Component, function() {
-		this.__mixins__ = [AddonComponent];
-	});
-	var TestComponent2 = new Class(TestComponent, function() {
-		this._test = function(self) {
-		}
-	});
-
-	var div = document.createElement('div');
-	var test = new TestComponent2(div);
-	test.test();
-
-	equal(onEventCalled, 1, 'on event called in extend.');
 });
 });
 
@@ -624,231 +588,6 @@ object.use('ui', function(ui) {
 	// 多个引用，自定义事件
 	test.test2.test('test');
 	equals(customEventCalled, 3, 'sub custom event called.');
-});
-});
-
-test('extend component', function() {
-object.use('ui', function(ui) {
-
-	var eventCalled = 0;
-	var methodCalled = 0;
-	var onEventCalled = 0;
-
-	var A = new Class(ui.Component, function() {
-		this.test = ui.define1('.test');
-		this._a = function(self) {
-			ok(true, 'parent called in method.');
-			methodCalled++;
-		};
-		this.test_click = function(self) {
-			ok(true, 'parent called in sub event.');
-			eventCalled++;
-		};
-		this.onA = function(self) {
-			ok(true, 'parent called in on event.');
-			onEventCalled++;
-		};
-	});
-
-	var AA = new Class(A, function() {
-		this._a = function(self) {
-			this.parent(self);
-			methodCalled++;
-		};
-		this.test_click = function(self) {
-			this.parent(self);
-			eventCalled++;
-		};
-		this.onA = function(self) {
-			this.parent(self);
-			onEventCalled++;
-		};
-	});
-
-	var div = document.createElement('div');
-	div.innerHTML = '<div class="test"></div>';
-
-	var aa = new AA(div);
-	aa.test.getNode().click();
-	aa.a();
-
-	equal(eventCalled, 2, 'override parent sub event.');
-	equal(methodCalled, 2, 'override parent method.');
-	equal(onEventCalled, 2, 'override parent on event.');
-
-});
-});
-
-test('addons', function() {
-object.use('ui', function(ui) {
-
-	var addonInitCalled = 0;
-	var initCalled = 0;
-	var eventCalled = 0;
-
-	var A = new Class(ui.Component, function() {
-
-		this.a = ui.define('.a');
-
-		this._init = function(self) {
-			addonInitCalled++;
-		};
-	});
-
-	var Test = new Class(ui.Component, function() {
-		this.__mixins__ = [A];
-
-		this.test = ui.define('.test');
-
-		this.a_show = function() {
-			eventCalled++;
-		};
-
-		this._init = function(self) {
-			initCalled++;
-		};
-	});
-
-	var div = document.createElement('div');
-	div.innerHTML = '<div class="a"></div>';
-
-	var test = new Test(div);
-
-	equal(addonInitCalled, 1, 'addon init method called.');
-	equal(initCalled, 1, 'init method called.');
-
-	ok(test.a, 'component addoned.');
-
-	test.a.fireEvent('show');
-	equal(eventCalled, 1, 'addoned event called.');
-});
-});
-
-test('custom addons', function() {
-
-var addonInitCalled = 0;
-object.define('test2', 'ui', function(require) {
-	var ui = require('ui');
-	this.TestComponent = new Class(ui.Component, function() {
-		this.a = 1;
-		this._init = function(self) {
-			addonInitCalled++;
-		};
-	});
-	this.TestComponent2 = new Class(ui.Component, function() {
-		this.b = 1;
-		this._init = function(self) {
-			addonInitCalled++;
-		};
-	});
-});
-object.use('ui', function(ui) {
-	var B = new Class(ui.Component, function() {
-		this._init = function(self) {
-			addonInitCalled++;
-		};
-	});
-
-	var A = new Class(ui.Component, function() {
-		this.__mixins__ = [B];
-		this.foo = 1;
-		this._init = function(self) {
-			addonInitCalled++;
-		};
-	});
-
-	var SubComponent = new Class(ui.Component, function() {
-		this.__mixins__ = [A];
-	});
-
-	// custom addon
-	var TestComponent = new Class(ui.Component, function() {
-		this.test = ui.define1(false, SubComponent, function(self, make) {
-			return document.createElement('div');
-		});
-	});
-
-	var test = new TestComponent(document.createElement('div'), {
-		'test.meta.addons': 'test2.TestComponent',
-	});
-
-	// 使用不同的addons
-	var test2 = new TestComponent(document.createElement('div'), {
-		'test.meta.addons': 'test2.TestComponent2',
-	});
-
-	test.render('test', function() {
-		equal(test.test.a, 1, 'test use addon.');
-		// addons不会覆盖内置的addon
-		equal(test.test.foo, 1, 'builtin addon ok.');
-	});
-	test2.render('test', function() {
-		equal(test2.test.b, 1, 'test2 use another addon.');
-	});
-
-	ok(test.test.constructor !== test2.test.constructor, 'different addon using different constructor.');
-
-	// 通过meta设置的addon、内置addon、addon的addon都会调用init
-	equal(addonInitCalled, 6, 'addon init called.');
-});
-});
-
-test('async custom addons', function() {
-object.use('ui', function(ui) {
-
-	var script = document.createElement('script');
-	script.setAttribute('data-src', 'async-module.js');
-	script.setAttribute('data-module', 'test.test');
-	document.body.appendChild(script);
-	object._loader.buildFileLib();
-
-	var A = new Class(ui.Component, function() {
-		this.foo = 1;
-	});
-
-	var SubComponent = new Class(ui.Component, function() {
-		this.__mixins__ = [A];
-	});
-
-	// custom addon
-	var TestComponent = new Class(ui.Component, function() {
-
-		this.test = ui.define1('.test', SubComponent);
-
-		this.test2 = ui.define1('.test2', 'test.test.TestComponent');
-
-		this._init = function(self) {
-			start();
-			// a、b均来自于addon
-			equal(self.test.a, 1, 'custom addon addoned.');
-			equal(self.test.b, 1, 'mutiple custom addon addoned.');
-
-			// a来自于自定义类型，b来自于addon
-			equal(self.test2.a, 1, 'custom addon addoned with custom type.');
-			equal(self.test2.b, 1, 'mutiple custom addon addoned with custom type.');
-
-			var type = self.test2.constructor;
-			// 刷新内容，测试constructor是否一致
-			self.getNode().innerHTML += '';
-			// 确保多次获取时用的都是生成的同一个类，而不是多次生成
-			ok(self.get('test2').constructor === type, 'custom addon using same constructor.');
-
-			// test已存在一个addon为A，确保不会被重置掉
-			equal(self.test.get('foo'), 1, 'write-in addon ok.');
-		};
-	});
-
-	var div = document.createElement('div');
-	div.innerHTML = '<div class="test"></div><div class="test2"></div>';
-
-	stop();
-	var test = new TestComponent(div, {
-		'test.meta.addons': 'test.test.TestComponent, test.test.TestComponent2',
-		'test2.meta.addons': 'test.test.TestComponent2'
-	});
-
-	document.body.removeChild(script);
-
 });
 });
 
@@ -989,6 +728,58 @@ object.use('ui', function(ui) {
 });
 });
 
+test('extend component', function() {
+object.use('ui', function(ui) {
+
+	var eventCalled = 0;
+	var methodCalled = 0;
+	var onEventCalled = 0;
+
+	var A = new Class(ui.Component, function() {
+		this.test = ui.define1('.test');
+		this._a = function(self) {
+			ok(true, 'parent called in method.');
+			methodCalled++;
+		};
+		this.test_click = function(self) {
+			ok(true, 'parent called in sub event.');
+			eventCalled++;
+		};
+		this.onA = function(self) {
+			ok(true, 'parent called in on event.');
+			onEventCalled++;
+		};
+	});
+
+	var AA = new Class(A, function() {
+		this._a = function(self) {
+			this.parent(self);
+			methodCalled++;
+		};
+		this.test_click = function(self) {
+			this.parent(self);
+			eventCalled++;
+		};
+		this.onA = function(self) {
+			this.parent(self);
+			onEventCalled++;
+		};
+	});
+
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="test"></div>';
+
+	var aa = new AA(div);
+	aa.test.getNode().click();
+	aa.a();
+
+	equal(eventCalled, 2, 'override parent sub event.');
+	equal(methodCalled, 2, 'override parent method.');
+	equal(onEventCalled, 2, 'override parent on event.');
+
+});
+});
+
 test('destroy', function() {
 object.use('ui', function(ui) {
 
@@ -1015,75 +806,6 @@ object.use('ui', function(ui) {
 	test.a.test();
 
 	equal(eventCalled, 1, 'event not called after destroyed.');
-
-});
-});
-
-test('addon class', function() {
-object.use('ui', function(ui) {
-
-	var eventFired = 0;
-
-	var A = new Class(ui.Component, function() {
-	});
-
-	var BaseClass = new Class(ui.AddonClass, function() {
-
-		this.$trigger = '{{name}}Trigger';
-
-		this['{{trigger}}_click'] = function(cls, vars) {
-			return function(self) {
-				ok(self.test, 'arguments ok.');
-				equal(vars.name, 'test', 'variable ok.');
-				eventFired++;
-			}
-		};
-
-	});
-
-	var TestClass = new Class(BaseClass, function() {
-
-		this.$name = 'test';
-
-		this['{{name}}'] = ui.define1(false, function() {
-			return document.createElement('div');
-		});
-
-		this['{{trigger}}'] = ui.define1(false, function() {
-			return document.createElement('span');
-		});
-	});
-
-	var Test2Class = new Class(BaseClass, function() {
-
-		this.$name = 'test2';
-
-		this['{{name}}'] = ui.define1(false, function() {
-			return document.createElement('div');
-		});
-
-		this['{{trigger}}'] = ui.define1(false, function() {
-			return document.createElement('span');
-		});
-	});
-
-	var Test = new TestClass({});
-	var Test2 = new Test2Class({});
-
-	var test = new Test(document.createElement('div'));
-	var test2 = new Test2(document.createElement('div'));
-
-	test.render('test', function() {
-		equal(test.test.getNode().tagName, 'DIV', 'render component ok.');
-	});
-
-	test.render('testTrigger', function() {
-		test.testTrigger.getNode().click();
-	});
-
-	test2.render('test2Trigger', function() {
-		test.testTrigger.getNode().click();
-	});
 
 });
 });
