@@ -635,47 +635,71 @@ this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
 		return getterValue;
 	};
 
-	this.getter1 = function(cls, self, name, value) {
+	/**
+	 * @param name 要获取的option的name
+	 * @param seted 保存在_options上的value
+	 */
+	this.getter1 = function(cls, self, name, seted) {
 		// 获取自己身上的option
-		// 三个获取级别，优先级：结构>用户设置>默认
+		// 三个获取级别，优先级：结构(getter)>用户设置(setter)>默认(default)
 		var meta = self.getMeta(name);
+		var from, value;
 
 		// meta不存在表示在获取一个没有注册的option
 		if (!meta) {
-			// _options上的value
-			return value;
+			from = null;
+			value = seted;
 		}
-
-		var getterValue = cls.get('customGetter')(self, name);
-
 		// 优先从结构中获取
-		if (getterValue != undefined) {
+		else if ((getterValue = cls.get('customGetter')(self, name)) !== undefined) {
+			from = 'getter';
 			value = getterValue;
 		}
+		// 其次是用户设置值
+		else if (seted !== undefined) {
+			from = 'setter';
+			value = seted;
+		}
 		// 最后是defaultValue
-		if (value == undefined) {
+		else {
+			from = 'default';
 			value = meta.defaultValue;
 		}
+
 		// 确保获取到的value得到更新
 		self._set(name, value);
 
-		return value;
+		return [from, value]
 	};
 
-	this.setter1 = function(cls, self, name, value) {
-		var oldValue = cls.get('getter1')(self, name, self._options[name]);
-		// 是option且修改了value且oldValue不是从node节点获取的，发出change事件
-		if (self.meta.options.indexOf(name) != -1 && oldValue !== value && cls.get('customGetter')(self, name) === undefined) {
-			// 假设会prevent，阻止更新
-			// 若没有prevent，fireevent的default会置prevented为false
-			var prevented = true;
-			(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
-				prevented = false;
-				// 重新更新对象上的直接引用值
-				self._set(name, value);
-			}))(self, oldValue, value);
-			return prevented;
+	this.setter1 = function(cls, self, name, value, oldValue) {
+		var valueInfo = cls.get('getter1')(self, name, oldValue);
+		var from = valueInfo[0];
+		var oldValue = valueInfo[1];
+
+		// 未定义的option
+		if (from == null) {
+			return false;
 		}
+		// 从node获取，阻止普通option的修改
+		else if (from == 'getter') {
+			return true;
+		}
+
+		// 重复设置相同的value，阻止fireEvent，同时阻止设置到_options
+		if (oldValue === value) {
+			return true;
+		}
+
+		// 假设会prevent，阻止更新
+		// 若没有prevent，fireevent的default会置prevented为false
+		var prevented = true;
+		(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
+			prevented = false;
+			// 重新更新对象上的直接引用值
+			self._set(name, value);
+		}))(self, oldValue, value);
+		return prevented;
 	};
 
 	this.setter = function(cls, self, prefix, surfix, value) {

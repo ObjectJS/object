@@ -277,6 +277,8 @@ object.use('ui', function(ui) {
 			return self.getNode().getAttribute('custom-attr');
 		});
 
+		this.test5 = ui.option('string');
+
 		this.test_change = function(self, event) {
 			if (event.value == 2) {
 				equal(event.oldValue, 10, 'old value ok.');
@@ -290,6 +292,10 @@ object.use('ui', function(ui) {
 		};
 
 		this.test3_change = function(self) {
+			optionChangeFired++;
+		};
+
+		this.test5_change = function(self) {
 			optionChangeFired++;
 		};
 	});
@@ -310,6 +316,10 @@ object.use('ui', function(ui) {
 	// 默认属性
 	equals(test.test, 10, 'default option value ok.');
 
+	// 设置同默认值相等
+	test.set('test5', 'string');
+	equals(optionChangeFired, 1, 'set same value as default not fired change.');
+
 	// 普通设置
 	test.set('test', 2);
 	equals(test.test, 2, 'set option value ok.');
@@ -319,7 +329,7 @@ object.use('ui', function(ui) {
 
 	// 设置相同的value不会触发事件
 	test.set('test', 2);
-	equals(optionChangeFired, 2, 'set same value to option wont fired change event.');
+	equal(optionChangeFired, 2, 'set same value to option wont fired change event.');
 
 	// 设置不存在的成员
 	test.set('nonexistent', 1);
