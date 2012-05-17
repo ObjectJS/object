@@ -28,6 +28,8 @@ function getComponent(node, type) {
  * 用于存放每个Component的信息
  */
 function RuntimeMeta() {
+	// Addons
+	this.addons = [];
 	// 所有元素引用
 	this.components = [];
 	// 所有选项
@@ -759,6 +761,7 @@ this.ComponentClass = new Class(Type, function() {
 			if (!mixin.get('gid')) {
 				return;
 			}
+			meta.addons.push(mixin);
 			mixer(mixin, true);
 		});
 
@@ -821,6 +824,11 @@ this.ComponentClass = new Class(Type, function() {
 		var meta = cls.get('meta');
 		var oMeta = other.get('meta');
 		var surfix = '$' + other.get('gid');
+
+		// 合并addon
+		oMeta.addons.forEach(function(addon) {
+			meta.addons.push(addon);
+		});
 
 		// 合并defaultOptions
 		extend(meta.defaultOptions, oMeta.defaultOptions, false);
@@ -1056,6 +1064,11 @@ this.Component = new exports.ComponentClass(function() {
 			self.setOption(key, value);
 		});
 
+		// 初始化addons
+		self.meta.addons.forEach(function(addon) {
+			addon.get('init')(self);
+		}); 
+
 		// 初始化components
 		self.meta.components.forEach(function(name) {
 			self.getMeta(name).select(self, name, null, function(comp) {
@@ -1063,18 +1076,6 @@ this.Component = new exports.ComponentClass(function() {
 				checkInit();
 			});
 		});
-
-		// 初始化addons
-		var mixins = self.__class__.get('__mixins__');
-		if (mixins) {
-			mixins.forEach(function(mixin) {
-				if (!mixin.get('gid')) {
-					// 不是addon
-					return;
-				}
-				mixin.get('init')(self);
-			}); 
-		}
 
 		checkInit();
 	};

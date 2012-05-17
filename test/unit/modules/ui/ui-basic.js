@@ -725,19 +725,36 @@ object.use('ui', function(ui) {
 });
 
 test('custom addons', function() {
-object.define('test.test', 'ui', function(require) {
+
+var addonInitCalled = 0;
+object.define('test2', 'ui', function(require) {
 	var ui = require('ui');
 	this.TestComponent = new Class(ui.Component, function() {
 		this.a = 1;
+		this._init = function(self) {
+			addonInitCalled++;
+		};
 	});
 	this.TestComponent2 = new Class(ui.Component, function() {
 		this.b = 1;
+		this._init = function(self) {
+			addonInitCalled++;
+		};
 	});
 });
 object.use('ui', function(ui) {
+	var B = new Class(ui.Component, function() {
+		this._init = function(self) {
+			addonInitCalled++;
+		};
+	});
 
 	var A = new Class(ui.Component, function() {
+		this.__mixins__ = [B];
 		this.foo = 1;
+		this._init = function(self) {
+			addonInitCalled++;
+		};
 	});
 
 	var SubComponent = new Class(ui.Component, function() {
@@ -752,21 +769,27 @@ object.use('ui', function(ui) {
 	});
 
 	var test = new TestComponent(document.createElement('div'), {
-		'test.meta.addons': 'test.test.TestComponent',
+		'test.meta.addons': 'test2.TestComponent',
 	});
 
 	// 使用不同的addons
 	var test2 = new TestComponent(document.createElement('div'), {
-		'test.meta.addons': 'test.test.TestComponent2',
+		'test.meta.addons': 'test2.TestComponent2',
 	});
 
-	test.render('test');
-	test2.render('test');
+	test.render('test', function() {
+		equal(test.test.a, 1, 'test use addon.');
+		// addons不会覆盖内置的addon
+		equal(test.test.foo, 1, 'builtin addon ok.');
+	});
+	test2.render('test', function() {
+		equal(test2.test.b, 1, 'test2 use another addon.');
+	});
 
-	equal(test.test.a, 1, 'test use addon.');
-	equal(test2.test.b, 1, 'test2 use another addon.');
 	ok(test.test.constructor !== test2.test.constructor, 'different addon using different constructor.');
 
+	// 通过meta设置的addon、内置addon、addon的addon都会调用init
+	equal(addonInitCalled, 6, 'addon init called.');
 });
 });
 
