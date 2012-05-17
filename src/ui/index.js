@@ -1046,14 +1046,14 @@ this.Component = new exports.ComponentClass(function() {
 		self._options = {};
 		options = options || {};
 		extend(options, self.meta.defaultOptions, false);
+		// 生成option在组件上的初始引用
+		self.meta.options.forEach(function(name) {
+			self.getOption(name);
+		});
 		// 设置所有传进来的option，触发第一次change事件
 		Object.keys(options).forEach(function(key) {
 			var value = options[key];
 			self.setOption(key, value);
-		});
-		// 生成option在组件上的初始引用
-		self.meta.options.forEach(function(name) {
-			self.getOption(name);
 		});
 
 		// 初始化components
