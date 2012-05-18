@@ -48,16 +48,20 @@ object.use('ui', function(ui) {
 test('custom addons', function() {
 
 var addonInitCalled = 0;
+var onEventCalled = 0;
+
 object.define('test2', 'ui', function(require) {
 	var ui = require('ui');
 	this.TestComponent = new Class(ui.Component, function() {
-		this.a = 1;
+		this.test = 1;
 		this._init = function(self) {
 			addonInitCalled++;
 		};
+		this._a = function(self) {
+		};
 	});
 	this.TestComponent2 = new Class(ui.Component, function() {
-		this.b = 1;
+		this.test2 = 1;
 		this._init = function(self) {
 			addonInitCalled++;
 		};
@@ -65,14 +69,17 @@ object.define('test2', 'ui', function(require) {
 });
 object.use('ui', function(ui) {
 	var B = new Class(ui.Component, function() {
+		this.b = ui.option('b');
 		this._init = function(self) {
 			addonInitCalled++;
+		};
+		this.onA = function(self) {
+			onEventCalled++;
 		};
 	});
 
 	var A = new Class(ui.Component, function() {
 		this.__mixins__ = [B];
-		this.foo = 1;
 		this._init = function(self) {
 			addonInitCalled++;
 		};
@@ -99,12 +106,12 @@ object.use('ui', function(ui) {
 	});
 
 	test.render('test', function() {
-		equal(test.test.a, 1, 'test use addon.');
-		// addons不会覆盖内置的addon
-		equal(test.test.foo, 1, 'builtin addon ok.');
+		equal(test.test.test, 1, 'test use addon.');
+		test.test.a();
+		equal(onEventCalled, 1, 'on event called.');
 	});
 	test2.render('test', function() {
-		equal(test2.test.b, 1, 'test2 use another addon.');
+		equal(test2.test.test2, 1, 'test2 use another addon.');
 	});
 
 	ok(test.test.constructor !== test2.test.constructor, 'different addon using different constructor.');

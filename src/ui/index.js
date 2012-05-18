@@ -42,6 +42,46 @@ function RuntimeMeta() {
 	this.defaultOptions = {};
 }
 
+RuntimeMeta.prototype.addAddon = function(addon) {
+	if (this.addons.indexOf(addon) == -1) {
+		this.addons.push(addon);
+		return true;
+	}
+	return false;
+};
+
+RuntimeMeta.prototype.addComponent = function(component) {
+	if (this.components.indexOf(component) == -1) {
+		this.components.push(component);
+		return true;
+	}
+	return false;
+};
+
+RuntimeMeta.prototype.addOption = function(option) {
+	if (this.options.indexOf(option) == -1) {
+		this.options.push(option);
+		return true;
+	}
+	return false;
+};
+
+RuntimeMeta.prototype.addOnEvent = function(onEvent) {
+	if (this.onEvents.indexOf(onEvent) == -1) {
+		this.onEvents.push(onEvent);
+		return true;
+	}
+	return false;
+};
+
+RuntimeMeta.prototype.addSubEvent = function(subEvent) {
+	if (this.subEvents.indexOf(subEvent) == -1) {
+		this.subEvents.push(subEvent);
+		return true;
+	}
+	return false;
+};
+
 function extend(src, target, ov) {
 	for (var name in target) {
 		if (src[name] === undefined || ov !== false) {
@@ -599,7 +639,7 @@ this.subevent = function(name) {
  * @decorator
  */
 this.onevent = function(name) {
-	var match = name.match(/^on(\w+)$/);
+	var match = name.match(/^on([\w\$]+)$/);
 	if (!match) {
 		// 名字不匹配，返回的decorator返回空
 		return function(func) {
@@ -724,7 +764,6 @@ this.ComponentClass = new Class(Type, function() {
 		var meta = new RuntimeMeta();
 		var options = {};
 		var memberSetter = cls.get('setMember');
-		var mixer = cls.get('mixMeta');
 
 		cls.set('gid', gid);
 		cls.set('meta', meta);
@@ -752,7 +791,7 @@ this.ComponentClass = new Class(Type, function() {
 
 		// 合并base的meta
 		if (base != Object) {
-			mixer(base);
+			cls.get('mixBase')(base);
 		}
 
 		// 合并mixin的meta
@@ -761,8 +800,13 @@ this.ComponentClass = new Class(Type, function() {
 			if (!mixin.get('gid')) {
 				return;
 			}
-			meta.addons.push(mixin);
-			mixer(mixin, true);
+			if (meta.addons.indexOf(mixin) == -1) {
+				meta.addons.push(mixin);
+			};
+		});
+		var mixer = cls.get('mixAddon');
+		meta.addons.forEach(function(addon) {
+			mixer(addon, true);
 		});
 
 		// 生成Components
@@ -818,66 +862,71 @@ this.ComponentClass = new Class(Type, function() {
 	};
 
 	/**
-	 * 将other中的meta信息合并到cls
+	 * 将base中的meta信息合并到cls
 	 */
-	this.mixMeta = function(cls, other, isAddon) {
+	this.mixBase = function(cls, base) {
 		var meta = cls.get('meta');
-		var oMeta = other.get('meta');
-		var surfix = '$' + other.get('gid');
-
-		// 合并addon
-		oMeta.addons.forEach(function(addon) {
-			meta.addons.push(addon);
-		});
+		var oMeta = base.get('meta');
 
 		// 合并defaultOptions
 		extend(meta.defaultOptions, oMeta.defaultOptions, false);
 
+		// 合并addon
+		oMeta.addons.forEach(meta.addAddon, meta);
+
 		// 合并components
-		oMeta.components.forEach(function(name) {
-			if (meta.components.indexOf(name) == -1) {
-				meta.components.push(name);
-			}
-		});
+		oMeta.components.forEach(meta.addComponent, meta);
 
 		// 合并options
-		oMeta.options.forEach(function(name) {
-			if (meta.options.indexOf(name) == -1) {
-				meta.options.push(name);
-			}
-		});
+		oMeta.options.forEach(meta.addOption, meta);
+
+		// 合并onevent
+		oMeta.onEvents.forEach(meta.addOnEvent, meta);
+
+		// 合并subevent
+		oMeta.subEvents.forEach(meta.addSubEvent, meta);
+	};
+
+	this.mixAddon = function(cls, addon) {
+		var meta = cls.get('meta');
+		var oMeta = addon.get('meta');
+		var surfix = '$' + addon.get('gid');
+
+		// 合并defaultOptions
+		extend(meta.defaultOptions, oMeta.defaultOptions, false);
+
+		// 合并addon
+		oMeta.addons.forEach(meta.addAddon, meta);
+
+		// 合并components
+		oMeta.components.forEach(meta.addComponent, meta);
+
+		// 合并options
+		oMeta.options.forEach(meta.addOption, meta);
 
 		// 合并onevent
 		oMeta.onEvents.forEach(function(name) {
-			var newName, func;
-
-			if (isAddon) {
-				newName = name + surfix;
-				func = other.get(name, false).im_func;
+			var newName = name + surfix;
+			var func;
+			if (meta.addOnEvent(newName)) {
+				func = addon.get(name, false).im_func;
+				// 制造一个新名字的成员
 				Type.__setattr__(cls, newName, exports.onevent(name)(function() {
 					return func.apply(this, arguments);
 				}));
-				meta.onEvents.push(newName);
-			}
-			else if (meta.onEvents.indexOf(name) == -1) {
-				meta.onEvents.push(name);
 			}
 		});
 
 		// 合并subevent
 		oMeta.subEvents.forEach(function(name) {
-			var newName, func;
-
-			if (isAddon) {
-				newName = name + surfix;
-				func = other.get(name, false).im_func;
-				Type.__setattr__(cls, newName, exports.subevent(name)(function() {
+			var newName = name + surfix;
+			var func;
+			if (meta.addSubEvent(newName)) {
+				func = addon.get(name, false).im_func;
+				// 制造一个新名字的成员
+				Type.__setattr__(cls, newName, exports.onevent(name)(function() {
 					return func.apply(this, arguments);
 				}));
-				meta.subEvents.push(newName);
-			}
-			else if (meta.subEvents.indexOf(name) == -1) {
-				meta.subEvents.push(name);
 			}
 		});
 	};
