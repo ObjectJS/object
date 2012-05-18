@@ -619,7 +619,8 @@ this.request = function(url, method) {
  * @param name 一个函数名字
  */
 this.subevent = function(name) {
-	var match = name.match(/^(_?\w+)_(\w+)$/);
+	// 名子要匹配带有$后缀
+	var match = name.match(/^(_?\w+)_([\w\$]+)$/);
 	if (!match) {
 		// 名字不匹配，返回的decorator返回空
 		return function(func) {
@@ -639,6 +640,7 @@ this.subevent = function(name) {
  * @decorator
  */
 this.onevent = function(name) {
+	// 名子要匹配带有$后缀
 	var match = name.match(/^on([\w\$]+)$/);
 	if (!match) {
 		// 名字不匹配，返回的decorator返回空
@@ -924,7 +926,7 @@ this.ComponentClass = new Class(Type, function() {
 			if (meta.addSubEvent(newName)) {
 				func = addon.get(name, false).im_func;
 				// 制造一个新名字的成员
-				Type.__setattr__(cls, newName, exports.onevent(name)(function() {
+				Type.__setattr__(cls, newName, exports.subevent(name)(function() {
 					return func.apply(this, arguments);
 				}));
 			}
