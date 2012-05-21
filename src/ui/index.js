@@ -1078,6 +1078,10 @@ this.Component = new exports.ComponentClass(function() {
 		function checkInit() {
 			if (inited == self.meta.components.length) {
 				inited = -1; // reset
+				// 初始化addons
+				self.meta.addons.forEach(function(addon) {
+					addon.get('_init')(self);
+				}); 
 				self.init();
 			}
 		}
@@ -1114,11 +1118,6 @@ this.Component = new exports.ComponentClass(function() {
 			var value = options[key];
 			self.setOption(key, value);
 		});
-
-		// 初始化addons
-		self.meta.addons.forEach(function(addon) {
-			addon.get('init')(self);
-		}); 
 
 		// 初始化components
 		self.meta.components.forEach(function(name) {
