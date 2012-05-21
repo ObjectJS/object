@@ -1,4 +1,4 @@
-object.define('ui/index.js', 'sys, window, string, options, dom, events, urlparse, ./net, ./options, ./memberloader', function(require, exports) {
+object.define('ui/index.js', 'sys, window, string, dom, events, urlparse, ./net, ./options, ./memberloader', function(require, exports) {
 
 var string = require('string');
 var dom = require('dom');
