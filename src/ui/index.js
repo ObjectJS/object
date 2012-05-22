@@ -467,17 +467,17 @@ function define(meta) {
 
 /**
  * 为一个Component定义一个components引用
- * 用法：
- * MyComponent = new Class(ui.Component, {
- *	refname: ui.define('.css-selector', ui.menu.Menu, {
- *		clickable: true
- *	}, renderer)
- * });
- * 这样MyComponent实例的refname属性即为相对应selector获取到的节点引用
  * @param {String|false} selector css选择器
  * @param {Component|String} [type=Component] 构造类的引用或模块成员字符串
  * @param {Object} [options] 默认配置
  * @param {Function} [renderer] 渲染器
+ * @example
+ * MyComponent = new Class(ui.Component, function() {
+ *	 this.subcomp = ui.define('.css-selector', SubComponentClass, {
+ *		 clickable: true
+ *	 }, function(self, make, data) {})
+ * });
+ * //这样MyComponent实例的subcomp属性即为相对应selector获取到的节点引用
  */
 this.define = function(selector, type, options, renderer) {
 	if (type && typeof type !== 'string' && !Class.instanceOf(type, Type)) {
@@ -500,6 +500,13 @@ this.define = function(selector, type, options, renderer) {
  * @param {Component|String} [type=Component] 构造类的引用或模块成员字符串
  * @param {Object} [options] 默认配置
  * @param {Function} [renderer] 渲染器
+ * @example
+ * MyComponent = new Class(ui.Component, function() {
+ *	 this.subcomp = ui.define1('.css-selector', SubComponentClass, {
+ *		 clickable: true
+ *	 }, function(self, make, data) {})
+ * });
+ * //这样MyComponent实例的subcomp属性即为相对应selector获取到的节点引用
  */
 this.define1 = function(selector, type, options, renderer) {
 	if (type && typeof type !== 'string' && !Class.instanceOf(type, Type)) {
@@ -518,7 +525,16 @@ this.define1 = function(selector, type, options, renderer) {
 
 /**
  * 定义父元素的引用，将在Component构造时遍历父节点直到找到相同类型的Component
- * @param {Component} type
+ * @param {Component|Function} type 父组件的类型（一直往上找到此类型的组件作为父组件）
+ * @param {Object} options 对父组件的属性设置
+ * @example
+ * var MyComponent = new Class(ui.Component, function() {
+ *    this.parent = ui.parent(ParentClass, {'option1':'value1'});
+ * });
+ * @example
+ * var MyComponent = new Class(ui.Component, function() {
+ *    this.parent = ui.parent(function() { return ParentClass; }, {'option1':'value1'});
+ * });
  */
 this.parent = function(type, options) {
 	if (!type) {
@@ -532,12 +548,16 @@ this.parent = function(type, options) {
 };
 
 /**
- * 声明一个option
- * 用法：
- * MyComponent = new Class(ui.Component, {
- *	myConfig: ui.option(1)
+ * 声明一个option<br>
+ * option在业务代码中不允许修改
+ * @param {Number|String|Boolean} defaultValue 默认值
+ * @param {Function} getter 传入的取值方法
+ * @example
+ * MyComponent = new Class(ui.Component, function() {
+ *	  this.myConfig = ui.option(1);
+ *	  this.myConfig_change = function(self, event) {};
  * });
- * 这样MyComponent实例的myConfig属性值即为默认值1，可通过 set 方法修改
+ * //这样MyComponent实例的myConfig属性值即为默认值1，可通过 set 方法修改，例如：self.set('myConfig', 2);
  */
 this.option = function(defaultValue, getter) {
 	var meta = new OptionMeta(defaultValue, getter);
@@ -556,8 +576,15 @@ this.option = function(defaultValue, getter) {
 
 /**
  * 声明一个request，可为其注册事件
- * @param url
- * @param [method='get']
+ * @param {String} url 异步请求地址
+ * @param {String} [method='get'] 异步请求的发送方法
+ * @example
+ * MyComponent = new Class(ui.Component, function() {
+ *     this.dataFetcher = ui.request('http://xxxx', 'post');
+ *     // 监听请求的事件
+ *     this.dataFetcher_success = function(self, event) {
+ *     };
+ * });
  */
 this.request = function(url, method) {
 	var meta = new RequestMeta(url, method || 'get');
@@ -572,7 +599,7 @@ this.request = function(url, method) {
 /**
  * 定义一个向子元素注册事件的方法
  * @decorator
- * @param name 一个函数名字
+ * @param {String} name 一个函数名字
  */
 this.subevent = function(name) {
 	var match = name.match(/^(_?\w+)_(\w+)$/);
@@ -852,7 +879,24 @@ this.ComponentsClass = new Class(Type, function() {
 });
 
 /**
- * UI模块基类，所有UI组件的基本类
+ * UI模块基类，所有UI组件的基本类，所有UI组件都必须继承自ui.Component
+ * @example
+ * MyComponent = new Class(ui.Component, function() {
+ *    this.subCompAs = ui.define1('.css-selector', SubCompClassA, {'optionA':true}, function(self, make,data) {});
+ *    this.subCompB = ui.define1('.css-selector', SubCompClassB, {'optionB':true}, function(self, make, data) {
+ *       self._node.grab(make(data));
+ *    });
+ *    this.parent = ui.parent(function() { return ParentCompClass; });
+ *    this.optionC = ui.option('hi', function(self) {
+ *       return self._node.getAttribute('another-attribute');
+ *    });
+ *    this.dataFetcher = ui.request('http://sub.renren.com/path', 'POST');
+ *    this._init = function(self) {};
+ *    this.dataFetcher_success = function(self, event) {};
+ *    this.onClick = function(self, event) {};
+ *    this._notify = function(self, param) {};
+ *    this.normalMethod = function(self) {};
+ * });
  */
 this.Component = new exports.ComponentClass(function() {
 
@@ -1109,10 +1153,12 @@ this.Component = new exports.ComponentClass(function() {
 
 	/**
 	 * 获取option的值
-	 * 支持复杂name的查询
+	 * 支持name的高级查询（传递特性）
+	 * @param {String} name 属性名称
+	 * @example
 	 * comp.getOption('xxx') 获取comp的xxx
+	 * @example
 	 * comp.getOption('sub.xxx') 获取当前comp为sub准备的xxx。若要获取运行时的option，请使用comp.sub.getOption('xxx');
-	 * @param {string} name name
 	 */
 	this.getOption = function(self, name) {
 		var value = optionsmod.getOptionFrom(self._options, name, function(value) {
@@ -1157,12 +1203,14 @@ this.Component = new exports.ComponentClass(function() {
 	};
 
 	/**
-	 * 设置option的值
+	 * 设置option的值，同时会触发option的change事件<br>
 	 * 支持复杂name的设置
-	 * comp.setOption('xxx', value) 设置comp的xxx
-	 * comp.setOption('sub.xxx', value) 若comp.sub已存在，则赋值到comp.sub，若未存在，则comp.sub在建立时会被赋值
 	 * @param name name
 	 * @param value value
+	 * @example
+	 * comp.setOption('xxx', value) 设置comp的xxx
+	 * @example
+	 * comp.setOption('sub.xxx', value) 若comp.sub已存在，则赋值到comp.sub，若未存在，则comp.sub在建立时会被赋值
 	 */
 	this.setOption = optionsmod.overloadsetter(function(self, name, value) {
 
@@ -1217,6 +1265,20 @@ this.Component = new exports.ComponentClass(function() {
 	 * @param {String} name 子component名字
 	 * @param {Object} data 模板数据/初始化参数
 	 * @param {Function} callback render结束后的回调
+	 * @example
+	 * MyComponent = new Class(ui.Component, function() {
+	 *     // 定义一个异步渲染的组件
+	 *     this.sub = ui.define('.css-selector', SubComponentClass, function(self, make, data) {
+	 *          self._node.appendChild(make());
+	 *     });
+	 *
+	 *     // 在初始化的时候执行渲染
+	 *     this._init = function(self) {
+	 *          self.render('sub', {'test':'hello'}, function() {
+	 *              console.log('render success');
+	 *          });
+	 *     };
+	 * });
 	 */
 	this.render = function(self, name, data, callback) {
 		// data可选
@@ -1283,7 +1345,7 @@ this.Component = new exports.ComponentClass(function() {
 	};
 
 	/**
-	 * 获取包装的节点
+	 * 获取组件类包装的DOM节点
 	 */
 	this.getNode = function(self) {
 		return self._node;
@@ -1317,7 +1379,9 @@ this.AddonClassClass = new Class(Type, function() {
 	};
 });
 
-// 继承于 ComponentClass
+/**
+ * 批量装配addon的类，该类是一种metaclass，继承于 ComponentClass
+ */
 this.AddonClass = new exports.AddonClassClass(exports.ComponentClass, function() {
 
 	this.__new__ = function(cls, name, base, dict) {
@@ -1364,6 +1428,7 @@ this.AddonClass = new exports.AddonClassClass(exports.ComponentClass, function()
 this.Page = new Class(exports.Component, function() {
 
 	/**
+	 * 初始化方法
 	 * @param {HTMLElement} [node=document.body] 页面的起始查询节点
 	 * @param {Object} options 配置页面组件的选项
 	 */

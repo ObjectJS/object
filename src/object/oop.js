@@ -338,8 +338,8 @@ Object.__new__ = function(cls) {
 };
 
 /**
- * @class
  * 小写type为兼容处理
+ * @class
  */
 var Type = this.Type = this.type = function() {
 };
