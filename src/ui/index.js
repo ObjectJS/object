@@ -699,7 +699,6 @@ this.ComponentClass = new Class(Type, function() {
 	this.initialize = function(cls, name, base, dict) {
 		var gid = globalid++;
 		var meta = new RuntimeMeta();
-		var options = {};
 		var memberSetter = cls.get('setMember');
 		var mixer = cls.get('mixMeta');
 
