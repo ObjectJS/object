@@ -90,7 +90,7 @@ this.Options = new Class(function() {
 			value = parsed[name];
 			// 定义查找
 			if (getter1) {
-				value = getter1(self, name, value);
+				value = getter1(self, name, value)[1];
 			}
 		}
 		// 多重名字
@@ -137,7 +137,7 @@ this.Options = new Class(function() {
 		// 直接name
 		if (pointAt == -1) {
 			if (setter1) {
-				prevented = setter1(self, name, value);
+				prevented = setter1(self, name, value, parsed[name]);
 			}
 			if (!prevented) {
 				parsed[name] = value;

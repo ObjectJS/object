@@ -1,4 +1,4 @@
-object.define('ui/index.js', 'sys, window, string, options, dom, events, urlparse, ./net, ./options, ./memberloader', function(require, exports) {
+object.define('ui/index.js', 'sys, window, string, dom, events, urlparse, ./net, ./options, ./memberloader', function(require, exports) {
 
 var string = require('string');
 var dom = require('dom');
@@ -28,6 +28,8 @@ function getComponent(node, type) {
  * 用于存放每个Component的信息
  */
 function RuntimeMeta() {
+	// Addons
+	this.addons = [];
 	// 所有元素引用
 	this.components = [];
 	// 所有选项
@@ -39,6 +41,46 @@ function RuntimeMeta() {
 	// 默认option
 	this.defaultOptions = {};
 }
+
+RuntimeMeta.prototype.addAddon = function(addon) {
+	if (this.addons.indexOf(addon) == -1) {
+		this.addons.push(addon);
+		return true;
+	}
+	return false;
+};
+
+RuntimeMeta.prototype.addComponent = function(component) {
+	if (this.components.indexOf(component) == -1) {
+		this.components.push(component);
+		return true;
+	}
+	return false;
+};
+
+RuntimeMeta.prototype.addOption = function(option) {
+	if (this.options.indexOf(option) == -1) {
+		this.options.push(option);
+		return true;
+	}
+	return false;
+};
+
+RuntimeMeta.prototype.addOnEvent = function(onEvent) {
+	if (this.onEvents.indexOf(onEvent) == -1) {
+		this.onEvents.push(onEvent);
+		return true;
+	}
+	return false;
+};
+
+RuntimeMeta.prototype.addSubEvent = function(subEvent) {
+	if (this.subEvents.indexOf(subEvent) == -1) {
+		this.subEvents.push(subEvent);
+		return true;
+	}
+	return false;
+};
 
 function extend(src, target, ov) {
 	for (var name in target) {
@@ -72,7 +114,7 @@ ComponentMeta.prototype.getType = function(metaOptions, callback) {
 
 	var meta = this;
 	var type = metaOptions.type || this.type;
-	var addons = metaOptions.addons || this.addons;
+	var addons = metaOptions.addons;
 	var cls;
 
 	var memberloader = require('./memberloader');
@@ -577,7 +619,8 @@ this.request = function(url, method) {
  * @param name 一个函数名字
  */
 this.subevent = function(name) {
-	var match = name.match(/^(_?\w+)_(\w+)$/);
+	// 名子要匹配带有$后缀
+	var match = name.match(/^(_?\w+)_([\w\$]+)$/);
 	if (!match) {
 		// 名字不匹配，返回的decorator返回空
 		return function(func) {
@@ -597,7 +640,8 @@ this.subevent = function(name) {
  * @decorator
  */
 this.onevent = function(name) {
-	var match = name.match(/^on(\w+)$/);
+	// 名子要匹配带有$后缀
+	var match = name.match(/^on([\w\$]+)$/);
 	if (!match) {
 		// 名字不匹配，返回的decorator返回空
 		return function(func) {
@@ -635,47 +679,71 @@ this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
 		return getterValue;
 	};
 
-	this.getter1 = function(cls, self, name, value) {
+	/**
+	 * @param name 要获取的option的name
+	 * @param seted 保存在_options上的value
+	 */
+	this.getter1 = function(cls, self, name, seted) {
 		// 获取自己身上的option
-		// 三个获取级别，优先级：结构>用户设置>默认
+		// 三个获取级别，优先级：结构(getter)>用户设置(setter)>默认(default)
 		var meta = self.getMeta(name);
+		var from, value;
 
 		// meta不存在表示在获取一个没有注册的option
 		if (!meta) {
-			// _options上的value
-			return value;
+			from = null;
+			value = seted;
 		}
-
-		var getterValue = cls.get('customGetter')(self, name);
-
 		// 优先从结构中获取
-		if (getterValue != undefined) {
+		else if ((getterValue = cls.get('customGetter')(self, name)) !== undefined) {
+			from = 'getter';
 			value = getterValue;
 		}
+		// 其次是用户设置值
+		else if (seted !== undefined) {
+			from = 'setter';
+			value = seted;
+		}
 		// 最后是defaultValue
-		if (value == undefined) {
+		else {
+			from = 'default';
 			value = meta.defaultValue;
 		}
+
 		// 确保获取到的value得到更新
 		self._set(name, value);
 
-		return value;
+		return [from, value]
 	};
 
-	this.setter1 = function(cls, self, name, value) {
-		var oldValue = cls.get('getter1')(self, name, self._options[name]);
-		// 是option且修改了value且oldValue不是从node节点获取的，发出change事件
-		if (self.meta.options.indexOf(name) != -1 && oldValue !== value && cls.get('customGetter')(self, name) === undefined) {
-			// 假设会prevent，阻止更新
-			// 若没有prevent，fireevent的default会置prevented为false
-			var prevented = true;
-			(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
-				prevented = false;
-				// 重新更新对象上的直接引用值
-				self._set(name, value);
-			}))(self, oldValue, value);
-			return prevented;
+	this.setter1 = function(cls, self, name, value, seted) {
+		var valueInfo = cls.get('getter1')(self, name, seted);
+		var from = valueInfo[0];
+		var oldValue = valueInfo[1];
+
+		// 未定义的option
+		if (from == null) {
+			return false;
 		}
+		// 从node获取，阻止普通option的修改
+		else if (from == 'getter') {
+			return true;
+		}
+
+		// 重复设置相同的value，阻止fireEvent，同时阻止设置到_options
+		if (oldValue === value) {
+			return true;
+		}
+
+		// 假设会prevent，阻止更新
+		// 若没有prevent，fireevent的default会置prevented为false
+		var prevented = true;
+		(events.fireevent('__option_change_' + name, ['oldValue', 'value'])(function(self) {
+			prevented = false;
+			// 重新更新对象上的直接引用值
+			self._set(name, value);
+		}))(self, oldValue, value);
+		return prevented;
 	};
 
 	this.setter = function(cls, self, prefix, surfix, value) {
@@ -700,7 +768,6 @@ this.ComponentClass = new Class(Type, function() {
 		var gid = globalid++;
 		var meta = new RuntimeMeta();
 		var memberSetter = cls.get('setMember');
-		var mixer = cls.get('mixMeta');
 
 		cls.set('gid', gid);
 		cls.set('meta', meta);
@@ -728,7 +795,7 @@ this.ComponentClass = new Class(Type, function() {
 
 		// 合并base的meta
 		if (base != Object) {
-			mixer(base);
+			cls.get('mixBase')(base);
 		}
 
 		// 合并mixin的meta
@@ -737,7 +804,13 @@ this.ComponentClass = new Class(Type, function() {
 			if (!mixin.get('gid')) {
 				return;
 			}
-			mixer(mixin, true);
+			if (meta.addons.indexOf(mixin) == -1) {
+				meta.addons.push(mixin);
+			};
+		});
+		var mixer = cls.get('mixAddon');
+		meta.addons.forEach(function(addon) {
+			mixer(addon, true);
 		});
 
 		// 生成Components
@@ -793,61 +866,71 @@ this.ComponentClass = new Class(Type, function() {
 	};
 
 	/**
-	 * 将other中的meta信息合并到cls
+	 * 将base中的meta信息合并到cls
 	 */
-	this.mixMeta = function(cls, other, isAddon) {
+	this.mixBase = function(cls, base) {
 		var meta = cls.get('meta');
-		var oMeta = other.get('meta');
-		var surfix = '$' + other.get('gid');
+		var oMeta = base.get('meta');
 
 		// 合并defaultOptions
 		extend(meta.defaultOptions, oMeta.defaultOptions, false);
 
+		// 合并addon
+		oMeta.addons.forEach(meta.addAddon, meta);
+
 		// 合并components
-		oMeta.components.forEach(function(name) {
-			if (meta.components.indexOf(name) == -1) {
-				meta.components.push(name);
-			}
-		});
+		oMeta.components.forEach(meta.addComponent, meta);
 
 		// 合并options
-		oMeta.options.forEach(function(name) {
-			if (meta.options.indexOf(name) == -1) {
-				meta.options.push(name);
-			}
-		});
+		oMeta.options.forEach(meta.addOption, meta);
+
+		// 合并onevent
+		oMeta.onEvents.forEach(meta.addOnEvent, meta);
+
+		// 合并subevent
+		oMeta.subEvents.forEach(meta.addSubEvent, meta);
+	};
+
+	this.mixAddon = function(cls, addon) {
+		var meta = cls.get('meta');
+		var oMeta = addon.get('meta');
+		var surfix = '$' + addon.get('gid');
+
+		// 合并defaultOptions
+		extend(meta.defaultOptions, oMeta.defaultOptions, false);
+
+		// 合并addon
+		oMeta.addons.forEach(meta.addAddon, meta);
+
+		// 合并components
+		oMeta.components.forEach(meta.addComponent, meta);
+
+		// 合并options
+		oMeta.options.forEach(meta.addOption, meta);
 
 		// 合并onevent
 		oMeta.onEvents.forEach(function(name) {
-			var newName, func;
-
-			if (isAddon) {
-				newName = name + surfix;
-				func = other.get(name, false).im_func;
+			var newName = name + surfix;
+			var func;
+			if (meta.addOnEvent(newName)) {
+				func = addon.get(name, false).im_func;
+				// 制造一个新名字的成员
 				Type.__setattr__(cls, newName, exports.onevent(name)(function() {
 					return func.apply(this, arguments);
 				}));
-				meta.onEvents.push(newName);
-			}
-			else if (meta.onEvents.indexOf(name) == -1) {
-				meta.onEvents.push(name);
 			}
 		});
 
 		// 合并subevent
 		oMeta.subEvents.forEach(function(name) {
-			var newName, func;
-
-			if (isAddon) {
-				newName = name + surfix;
-				func = other.get(name, false).im_func;
+			var newName = name + surfix;
+			var func;
+			if (meta.addSubEvent(newName)) {
+				func = addon.get(name, false).im_func;
+				// 制造一个新名字的成员
 				Type.__setattr__(cls, newName, exports.subevent(name)(function() {
 					return func.apply(this, arguments);
 				}));
-				meta.subEvents.push(newName);
-			}
-			else if (meta.subEvents.indexOf(name) == -1) {
-				meta.subEvents.push(name);
 			}
 		});
 	};
@@ -997,6 +1080,10 @@ this.Component = new exports.ComponentClass(function() {
 		function checkInit() {
 			if (inited == self.meta.components.length) {
 				inited = -1; // reset
+				// 初始化addons
+				self.meta.addons.forEach(function(addon) {
+					addon.get('_init')(self);
+				}); 
 				self.init();
 			}
 		}
@@ -1024,14 +1111,14 @@ this.Component = new exports.ComponentClass(function() {
 		self._options = {};
 		options = options || {};
 		extend(options, self.meta.defaultOptions, false);
+		// 生成option在组件上的初始引用
+		self.meta.options.forEach(function(name) {
+			self.getOption(name);
+		});
 		// 设置所有传进来的option，触发第一次change事件
 		Object.keys(options).forEach(function(key) {
 			var value = options[key];
 			self.setOption(key, value);
-		});
-		// 生成option在组件上的初始引用
-		self.meta.options.forEach(function(name) {
-			self.getOption(name);
 		});
 
 		// 初始化components
@@ -1041,18 +1128,6 @@ this.Component = new exports.ComponentClass(function() {
 				checkInit();
 			});
 		});
-
-		// 初始化addons
-		var mixins = self.__class__.get('__mixins__');
-		if (mixins) {
-			mixins.forEach(function(mixin) {
-				if (!mixin.get('gid')) {
-					// 不是addon
-					return;
-				}
-				mixin.get('init')(self);
-			}); 
-		}
 
 		checkInit();
 	};
