@@ -836,7 +836,9 @@ Class.inject = function(cls, host, args, filter) {
 	}
 };
 
-// 判断成员是否是一个type类型的
+/**
+ * 判断成员是否是一个type类型的
+ */
 Class.instanceOf = function(obj, func) {
 	if (typeof func != 'function') {
 		throw new Error('bad arguments.');
