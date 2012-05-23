@@ -1,0 +1,113 @@
+<html>
+<head>
+<meta charset="utf-8" />
+<script type="text/javascript" src="../src/object.js"></script>
+<script>
+	object.add('test', function() {
+
+		var testExtends = function() {
+			var A = new Class(function() {
+				this.a = function(self) {
+					alert('a');
+				};
+			});
+			A._name = 'A';
+
+			var B = new Class(A, function() {
+				this.b = function(self) {
+					alert('b');
+				};
+			});
+			B._name = 'B';
+
+			var C = new Class(B, function() {
+				this.c = function(self) {
+					alert('c');
+				};
+			});
+			C._name = 'C';
+
+			var c = new C();
+
+			A.set({
+				prop: {foo: 1},
+				method: function() {
+					alert('method');
+				},
+				cm: classmethod(function(cls) {
+					alert(cls._name);
+				})
+			});
+
+			c.prop.bar = 2;
+			c.method();
+
+			C.cm();
+		};
+		testExtends();
+
+		// mixin 测试
+		var testMixin = function() {
+
+			MyEvents = new Class({
+				initialize : function(self) {
+					self.prop = {a: 'fuck'};
+				},
+				addEvent : function(self, type, func) {
+					alert('add')
+				},
+				removeEvent : function(self, type, func) {
+					alert('reove')
+				},
+				fireEvent : function(self, type) {
+					alert('fire')
+				},
+				test1: classmethod(function(cls) {
+					console.log(cls._name)
+				}),
+				test2: staticmethod(function(msg) {
+					alert(msg);
+				})
+			});
+
+			var MyClass = new Class(Array, function() {
+				Class.mixin(this, MyEvents);
+			});
+			MyClass._name = 'MyClass';
+
+			var MyClass2 = new Class(String, function() {
+				Class.mixin(this, MyEvents);
+			});
+			MyClass2._name = 'MyClass2';
+
+			var my = new MyClass();
+			var my2 = new MyClass2();
+
+			my.prop.b = 'haha';
+			console.dir(my.prop)
+			console.dir(my2.prop)
+		};
+		// testMixin();
+
+		// 速度测试
+		var testSpeed = function() {
+			var st = new Date().getTime();
+			var proto = {};
+			for (var i = 0; i < 10000; i++) {
+				proto['m' + i] = classmethod(function(self) {
+					alert(this);
+				}.bind(i));
+			}
+			var MyClass = new Class(proto);
+			console.log(new Date().getTime() - st);
+		}
+		//testSpeed();
+
+	});
+	object.execute('test');
+</script>
+</head>
+<body>
+
+</body>
+</html>
