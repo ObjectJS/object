@@ -1390,10 +1390,12 @@ Loader.prototype.execute = function(name) {
 	var context = info.context;
 
 	var runtime = this.createRuntime(id, context);
+	object.runtime = runtime;
 	runtime.loadModule(id, function() {
 		var pkg = runtime.loader.lib[id];
 		pkg.execute('__main__', context, runtime);
 	});
+	object.runtime = null;
 };
 
 /**
@@ -1430,10 +1432,12 @@ Loader.prototype.use = function(dependencies, factory) {
 
 	var runtime = this.createRuntime(id);
 
+	object.runtime = runtime;
 	runtime.loadModule(id, function() {
 		var pkg = runtime.loader.lib[id];
 		pkg.execute('__main__', '', runtime);
 	});
+	object.runtime = null;
 };
 
 object.Loader = Loader;

@@ -1,4 +1,23 @@
 module("class-basic");
+
+test('__module__', function() {
+	object.define('test__module__', function() {
+		var A = new Class({});
+		equal(A.__module__, 'test__module__', '__module__ ok.');
+
+		stop();
+		var image = new Image();
+		image.onload = image.onerror = function() {
+			start();
+			var B = new Class({});
+			equal(B.__module__, '', 'async class __module__ empty.')
+		};
+		image.src = 'not-exists.jpg';
+	});
+	object.use('test__module__', function() {});
+	object.remove('test_module__');
+});
+
 test('modify global variable in constructor', function() {
 	var counter = 0;
 	var A = new Class(function() {
@@ -84,7 +103,7 @@ test('getter/setter basic', function() {
 	var m = a.get('m');
 	equal(m(), 1, 'self bind method called ok.');
 	m = a.get('m', {value: 2});
-	equal(m(), 2, 'custom bine method call ok.');
+	equal(m(), 2, 'custom bind method call ok.');
 
 	equal(a.cm(), 1, 'classmethod called.');
 	var m = a.get('cm');
@@ -97,7 +116,11 @@ test('getter/setter basic', function() {
 	var m = a.get('sm');
 	equal(m(), 1, 'self bind instancemethod called ok.');
 	m = a.get('sm', {value: 2});
-	equal(m(), 2, 'custome bine instancemethod call ok.');
+	equal(m(), 2, 'custome bind instancemethod call ok.');
+
+	// 不绑定
+	m = a.get('m', false);
+	strictEqual(m(), undefined, 'no bind called ok.');
 
 });
 
@@ -558,6 +581,14 @@ test('instancemethod', function() {
 		ok(false, 'cls.get bind a object throw a error.')
 	} catch(e) {
 		ok(true, 'cls.get bind a object throw a error.')
+	}
+
+	// cls.get 不绑定
+	try {
+		var result = A.get('b', false)(arg1, arg2);
+		ok(false, 'cls.get bind a object throw a error.')
+	} catch(e) {
+		ok(true, 'cls.get no bind throw a error.')
 	}
 
 	var result = A.get('b', B)(arg1, arg2);

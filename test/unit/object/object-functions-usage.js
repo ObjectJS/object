@@ -84,15 +84,16 @@ test('add and use, with seperator', function() {
 });
 
 test('add and use, same name module', function() {
-	object.add('test', function(exports) {
+	object.add('test_same_name', function(exports) {
 		exports.a = 1;
 	});
-	object.add('test', function(exports) {
+	object.add('test_same_name', function(exports) {
 		exports.a = 2;
 	});
-	object.use('test', function(exports, test) {
+	object.use('test_same_name', function(exports, test) {
 		equal(test.a, 1, 'when module name is the same, only use the first added module');
 	});
+	object.remove('test_same_name');
 });
 
 test('auto-import parent package', function() {

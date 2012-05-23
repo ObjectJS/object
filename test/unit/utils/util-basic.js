@@ -295,29 +295,32 @@ test('Class.instanceOf', function() {
 	var bb = new BB({});
 	var cc = new CC();
 
+	// 完整性验证
+	equal(Class.instanceOf(function() {}, Type), false, 'empty func ok.');
+
 	// Object
-	equals(b instanceof Object, true, '');
-	equals(Class.instanceOf(b, Object), true, '');
-	equals(b instanceof A, true, '');
-	equals(Class.instanceOf(b, A), true, '');
-	equals(b instanceof B, true, '');
-	equals(Class.instanceOf(b, B), true, '');
+	equal(b instanceof Object, true, '');
+	equal(Class.instanceOf(b, Object), true, '');
+	equal(b instanceof A, true, '');
+	equal(Class.instanceOf(b, A), true, '');
+	equal(b instanceof B, true, '');
+	equal(Class.instanceOf(b, B), true, '');
 
 	// Type
-	equals(bb instanceof Type, false, '');
-	equals(Class.instanceOf(bb, Type), true, '');
-	equals(bb instanceof AA, false, '');
-	equals(Class.instanceOf(bb, AA), true, '');
-	equals(bb instanceof BB, false, '');
-	equals(Class.instanceOf(bb, BB), true, '');
+	equal(bb instanceof Type, false, '');
+	equal(Class.instanceOf(bb, Type), true, '');
+	equal(bb instanceof AA, false, '');
+	equal(Class.instanceOf(bb, AA), true, '');
+	equal(bb instanceof BB, false, '');
+	equal(Class.instanceOf(bb, BB), true, '');
 
 	// 继承于Object，创建于Type
-	equals(cc instanceof Object, true, '');
-	equals(Class.instanceOf(cc, Object), true, '');
-	equals(cc instanceof A, true, '');
-	equals(Class.instanceOf(cc, A), true, '');
-	equals(cc instanceof B, true, '');
-	equals(Class.instanceOf(cc, B), true, '');
+	equal(cc instanceof Object, true, '');
+	equal(Class.instanceOf(cc, Object), true, '');
+	equal(cc instanceof A, true, '');
+	equal(Class.instanceOf(cc, A), true, '');
+	equal(cc instanceof B, true, '');
+	equal(Class.instanceOf(cc, B), true, '');
 });
 
 test('Class.initMixins', function() {
@@ -347,9 +350,10 @@ test('Class.initMixins', function() {
 		Class.mixin(this, mixin2);
 	});
 
-	Class.initMixins(A, a = {});
-	equal(a.a, 1, 'intialize called, value a set');
-	equal(a.b, 2, 'intialize called, value b set');
+	// not necessary
+	//Class.initMixins(A, a = {});
+	//equal(a.a, 1, 'intialize called, value a set');
+	//equal(a.b, 2, 'intialize called, value b set');
 });
 
 test('Class.mixin', function() {
