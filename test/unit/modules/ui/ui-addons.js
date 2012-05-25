@@ -1,8 +1,13 @@
-module('addons');
+module('ui-addons');
+var path = transTestDir('modules/ui/');
+
+var async_module_js = path + 'async-module.js';
+
+object.use('ui', function(ui) {
+	window.ui = ui;
+});
 
 test('basic', function() {
-object.use('ui', function(ui) {
-
 	var addonInitCalled = 0;
 	var initCalled = 0;
 	var eventCalled = 0;
@@ -43,7 +48,6 @@ object.use('ui', function(ui) {
 	test.a.fireEvent('show');
 	equal(eventCalled, 1, 'addoned event called.');
 });
-});
 
 test('custom addons', function() {
 
@@ -67,7 +71,6 @@ object.define('test2', 'ui', function(require) {
 		};
 	});
 });
-object.use('ui', function(ui) {
 	var B = new Class(ui.Component, function() {
 		this.b = ui.option('b');
 		this._init = function(self) {
@@ -119,13 +122,11 @@ object.use('ui', function(ui) {
 	// 通过meta设置的addon、内置addon、addon的addon都会调用init
 	equal(addonInitCalled, 6, 'addon init called.');
 });
-});
 
 test('async custom addons', function() {
-object.use('ui', function(ui) {
 
 	var script = document.createElement('script');
-	script.setAttribute('data-src', 'async-module.js');
+	script.setAttribute('data-src', async_module_js);
 	script.setAttribute('data-module', 'test.test');
 	document.body.appendChild(script);
 	object._loader.buildFileLib();
@@ -178,10 +179,8 @@ object.use('ui', function(ui) {
 	document.body.removeChild(script);
 
 });
-});
 
 test('on event method', function() {
-object.use('ui', function(ui) {
 
 	var onEventCalled = 0;
 	var AddonComponent = new Class(ui.Component, function() {
@@ -203,10 +202,8 @@ object.use('ui', function(ui) {
 
 	equal(onEventCalled, 1, 'on event called in extend.');
 });
-});
 
 test('addon class', function() {
-object.use('ui', function(ui) {
 
 	var eventFired = 0;
 
@@ -271,6 +268,5 @@ object.use('ui', function(ui) {
 		test.testTrigger.getNode().click();
 	});
 
-});
 });
 

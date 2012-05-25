@@ -1055,7 +1055,9 @@ this.Component = new exports.ComponentClass(function() {
 		} else if (Class.getChain(self.__class__).indexOf(lastType) != -1) {
 			self._node.componentType = self.__class__;
 		} else {
-			console.warn('node has already wrapped, auto changed to virtual mode.');
+			if (typeof console != 'undefined') {
+				console.warn('node has already wrapped, auto changed to virtual mode.');
+			}
 			// 在virtual模式下，所有涉及到self._node触发事件的特性都不会有
 			// 包括：
 			// option（会触发change事件）
@@ -1069,7 +1071,9 @@ this.Component = new exports.ComponentClass(function() {
 			// get('tagName') 返回的永远大写
 			return tag.toUpperCase() == self._node.get('tagName');
 		})) {
-			console.error('just allow ' + self.allowTags + ' tags.');
+			if (typeof console != 'undefined') {
+				console.error('just allow ' + self.allowTags + ' tags.');
+			}
 			return;
 		}
 

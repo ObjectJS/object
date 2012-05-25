@@ -13,6 +13,7 @@ $(document).ready(function() {
 		{module:'options', url:'modules/options'},
 		{module:'net', url:'modules/net'},
 		{module:'lunar', url:'modules/lunar'},
+		{module:'ui', url:'modules/ui'},
 		{module:'loader',url:'loader'},
 		{module:'module',url:'module'}
 	];

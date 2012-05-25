@@ -1,8 +1,18 @@
-module('basic');
+module('ui-basic');
+
+var path = transTestDir('modules/ui/');
+
+var async_module_js = path + 'async-module.js';
+var async_template_js = path + 'async-template.js';
+var request_txt = path + 'request.txt';
+var notexists = path + 'not-exists.txt';
+
+object.use('ui', function(ui) {
+	window.ui = ui;
+});
 
 test('sub property', function() {
 
-object.use('ui', function(ui) {
 	var initCalled = 0;
 	var TestComponent = new Class(ui.Component, function() {
 		this.test = ui.define1('.test');
@@ -60,11 +70,7 @@ object.use('ui', function(ui) {
 	equal(test.test, null, 'disposed.');
 });
 
-});
-
 test('mutiple sub property', function() {
-
-object.use('ui', function(ui) {
 
 	var methodCalled = 0;
 
@@ -107,11 +113,7 @@ object.use('ui', function(ui) {
 	strictEqual(test.test.length, 0, 'dispose all ok.');
 });
 
-});
-
 test('parent property', function() {
-
-object.use('ui', function(ui) {
 
 	var TestComponent = new Class(ui.Component, function() {
 		this.parent = ui.parent(function() {
@@ -129,11 +131,8 @@ object.use('ui', function(ui) {
 
 	strictEqual(test.test.parent, test, 'parent component ok.');
 });
-});
 
 test('deep parent property', function() {
-
-object.use('ui', function(ui) {
 
 	var TestComponent = new Class(ui.Component, function() {
 		this.parent = ui.parent(function() {
@@ -155,17 +154,14 @@ object.use('ui', function(ui) {
 
 	// parent1 包装 parent2，都是ParentComponent，向上查找时应该找到第一个找到的parent2
 	strictEqual(test.parent, parent2, 'found right parent.');
-});
 
 });
 
 test('async load component', function() {
 
-object.use('ui', function(ui) {
 	expect(2);
-
 	var script = document.createElement('script');
-	script.setAttribute('data-src', 'async-module.js');
+	script.setAttribute('data-src', async_module_js);
 	script.setAttribute('data-module', 'test.test');
 	document.body.appendChild(script);
 	object._loader.buildFileLib();
@@ -195,21 +191,20 @@ object.use('ui', function(ui) {
 
 	document.body.removeChild(script);
 });
-});
 
 test('async load template', function() {
 
 	var script = document.createElement('script');
-	script.setAttribute('data-src', 'async-template.js');
-	script.setAttribute('data-module', 'test/template.mustache');
+	script.setAttribute('data-src', async_template_js);
+	script.setAttribute('data-module', 'test_ui/template.mustache');
 	document.body.appendChild(script);
 	object._loader.buildFileLib();
 
-	object.define('test/index.js', 'ui', function(require) {
+	object.define('test_ui/index.js', 'ui', function(require, exports) {
 
 		var ui = require('ui');
 
-		var TestComponent = new Class(ui.Component, function() {
+		exports.TestComponent = new Class(ui.Component, function() {
 			this.test = ui.define1('.test', function(self, make) {
 				self.getNode().appendChild(make());
 			});
@@ -217,40 +212,39 @@ test('async load template', function() {
 				self.getNode().appendChild(make());
 			});
 		});
-
-		var div = document.createElement('div');
-		var test = new TestComponent(div, {
-			'test.meta.templatemodule': 'test/template.mustache',
-			'test2.meta.templatemodule': './template.mustache'
-		});
-
-		stop();
-		test.render('test', {
-			'msg': 'haha'
-		}, function() {
-			start();
-			ok(test.test, 'render component by async template ok.');
-		});
-
-		// 测试相对路径
-		stop();
-		test.render('test2', {
-			'msg': 'haha'
-		}, function() {
-			start();
-			ok(test.test2, 'render component by relative async template ok.');
-		});
-
-		document.body.removeChild(script);
 	});
 
-	object.use('test, sys', function(test, sys) {
+	var test_ui_module = null;
+	object.use('test_ui, sys', function(test, sys) {
+		test_ui_module = test;
 	});
+	var div = document.createElement('div');
+	var test = new test_ui_module.TestComponent(div, {
+		'test.meta.templatemodule': 'test_ui/template.mustache',
+		'test2.meta.templatemodule': './template.mustache'
+	});
+	stop();
+	test.render('test', {
+		'msg': 'haha'
+	}, function() {
+		start();
+		ok(test.test, 'render component by async template ok.');
+	});
+
+	// 测试相对路径
+	stop();
+	test.render('test2', {
+		'msg': 'haha'
+	}, function() {
+		start();
+		ok(test.test2, 'render component by relative async template ok.');
+	});
+
+	document.body.removeChild(script);
+	object.remove('test_ui');
 });
 
 test('option property', function() {
-object.use('ui', function(ui) {
-
 	optionChangeFired = 0;
 
 	var SubComponent = new Class(ui.Component, function() {
@@ -380,30 +374,29 @@ object.use('ui', function(ui) {
 	strictEqual(test.sub2.get('test2'), undefined, 'can\'t get undefined option.');
 	strictEqual(test.sub2.getOption('test2'), true, 'setOption to nonexistent undefined sub ok.');
 });
-});
 
 test('request property', function() {
-object.use('ui', function(ui) {
 
-var errorCalled = 0;
-var successCalled = 0;
+window.errorCalled = 0;
+window.successCalled1 = 0;
+window.successCalled2 = 0;
 
 var TestComponent = new Class(ui.Component, function() {
 
-	this.dataFetcher = ui.request('error');
-	this.dataFetcher2 = ui.request('request.txt');
-	this.dataFetcher3 = ui.request('error');
+	this.dataFetcher = ui.request(notexists);
+	this.dataFetcher2 = ui.request(request_txt);
+	this.dataFetcher3 = ui.request(notexists);
 
 	this.dataFetcher_error = function(self, event) {
 		errorCalled++;
 	}; 
 
 	this.dataFetcher2_success = function(self, event) {
-		successCalled++;
+		successCalled1++;
 	};
 
 	this.dataFetcher3_success = function(self, event) {
-		successCalled++;
+		successCalled2++;
 	};
 
 });
@@ -421,23 +414,20 @@ stop();
 test.get('dataFetcher2').send();
 test.get('dataFetcher2').oncomplete = function() {
 	start();
-	equal(successCalled, 1, 'request success fired.');
+	equal(successCalled1, 1, 'request success fired.');
 };
 
 stop();
-test.setOption('dataFetcher3.url', 'request.txt');
+test.setOption('dataFetcher3.url', request_txt);
 test.get('dataFetcher3').send();
 test.get('dataFetcher3').oncomplete = function() {
 	start();
-	equal(successCalled, 2, 'request success fired by url changed.');
+	equal(successCalled2, 1, 'request success fired by url changed.');
 };
 
 });
-});
 
 test('handle method', function() {
-object.use('ui', function(ui) {
-
 	var methodCalled = 0;
 	var eventFired = 0;
 	var TestComponent = new Class(ui.Component, function() {
@@ -466,10 +456,8 @@ object.use('ui', function(ui) {
 	equals(methodCalled, 1, 'method called.');
 	equals(eventFired, 1, 'event fired.');
 });
-});
 
 test('on event method', function() {
-object.use('ui', function(ui) {
 
 	var eventFired = 0;
 	var onEventCalled = 0;
@@ -508,10 +496,8 @@ object.use('ui', function(ui) {
 	equal(fireEventCalled, 1, 'on event called by fireEvent.');
 
 });
-});
 
 test('sub event method', function() {
-object.use('ui', function(ui) {
 
 	var clickEventCalled = 0;
 	var customEventCalled = 0;
@@ -589,11 +575,13 @@ object.use('ui', function(ui) {
 	test.test2.test('test');
 	equals(customEventCalled, 3, 'sub custom event called.');
 });
-});
 
 test('render', function() {
-object.use('ui', function(ui) {
 
+	var ua = null;
+	object.use('ua', function(ua2) {
+		ua = ua2;
+	});
 	var renderedEventCalled = 0;
 
 	var ParentComponent = new Class(ui.Component, function() {
@@ -650,7 +638,12 @@ object.use('ui', function(ui) {
 		ok(test.test.parent, 'parent got when render.');
 		renderCallbackCalled++;
 	});
-	equal(test.getNode().innerHTML, '<div class="test">test</div>', 'template render ok by default options.');
+	if (ua.ua.ie) {
+		// IE的innerHTML：tagName是大写的/draggable等属性也会显示
+		ok(/<DIV class=test.+>test<\/DIV>/.test(test.getNode().innerHTML), 'template render ok by default options.');
+	} else {
+		equal(test.getNode().innerHTML, '<div class="test">test</div>', 'template render ok by default options.');
+	}
 	equal(renderCallbackCalled, 1, 'render callback called.');
 
 	// 第二次渲染，调用callback
@@ -682,10 +675,8 @@ object.use('ui', function(ui) {
 	});
 
 });
-});
 
 test('render free component', function() {
-object.use('ui', function(ui) {
 
 	var TestComponent = new Class(ui.Component, function() {
 		this.free = ui.define1(false);
@@ -726,10 +717,8 @@ object.use('ui', function(ui) {
 		equal(test.free4.getNode()[0].innerHTML, 'free4', 'render free components with single return value.');
 	});
 });
-});
 
 test('extend component', function() {
-object.use('ui', function(ui) {
 
 	var eventCalled = 0;
 	var methodCalled = 0;
@@ -778,10 +767,8 @@ object.use('ui', function(ui) {
 	equal(onEventCalled, 2, 'override parent on event.');
 
 });
-});
 
 test('destroy', function() {
-object.use('ui', function(ui) {
 
 	var eventCalled = 0;
 
@@ -808,11 +795,9 @@ object.use('ui', function(ui) {
 	equal(eventCalled, 1, 'event not called after destroyed.');
 
 });
-});
 
 test('page', function() {
 
-object.use('ui', function(ui) {
 
 	var TestComponent = new Class(ui.Component, function() {
 	});
@@ -852,12 +837,11 @@ object.use('ui', function(ui) {
 		equal(window.profile.test.getNode().innerHTML, 'test', 'render templated component ok.');
 	});
 
-});
+	document.body.removeChild(div);
 
 });
 
 test('virtual component', function() {
-object.use('ui', function(ui) {
 
 	var eventCalled = 0;
 
@@ -914,10 +898,8 @@ object.use('ui', function(ui) {
 	// 类型不同
 	notEqual(a.test2, b.test2, 'using same node with different type.');
 });
-});
 
 test('virtual components', function() {
-object.use('ui', function(ui) {
 
 	var eventCalled = 0;
 
@@ -960,5 +942,4 @@ object.use('ui', function(ui) {
 	// 事件绑定
 	a.test.fireEvent('click'); // 触发了3个节点的fireEvent
 	equal(eventCalled, 6, 'both event called.');
-});
 });
