@@ -399,6 +399,8 @@ CommonJSPackage.prototype.createRequire = function(name, context, deps, runtime)
 	}
 
 	require.async = function(dependencies, callback) {
+		// async可表示为一个新的入口，也需要刷新lib
+		runtime.loader.buildFileLib();
 		// 创建一个同目录package，保证相对依赖的正确
 		var id = parent.id + '~' + new Date().getTime() + Math.floor(Math.random() * 100);
 		runtime.loader.defineModule(CommonJSPackage, id, dependencies, function(require, exports, module) {
