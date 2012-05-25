@@ -451,10 +451,10 @@ OptionMeta.prototype.bindEvents = function(self, name) {
 	});
 };
 
-function SubEventMeta(sub, eventType) {
+function SubEventMeta(sub, eventType, methodName) {
 	this.sub = sub;
 	this.eventType = eventType;
-	this.methodName = sub + '_' + eventType;
+	this.methodName = methodName;
 }
 
 SubEventMeta.prototype.init = function(self, name) {
@@ -620,7 +620,7 @@ this.request = function(url, method) {
  */
 this.subevent = function(name) {
 	// 名子要匹配带有$后缀
-	var match = name.match(/^(_?\w+)_([\w\$]+)$/);
+	var match = name.match(/^(_?\w+)_([\w]+)([\$\w]*)$/);
 	if (!match) {
 		// 名字不匹配，返回的decorator返回空
 		return function(func) {
@@ -629,8 +629,10 @@ this.subevent = function(name) {
 	}
 	var sub = match[1];
 	var eventType = match[2];
+	// 后面带的无用的东西，只是用来区分addon的
+	var surfix = match[3];
 	return function(func) {
-		func.meta = new SubEventMeta(sub, eventType);
+		func.meta = new SubEventMeta(sub, eventType, name);
 		return func;
 	};
 };
@@ -641,7 +643,7 @@ this.subevent = function(name) {
  */
 this.onevent = function(name) {
 	// 名子要匹配带有$后缀
-	var match = name.match(/^on([\w\$]+)$/);
+	var match = name.match(/^on([\w]+)([\$\w]*)$/);
 	if (!match) {
 		// 名字不匹配，返回的decorator返回空
 		return function(func) {
@@ -649,6 +651,8 @@ this.onevent = function(name) {
 		};
 	}
 	var eventType = match[1];
+	// 后面带的无用的东西，只是用来区分addon的
+	var surfix = match[2];
 	eventType = eventType.slice(0, 1).toLowerCase() + eventType.slice(1);
 	return function(func) {
 		func.meta = new OnEventMeta(eventType);
@@ -913,7 +917,7 @@ this.ComponentClass = new Class(Type, function() {
 			if (meta.addOnEvent(newName)) {
 				func = addon.get(name, false).im_func;
 				// 制造一个新名字的成员
-				Type.__setattr__(cls, newName, exports.onevent(name)(function() {
+				Type.__setattr__(cls, newName, exports.onevent(newName)(function() {
 					return func.apply(this, arguments);
 				}));
 			}
@@ -926,7 +930,7 @@ this.ComponentClass = new Class(Type, function() {
 			if (meta.addSubEvent(newName)) {
 				func = addon.get(name, false).im_func;
 				// 制造一个新名字的成员
-				Type.__setattr__(cls, newName, exports.subevent(name)(function() {
+				Type.__setattr__(cls, newName, exports.subevent(newName)(function() {
 					return func.apply(this, arguments);
 				}));
 			}

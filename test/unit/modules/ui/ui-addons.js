@@ -51,26 +51,27 @@ test('basic', function() {
 
 test('custom addons', function() {
 
-var addonInitCalled = 0;
-var onEventCalled = 0;
+	var addonInitCalled = 0;
+	var onEventCalled = 0;
 
-object.define('test2', 'ui', function(require) {
-	var ui = require('ui');
-	this.TestComponent = new Class(ui.Component, function() {
-		this.test = 1;
-		this._init = function(self) {
-			addonInitCalled++;
-		};
-		this._a = function(self) {
-		};
+	object.define('test2', 'ui', function(require) {
+		var ui = require('ui');
+		this.TestComponent = new Class(ui.Component, function() {
+			this.test = 1;
+			this._init = function(self) {
+				addonInitCalled++;
+			};
+			this._a = function(self) {
+			};
+		});
+		this.TestComponent2 = new Class(ui.Component, function() {
+			this.test2 = 1;
+			this._init = function(self) {
+				addonInitCalled++;
+			};
+		});
 	});
-	this.TestComponent2 = new Class(ui.Component, function() {
-		this.test2 = 1;
-		this._init = function(self) {
-			addonInitCalled++;
-		};
-	});
-});
+
 	var B = new Class(ui.Component, function() {
 		this.b = ui.option('b');
 		this._init = function(self) {
@@ -201,6 +202,40 @@ test('on event method', function() {
 	test.test();
 
 	equal(onEventCalled, 1, 'on event called in extend.');
+});
+
+test('sub event method', function() {
+
+	// 从addon注册的subEvent调用
+	var addonSubEventCalled = 0;
+
+	// 从继承注册的subEvent调用
+	var subEventCalled = 0;
+
+	var AddonComponent = new Class(ui.Component, function() {
+		this.a_a = function(self) {
+			addonSubEventCalled++;
+		};
+	});
+	var AComponent = new Class(ui.Component, function() {
+		this._a = function(self) {
+		};
+	});
+	var TestComponent = new Class(ui.Component, function() {
+		this.__mixins__ = [AddonComponent];
+		this.a = ui.define('.a', AComponent);
+		this.a_a = function(self) {
+			subEventCalled++;
+		};
+	});
+
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="a"></div>';
+	var test = new TestComponent(div);
+
+	test.a.a();
+	equal(subEventCalled, 1, 'sub event called.');
+	equal(addonSubEventCalled, 1, 'sub event called in addon.');
 });
 
 test('addon class', function() {
