@@ -377,9 +377,9 @@ test('option property', function() {
 
 test('request property', function() {
 
-window.errorCalled = 0;
-window.successCalled1 = 0;
-window.successCalled2 = 0;
+var errorCalled = 0;
+var successCalled1 = 0;
+var successCalled2 = 0;
 
 var TestComponent = new Class(ui.Component, function() {
 
