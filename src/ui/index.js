@@ -801,6 +801,7 @@ this.ComponentClass = new Class(Type, function() {
 		}
 
 		// 合并mixin的meta
+		var mixer = cls.get('mixAddon');
 		;(cls.__mixins__ || []).forEach(function(mixin) {
 			// mixin的有可能不是addon
 			if (!mixin.get('gid')) {
@@ -808,11 +809,8 @@ this.ComponentClass = new Class(Type, function() {
 			}
 			if (meta.addons.indexOf(mixin) == -1) {
 				meta.addons.push(mixin);
+				mixer(mixin);
 			};
-		});
-		var mixer = cls.get('mixAddon');
-		meta.addons.forEach(function(addon) {
-			mixer(addon, true);
 		});
 
 		// 生成Components
