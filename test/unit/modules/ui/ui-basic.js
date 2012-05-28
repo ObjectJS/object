@@ -436,7 +436,7 @@ test('handle method', function() {
 			methodCalled = 1;
 		};
 		this._test2 = function(self) {
-			ok(false, 'preventDefault bad when event fired.')
+			ok(false, 'preventDefault bad when event fired.');
 		};
 	});
 	TestComponent.set('_test3', function() {
@@ -504,12 +504,12 @@ test('sub event method', function() {
 
 	var Test1Component = new Class(ui.Component, function() {
 		this._test = function(self, a) {
-		}
+		};
 	});
 
 	var Test2Component = new Class(ui.Component, function() {
 		this._test = function(self, a) {
-		}
+		};
 	});
 
 	var TestComponent = new Class(ui.Component, function() {
@@ -576,6 +576,31 @@ test('sub event method', function() {
 	equals(customEventCalled, 3, 'sub custom event called.');
 });
 
+test('event map', function() {
+	// TODO;
+	return;
+
+	mappedMethodCalled = 0;
+
+	var A = new Class(ui.Component, function() {
+
+		this.a = ui.define('.a', {
+			'meta.eventMap.click' : 'haha'
+		});
+
+		this._haha = function() {
+			mappedMethodCalled++;
+		};
+	});
+
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="a"></div>';
+	var a = new A(div);
+	a.fireEvent('click');
+
+	equal(mappedMethodCalled, 1, 'event map method called.');
+});
+
 test('render', function() {
 
 	var ua = null;
@@ -615,7 +640,7 @@ test('render', function() {
 
 		this.test_click = function(self) {
 			renderedEventCalled++;
-		}
+		};
 
 	});
 
@@ -696,7 +721,7 @@ test('render free component', function() {
 		'free.meta.template': '<div>{{value}}</div>',
 		'free2.meta.template': '<div>{{value}}</div>',
 		'free4.meta.template': '<div>{{value}}</div>'
-	})
+	});
 
 	// 渲染free，无所谓selector，render出来就能取到
 	test.render('free', {value: 'free'}, function() {
