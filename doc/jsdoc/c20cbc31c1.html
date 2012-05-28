@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>JSDoc: Class: AutoCompleteWrapper</title>
+	
+	<script src="http://shjs.sourceforge.net/sh_main.min.js"> </script>
+    <script src="http://shjs.sourceforge.net/lang/sh_javascript.min.js"> </script>
+    
+    <link type="text/css" rel="stylesheet" href="styles/node-dark.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+    
+    <h1 class="page-title">Class: AutoCompleteWrapper</h1>
+    
+    
+    
+    <section>
+     
+    <header>
+        <h2><span class="ancestors"><a href="0ff45dba60.html">ui/autocomplete</a>~</span>AutoCompleteWrapper</h2>
+        
+    </header>  
+    
+    <article>
+        <div class="container-overview">
+        <dt>
+    <h4 class="name" id="AutoCompleteWrapper"><span class="type-signature"></span>new AutoCompleteWrapper</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        datalist的封装类，所有datalist的操作都由此类完成
+将此类与AutoComplete类分离开，减少往input上添加的不必要的属性
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 126</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+
+        </div>
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+            
+            <h3 class="subsection-title">Members</h3>
+            
+            <dl>
+<dt>
+    <h4 class="name" id="_bindedFlag"><span class="type-signature">&lt;protect> </span>_bindedFlag<span class="type-signature"></span></h4>
+    
+    
+</dt>
+<dd>
+    
+    <p class="description">
+        避免多次为document绑定mousedown而设置的标志，jquery使用的是event.one的机制
+    </p>
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 439</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+</dd>
+</dl>
+            
+        
+        
+        
+            
+            <h3 class="subsection-title">Methods</h3>
+            
+            <dl><dt>
+    <h4 class="name" id="adjustContainerDisplay"><span class="type-signature"></span>adjustContainerDisplay</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        调整容器的显示，比如高宽、ie6下iframe的高宽
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 378</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="bindDOMNodeInsertEvent"><span class="type-signature"></span>bindDOMNodeInsertEvent</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        为list属性对应的datalist添加DOMNodeInserted事件监听，在添加节点后显示列表
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 150</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="bindEventForContainer"><span class="type-signature"></span>bindEventForContainer</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        为容器绑定事件，为li做事件代理，包括mouseover/mouseout/mousedown/click<br>
+点击滚动条不会mouseup，解决办法：通过监听下一次mousedown的位置来确定是否隐藏 参考jquery autocomplete
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 418</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="filterListItems"><span class="type-signature"></span>filterListItems</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        根据input中现有的输入内容，过滤数据列表项
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 326</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="focusToInput"><span class="type-signature"></span>focusToInput</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        让input获取焦点
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 211</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="getListData"><span class="type-signature"></span>getListData</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        从datalist列表中获取数据，并且组织成json数据，以备模板引擎渲染使用
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 473</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    <h5>Returns:</h5>
+    
+<div class="param-desc">
+    数据列表，格式形如：{value:value, text:text} value是真实值，text是显示的值
+TODO 需要增加缓存以减少查询
+</div>
+
+
+
+
+<dl>
+	<dt>
+		Type
+	</dt>
+	<dd>
+		
+		<span class="param-type">Array</span> 
+		
+	</dd>
+</dl>
+
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="handleInputBlur"><span class="type-signature"></span>handleInputBlur</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        处理input的焦点丢失
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 537</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="handleInputClick"><span class="type-signature"></span>handleInputClick</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        处理input click
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 513</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="handleInputFocus"><span class="type-signature"></span>handleInputFocus</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        处理input的焦点获取
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 525</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="handleInputKeydown"><span class="type-signature"></span>handleInputKeydown</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        处理input的keydown事件
+    </p>
+    
+    
+    
+    
+    <h5>Parameters:</h5>
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>e</code></td>
+            
+            
+            <td class="type">
+            Event
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">事件对象，用于获取keyCode</td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 549</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="handleInputKeyup"><span class="type-signature"></span>handleInputKeyup</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        处理input的keyup事件
+    </p>
+    
+    
+    
+    
+    <h5>Parameters:</h5>
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>e</code></td>
+            
+            
+            <td class="type">
+            Event
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">事件对象，用于获取keyCode</td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 587</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="hideDataList"><span class="type-signature"></span>hideDataList</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        隐藏列表
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 623</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="initialize"><span class="type-signature"></span>initialize</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        初始化方法，主要是禁用浏览器自带的自动提示、并初始化参数选项
+    </p>
+    
+    
+    
+    
+    <h5>Parameters:</h5>
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>input</code></td>
+            
+            
+            <td class="type">
+            HTMLInputElement
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">自动提示的输入域</td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 132</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="initOptions"><span class="type-signature"></span>initOptions</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        初始化options属性
+    </p>
+    
+    
+    
+    
+    <h5>Parameters:</h5>
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>options</code></td>
+            
+            
+            <td class="type">
+            Object
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">属性设置</td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 204</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="isDataListDisplayed"><span class="type-signature"></span>isDataListDisplayed</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        判断列表数据是否已经显示
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 636</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    <h5>Returns:</h5>
+    
+<div class="param-desc">
+    如果已经显示返回true，否则返回false
+</div>
+
+
+
+
+<dl>
+	<dt>
+		Type
+	</dt>
+	<dd>
+		
+		<span class="param-type">Boolean</span> 
+		
+	</dd>
+</dl>
+
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="relocate"><span class="type-signature"></span>relocate</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        relocate [AUTO-GENERATED]
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 614</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="scrollToSelectedItem"><span class="type-signature"></span>scrollToSelectedItem</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        控制滚动条滚动到选中的数据项上
+    </p>
+    
+    
+    
+    
+    <h5>Parameters:</h5>
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>index</code></td>
+            
+            
+            <td class="type">
+            int
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">选中项的索引</td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>direction</code></td>
+            
+            
+            <td class="type">
+            <a href="String.html">String</a>
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">按键的方向（up/down）</td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 266</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="selectListItem"><span class="type-signature"></span>selectListItem</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        选择列表中的一项，并触发select事件
+    </p>
+    
+    
+    
+    
+    <h5>Parameters:</h5>
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>li</code></td>
+            
+            
+            <td class="type">
+            HTMLLIElement
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">选中的li项</td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 607</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="selectNextListItem"><span class="type-signature"></span>selectNextListItem</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        选择下一条记录
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 242</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="selectPrevListItem"><span class="type-signature"></span>selectPrevListItem</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        选择上一条记录
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 221</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="showDataList"><span class="type-signature"></span>showDataList</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        显示数据列表，每一次获取焦点时调用此方法显示数据
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 293</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="simulateDOMNodeInsertForIE"><span class="type-signature"></span>simulateDOMNodeInsertForIE</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        在IE下模拟DOMNodeInserted事件
+根据具体使用，暂替换appendChild和insertBefore
+    </p>
+    
+    
+    
+    
+    <h5>Parameters:</h5>
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>datalist</code></td>
+            
+            
+            <td class="type">
+            HTMLDataListElement
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">datalist对象，事件由datalist发出</td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/ui/autocomplete.js</a>, line 182</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+</dl>
+            
+        
+        
+        
+        
+        
+    </article>
+    
+    </section>  
+    
+</div>
+
+<nav>
+    <h3>Modules</h3><ul><li><a href="ffc9ad4cf8.html">loader</a></li><li><a href="e79101ab7d.html">window</a></li><li><a href="259a7dbe3b.html">dom/dd</a></li><li><a href="ccd79dc88a.html">dom/index</a></li><li><a href="d5c96ec0a1.html">events</a></li><li><a href="8b53967ac8.html">lunar</a></li><li><a href="a62b7722f2.html">mvc</a></li><li><a href="0444bea506.html">net</a></li><li><a href="123515d218.html">options</a></li><li><a href="bd44fc7f56.html">string</a></li><li><a href="023905e127.html">sys</a></li><li><a href="ffd5c88b80.html">ua/extra</a></li><li><a href="3a1c65c656.html">ua/flashdetect</a></li><li><a href="385bab1c34.html">ua/index</a></li><li><a href="adeb557778.html">ua/os</a></li><li><a href="0ff45dba60.html">ui/autocomplete</a></li><li><a href="08dac09661.html">ui/decorators</a></li><li><a href="804abf754b.html">ui/forms</a></li><li><a href="2c1d34ad2c.html">ui/index</a></li><li><a href="a0aba80f2d.html">ui/memberloader</a></li><li><a href="18a788c1e6.html">ui/nav</a></li><li><a href="ec5986e58c.html">ui/net</a></li><li><a href="5050362abd.html">ui/options</a></li><li><a href="89bca7482b.html">uiold</a></li><li><a href="bd3f7dca6b.html">urlparse</a></li><li><a href="7d862d307e.html">validator</a></li></ul><h3>Classes</h3><ul><li><a href="d04fc83d03.html">CommonJSPackage</a></li><li><a href="22f66f59df.html">CyclicDependencyError</a></li><li><a href="b88b311f2e.html">Module</a></li><li><a href="3e73d66ba6.html">ModuleRequiredError</a></li><li><a href="42d7a26a88.html">NoModuleError</a></li><li><a href="32e4a79c77.html">Type</a></li><li><a href="Array.html">Array</a></li><li><a href="Function.html">Function</a></li><li><a href="44d985dede.html">DragDrop</a></li><li><a href="f968a42523.html">Document</a></li><li><a href="37a5293436.html">Element</a></li><li><a href="9022149830.html">ElementClassList</a></li><li><a href="84f6d439bc.html">Elements</a></li><li><a href="9c0e341ba5.html">FormElement</a></li><li><a href="88b7a42f8f.html">FormItemElement</a></li><li><a href="951acc7459.html">ImageElement</a></li><li><a href="95bdcd407f.html">InputElement</a></li><li><a href="09067c86a9.html">TextAreaElement</a></li><li><a href="d15398a21e.html">TextBaseElement</a></li><li><a href="463d3cb7a3.html">Window</a></li><li><a href="3577b7d839.html">Events</a></li><li><a href="37d3b42848.html#__eventListeners">Action</a></li><li><a href="67b89394ea.html">Request</a></li><li><a href="d7dd04889c.html">Arguments</a></li><li><a href="770e992ceb.html">Options</a></li><li><a href="82b9242447.html">AutoComplete</a></li><li><a href="c20cbc31c1.html">AutoCompleteWrapper</a></li><li><a href="be5a16f2bd.html">SelectionInput</a></li><li><a href="170c6400d7.html">SelectionInputValues</a></li><li><a href="21a1b7edc7.html">AddonClass</a></li><li><a href="b9353bb783.html">AddonClassClass</a></li><li><a href="11ed42b868.html">Component</a></li><li><a href="9303a80c25.html">ComponentClass</a></li><li><a href="cc0f61f737.html">ComponentsClass</a></li><li><a href="810ee51405.html">Page</a></li><li><a href="e269e5726d.html">ForeNextControl</a></li><li><a href="3e92d93180.html">Request</a></li><li><a href="03b549ad9c.html">Options</a></li><li><a href="2a0644c546.html">Component</a></li><li><a href="ba4b0fe25c.html">ForeNextControl</a></li><li><a href="b80feaee05.html">TabControl</a></li><li><a href="self.classList.html">classList</a></li><li><a href="self.values.html">values</a></li><li><a href="String.html">String</a></li><li><a href="Type.html">Type</a></li></ul><h3>Namespaces</h3><ul><li><a href="Class.html">Class</a></li><li><a href="object.html">object</a></li></ul><h3>Global</h3><ul><li><a href="global.html#__mixins__">__mixins__</a></li></ul>
+</nav>
+
+<br clear="both">
+
+<footer>
+    Documentation generated by <a href="https://github.com/micmath/jsdoc">JSDoc 3</a> on Tue May 22 2012 17:06:41 GMT+0800 (CST)
+</footer>
+
+<script> sh_highlightDocument(); </script>
+</body>
+</html>

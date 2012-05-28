@@ -763,12 +763,14 @@ this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
 
 });
 
+/**
+ * Component的metaclass
+ */
 this.ComponentClass = new Class(Type, function() {
 
 	this.initialize = function(cls, name, base, dict) {
 		var gid = globalid++;
 		var meta = new RuntimeMeta();
-		var options = {};
 		var memberSetter = cls.get('setMember');
 
 		cls.set('gid', gid);
