@@ -809,10 +809,11 @@ this.ComponentClass = new Class(Type, function() {
 			if (!mixin.get('gid')) {
 				return;
 			}
-			if (meta.addons.indexOf(mixin) == -1) {
-				meta.addons.push(mixin);
+			// 自己的addon
+			if (meta.addAddon(mixin)) {
+				// mixer 中 mix addon 的 addon
 				mixer(mixin);
-			};
+			}
 		});
 
 		// 生成Components
@@ -896,19 +897,19 @@ this.ComponentClass = new Class(Type, function() {
 		var oMeta = addon.get('meta');
 		var surfix = '$' + addon.get('gid');
 
-		// 合并defaultOptions
+		// 合并addon的defaultOptions
 		extend(meta.defaultOptions, oMeta.defaultOptions, false);
 
-		// 合并addon
+		// 合并addon的addon
 		oMeta.addons.forEach(meta.addAddon, meta);
 
-		// 合并components
+		// 合并addon的components
 		oMeta.components.forEach(meta.addComponent, meta);
 
-		// 合并options
+		// 合并addon的options
 		oMeta.options.forEach(meta.addOption, meta);
 
-		// 合并onevent
+		// 合并addon的onevent
 		oMeta.onEvents.forEach(function(name) {
 			var newName = name + surfix;
 			var func;
@@ -921,7 +922,7 @@ this.ComponentClass = new Class(Type, function() {
 			}
 		});
 
-		// 合并subevent
+		// 合并addon的subevent
 		oMeta.subEvents.forEach(function(name) {
 			var newName = name + surfix;
 			var func;
