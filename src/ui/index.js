@@ -846,9 +846,7 @@ this.ComponentClass = new Class(Type, function() {
 
 		}
 		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
-			Type.__setattr__(cls, name.slice(1), events.fireevent(function(self) {
-				return member.apply(this, arguments);
-			}));
+			Type.__setattr__(cls, name.slice(1), events.fireevent(member));
 
 		}
 		else if (exports.subevent(name)(member)) {
@@ -914,7 +912,7 @@ this.ComponentClass = new Class(Type, function() {
 			var func;
 			if (meta.addOnEvent(newName)) {
 				func = addon.get(name, false).im_func;
-				// 制造一个新名字的成员
+				// 重新包装，避免名字不同导致warning
 				Type.__setattr__(cls, newName, exports.onevent(newName)(function() {
 					return func.apply(this, arguments);
 				}));
@@ -927,7 +925,7 @@ this.ComponentClass = new Class(Type, function() {
 			var func;
 			if (meta.addSubEvent(newName)) {
 				func = addon.get(name, false).im_func;
-				// 制造一个新名字的成员
+				// 重新包装，避免名字不同导致warning
 				Type.__setattr__(cls, newName, exports.subevent(newName)(function() {
 					return func.apply(this, arguments);
 				}));
