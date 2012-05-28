@@ -576,31 +576,6 @@ test('sub event method', function() {
 	equals(customEventCalled, 3, 'sub custom event called.');
 });
 
-test('event map', function() {
-	// TODO;
-	return;
-
-	mappedMethodCalled = 0;
-
-	var A = new Class(ui.Component, function() {
-
-		this.a = ui.define('.a', {
-			'meta.eventMap.click' : 'haha'
-		});
-
-		this._haha = function() {
-			mappedMethodCalled++;
-		};
-	});
-
-	var div = document.createElement('div');
-	div.innerHTML = '<div class="a"></div>';
-	var a = new A(div);
-	a.fireEvent('click');
-
-	equal(mappedMethodCalled, 1, 'event map method called.');
-});
-
 test('render', function() {
 
 	var ua = null;
