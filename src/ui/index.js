@@ -38,6 +38,8 @@ function RuntimeMeta() {
 	this.onEvents = [];
 	// 所有xxx_xxx形式注册事件方法
 	this.subEvents = [];
+	// 所有xxx_xxx_before形式注册的aop方法
+	this.aopMethods = [];
 	// 默认option
 	this.defaultOptions = {};
 }
@@ -77,6 +79,14 @@ RuntimeMeta.prototype.addOnEvent = function(onEvent) {
 RuntimeMeta.prototype.addSubEvent = function(subEvent) {
 	if (this.subEvents.indexOf(subEvent) == -1) {
 		this.subEvents.push(subEvent);
+		return true;
+	}
+	return false;
+};
+
+RuntimeMeta.prototype.addAOPMethod = function(aopMethod) {
+	if (this.aopMethods.indexOf(aopMethod) == -1) {
+		this.aopMethods.push(aopMethod);
 		return true;
 	}
 	return false;
@@ -337,12 +347,25 @@ ComponentMeta.prototype.bindEvents = function(self, name, comp) {
 		self.__bounds.push(comp);
 	}
 
-	// 此组件没有给这个sub定义事件
-	if (!(comp && comp.addEvent && self.__subEventsMap[name])) {
+	if (!comp) {
 		return;
 	}
 
-	self.__subEventsMap[name].forEach(function(eventMeta) {
+	;(self.__aopMethodsMap[name] || []).forEach(function(aopMeta) {
+		var methodName = aopMeta.methodName;
+		var originalName = aopMeta.originalName;
+		var aopType = aopMeta.aopType;
+		var original = comp.get(originalName);
+		if (original) {
+			if (aopType == 'around') {
+				comp[originalName] = function() {
+					self[methodName](original);
+				};
+			}
+		}
+	});
+
+	;(self.__subEventsMap[name] || []).forEach(function(eventMeta) {
 		var methodName = eventMeta.methodName;
 		self.addEventTo(comp, eventMeta.eventType, function(event) {
 			event.targetComponent = comp;
@@ -451,21 +474,6 @@ OptionMeta.prototype.bindEvents = function(self, name) {
 	});
 };
 
-function SubEventMeta(sub, eventType, methodName) {
-	this.sub = sub;
-	this.eventType = eventType;
-	this.methodName = methodName;
-}
-
-SubEventMeta.prototype.init = function(self, name) {
-	var sub = this.sub;
-	// 记录下来，render时从__subEventsMap获取信息
-	if (!(sub in self.__subEventsMap)) {
-		self.__subEventsMap[sub] = [];
-	}
-	self.__subEventsMap[sub].push(this);
-};
-
 function OnEventMeta(eventType) {
 	this.eventType = eventType;
 }
@@ -481,6 +489,37 @@ OnEventMeta.prototype.bindEvents = function(self, name) {
 		}
 		self[name].apply(self, args);
 	});
+};
+
+function SubEventMeta(sub, eventType, methodName) {
+	this.sub = sub;
+	this.eventType = eventType;
+	this.methodName = methodName;
+}
+
+SubEventMeta.prototype.init = function(self, name) {
+	var sub = this.sub;
+	// 记录下来，render时从__subEventsMap获取信息
+	if (!(sub in self.__subEventsMap)) {
+		self.__subEventsMap[sub] = [];
+	}
+	self.__subEventsMap[sub].push(this);
+};
+
+function AOPMethodMeta(sub, originalName, aopType, methodName) {
+	this.sub = sub;
+	this.originalName = originalName;
+	this.aopType = aopType;
+	this.methodName = methodName;
+}
+
+AOPMethodMeta.prototype.init = function(self, name) {
+	var sub = this.sub;
+	// 记录下来，render时从__aopMethodsMap获取信息
+	if (!(sub in self.__aopMethodsMap)) {
+		self.__aopMethodsMap[sub] = [];
+	}
+	self.__aopMethodsMap[sub].push(this);
 };
 
 function RequestMeta(url, method) {
@@ -613,6 +652,10 @@ this.request = function(url, method) {
 	return prop;
 };
 
+var emptyDecorator = function(func) {
+	return null;
+};
+
 /**
  * 定义一个向子元素注册事件的方法
  * @decorator
@@ -620,12 +663,10 @@ this.request = function(url, method) {
  */
 this.subevent = function(name) {
 	// 名子要匹配带有$后缀
-	var match = name.match(/^(_?\w+)_([\w]+)([\$\w]*)$/);
+	var match = name.match(/^([a-zA-Z1-9]+)_([a-zA-Z1-9]+)([\$0-9]*)$/);
 	if (!match) {
 		// 名字不匹配，返回的decorator返回空
-		return function(func) {
-			return null;
-		};
+		return emptyDecorator;
 	}
 	var sub = match[1];
 	var eventType = match[2];
@@ -637,18 +678,34 @@ this.subevent = function(name) {
 	};
 };
 
+this.aopmethod = function(name) {
+	// 名子要匹配带有$后缀
+	var match = name.match(/^([a-zA-Z1-9]+)_([a-zA-Z1-9]+)_([a-zA-Z1-9]+)([\$0-9]*)$/);
+	if (!match) {
+		// 名字不匹配，返回的decorator返回空
+		return emptyDecorator;
+	}
+	var sub = match[1];
+	var methodName = match[2];
+	var aopType = match[3];
+	// 后面带的无用的东西，只是用来区分addon的
+	var surfix = match[4];
+	return function(func) {
+		func.meta = new AOPMethodMeta(sub, methodName, aopType, name);
+		return func;
+	};
+};
+
 /**
  * 定义一个扩展向宿主元素定义事件的方法
  * @decorator
  */
 this.onevent = function(name) {
 	// 名子要匹配带有$后缀
-	var match = name.match(/^on([\w]+)([\$\w]*)$/);
+	var match = name.match(/^on([a-zA-Z1-9]+)([\$0-9]*)$/);
 	if (!match) {
 		// 名字不匹配，返回的decorator返回空
-		return function(func) {
-			return null;
-		};
+		return emptyDecorator;
 	}
 	var eventType = match[1];
 	// 后面带的无用的东西，只是用来区分addon的
@@ -836,15 +893,11 @@ this.ComponentClass = new Class(Type, function() {
 
 		}
 		else if (member.__class__ == property && member.meta instanceof OptionMeta) {
-			if (meta.options.indexOf(name) == -1) {
-				meta.options.push(name);
-			}
+			meta.addOption(name);
 
 		}
 		else if (member.__class__ == property && member.meta instanceof ComponentMeta) {
-			if (meta.components.indexOf(name) == -1) {
-				meta.components.push(name);
-			}
+			meta.addComponent(name);
 			Type.__setattr__(cls, '__render_' + name, member.meta.renderer);
 
 		}
@@ -852,16 +905,16 @@ this.ComponentClass = new Class(Type, function() {
 			Type.__setattr__(cls, name.slice(1), events.fireevent(member));
 
 		}
+		else if (exports.aopmethod(name)(member)) {
+			meta.addAOPMethod(name);
+
+		}
 		else if (exports.subevent(name)(member)) {
-			if (meta.subEvents.indexOf(name) == -1) {
-				meta.subEvents.push(name);
-			}
+			meta.addSubEvent(name);
 
 		}
 		else if (exports.onevent(name)(member)) {
-			if (meta.onEvents.indexOf(name) == -1) {
-				meta.onEvents.push(name);
-			}
+			meta.addOnEvent(name);
 
 		}
 	};
@@ -890,6 +943,9 @@ this.ComponentClass = new Class(Type, function() {
 
 		// 合并subevent
 		oMeta.subEvents.forEach(meta.addSubEvent, meta);
+
+		// 合并aopmethod
+		oMeta.aopMethods.forEach(meta.addAOPMethod, meta);
 	};
 
 	this.mixAddon = function(cls, addon) {
@@ -930,6 +986,19 @@ this.ComponentClass = new Class(Type, function() {
 				func = addon.get(name, false).im_func;
 				// 重新包装，避免名字不同导致warning
 				Type.__setattr__(cls, newName, exports.subevent(newName)(function() {
+					return func.apply(this, arguments);
+				}));
+			}
+		});
+
+		// 合并addon的aopmethod
+		oMeta.aopMethods.forEach(function(name) {
+			var newName = name + surfix;
+			var func;
+			if (meta.addAOPMethod(newName)) {
+				func = addon.get(name, false).im_func;
+				// 重新包装，避免名字不同导致warning
+				Type.__setattr__(cls, newName, exports.aopmethod(newName)(function() {
 					return func.apply(this, arguments);
 				}));
 			}
@@ -1009,6 +1078,7 @@ this.ComponentsClass = new Class(Type, function() {
 		else {
 			// 重新包装，避免名字不同导致warning
 			Type.__setattr__(cls, name, function() {
+				// TODO 从self上获取成员而不是直接调用member
 				return member.apply(this, arguments);
 			});
 		}
@@ -1097,6 +1167,13 @@ this.Component = new exports.ComponentClass(function() {
 		self.__subEventsMap = {};
 		// 初始化subEventsMap
 		self.meta.subEvents.forEach(function(name) {
+			self.getMeta(name).init(self, name);
+		});
+
+		// 存储aopMethods，用于render时获取信息
+		self.__aopMethodsMap = {};
+		// 初始化aopMethodsMap
+		self.meta.aopMethods.forEach(function(name) {
 			self.getMeta(name).init(self, name);
 		});
 

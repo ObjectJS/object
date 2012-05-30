@@ -497,6 +497,35 @@ test('on event method', function() {
 
 });
 
+test('aop method', function() {
+
+	var roundCalled = 0;
+	var originalCalled = 0;
+
+	var A = new Class(ui.Component, function() {
+		this.a = function(self) {
+			originalCalled++;
+		};
+	});
+
+	var Test = new Class(ui.Component, function() {
+		this.a = ui.define1('.a', A);
+		this.a_a_around = function(self, origin) {
+			roundCalled++;
+			origin();
+		};
+	});
+
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="a"></div>'
+	var test = new Test(div);
+	test.a.a();
+
+	equal(originalCalled, 1, 'orginal called.');
+	equal(roundCalled, 1, 'round called.');
+
+});
+
 test('sub event method', function() {
 
 	var clickEventCalled = 0;
