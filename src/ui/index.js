@@ -1031,6 +1031,11 @@ this.ComponentClass = new Class(Type, function() {
 				if (name == '__metaclass__' || name == 'initialize') {
 					return;
 				}
+				// only method, filter field and class
+				if (typeof member != 'function' || Class.instanceOf(member, Type)) {
+					return;
+				}
+
 				this[name] = member;
 			}, this);
 		}));
@@ -1052,10 +1057,6 @@ this.ComponentsClass = new Class(Type, function() {
 	};
 
 	this.__setattr__ = function(cls, name, member) {
-		// only method, filter field and class
-		if (typeof member != 'function' || Class.instanceOf(member, Type)) {
-			return;
-		}
 		cls.get('setMember')(name, member);
 	};
 
