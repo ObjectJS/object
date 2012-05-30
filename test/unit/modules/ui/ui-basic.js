@@ -513,16 +513,18 @@ test('aop method', function() {
 		this.a_a_around = function(self, origin) {
 			roundCalled++;
 			origin();
+			return 1;
 		};
 	});
 
 	var div = document.createElement('div');
 	div.innerHTML = '<div class="a"></div>'
 	var test = new Test(div);
-	test.a.a();
+	var result = test.a.a();
 
 	equal(originCalled, 1, 'orginal called.');
 	equal(roundCalled, 1, 'round called.');
+	equal(result, 1, 'return value ok in round.');
 
 });
 

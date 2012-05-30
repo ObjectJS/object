@@ -359,8 +359,12 @@ ComponentMeta.prototype.bindEvents = function(self, name, comp) {
 		if (origin) {
 			if (aopType == 'around') {
 				comp[originName] = function() {
-					self[methodName](origin);
+					return self[methodName](origin);
 				};
+			}
+			else if (aopType == 'before') {
+			}
+			else if (aopType == 'after') {
 			}
 		}
 	});
