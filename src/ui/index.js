@@ -353,13 +353,13 @@ ComponentMeta.prototype.bindEvents = function(self, name, comp) {
 
 	;(self.__aopMethodsMap[name] || []).forEach(function(aopMeta) {
 		var methodName = aopMeta.methodName;
-		var originalName = aopMeta.originalName;
+		var originName = aopMeta.originName;
 		var aopType = aopMeta.aopType;
-		var original = comp.get(originalName);
-		if (original) {
+		var origin = comp.get(originName);
+		if (origin) {
 			if (aopType == 'around') {
-				comp[originalName] = function() {
-					self[methodName](original);
+				comp[originName] = function() {
+					self[methodName](origin);
 				};
 			}
 		}
@@ -506,9 +506,9 @@ SubEventMeta.prototype.init = function(self, name) {
 	self.__subEventsMap[sub].push(this);
 };
 
-function AOPMethodMeta(sub, originalName, aopType, methodName) {
+function AOPMethodMeta(sub, originName, aopType, methodName) {
 	this.sub = sub;
-	this.originalName = originalName;
+	this.originName = originName;
 	this.aopType = aopType;
 	this.methodName = methodName;
 }
@@ -1052,35 +1052,48 @@ this.ComponentsClass = new Class(Type, function() {
 	};
 
 	this.__setattr__ = function(cls, name, member) {
-		var newName = name.slice(1);
-		// only method
+		// only method, filter field and class
 		if (typeof member != 'function' || Class.instanceOf(member, Type)) {
 			return;
 		}
-		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
-			// 重新包装，避免名字不同导致warning
-			Type.__setattr__(cls, newName, function(self) {
-				var results = [];
-				var args = Array.prototype.slice.call(arguments, 1);
-				// 有可能是个空的Components
-				if (self._node) {
-					self._node.forEach(function(node, i) {
-						// 将每个的执行结果返回组成数组
-						var result = self[i][newName].apply(self[i], args);
-						results.push(result);
-					});
-				}
-				return results;
-			});
-			// _xxx
+		cls.get('setMember')(name, member);
+	};
+
+	/*
+	 * 制造包装后的方法，遍历调用所有子节点的同名方法
+	 */
+	this.makeMethod = function(cls, name) {
+		// 重新包装，避免名字不同导致warning
+		Type.__setattr__(cls, name, function(self) {
+			var results = [];
+			var args = Array.prototype.slice.call(arguments, 1);
+			// 有可能是个空的Components
+			if (self._node) {
+				self._node.forEach(function(node, i) {
+					// 将每个的执行结果返回组成数组
+					var result = self[i][name].apply(self[i], args);
+					results.push(result);
+				});
+			}
+			return results;
+		});
+	};
+
+	this.setMember = function(cls, name, member) {
+		var newName;
+		var makeMethod = cls.get('makeMethod');
+
+		if (name == 'getNode') {
 			Type.__setattr__(cls, name, member);
 		}
+		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
+			// xxx
+			makeMethod(name.slice(1));
+			// _xxx
+			makeMethod(name);
+		}
 		else {
-			// 重新包装，避免名字不同导致warning
-			Type.__setattr__(cls, name, function() {
-				// TODO 从self上获取成员而不是直接调用member
-				return member.apply(this, arguments);
-			});
+			makeMethod(name);
 		}
 	};
 
