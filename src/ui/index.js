@@ -217,9 +217,7 @@ ComponentMeta.prototype.wrap = function(self, name, node, type) {
 ComponentMeta.prototype.register = function(self, name, comp) {
 	this.bindEvents(self, name, comp);
 	// 重新搜索，更新其options
-	Object.keys(self._options[name]).forEach(function(key) {
-		comp.setOption(key, self._options[name][key]);
-	});
+	comp.setOption(self._options[name]);
 };
 
 /**
@@ -1215,11 +1213,8 @@ this.Component = new exports.ComponentClass(function() {
 		self.meta.options.forEach(function(name) {
 			self.getOption(name);
 		});
-		// 设置所有传进来的option，触发第一次change事件
-		Object.keys(options).forEach(function(key) {
-			var value = options[key];
-			self.setOption(key, value);
-		});
+		// 设置所有传进来的option
+		self.setOption(options);
 
 		// 初始化components
 		self.meta.components.forEach(function(name) {
