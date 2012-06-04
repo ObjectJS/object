@@ -499,32 +499,88 @@ test('on event method', function() {
 
 test('aop method', function() {
 
-	var roundCalled = 0;
+	var aroundCalled = 0;
 	var originCalled = 0;
+	var beforeCalled = 0;
+	var afterCalled = 0;
 
 	var A = new Class(ui.Component, function() {
+		this.value = 0;
 		this.a = function(self) {
 			originCalled++;
+			return self.value;
+		};
+		this.b = function(self) {
+			originCalled++;
+			return self.value;
+		};
+		this.c = function(self) {
+			originCalled++;
+			return self.value;
+		};
+		this.a_around = function(self, origin) {
+			return function() {
+				aroundCalled++;
+				var result = origin();
+				return result;
+			};
+		};
+		this.b_before = function(self) {
+			beforeCalled++;
+		};
+		this.c_after = function(self) {
+			afterCalled++;
 		};
 	});
 
 	var Test = new Class(ui.Component, function() {
 		this.a = ui.define1('.a', A);
 		this.a_a_around = function(self, origin) {
-			roundCalled++;
-			origin();
-			return 1;
+			return function() {
+				aroundCalled++;
+				var result = origin();
+				return result + 1;
+			}
+		};
+		this.a_b_before = function(self) {
+			beforeCalled++;
+		};
+		this.a_c_after = function(self) {
+			afterCalled++;
 		};
 	});
 
 	var div = document.createElement('div');
 	div.innerHTML = '<div class="a"></div>'
 	var test = new Test(div);
-	var result = test.a.a();
+	var a = test.a;
+	var result;
 
+	// Around
+	result = a.a();
 	equal(originCalled, 1, 'orginal called.');
-	equal(roundCalled, 1, 'round called.');
+	equal(aroundCalled, 2, 'round called.');
 	equal(result, 1, 'return value ok in round.');
+
+	// Before
+	result = a.b();
+	equal(originCalled, 2, 'orginal called.');
+	equal(beforeCalled, 2, 'before called.');
+
+	// After
+	result = a.c();
+	equal(originCalled, 3, 'orginal called.');
+	equal(afterCalled, 2, 'after called.');
+
+	// Destory
+	test.destroy();
+	result = a.a();
+	equal(originCalled, 4, 'orginal called.');
+	// a_a_round被移除，a_round不会被移除
+	equal(aroundCalled, 3, 'round removed.');
+	equal(beforeCalled, 2, 'before removed.');
+	equal(afterCalled, 2, 'after removed.');
+	equal(result, 0, 'return value ok after destroy.');
 
 });
 
@@ -754,12 +810,19 @@ test('extend component', function() {
 	var eventCalled = 0;
 	var methodCalled = 0;
 	var onEventCalled = 0;
+	var aroundCalled = 0;
 
 	var A = new Class(ui.Component, function() {
 		this.test = ui.define1('.test');
 		this._a = function(self) {
 			ok(true, 'parent called in method.');
 			methodCalled++;
+		};
+		this.a_around = function(self, origin) {
+			return function() {
+				aroundCaleld++;
+				return origin();
+			}
 		};
 		this.test_click = function(self) {
 			ok(true, 'parent called in sub event.');
@@ -775,6 +838,12 @@ test('extend component', function() {
 		this._a = function(self) {
 			this.parent(self);
 			methodCalled++;
+		};
+		this.a_around = function(self, origin) {
+			return function() {
+				aroundCalled++;
+				return origin();
+			}
 		};
 		this.test_click = function(self) {
 			this.parent(self);
@@ -796,6 +865,7 @@ test('extend component', function() {
 	equal(eventCalled, 2, 'override parent sub event.');
 	equal(methodCalled, 2, 'override parent method.');
 	equal(onEventCalled, 2, 'override parent on event.');
+	equal(aroundCalled, 1, 'override parent around method.');
 
 });
 

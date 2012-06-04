@@ -1,8 +1,9 @@
-object.define('ui/index.js', 'sys, window, string, dom, events, urlparse, ./net, ./options, ./memberloader', function(require, exports) {
+object.define('ui/index.js', 'sys, window, string, dom, events, urlparse, ./aop, ./net, ./options, ./memberloader', function(require, exports) {
 
 var string = require('string');
 var dom = require('dom');
 var events = require('events');
+var aop = require('./aop');
 var net = require('./net');
 var optionsmod = require('./options');
 
@@ -353,17 +354,12 @@ ComponentMeta.prototype.bindEvents = function(self, name, comp) {
 		var methodName = aopMeta.methodName;
 		var originName = aopMeta.originName;
 		var aopType = aopMeta.aopType;
-		var origin = comp.get(originName);
-		if (origin) {
-			if (aopType == 'around') {
-				comp[originName] = function() {
-					return self[methodName](origin);
-				};
-			}
-			else if (aopType == 'before') {
-			}
-			else if (aopType == 'after') {
-			}
+		if (comp[originName]) {
+			self.addAspectTo(comp, originName, aopType, function(origin) {
+				return self[methodName](function() {
+					return origin.apply(comp, arguments);
+				});
+			});
 		}
 	});
 
@@ -1128,6 +1124,8 @@ this.Component = new exports.ComponentClass(function() {
 		self.__events = [];
 		// 记录本comp上的subevents已经被注册到了哪些sub comp上
 		self.__bounds = [];
+		// 记录所有aop
+		self.__aops = [];
 
 		self._node = dom.wrap(node);
 
@@ -1216,6 +1214,19 @@ this.Component = new exports.ComponentClass(function() {
 		// 设置所有传进来的option
 		self.setOption(options);
 
+		// 初始化自己身上的aop方法
+		self.meta.subEvents.forEach(function(name) {
+			var meta = self.getMeta(name);
+			var member = self[meta.sub];
+			if (typeof member == 'function') {
+				self.addAspectTo(self, meta.sub, meta.eventType, function(origin) {
+					return self[meta.methodName](function() {
+						return origin.apply(self, arguments);
+					});
+				});
+			}
+		});
+
 		// 初始化components
 		self.meta.components.forEach(function(name) {
 			self.getMeta(name).select(self, name, null, function(comp) {
@@ -1225,6 +1236,14 @@ this.Component = new exports.ComponentClass(function() {
 		});
 
 		checkInit();
+	};
+
+	/**
+	 * 统一的aop注册入口
+	 */
+	this.addAspectTo = function(self, comp, originName, aopType, func) {
+		var signal = aop[aopType](comp, originName, func);
+		self.__aops.push(signal);
 	};
 
 	/**
@@ -1309,6 +1328,11 @@ this.Component = new exports.ComponentClass(function() {
 		// 清除所有注册的事件
 		self.__events.forEach(function(item) {
 			item[0].removeEvent(item[1], item[2], item[3]);
+		});
+
+		// 清除所有aop包装
+		self.__aops.forEach(function(signal) {
+			signal.remove();
 		});
 
 		// 将node上保存的自己的引用删掉
@@ -1561,3 +1585,4 @@ this.Page = new Class(exports.Component, function() {
 });
 
 });
+
