@@ -519,33 +519,44 @@ test('aop method', function() {
 			return self.value;
 		};
 		this.a_around = function(self, origin) {
-			return function() {
+			strictEqual(self.value, 0, 'arguments ok in around define.');
+			return function(value) {
+				equal(value, 'a', 'arguments ok in around.');
 				aroundCalled++;
-				var result = origin();
+				var result = origin(value);
 				return result;
 			};
 		};
-		this.b_before = function(self) {
+		this.b_before = function(self, value) {
+			strictEqual(self.value, 0, 'arguments ok in before.');
+			equal(value, 'b', 'arguments ok in before.');
 			beforeCalled++;
 		};
-		this.c_after = function(self) {
+		this.c_after = function(self, value) {
+			strictEqual(self.value, 0, 'arguments ok in after.');
+			equal(value, 'c', 'arguments ok in after.');
 			afterCalled++;
 		};
 	});
 
 	var Test = new Class(ui.Component, function() {
 		this.a = ui.define1('.a', A);
+		this.value = 1;
 		this.a_a_around = function(self, origin) {
-			return function() {
+			strictEqual(self.value, 1, 'arguments ok in around define.');
+			return function(value) {
+				equal(value, 'a', 'arguments ok in around.');
 				aroundCalled++;
-				var result = origin();
+				var result = origin(value);
 				return result + 1;
 			}
 		};
 		this.a_b_before = function(self) {
+			strictEqual(self.value, 0, 'arguments ok in before.');
 			beforeCalled++;
 		};
 		this.a_c_after = function(self) {
+			strictEqual(self.value, 0, 'arguments ok in after.');
 			afterCalled++;
 		};
 	});
@@ -557,24 +568,24 @@ test('aop method', function() {
 	var result;
 
 	// Around
-	result = a.a();
+	result = a.a('a');
 	equal(originCalled, 1, 'orginal called.');
 	equal(aroundCalled, 2, 'round called.');
 	equal(result, 1, 'return value ok in round.');
 
 	// Before
-	result = a.b();
+	result = a.b('b');
 	equal(originCalled, 2, 'orginal called.');
 	equal(beforeCalled, 2, 'before called.');
 
 	// After
-	result = a.c();
+	result = a.c('c');
 	equal(originCalled, 3, 'orginal called.');
 	equal(afterCalled, 2, 'after called.');
 
 	// Destory
 	test.destroy();
-	result = a.a();
+	result = a.a('a');
 	equal(originCalled, 4, 'orginal called.');
 	// a_a_round被移除，a_round不会被移除
 	equal(aroundCalled, 3, 'round removed.');

@@ -94,7 +94,6 @@ object.define('ui/aop.js', function() {
 	};
 =====*/
 
-"use strict";
 var nextId = 0;
 function advise(dispatcher, type, advice, receiveArguments){
 	var previous = dispatcher[type];

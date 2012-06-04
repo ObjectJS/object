@@ -355,11 +355,7 @@ ComponentMeta.prototype.bindEvents = function(self, name, comp) {
 		var originName = aopMeta.originName;
 		var aopType = aopMeta.aopType;
 		if (comp[originName]) {
-			self.addAspectTo(comp, originName, aopType, function(origin) {
-				return self[methodName](function() {
-					return origin.apply(comp, arguments);
-				});
-			});
+			self.addAspectTo(comp, originName, aopType, methodName);
 		}
 	});
 
@@ -1219,11 +1215,7 @@ this.Component = new exports.ComponentClass(function() {
 			var meta = self.getMeta(name);
 			var member = self[meta.sub];
 			if (typeof member == 'function') {
-				self.addAspectTo(self, meta.sub, meta.eventType, function(origin) {
-					return self[meta.methodName](function() {
-						return origin.apply(self, arguments);
-					});
-				});
+				self.addAspectTo(self, meta.sub, meta.eventType, meta.methodName);
 			}
 		});
 
@@ -1241,8 +1233,14 @@ this.Component = new exports.ComponentClass(function() {
 	/**
 	 * 统一的aop注册入口
 	 */
-	this.addAspectTo = function(self, comp, originName, aopType, func) {
-		var signal = aop[aopType](comp, originName, func);
+	this.addAspectTo = function(self, comp, originName, aopType, methodName) {
+		var advice = aopType == 'around' ? function(origin) {
+			// 返回一个绑定后的origin
+			return self[methodName](function() {
+				return origin.apply(comp, arguments);
+			});
+		} : self[methodName];
+		var signal = aop[aopType](comp, originName, advice, true);
 		self.__aops.push(signal);
 	};
 
