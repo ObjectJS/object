@@ -204,13 +204,12 @@ ComponentMeta.prototype.wrap = function(self, name, node, type) {
 	else {
 		comp = new type(node, self._options[name]);
 		this.bindEvents(self, name, comp);
-		self.addEventTo(comp, 'destroy', function(event) {
-			var rebuild = event._args[0];
+		self.addEventTo(comp, 'afterdispose', function() {
+			// 重新获取其引用
+			self.getMeta(name).select(self, name);
+		});
+		self.addEventTo(comp, 'destroy', function() {
 			self.destroyComponent(comp);
-			if (rebuild) {
-				// 重新获取其引用
-				self.getMeta(name).select(self, name);
-			}
 		});
 	}
 
@@ -1379,7 +1378,8 @@ this.Component = new exports.ComponentClass(function() {
 		// virtual mode 无法触发事件，因此不执行dispose操作
 		if (!self.__virtual) {
 			self._node.dispose();
-			self.destroy(true);
+			self.fireEvent('afterdispose');
+			self.destroy();
 		}
 	};
 
