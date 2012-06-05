@@ -204,8 +204,13 @@ ComponentMeta.prototype.wrap = function(self, name, node, type) {
 	else {
 		comp = new type(node, self._options[name]);
 		this.bindEvents(self, name, comp);
-		self.addEventTo(comp, 'aftercomponentdispose', function(event) {
-			self.getMeta(name).select(self, name);
+		self.addEventTo(comp, 'destroy', function(event) {
+			var rebuild = event._args[0];
+			self.destroyComponent(comp);
+			if (rebuild) {
+				// 重新获取其引用
+				self.getMeta(name).select(self, name);
+			}
 		});
 	}
 
@@ -342,7 +347,7 @@ ComponentMeta.prototype.bindEvents = function(self, name, comp) {
 		return;
 	}
 
-	// cons comp可能会注册来自多个引用了它的其他的comp的事件注册
+	// comp可能会注册来自多个引用了它的其他的comp的事件注册
 	// 通过在__bounds中保存已经注册过的其他组件，避免重复注册
 	if (self.__bounds.indexOf(comp) != -1) {
 		return;
@@ -462,9 +467,7 @@ OptionMeta.prototype.bindEvents = function(self, name) {
 	self.__subEventsMap[name].forEach(function(eventMeta) {
 		var methodName = eventMeta.methodName;
 		var fakeEventType = '__option_' + eventMeta.eventType + '_' + eventMeta.sub;
-		self.addEventTo(self, fakeEventType, function(event) {
-			self[methodName](event);
-		});
+		self.addEventTo(self, fakeEventType, self.get(methodName));
 	});
 };
 
@@ -1121,7 +1124,7 @@ this.Component = new exports.ComponentClass(function() {
 		// 记录本comp上的subevents已经被注册到了哪些sub comp上
 		self.__bounds = [];
 		// 记录所有aop
-		self.__aops = [];
+		self.__signals = [];
 
 		self._node = dom.wrap(node);
 
@@ -1234,14 +1237,16 @@ this.Component = new exports.ComponentClass(function() {
 	 * 统一的aop注册入口
 	 */
 	this.addAspectTo = function(self, comp, originName, aopType, methodName) {
-		var advice = aopType == 'around' ? function(origin) {
+		var advice = (aopType == 'around') ? function(origin) {
 			// 返回一个绑定后的origin
 			return self[methodName](function() {
 				return origin.apply(comp, arguments);
 			});
 		} : self[methodName];
 		var signal = aop[aopType](comp, originName, advice, true);
-		self.__aops.push(signal);
+		signal.comp = comp;
+		// 记录自己给别人添加的aop方法
+		self.__signals.push(signal);
 	};
 
 	/**
@@ -1250,15 +1255,21 @@ this.Component = new exports.ComponentClass(function() {
 	 */
 	this.addEventTo = function(self, comp, type, func, cap) {
 		comp.addEvent(type, func, cap);
-		self.__events.push([comp, type, func, cap]);
+		var item = {
+			comp: comp,
+			type: type,
+			func: func,
+			cap: cap
+		};
+		// 记录自己给别人添加的事件
+		self.__events.push(item);
 	};
 
 	this.fireEvent = function(self) {
 		return (self.__virtual || self._node).fireEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
 	};
 
-	this.addEvent = function(self, eventType, func, cap) {
-		self.__events.push([self, eventType, func, cap]);
+	this.addEvent = function(self) {
 		return (self.__virtual || self._node).addEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
 	};
 
@@ -1318,29 +1329,47 @@ this.Component = new exports.ComponentClass(function() {
 	 * 所有注册的事件会被移除
 	 */
 	this._destroy = function(self) {
+
 		// 删除所有render的元素
 		self.__rendered.forEach(function(node) {
 			node.dispose();
 		});
-		self.__rendered = [];
+		self.__rendered.splice(self.__rendered.length);
 
 		// 清除所有注册的事件
 		self.__events.forEach(function(item) {
-			item[0].removeEvent(item[1], item[2], item[3]);
+			item.comp.removeEvent(item.type, item.func, item.cap);
 		});
+		self.__events.splice(self.__events.length);
 
 		// 清除所有aop包装
-		self.__aops.forEach(function(signal) {
+		self.__signals.forEach(function(signal) {
 			signal.remove();
 		});
+		self.__signals.splice(self.__signals.length);
 
 		// 将node上保存的自己的引用删掉
 		// 恢复self包装过node的所有痕迹
-		for (var i = 0; i < self._node.components.length; i++) {
-			if (self._node.components[i] === self) {
-				self._node.components.splice(i, 1);
+		self._node.components.splice(self._node.components.indexOf(self), 1);
+	};
+
+	this.destroyComponent = function(self, comp) {
+		// 清除self注册给comp的事件
+		self.__events.forEach(function(item) {
+			if (item.comp === comp) {
+				item.comp.removeEvent(item.type, item.func, item.cap);
 			}
-		}
+		});
+
+		// 清除self注册给comp的aop方法
+		self.__signals.forEach(function(signal) {
+			if (signal.comp === comp) {
+				signal.remove();
+			}
+		});
+
+		// destroy后，所有的self注册给其的事件已经清除，将其从__bounds中删除
+		self.__bounds.splice(self.__bounds.indexOf(comp), 1);
 	};
 
 	/**
@@ -1350,7 +1379,7 @@ this.Component = new exports.ComponentClass(function() {
 		// virtual mode 无法触发事件，因此不执行dispose操作
 		if (!self.__virtual) {
 			self._node.dispose();
-			self.fireEvent('aftercomponentdispose');
+			self.destroy(true);
 		}
 	};
 

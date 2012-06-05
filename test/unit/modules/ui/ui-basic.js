@@ -67,7 +67,7 @@ test('sub property', function() {
 
 	// dispose
 	test.test.dispose();
-	equal(test.test, null, 'disposed.');
+	strictEqual(test.test, null, 'disposed.');
 });
 
 test('mutiple sub property', function() {
@@ -659,6 +659,12 @@ test('sub event method', function() {
 
 	// 单个引用，内置事件
 	test.test.getNode().click();
+	test.get('test');
+	test.get('test');
+	test.get('test');
+	test.get('test');
+	test.get('test');
+	test.get('test');
 	equals(clickEventCalled, 1, 'sub click event called.');
 
 	// 单个引用，自定义事件
@@ -884,27 +890,43 @@ test('destroy', function() {
 
 	var eventCalled = 0;
 
-	var div = document.createElement('div');
-	div.innerHTML = '<div class="a"></div>';
-
 	var A = new Class(ui.Component, function() {
-		this._test = function(self) {
+		this._a = function(self) {
+		};
+	});
+	var B = new Class(ui.Component, function() {
+		this._b = function(self) {
 		};
 	});
 
 	var Test = new Class(ui.Component, function() {
 		this.a = ui.define1('.a', A);
-		this.a_test = function(self) {
+		this.a_a = function(self) {
+			eventCalled++;
+		};
+		this.b = ui.define('.b', B);
+		this.b_b = function(self) {
 			eventCalled++;
 		};
 	});
 
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="a"></div><div class="b"></div>';
 	var test = new Test(div);
-	test.a.test();
-	test.destroy();
-	test.a.test();
 
+	// destroy子成员
+	test.a.a();
+	equal(eventCalled, 1, 'event called.');
+	test.a.destroy();
+	test.a.a();
 	equal(eventCalled, 1, 'event not called after destroyed.');
+
+	// destroy自己
+	test.b.b();
+	equal(eventCalled, 2, 'event called.');
+	test.destroy();
+	test.b.b();
+	equal(eventCalled, 2, 'event not called after destroyed.');
 
 });
 
@@ -960,8 +982,8 @@ test('virtual component', function() {
 	var div = document.createElement('div');
 	div.innerHTML = '<div><div class="test"></div><div class="test2"></div></div>';
 
-	var Base1 = new Class(ui.Component, {});
-	var Base2 = new Class(ui.Component, {});
+	var Base1 = new Class(ui.Component, {xxx: 'Base1'});
+	var Base2 = new Class(ui.Component, {xxx: 'Base2'});
 
 	var A = new Class(ui.Component, function() {
 		this.test = ui.define1('.test', {
@@ -1011,7 +1033,7 @@ test('virtual component', function() {
 	notEqual(a.test2, b.test2, 'using same node with different type.');
 });
 
-test('virtual components', function() {
+test('mutiple virtual components', function() {
 
 	var eventCalled = 0;
 
