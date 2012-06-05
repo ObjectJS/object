@@ -38,9 +38,9 @@ function RuntimeMeta() {
 	// 所有onXxx形式注册事件方法
 	this.onEvents = [];
 	// 所有xxx_xxx形式注册事件方法
-	this.subEvents = [];
+	this.subMethods = [];
 	// 所有xxx_xxx_before形式注册的aop方法
-	this.aopMethods = [];
+	this.subSubMethods = [];
 	// 默认option
 	this.defaultOptions = {};
 }
@@ -53,41 +53,41 @@ RuntimeMeta.prototype.addAddon = function(addon) {
 	return false;
 };
 
-RuntimeMeta.prototype.addComponent = function(component) {
-	if (this.components.indexOf(component) == -1) {
-		this.components.push(component);
+RuntimeMeta.prototype.addComponent = function(name) {
+	if (this.components.indexOf(name) == -1) {
+		this.components.push(name);
 		return true;
 	}
 	return false;
 };
 
-RuntimeMeta.prototype.addOption = function(option) {
-	if (this.options.indexOf(option) == -1) {
-		this.options.push(option);
+RuntimeMeta.prototype.addOption = function(name) {
+	if (this.options.indexOf(name) == -1) {
+		this.options.push(name);
 		return true;
 	}
 	return false;
 };
 
-RuntimeMeta.prototype.addOnEvent = function(onEvent) {
-	if (this.onEvents.indexOf(onEvent) == -1) {
-		this.onEvents.push(onEvent);
+RuntimeMeta.prototype.addOnEvent = function(name) {
+	if (this.onEvents.indexOf(name) == -1) {
+		this.onEvents.push(name);
 		return true;
 	}
 	return false;
 };
 
-RuntimeMeta.prototype.addSubEvent = function(subEvent) {
-	if (this.subEvents.indexOf(subEvent) == -1) {
-		this.subEvents.push(subEvent);
+RuntimeMeta.prototype.addSubMethod = function(name) {
+	if (this.subMethods.indexOf(name) == -1) {
+		this.subMethods.push(name);
 		return true;
 	}
 	return false;
 };
 
-RuntimeMeta.prototype.addAOPMethod = function(aopMethod) {
-	if (this.aopMethods.indexOf(aopMethod) == -1) {
-		this.aopMethods.push(aopMethod);
+RuntimeMeta.prototype.addSubSubMethod = function(name) {
+	if (this.subSubMethods.indexOf(name) == -1) {
+		this.subSubMethods.push(name);
 		return true;
 	}
 	return false;
@@ -354,7 +354,7 @@ ComponentMeta.prototype.bindEvents = function(self, name, comp) {
 		self.__bounds.push(comp);
 	}
 
-	;(self.__aopMethodsMap[name] || []).forEach(function(aopMeta) {
+	;(self.__subSubMethodsMap[name] || []).forEach(function(aopMeta) {
 		var methodName = aopMeta.methodName;
 		var originName = aopMeta.originName;
 		var aopType = aopMeta.aopType;
@@ -363,7 +363,7 @@ ComponentMeta.prototype.bindEvents = function(self, name, comp) {
 		}
 	});
 
-	;(self.__subEventsMap[name] || []).forEach(function(eventMeta) {
+	;(self.__subMethodsMap[name] || []).forEach(function(eventMeta) {
 		var methodName = eventMeta.methodName;
 		self.addEventTo(comp, eventMeta.eventType, function(event) {
 			event.targetComponent = comp;
@@ -460,10 +460,10 @@ OptionMeta.prototype.ensureTypedValue = function(value) {
 };
 
 OptionMeta.prototype.bindEvents = function(self, name) {
-	if (!self.__subEventsMap[name]) {
+	if (!self.__subMethodsMap[name]) {
 		return;
 	}
-	self.__subEventsMap[name].forEach(function(eventMeta) {
+	self.__subMethodsMap[name].forEach(function(eventMeta) {
 		var methodName = eventMeta.methodName;
 		var fakeEventType = '__option_' + eventMeta.eventType + '_' + eventMeta.sub;
 		self.addEventTo(self, fakeEventType, self.get(methodName));
@@ -487,35 +487,35 @@ OnEventMeta.prototype.bindEvents = function(self, name) {
 	});
 };
 
-function SubEventMeta(sub, eventType, methodName) {
+function SubMethodMeta(sub, eventType, methodName) {
 	this.sub = sub;
 	this.eventType = eventType;
 	this.methodName = methodName;
 }
 
-SubEventMeta.prototype.init = function(self, name) {
+SubMethodMeta.prototype.init = function(self, name) {
 	var sub = this.sub;
-	// 记录下来，render时从__subEventsMap获取信息
-	if (!(sub in self.__subEventsMap)) {
-		self.__subEventsMap[sub] = [];
+	// 记录下来，render时从__subMethodsMap获取信息
+	if (!(sub in self.__subMethodsMap)) {
+		self.__subMethodsMap[sub] = [];
 	}
-	self.__subEventsMap[sub].push(this);
+	self.__subMethodsMap[sub].push(this);
 };
 
-function AOPMethodMeta(sub, originName, aopType, methodName) {
+function SubSubMethodMeta(sub, originName, aopType, methodName) {
 	this.sub = sub;
 	this.originName = originName;
 	this.aopType = aopType;
 	this.methodName = methodName;
 }
 
-AOPMethodMeta.prototype.init = function(self, name) {
+SubSubMethodMeta.prototype.init = function(self, name) {
 	var sub = this.sub;
-	// 记录下来，render时从__aopMethodsMap获取信息
-	if (!(sub in self.__aopMethodsMap)) {
-		self.__aopMethodsMap[sub] = [];
+	// 记录下来，render时从__subSubMethodsMap获取信息
+	if (!(sub in self.__subSubMethodsMap)) {
+		self.__subSubMethodsMap[sub] = [];
 	}
-	self.__aopMethodsMap[sub].push(this);
+	self.__subSubMethodsMap[sub].push(this);
 };
 
 function RequestMeta(url, method) {
@@ -657,7 +657,7 @@ var emptyDecorator = function(func) {
  * @decorator
  * @param name 一个函数名字
  */
-this.subevent = function(name) {
+this.submethod = function(name) {
 	// 名子要匹配带有$后缀
 	var match = name.match(/^([a-zA-Z1-9]+)_([a-zA-Z1-9]+)([\$0-9]*)$/);
 	if (!match) {
@@ -669,12 +669,12 @@ this.subevent = function(name) {
 	// 后面带的无用的东西，只是用来区分addon的
 	var surfix = match[3];
 	return function(func) {
-		func.meta = new SubEventMeta(sub, eventType, name);
+		func.meta = new SubMethodMeta(sub, eventType, name);
 		return func;
 	};
 };
 
-this.aopmethod = function(name) {
+this.subsubmethod = function(name) {
 	// 名子要匹配带有$后缀
 	var match = name.match(/^([a-zA-Z1-9]+)_([a-zA-Z1-9]+)_([a-zA-Z1-9]+)([\$0-9]*)$/);
 	if (!match) {
@@ -687,7 +687,7 @@ this.aopmethod = function(name) {
 	// 后面带的无用的东西，只是用来区分addon的
 	var surfix = match[4];
 	return function(func) {
-		func.meta = new AOPMethodMeta(sub, methodName, aopType, name);
+		func.meta = new SubSubMethodMeta(sub, methodName, aopType, name);
 		return func;
 	};
 };
@@ -901,12 +901,12 @@ this.ComponentClass = new Class(Type, function() {
 			Type.__setattr__(cls, name.slice(1), events.fireevent(member));
 
 		}
-		else if (exports.aopmethod(name)(member)) {
-			meta.addAOPMethod(name);
+		else if (exports.subsubmethod(name)(member)) {
+			meta.addSubSubMethod(name);
 
 		}
-		else if (exports.subevent(name)(member)) {
-			meta.addSubEvent(name);
+		else if (exports.submethod(name)(member)) {
+			meta.addSubMethod(name);
 
 		}
 		else if (exports.onevent(name)(member)) {
@@ -937,11 +937,11 @@ this.ComponentClass = new Class(Type, function() {
 		// 合并onevent
 		oMeta.onEvents.forEach(meta.addOnEvent, meta);
 
-		// 合并subevent
-		oMeta.subEvents.forEach(meta.addSubEvent, meta);
+		// 合并submethod
+		oMeta.subMethods.forEach(meta.addSubMethod, meta);
 
-		// 合并aopmethod
-		oMeta.aopMethods.forEach(meta.addAOPMethod, meta);
+		// 合并subsubmethod
+		oMeta.subSubMethods.forEach(meta.addSubSubMethod, meta);
 	};
 
 	this.mixAddon = function(cls, addon) {
@@ -974,27 +974,27 @@ this.ComponentClass = new Class(Type, function() {
 			}
 		});
 
-		// 合并addon的subevent
-		oMeta.subEvents.forEach(function(name) {
+		// 合并addon的submethod
+		oMeta.subMethods.forEach(function(name) {
 			var newName = name + surfix;
 			var func;
-			if (meta.addSubEvent(newName)) {
+			if (meta.addSubMethod(newName)) {
 				func = addon.get(name, false).im_func;
 				// 重新包装，避免名字不同导致warning
-				Type.__setattr__(cls, newName, exports.subevent(newName)(function() {
+				Type.__setattr__(cls, newName, exports.submethod(newName)(function() {
 					return func.apply(this, arguments);
 				}));
 			}
 		});
 
-		// 合并addon的aopmethod
-		oMeta.aopMethods.forEach(function(name) {
+		// 合并addon的subsubmethod
+		oMeta.subSubMethods.forEach(function(name) {
 			var newName = name + surfix;
 			var func;
-			if (meta.addAOPMethod(newName)) {
+			if (meta.addSubSubMethod(newName)) {
 				func = addon.get(name, false).im_func;
 				// 重新包装，避免名字不同导致warning
-				Type.__setattr__(cls, newName, exports.aopmethod(newName)(function() {
+				Type.__setattr__(cls, newName, exports.subsubmethod(newName)(function() {
 					return func.apply(this, arguments);
 				}));
 			}
@@ -1120,7 +1120,7 @@ this.Component = new exports.ComponentClass(function() {
 		self.__rendered = []; // 后来被加入的，而不是首次通过selector选择的node的引用
 		// 存储所有注册的事件
 		self.__events = [];
-		// 记录本comp上的subevents已经被注册到了哪些sub comp上
+		// 记录本comp上的subMethods已经被注册到了哪些sub comp上
 		self.__bounds = [];
 		// 记录所有aop
 		self.__signals = [];
@@ -1175,17 +1175,17 @@ this.Component = new exports.ComponentClass(function() {
 			}
 		}
 
-		// 存储subEvents，用于render时获取信息
-		self.__subEventsMap = {};
-		// 初始化subEventsMap
-		self.meta.subEvents.forEach(function(name) {
+		// 存储subMethods，用于render时获取信息
+		self.__subMethodsMap = {};
+		// 初始化subMethodsMap
+		self.meta.subMethods.forEach(function(name) {
 			self.getMeta(name).init(self, name);
 		});
 
-		// 存储aopMethods，用于render时获取信息
-		self.__aopMethodsMap = {};
-		// 初始化aopMethodsMap
-		self.meta.aopMethods.forEach(function(name) {
+		// 存储subSubMethods，用于render时获取信息
+		self.__subSubMethodsMap = {};
+		// 初始化subSubMethodsMap
+		self.meta.subSubMethods.forEach(function(name) {
 			self.getMeta(name).init(self, name);
 		});
 
@@ -1213,7 +1213,7 @@ this.Component = new exports.ComponentClass(function() {
 		self.setOption(options);
 
 		// 初始化自己身上的aop方法
-		self.meta.subEvents.forEach(function(name) {
+		self.meta.subMethods.forEach(function(name) {
 			var meta = self.getMeta(name);
 			var member = self[meta.sub];
 			if (typeof member == 'function') {
