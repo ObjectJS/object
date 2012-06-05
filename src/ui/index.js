@@ -260,7 +260,7 @@ ComponentMeta.prototype.select = function(self, name, made, callback) {
 			var node = self._node;
 			var comp = null;
 			while ((node = node.parentNode)) {
-				if (comp = getComponent(node, type)) {
+				if ((comp = getComponent(node, type))) {
 					break;
 				}
 			}
@@ -716,7 +716,7 @@ this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
 	this.customGetter = function(cls, self, name) {
 		var meta = self.getMeta(name);
 		if (!meta) {
-			return;
+			return undefined;
 		}
 
 		// 默认getter是从结构中通过data-前缀获取
@@ -768,7 +768,7 @@ this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
 		// 确保获取到的value得到更新
 		self._set(name, value);
 
-		return [from, value]
+		return [from, value];
 	};
 
 	this.setter1 = function(cls, self, name, value, seted) {
