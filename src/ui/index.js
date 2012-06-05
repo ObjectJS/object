@@ -37,9 +37,9 @@ function RuntimeMeta() {
 	this.options = [];
 	// 所有onXxx形式注册事件方法
 	this.onEvents = [];
-	// 所有xxx_xxx形式注册事件方法
+	// 所有xxx_xxx形式方法
 	this.subMethods = [];
-	// 所有xxx_xxx_before形式注册的aop方法
+	// 所有xxx_xxx_xxx形式方法
 	this.subSubMethods = [];
 	// 默认option
 	this.defaultOptions = {};
@@ -355,25 +355,26 @@ ComponentMeta.prototype.bindEvents = function(self, name, comp) {
 	}
 
 	;(self.__subSubMethodsMap[name] || []).forEach(function(aopMeta) {
-		var methodName = aopMeta.methodName;
-		var originName = aopMeta.originName;
-		var aopType = aopMeta.aopType;
+		var fullname = aopMeta.fullname;
+		var originName = aopMeta.sub2;
+		var aopType = aopMeta.sub3;
 		if (comp[originName]) {
-			self.addAspectTo(comp, originName, aopType, methodName);
+			self.addAspectTo(comp, originName, aopType, fullname);
 		}
 	});
 
-	;(self.__subMethodsMap[name] || []).forEach(function(eventMeta) {
-		var methodName = eventMeta.methodName;
-		self.addEventTo(comp, eventMeta.eventType, function(event) {
+	;(self.__subMethodsMap[name] || []).forEach(function(meta) {
+		var fullname = meta.fullname;
+		var type = meta.sub2;
+		self.addEventTo(comp, type, function(event) {
 			event.targetComponent = comp;
 			var args;
 			// 将event._args pass 到函数后面
 			if (event._args) {
 				args = [event].concat(event._args);
-				self[methodName].apply(self, args);
+				self[fullname].apply(self, args);
 			} else {
-				self[methodName](event);
+				self[fullname](event);
 			}
 		});
 	});
@@ -463,10 +464,12 @@ OptionMeta.prototype.bindEvents = function(self, name) {
 	if (!self.__subMethodsMap[name]) {
 		return;
 	}
-	self.__subMethodsMap[name].forEach(function(eventMeta) {
-		var methodName = eventMeta.methodName;
-		var fakeEventType = '__option_' + eventMeta.eventType + '_' + eventMeta.sub;
-		self.addEventTo(self, fakeEventType, self.get(methodName));
+	self.__subMethodsMap[name].forEach(function(meta) {
+		var fullname = meta.fullname;
+		var sub = meta.sub1;
+		var type = meta.sub2;
+		var fakeType = '__option_' + type + '_' + sub;
+		self.addEventTo(self, fakeType, self.get(fullname));
 	});
 };
 
@@ -487,35 +490,35 @@ OnEventMeta.prototype.bindEvents = function(self, name) {
 	});
 };
 
-function SubMethodMeta(sub, eventType, methodName) {
-	this.sub = sub;
-	this.eventType = eventType;
-	this.methodName = methodName;
+function SubMethodMeta(sub1, sub2, fullname) {
+	this.sub1 = sub1;
+	this.sub2 = sub2;
+	this.fullname = fullname;
 }
 
 SubMethodMeta.prototype.init = function(self, name) {
-	var sub = this.sub;
+	var sub1 = this.sub1;
 	// 记录下来，render时从__subMethodsMap获取信息
-	if (!(sub in self.__subMethodsMap)) {
-		self.__subMethodsMap[sub] = [];
+	if (!self.__subMethodsMap[sub1]) {
+		self.__subMethodsMap[sub1] = [];
 	}
-	self.__subMethodsMap[sub].push(this);
+	self.__subMethodsMap[sub1].push(this);
 };
 
-function SubSubMethodMeta(sub, originName, aopType, methodName) {
-	this.sub = sub;
-	this.originName = originName;
-	this.aopType = aopType;
-	this.methodName = methodName;
+function SubSubMethodMeta(sub1, sub2, sub3, fullname) {
+	this.sub1 = sub1;
+	this.sub2 = sub2;
+	this.sub3 = sub3;
+	this.fullname = fullname;
 }
 
 SubSubMethodMeta.prototype.init = function(self, name) {
-	var sub = this.sub;
+	var sub1 = this.sub1;
 	// 记录下来，render时从__subSubMethodsMap获取信息
-	if (!(sub in self.__subSubMethodsMap)) {
-		self.__subSubMethodsMap[sub] = [];
+	if (!self.__subSubMethodsMap[sub1]) {
+		self.__subSubMethodsMap[sub1] = [];
 	}
-	self.__subSubMethodsMap[sub].push(this);
+	self.__subSubMethodsMap[sub1].push(this);
 };
 
 function RequestMeta(url, method) {
@@ -1215,9 +1218,11 @@ this.Component = new exports.ComponentClass(function() {
 		// 初始化自己身上的aop方法
 		self.meta.subMethods.forEach(function(name) {
 			var meta = self.getMeta(name);
-			var member = self[meta.sub];
+			var sub = meta.sub1;
+			var type = meta.sub2;
+			var member = self[sub];
 			if (typeof member == 'function') {
-				self.addAspectTo(self, meta.sub, meta.eventType, meta.methodName);
+				self.addAspectTo(self, sub, type, meta.fullname);
 			}
 		});
 
