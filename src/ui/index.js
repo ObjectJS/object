@@ -206,7 +206,7 @@ ComponentMeta.prototype.wrap = function(self, name, node, type) {
 		this.bindEvents(self, name, comp);
 		self.addEventTo(comp, 'aftercomponentdispose', function(event) {
 			self.getMeta(name).select(self, name);
-		})
+		});
 	}
 
 	return comp;
@@ -338,16 +338,16 @@ ComponentMeta.prototype.getTemplate = function(metaOptions, relativeModule, call
 
 ComponentMeta.prototype.bindEvents = function(self, name, comp) {
 
-	// comp可能会注册来自多个引用了它的其他的comp的事件注册
+	if (!comp) {
+		return;
+	}
+
+	// cons comp可能会注册来自多个引用了它的其他的comp的事件注册
 	// 通过在__bounds中保存已经注册过的其他组件，避免重复注册
 	if (self.__bounds.indexOf(comp) != -1) {
 		return;
 	} else {
 		self.__bounds.push(comp);
-	}
-
-	if (!comp) {
-		return;
 	}
 
 	;(self.__aopMethodsMap[name] || []).forEach(function(aopMeta) {
@@ -1257,7 +1257,8 @@ this.Component = new exports.ComponentClass(function() {
 		return (self.__virtual || self._node).fireEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
 	};
 
-	this.addEvent = function(self, eventType, func) {
+	this.addEvent = function(self, eventType, func, cap) {
+		self.__events.push([self, eventType, func, cap]);
 		return (self.__virtual || self._node).addEvent.apply(self._node, Array.prototype.slice.call(arguments, 1));
 	};
 
