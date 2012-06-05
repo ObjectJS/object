@@ -238,6 +238,43 @@ test('sub event method', function() {
 	equal(addonSubEventCalled, 1, 'sub event called in addon.');
 });
 
+test('addon\'s addon', function() {
+	var onEventCalled = 0;
+	var subEventCalled = 0;
+	var A = new Class(ui.Component, function() {
+		this.onTest = function(self) {
+			onEventCalled++;
+		};
+		this.a_click = function(self) {
+			subEventCalled++;
+		};
+	});
+	var AA = new Class(ui.Component, function() {
+		this.__mixins__ = [A];
+	});
+	var BB = new Class(ui.Component, function() {
+		this.__mixins__ = [A];
+	});
+	var Test = new Class(ui.Component, function() {
+		this.__mixins__ = [AA, BB];
+		this._test = function(self) {
+		};
+		this.a = ui.define1('.a');
+	});
+	var div = document.createElement('div');
+	div.innerHTML = '<div class="a"></div>';
+	var test = new Test(div);
+
+	// meta.addons
+	equal(test.meta.addons.length, 3, 'meta addons ok.');
+
+	test.test();
+	equal(onEventCalled, 1, 'on event called times ok.');
+
+	test.a.getNode().click();
+	equal(subEventCalled, 1, 'sub event called times ok.');
+});
+
 test('addon class', function() {
 
 	var eventFired = 0;

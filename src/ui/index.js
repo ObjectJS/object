@@ -473,8 +473,9 @@ OptionMeta.prototype.bindEvents = function(self, name) {
 	});
 };
 
-function OnEventMeta(eventType) {
+function OnEventMeta(eventType, fullname) {
 	this.eventType = eventType;
+	this.fullname = fullname;
 }
 
 OnEventMeta.prototype.bindEvents = function(self, name) {
@@ -711,7 +712,7 @@ this.onevent = function(name) {
 	var surfix = match[2];
 	eventType = eventType.slice(0, 1).toLowerCase() + eventType.slice(1);
 	return function(func) {
-		func.meta = new OnEventMeta(eventType);
+		func.meta = new OnEventMeta(eventType, name);
 		return func;
 	};
 };
@@ -886,6 +887,7 @@ this.ComponentClass = new Class(Type, function() {
 	 */
 	this.setMember = function(cls, name, member) {
 		var meta = cls.get('meta');
+		var newMember;
 
 		if (!member) {
 			return;
@@ -912,8 +914,14 @@ this.ComponentClass = new Class(Type, function() {
 			meta.addSubMethod(name);
 
 		}
-		else if (exports.onevent(name)(member)) {
-			meta.addOnEvent(name);
+		else if ((newMember = exports.onevent(name)(member))) {
+			//meta.addOnEvent(name);
+			var onEventMeta = newMember.meta;
+			if (!meta.onEvents.some(function(meta) {
+				return onEventMeta.eventType == meta.eventType;
+			})) {
+				meta.onEvents.push(onEventMeta);
+			}
 
 		}
 	};
@@ -937,8 +945,15 @@ this.ComponentClass = new Class(Type, function() {
 		// 合并options
 		oMeta.options.forEach(meta.addOption, meta);
 
+		oMeta.onEvents.forEach(function(onEventMeta) {
+			if (!meta.onEvents.some(function(meta) {
+				return onEventMeta.eventType == meta.eventType;
+			})) {
+				meta.onEvents.push(onEventMeta);
+			}
+		});
 		// 合并onevent
-		oMeta.onEvents.forEach(meta.addOnEvent, meta);
+		//oMeta.onEvents.forEach(meta.addOnEvent, meta);
 
 		// 合并submethod
 		oMeta.subMethods.forEach(meta.addSubMethod, meta);
@@ -964,18 +979,34 @@ this.ComponentClass = new Class(Type, function() {
 		// 合并addon的options
 		oMeta.options.forEach(meta.addOption, meta);
 
-		// 合并addon的onevent
-		oMeta.onEvents.forEach(function(name) {
-			var newName = name + surfix;
+		oMeta.onEvents.forEach(function(onEventMeta) {
 			var func;
-			if (meta.addOnEvent(newName)) {
-				func = addon.get(name, false).im_func;
+			var fullname = onEventMeta.fullname;
+			var newName = fullname + '$' + onEventMeta.gid;
+			if (!meta.onEvents.some(function(meta) {
+				return onEventMeta.eventType == meta.eventType && onEventMeta.gid == meta.gid;
+			})) {
+				meta.onEvents.push(onEventMeta);
+				func = addon.get(fullname, false).im_func;
 				// 重新包装，避免名字不同导致warning
 				Type.__setattr__(cls, newName, exports.onevent(newName)(function() {
 					return func.apply(this, arguments);
 				}));
 			}
 		});
+
+		// 合并addon的onevent
+		//oMeta.onEvents.forEach(function(name) {
+			//var newName = name + surfix;
+			//var func;
+			//if (meta.addOnEvent(newName)) {
+				//func = addon.get(name, false).im_func;
+				//// 重新包装，避免名字不同导致warning
+				//Type.__setattr__(cls, newName, exports.onevent(newName)(function() {
+					//return func.apply(this, arguments);
+				//}));
+			//}
+		//});
 
 		// 合并addon的submethod
 		oMeta.subMethods.forEach(function(name) {
@@ -1199,8 +1230,9 @@ this.Component = new exports.ComponentClass(function() {
 			});
 
 			// 初始化onEvents
-			self.meta.onEvents.forEach(function(name) {
-				self.getMeta(name).bindEvents(self, name);
+			self.meta.onEvents.forEach(function(meta) {
+				// TODO 这里的meta.fullname应该有addon后缀
+				meta.bindEvents(self, meta.fullname);
 			});
 		}
 
