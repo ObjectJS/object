@@ -1266,7 +1266,6 @@ this.Component = new exports.ComponentClass(function() {
 
 			// 初始化onEvents
 			self.meta.onEvents.forEach(function(meta) {
-				console.log('init', meta);
 				meta.bindEvents(self);
 			});
 		}
@@ -1489,24 +1488,26 @@ this.Component = new exports.ComponentClass(function() {
 	/**
 	 * 获取成员的meta信息
 	 */
-	this.getMeta = function(self, name) {
+	this.getMeta = classmethod(function(cls, name) {
 		var meta;
+		var member = Type.__getattribute__(cls, name);
 
-		if (self.__properties__[name]) {
-			meta = self.__properties__[name].meta;
+		if (!member) {
+			return null;
 		}
-		else if (typeof self[name] == 'function') {
-			meta = self[name].im_func.meta;
+
+		if (member.__class__ == property) {
+			meta = member.meta;
 		}
-		else if (self[name]) {
-			meta = self[name].meta;
+		else if (typeof member == 'function') {
+			meta = member.im_func.meta;
 		}
 		else {
 			meta = null;
 		}
 
 		return meta;
-	};
+	});
 
 	/**
 	 * 渲染一组component，渲染后执行callback
