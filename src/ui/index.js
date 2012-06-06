@@ -141,12 +141,39 @@ RuntimeMeta.prototype.addAddonSubMethod = function(addon, meta) {
 	}
 };
 
-RuntimeMeta.prototype.addSubSubMethod = function(name) {
-	if (this.subSubMethods.indexOf(name) == -1) {
-		this.subSubMethods.push(name);
-		return true;
+RuntimeMeta.prototype.addSubSubMethod = function(meta) {
+	if (!this.subSubMethods.some(function(subSubMethodMeta) {
+		return meta.sub1 == subSubMethodMeta.sub1 && meta.sub2 == subSubMethodMeta.sub2 && meta.sub3 == subSubMethodMeta.sub3;
+	})) {
+		meta.cls = this.cls;
+		this.subSubMethods.push(meta);
 	}
-	return false;
+};
+
+RuntimeMeta.prototype.addAddonSubSubMethod = function(addon, meta) {
+	var func;
+	var fullname;
+	var newName;
+	var newMember;
+	var oGid = addon.get('gid');
+
+	if (!this.subSubMethods.some(function(subSubMethodMeta) {
+		// 若都是相同组件定义的（gid相同）且类型相同则不添加
+		return subSubMethodMeta.sub1 == meta.sub1 && subSubMethodMeta.sub2 == meta.sub2 && subSubMethodMeta.sub3 == meta.sub3 && subSubMethodMeta.cls === meta.cls;
+	})) {
+		fullname = meta.fullname;
+		newName = fullname + '$' + oGid;
+		func = addon.get(fullname, false).im_func;
+		// 重新包装，避免名字不同导致warning
+		// 使用meta.gid，确保此gid同这个meta初定义时一致
+		newMember = exports.subsubmethod(newName)(function() {
+			return func.apply(this, arguments);
+		});
+		Type.__setattr__(this.cls, newName, newMember);
+		newMember.meta.cls = meta.cls;
+		// 传递重新生成的这个meta
+		this.subSubMethods.push(newMember.meta);
+	}
 };
 
 function extend(src, target, ov) {
@@ -965,7 +992,7 @@ this.ComponentClass = new Class(Type, function() {
 
 		}
 		else if (newMember = exports.subsubmethod(name)(member)) {
-			meta.addSubSubMethod(name);
+			meta.addSubSubMethod(newMember.meta);
 
 		}
 		else if (newMember = exports.submethod(name)(member)) {
@@ -1037,17 +1064,10 @@ this.ComponentClass = new Class(Type, function() {
 		}, meta);
 
 		// 合并addon的subsubmethod
-		oMeta.subSubMethods.forEach(function(name) {
-			var newName = name + surfix;
-			var func;
-			if (meta.addSubSubMethod(newName)) {
-				func = addon.get(name, false).im_func;
-				// 重新包装，避免名字不同导致warning
-				Type.__setattr__(cls, newName, exports.subsubmethod(newName)(function() {
-					return func.apply(this, arguments);
-				}));
-			}
-		});
+		oMeta.subSubMethods.forEach(function(subSubMethodMeta) {
+			meta.addAddonSubSubMethod(addon, subSubMethodMeta);
+		}, meta);
+
 	};
 
 	/**
@@ -1234,8 +1254,8 @@ this.Component = new exports.ComponentClass(function() {
 		// 存储subSubMethods，用于render时获取信息
 		self.__subSubMethodsMap = {};
 		// 初始化subSubMethodsMap
-		self.meta.subSubMethods.forEach(function(name) {
-			self.getMeta(name).init(self, name);
+		self.meta.subSubMethods.forEach(function(meta) {
+			meta.init(self, name);
 		});
 
 		if (!self.__virtual) {
