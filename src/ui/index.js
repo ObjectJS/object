@@ -28,7 +28,9 @@ function getComponent(node, type) {
 /**
  * 用于存放每个Component的信息
  */
-function RuntimeMeta() {
+function RuntimeMeta(cls) {
+	// 此meta所在的component
+	this.cls = cls;
 	// Addons
 	this.addons = [];
 	// 所有元素引用
@@ -69,20 +71,74 @@ RuntimeMeta.prototype.addOption = function(name) {
 	return false;
 };
 
-RuntimeMeta.prototype.addOnEvent = function(name) {
-	if (this.onEvents.indexOf(name) == -1) {
-		this.onEvents.push(name);
-		return true;
+RuntimeMeta.prototype.addOnEvent = function(meta) {
+	if (!this.onEvents.some(function(onEventMeta) {
+		return meta.eventType == onEventMeta.eventType;
+	})) {
+		meta.cls = this.cls;
+		this.onEvents.push(meta);
 	}
-	return false;
 };
 
-RuntimeMeta.prototype.addSubMethod = function(name) {
-	if (this.subMethods.indexOf(name) == -1) {
-		this.subMethods.push(name);
-		return true;
+RuntimeMeta.prototype.addAddonOnEvent = function(addon, meta) {
+	var func;
+	var fullname;
+	var newName;
+	var newMember;
+	var oGid = addon.get('gid');
+
+	if (!this.onEvents.some(function(onEventMeta) {
+		// 若都是相同组件定义的（gid相同）且类型相同则不添加
+		return onEventMeta.eventType == meta.eventType && onEventMeta.cls === meta.cls;
+	})) {
+		fullname = meta.fullname;
+		newName = fullname + '$' + oGid;
+		func = addon.get(fullname, false).im_func;
+		// 重新包装，避免名字不同导致warning
+		// 使用meta.gid，确保此gid同这个meta初定义时一致
+		newMember = exports.onevent(newName)(function() {
+			return func.apply(this, arguments);
+		});
+		Type.__setattr__(this.cls, newName, newMember);
+		newMember.meta.cls = meta.cls;
+		// 传递重新生成的这个meta
+		this.onEvents.push(newMember.meta);
 	}
-	return false;
+};
+
+RuntimeMeta.prototype.addSubMethod = function(meta) {
+	if (!this.subMethods.some(function(subMethodMeta) {
+		return meta.sub1 == subMethodMeta.sub1 && meta.sub2 == subMethodMeta.sub2;
+	})) {
+		meta.cls = this.cls;
+		this.subMethods.push(meta);
+	}
+};
+
+RuntimeMeta.prototype.addAddonSubMethod = function(addon, meta) {
+	var func;
+	var fullname;
+	var newName;
+	var newMember;
+	var oGid = addon.get('gid');
+
+	if (!this.subMethods.some(function(subMethodMeta) {
+		// 若都是相同组件定义的（gid相同）且类型相同则不添加
+		return subMethodMeta.sub1 == meta.sub1 && subMethodMeta.sub2 == meta.sub2 && subMethodMeta.cls === meta.cls;
+	})) {
+		fullname = meta.fullname;
+		newName = fullname + '$' + oGid;
+		func = addon.get(fullname, false).im_func;
+		// 重新包装，避免名字不同导致warning
+		// 使用meta.gid，确保此gid同这个meta初定义时一致
+		newMember = exports.submethod(newName)(function() {
+			return func.apply(this, arguments);
+		});
+		Type.__setattr__(this.cls, newName, newMember);
+		newMember.meta.cls = meta.cls;
+		// 传递重新生成的这个meta
+		this.subMethods.push(newMember.meta);
+	}
 };
 
 RuntimeMeta.prototype.addSubSubMethod = function(name) {
@@ -478,8 +534,9 @@ function OnEventMeta(eventType, fullname) {
 	this.fullname = fullname;
 }
 
-OnEventMeta.prototype.bindEvents = function(self, name) {
+OnEventMeta.prototype.bindEvents = function(self) {
 	var eventType = this.eventType;
+	var methodName = this.fullname;
 
 	self.addEventTo(self, eventType, function(event) {
 		var args = [event];
@@ -487,7 +544,7 @@ OnEventMeta.prototype.bindEvents = function(self, name) {
 		if (event._args) {
 			args = args.concat(event._args);
 		}
-		self[name].apply(self, args);
+		self[methodName].apply(self, args);
 	});
 };
 
@@ -827,7 +884,7 @@ this.ComponentClass = new Class(Type, function() {
 
 	this.initialize = function(cls, name, base, dict) {
 		var gid = globalid++;
-		var meta = new RuntimeMeta();
+		var meta = new RuntimeMeta(cls);
 		var memberSetter = cls.get('setMember');
 
 		cls.set('gid', gid);
@@ -887,6 +944,7 @@ this.ComponentClass = new Class(Type, function() {
 	 */
 	this.setMember = function(cls, name, member) {
 		var meta = cls.get('meta');
+		var gid = cls.get('gid');
 		var newMember;
 
 		if (!member) {
@@ -906,22 +964,16 @@ this.ComponentClass = new Class(Type, function() {
 			Type.__setattr__(cls, name.slice(1), events.fireevent(member));
 
 		}
-		else if (exports.subsubmethod(name)(member)) {
+		else if (newMember = exports.subsubmethod(name)(member)) {
 			meta.addSubSubMethod(name);
 
 		}
-		else if (exports.submethod(name)(member)) {
-			meta.addSubMethod(name);
+		else if (newMember = exports.submethod(name)(member)) {
+			meta.addSubMethod(newMember.meta);
 
 		}
 		else if ((newMember = exports.onevent(name)(member))) {
-			//meta.addOnEvent(name);
-			var onEventMeta = newMember.meta;
-			if (!meta.onEvents.some(function(meta) {
-				return onEventMeta.eventType == meta.eventType;
-			})) {
-				meta.onEvents.push(onEventMeta);
-			}
+			meta.addOnEvent(newMember.meta);
 
 		}
 	};
@@ -945,15 +997,8 @@ this.ComponentClass = new Class(Type, function() {
 		// 合并options
 		oMeta.options.forEach(meta.addOption, meta);
 
-		oMeta.onEvents.forEach(function(onEventMeta) {
-			if (!meta.onEvents.some(function(meta) {
-				return onEventMeta.eventType == meta.eventType;
-			})) {
-				meta.onEvents.push(onEventMeta);
-			}
-		});
 		// 合并onevent
-		//oMeta.onEvents.forEach(meta.addOnEvent, meta);
+		oMeta.onEvents.forEach(meta.addOnEvent, meta);
 
 		// 合并submethod
 		oMeta.subMethods.forEach(meta.addSubMethod, meta);
@@ -964,8 +1009,10 @@ this.ComponentClass = new Class(Type, function() {
 
 	this.mixAddon = function(cls, addon) {
 		var meta = cls.get('meta');
+		var gid = cls.get('gid');
 		var oMeta = addon.get('meta');
-		var surfix = '$' + addon.get('gid');
+		var oGid = addon.get('gid');
+		var surfix = '$' + oGid;
 
 		// 合并addon的defaultOptions
 		extend(meta.defaultOptions, oMeta.defaultOptions, false);
@@ -979,47 +1026,15 @@ this.ComponentClass = new Class(Type, function() {
 		// 合并addon的options
 		oMeta.options.forEach(meta.addOption, meta);
 
+		// 合并addond哦onEvents
 		oMeta.onEvents.forEach(function(onEventMeta) {
-			var func;
-			var fullname = onEventMeta.fullname;
-			var newName = fullname + '$' + onEventMeta.gid;
-			if (!meta.onEvents.some(function(meta) {
-				return onEventMeta.eventType == meta.eventType && onEventMeta.gid == meta.gid;
-			})) {
-				meta.onEvents.push(onEventMeta);
-				func = addon.get(fullname, false).im_func;
-				// 重新包装，避免名字不同导致warning
-				Type.__setattr__(cls, newName, exports.onevent(newName)(function() {
-					return func.apply(this, arguments);
-				}));
-			}
-		});
-
-		// 合并addon的onevent
-		//oMeta.onEvents.forEach(function(name) {
-			//var newName = name + surfix;
-			//var func;
-			//if (meta.addOnEvent(newName)) {
-				//func = addon.get(name, false).im_func;
-				//// 重新包装，避免名字不同导致warning
-				//Type.__setattr__(cls, newName, exports.onevent(newName)(function() {
-					//return func.apply(this, arguments);
-				//}));
-			//}
-		//});
+			meta.addAddonOnEvent(addon, onEventMeta);
+		}, meta);
 
 		// 合并addon的submethod
-		oMeta.subMethods.forEach(function(name) {
-			var newName = name + surfix;
-			var func;
-			if (meta.addSubMethod(newName)) {
-				func = addon.get(name, false).im_func;
-				// 重新包装，避免名字不同导致warning
-				Type.__setattr__(cls, newName, exports.submethod(newName)(function() {
-					return func.apply(this, arguments);
-				}));
-			}
-		});
+		oMeta.subMethods.forEach(function(subMethodMeta) {
+			meta.addAddonSubMethod(addon, subMethodMeta);
+		}, meta);
 
 		// 合并addon的subsubmethod
 		oMeta.subSubMethods.forEach(function(name) {
@@ -1212,8 +1227,8 @@ this.Component = new exports.ComponentClass(function() {
 		// 存储subMethods，用于render时获取信息
 		self.__subMethodsMap = {};
 		// 初始化subMethodsMap
-		self.meta.subMethods.forEach(function(name) {
-			self.getMeta(name).init(self, name);
+		self.meta.subMethods.forEach(function(meta) {
+			meta.init(self, name);
 		});
 
 		// 存储subSubMethods，用于render时获取信息
@@ -1231,8 +1246,8 @@ this.Component = new exports.ComponentClass(function() {
 
 			// 初始化onEvents
 			self.meta.onEvents.forEach(function(meta) {
-				// TODO 这里的meta.fullname应该有addon后缀
-				meta.bindEvents(self, meta.fullname);
+				console.log('init', meta);
+				meta.bindEvents(self);
 			});
 		}
 
@@ -1248,8 +1263,7 @@ this.Component = new exports.ComponentClass(function() {
 		self.setOption(options);
 
 		// 初始化自己身上的aop方法
-		self.meta.subMethods.forEach(function(name) {
-			var meta = self.getMeta(name);
+		self.meta.subMethods.forEach(function(meta) {
 			var sub = meta.sub1;
 			var type = meta.sub2;
 			var member = self[sub];
