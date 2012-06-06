@@ -58,7 +58,7 @@ function urlparse(url, default_scheme) {
 			scheme = url.substring(0, i).toLowerCase();
 			url = url.substring(i+1);
 		} else {
-			for(var i=0, len = url.length; i < len; i++) {
+			for (i = 0, len = url.length; i < len; i++) {
 				if (scheme_chars.indexOf(url.charAt(i)) == -1) {
 					break;
 				}
@@ -164,7 +164,8 @@ function urljoin(base, url) {
 		return urlunparse(parts);
 	}
 
-    var segments = bparts[2].split('/').slice(0, -1).concat(parts[2].split('/'))
+    var segments = bparts[2].split('/').slice(0, -1).concat(parts[2].split('/'));
+	var i;
 
 	// 确保能够生成最后的斜线
 	if (segments[segments.length - 1] == '.') {
@@ -172,7 +173,7 @@ function urljoin(base, url) {
 	}
 
 	// 去掉所有'.'当前目录
-	for (var i = 0, l = segments.length; i < l; i++) {
+	for (i = 0, l = segments.length; i < l; i++) {
 		if (segments[i] == '.') {
 			segments.splice(i, 1);
 			i--;
@@ -180,7 +181,6 @@ function urljoin(base, url) {
 	}
 
 	// 合并所有'..'
-	var i;
 	while (true) {
 		i = 1;
 		n = segments.length - 1;
@@ -411,7 +411,7 @@ CommonJSPackage.prototype.createRequire = function(name, context, deps, runtime)
 			callback.apply(null, args);
 		});
 		runtime.loadModule(id, function() {
-			var newPkg = runtime.loader.lib[id]
+			var newPkg = runtime.loader.lib[id];
 			// 由于newPkg的id与之前的相同，load方法会覆盖掉runtime.loadings上保存的成员
 			newPkg.execute(newPkg.id, context, runtime);
 		});

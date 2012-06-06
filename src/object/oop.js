@@ -399,8 +399,9 @@ Type.__new__ = function(metaclass, name, base, dict) {
 	// 将base上的classmethod、staticmethod成员放到cls上
 	// Object和Type上没有任何classmethod、staticmethod，无需处理
 	if (base !== Object && base !== Type) {
-		(base.__classbasedmethods__ || []).forEach(function(name) {
+		;(base.__classbasedmethods__ || []).forEach(function(name) {
 			cls[name] = base[name];
+			cls.__classbasedmethods__.push(name);
 		});
 	}
 
@@ -840,7 +841,9 @@ Class.inject = function(cls, host, args, filter) {
 	}
 };
 
-// 判断成员是否是一个type类型的
+/**
+ * 判断成员是否是一个type类型的
+ */
 Class.instanceOf = function(obj, func) {
 	if (typeof func != 'function') {
 		throw new Error('bad arguments.');
