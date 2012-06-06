@@ -95,7 +95,6 @@ RuntimeMeta.prototype.addAddonOnEvent = function(addon, meta) {
 		newName = fullname + '$' + oGid;
 		func = addon.get(fullname, false).im_func;
 		// 重新包装，避免名字不同导致warning
-		// 使用meta.gid，确保此gid同这个meta初定义时一致
 		newMember = exports.onevent(newName)(function() {
 			return func.apply(this, arguments);
 		});
@@ -130,7 +129,6 @@ RuntimeMeta.prototype.addAddonSubMethod = function(addon, meta) {
 		newName = fullname + '$' + oGid;
 		func = addon.get(fullname, false).im_func;
 		// 重新包装，避免名字不同导致warning
-		// 使用meta.gid，确保此gid同这个meta初定义时一致
 		newMember = exports.submethod(newName)(function() {
 			return func.apply(this, arguments);
 		});
@@ -165,7 +163,6 @@ RuntimeMeta.prototype.addAddonSubSubMethod = function(addon, meta) {
 		newName = fullname + '$' + oGid;
 		func = addon.get(fullname, false).im_func;
 		// 重新包装，避免名字不同导致warning
-		// 使用meta.gid，确保此gid同这个meta初定义时一致
 		newMember = exports.subsubmethod(newName)(function() {
 			return func.apply(this, arguments);
 		});
