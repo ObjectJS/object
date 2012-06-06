@@ -10,11 +10,72 @@ var optionsmod = require('./options');
 var globalid = 0;
 
 /**
+ * 定义一个向子元素注册事件的方法
+ * @decorator
+ * @param name 一个函数名字
+ */
+this.submethod = function(name) {
+	// 名子要匹配带有$后缀
+	var match = name.match(/^([a-zA-Z1-9]+)_([a-zA-Z1-9]+)([\$0-9]*)$/);
+	if (!match) {
+		// 名字不匹配，返回的decorator返回空
+		return emptyDecorator;
+	}
+	var sub = match[1];
+	var eventType = match[2];
+	// 后面带的无用的东西，只是用来区分addon的
+	var surfix = match[3];
+	return function(func) {
+		func.meta = new SubMethodMeta(sub, eventType, name);
+		return func;
+	};
+};
+
+this.subsubmethod = function(name) {
+	// 名子要匹配带有$后缀
+	var match = name.match(/^([a-zA-Z1-9]+)_([a-zA-Z1-9]+)_([a-zA-Z1-9]+)([\$0-9]*)$/);
+	if (!match) {
+		// 名字不匹配，返回的decorator返回空
+		return emptyDecorator;
+	}
+	var sub = match[1];
+	var methodName = match[2];
+	var aopType = match[3];
+	// 后面带的无用的东西，只是用来区分addon的
+	var surfix = match[4];
+	return function(func) {
+		func.meta = new SubSubMethodMeta(sub, methodName, aopType, name);
+		return func;
+	};
+};
+
+/**
+ * 定义一个扩展向宿主元素定义事件的方法
+ * @decorator
+ */
+this.onevent = function(name) {
+	// 名子要匹配带有$后缀
+	var match = name.match(/^on([a-zA-Z1-9]+)([\$0-9]*)$/);
+	if (!match) {
+		// 名字不匹配，返回的decorator返回空
+		return emptyDecorator;
+	}
+	var eventType = match[1];
+	// 后面带的无用的东西，只是用来区分addon的
+	var surfix = match[2];
+	eventType = eventType.slice(0, 1).toLowerCase() + eventType.slice(1);
+	return function(func) {
+		func.meta = new OnEventMeta(eventType, name);
+		return func;
+	};
+};
+
+/**
  * 获取node节点已经被type包装过的实例
  */
 function getComponent(node, type) {
 	var comp ;
-	(node.components || []).some(function(component) {
+	;(node.components || []).some(function(component) {
 		// 用instanceOf判断，而不要通过gid
 		// 在多个use下gid有可能重复，可能会找到错误的对象
 		if (Class.instanceOf(component, type)) {
@@ -69,108 +130,6 @@ RuntimeMeta.prototype.addOption = function(name) {
 		return true;
 	}
 	return false;
-};
-
-RuntimeMeta.prototype.addOnEvent = function(meta) {
-	if (!this.onEvents.some(function(onEventMeta) {
-		return meta.eventType == onEventMeta.eventType;
-	})) {
-		meta.cls = this.cls;
-		this.onEvents.push(meta);
-	}
-};
-
-RuntimeMeta.prototype.addAddonOnEvent = function(addon, meta) {
-	var func;
-	var fullname;
-	var newName;
-	var newMember;
-	var oGid = addon.get('gid');
-
-	if (!this.onEvents.some(function(onEventMeta) {
-		// 若都是相同组件定义的（gid相同）且类型相同则不添加
-		return onEventMeta.eventType == meta.eventType && onEventMeta.cls === meta.cls;
-	})) {
-		fullname = meta.fullname;
-		newName = fullname + '$' + oGid;
-		func = addon.get(fullname, false).im_func;
-		// 重新包装，避免名字不同导致warning
-		newMember = exports.onevent(newName)(function() {
-			return func.apply(this, arguments);
-		});
-		Type.__setattr__(this.cls, newName, newMember);
-		newMember.meta.cls = meta.cls;
-		// 传递重新生成的这个meta
-		this.onEvents.push(newMember.meta);
-	}
-};
-
-RuntimeMeta.prototype.addSubMethod = function(meta) {
-	if (!this.subMethods.some(function(subMethodMeta) {
-		return meta.sub1 == subMethodMeta.sub1 && meta.sub2 == subMethodMeta.sub2;
-	})) {
-		meta.cls = this.cls;
-		this.subMethods.push(meta);
-	}
-};
-
-RuntimeMeta.prototype.addAddonSubMethod = function(addon, meta) {
-	var func;
-	var fullname;
-	var newName;
-	var newMember;
-	var oGid = addon.get('gid');
-
-	if (!this.subMethods.some(function(subMethodMeta) {
-		// 若都是相同组件定义的（gid相同）且类型相同则不添加
-		return subMethodMeta.sub1 == meta.sub1 && subMethodMeta.sub2 == meta.sub2 && subMethodMeta.cls === meta.cls;
-	})) {
-		fullname = meta.fullname;
-		newName = fullname + '$' + oGid;
-		func = addon.get(fullname, false).im_func;
-		// 重新包装，避免名字不同导致warning
-		newMember = exports.submethod(newName)(function() {
-			return func.apply(this, arguments);
-		});
-		Type.__setattr__(this.cls, newName, newMember);
-		newMember.meta.cls = meta.cls;
-		// 传递重新生成的这个meta
-		this.subMethods.push(newMember.meta);
-	}
-};
-
-RuntimeMeta.prototype.addSubSubMethod = function(meta) {
-	if (!this.subSubMethods.some(function(subSubMethodMeta) {
-		return meta.sub1 == subSubMethodMeta.sub1 && meta.sub2 == subSubMethodMeta.sub2 && meta.sub3 == subSubMethodMeta.sub3;
-	})) {
-		meta.cls = this.cls;
-		this.subSubMethods.push(meta);
-	}
-};
-
-RuntimeMeta.prototype.addAddonSubSubMethod = function(addon, meta) {
-	var func;
-	var fullname;
-	var newName;
-	var newMember;
-	var oGid = addon.get('gid');
-
-	if (!this.subSubMethods.some(function(subSubMethodMeta) {
-		// 若都是相同组件定义的（gid相同）且类型相同则不添加
-		return subSubMethodMeta.sub1 == meta.sub1 && subSubMethodMeta.sub2 == meta.sub2 && subSubMethodMeta.sub3 == meta.sub3 && subSubMethodMeta.cls === meta.cls;
-	})) {
-		fullname = meta.fullname;
-		newName = fullname + '$' + oGid;
-		func = addon.get(fullname, false).im_func;
-		// 重新包装，避免名字不同导致warning
-		newMember = exports.subsubmethod(newName)(function() {
-			return func.apply(this, arguments);
-		});
-		Type.__setattr__(this.cls, newName, newMember);
-		newMember.meta.cls = meta.cls;
-		// 传递重新生成的这个meta
-		this.subSubMethods.push(newMember.meta);
-	}
 };
 
 function extend(src, target, ov) {
@@ -553,10 +512,58 @@ OptionMeta.prototype.bindEvents = function(self, name) {
 	});
 };
 
+function AddonableMeta() {
+}
+
+AddonableMeta.prototype.addTo = function(meta) {
+	if (!meta[this.storeKey].some(this.equal, this)) {
+		this.cls = meta.cls;
+		meta[this.storeKey].push(this);
+	}
+};
+
+AddonableMeta.prototype.addAddonTo = function(addon, meta) {
+	var func;
+	var fullname;
+	var newName;
+	var newMember;
+	var oGid = addon.get('gid');
+
+	if (!meta[this.storeKey].some(this.strictEqual, this)) {
+		fullname = this.fullname;
+		newName = fullname + '$' + oGid;
+		func = addon.get(fullname, false).im_func;
+		// 重新包装，避免名字不同导致warning
+		newMember = this.decorator(newName)(function() {
+			return func.apply(meta, arguments);
+		});
+		Type.__setattr__(meta.cls, newName, newMember);
+		newMember.meta.cls = this.cls;
+		// 传递重新生成的这个meta
+		meta[this.storeKey].push(newMember.meta);
+	}
+};
+
+AddonableMeta.prototype.strictEqual = function(other) {
+	return this.equal(other) && this.cls === other.cls;
+};
+
 function OnEventMeta(eventType, fullname) {
 	this.eventType = eventType;
 	this.fullname = fullname;
 }
+
+OnEventMeta.prototype = new AddonableMeta();
+
+OnEventMeta.prototype.constructor = OnEventMeta;
+
+OnEventMeta.prototype.storeKey = 'onEvents';
+
+OnEventMeta.prototype.decorator = exports.onevent;
+
+OnEventMeta.prototype.equal = function(other) {
+	return this.eventType == other.eventType;
+};
 
 OnEventMeta.prototype.bindEvents = function(self) {
 	var eventType = this.eventType;
@@ -578,6 +585,18 @@ function SubMethodMeta(sub1, sub2, fullname) {
 	this.fullname = fullname;
 }
 
+SubMethodMeta.prototype = new AddonableMeta();
+
+SubMethodMeta.prototype.constructor = SubMethodMeta;
+
+SubMethodMeta.prototype.storeKey = 'subMethods';
+
+SubMethodMeta.prototype.decorator = exports.submethod;
+
+SubMethodMeta.prototype.equal = function(other) {
+	return this.sub1 == other.sub1 && this.sub2 == other.sub2;
+};
+
 SubMethodMeta.prototype.init = function(self, name) {
 	var sub1 = this.sub1;
 	// 记录下来，render时从__subMethodsMap获取信息
@@ -593,6 +612,18 @@ function SubSubMethodMeta(sub1, sub2, sub3, fullname) {
 	this.sub3 = sub3;
 	this.fullname = fullname;
 }
+
+SubSubMethodMeta.prototype = new AddonableMeta();
+
+SubSubMethodMeta.prototype.constructor = SubSubMethodMeta;
+
+SubSubMethodMeta.prototype.storeKey = 'subSubMethods';
+
+SubSubMethodMeta.prototype.decorator = exports.subsubmethod;
+
+SubSubMethodMeta.prototype.equal = function(other) {
+	return this.sub1 == other.sub1 && this.sub2 == other.sub2 && this.sub3 == other.sub3;
+};
 
 SubSubMethodMeta.prototype.init = function(self, name) {
 	var sub1 = this.sub1;
@@ -735,67 +766,6 @@ this.request = function(url, method) {
 
 var emptyDecorator = function(func) {
 	return null;
-};
-
-/**
- * 定义一个向子元素注册事件的方法
- * @decorator
- * @param name 一个函数名字
- */
-this.submethod = function(name) {
-	// 名子要匹配带有$后缀
-	var match = name.match(/^([a-zA-Z1-9]+)_([a-zA-Z1-9]+)([\$0-9]*)$/);
-	if (!match) {
-		// 名字不匹配，返回的decorator返回空
-		return emptyDecorator;
-	}
-	var sub = match[1];
-	var eventType = match[2];
-	// 后面带的无用的东西，只是用来区分addon的
-	var surfix = match[3];
-	return function(func) {
-		func.meta = new SubMethodMeta(sub, eventType, name);
-		return func;
-	};
-};
-
-this.subsubmethod = function(name) {
-	// 名子要匹配带有$后缀
-	var match = name.match(/^([a-zA-Z1-9]+)_([a-zA-Z1-9]+)_([a-zA-Z1-9]+)([\$0-9]*)$/);
-	if (!match) {
-		// 名字不匹配，返回的decorator返回空
-		return emptyDecorator;
-	}
-	var sub = match[1];
-	var methodName = match[2];
-	var aopType = match[3];
-	// 后面带的无用的东西，只是用来区分addon的
-	var surfix = match[4];
-	return function(func) {
-		func.meta = new SubSubMethodMeta(sub, methodName, aopType, name);
-		return func;
-	};
-};
-
-/**
- * 定义一个扩展向宿主元素定义事件的方法
- * @decorator
- */
-this.onevent = function(name) {
-	// 名子要匹配带有$后缀
-	var match = name.match(/^on([a-zA-Z1-9]+)([\$0-9]*)$/);
-	if (!match) {
-		// 名字不匹配，返回的decorator返回空
-		return emptyDecorator;
-	}
-	var eventType = match[1];
-	// 后面带的无用的东西，只是用来区分addon的
-	var surfix = match[2];
-	eventType = eventType.slice(0, 1).toLowerCase() + eventType.slice(1);
-	return function(func) {
-		func.meta = new OnEventMeta(eventType, name);
-		return func;
-	};
 };
 
 this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
@@ -989,15 +959,15 @@ this.ComponentClass = new Class(Type, function() {
 
 		}
 		else if (newMember = exports.subsubmethod(name)(member)) {
-			meta.addSubSubMethod(newMember.meta);
+			newMember.meta.addTo(meta);
 
 		}
 		else if (newMember = exports.submethod(name)(member)) {
-			meta.addSubMethod(newMember.meta);
+			newMember.meta.addTo(meta);
 
 		}
 		else if ((newMember = exports.onevent(name)(member))) {
-			meta.addOnEvent(newMember.meta);
+			newMember.meta.addTo(meta);
 
 		}
 	};
@@ -1022,13 +992,19 @@ this.ComponentClass = new Class(Type, function() {
 		oMeta.options.forEach(meta.addOption, meta);
 
 		// 合并onevent
-		oMeta.onEvents.forEach(meta.addOnEvent, meta);
+		oMeta.onEvents.forEach(function(onEventMeta) {
+			onEventMeta.addTo(meta);
+		});
 
 		// 合并submethod
-		oMeta.subMethods.forEach(meta.addSubMethod, meta);
+		oMeta.subMethods.forEach(function(subMethodMeta) {
+			subMethodMeta.addTo(meta);
+		});
 
 		// 合并subsubmethod
-		oMeta.subSubMethods.forEach(meta.addSubSubMethod, meta);
+		oMeta.subSubMethods.forEach(function(subSubMethodMeta) {
+			subSubMethodMeta.addTo(meta);
+		});
 	};
 
 	this.mixAddon = function(cls, addon) {
@@ -1052,17 +1028,17 @@ this.ComponentClass = new Class(Type, function() {
 
 		// 合并addond哦onEvents
 		oMeta.onEvents.forEach(function(onEventMeta) {
-			meta.addAddonOnEvent(addon, onEventMeta);
+			onEventMeta.addAddonTo(addon, meta);
 		}, meta);
 
 		// 合并addon的submethod
 		oMeta.subMethods.forEach(function(subMethodMeta) {
-			meta.addAddonSubMethod(addon, subMethodMeta);
+			subMethodMeta.addAddonTo(addon, meta);
 		}, meta);
 
 		// 合并addon的subsubmethod
 		oMeta.subSubMethods.forEach(function(subSubMethodMeta) {
-			meta.addAddonSubSubMethod(addon, subSubMethodMeta);
+			subSubMethodMeta.addAddonTo(addon, meta);
 		}, meta);
 
 	};
@@ -1487,7 +1463,7 @@ this.Component = new exports.ComponentClass(function() {
 	 */
 	this.getMeta = classmethod(function(cls, name) {
 		var meta;
-		var member = Type.__getattribute__(cls, name);
+		var member = cls.get(name, false);
 
 		if (!member) {
 			return null;
