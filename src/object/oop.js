@@ -395,8 +395,9 @@ Type.__new__ = function(metaclass, name, base, dict) {
 	// 将base上的classmethod、staticmethod成员放到cls上
 	// Object和Type上没有任何classmethod、staticmethod，无需处理
 	if (base !== Object && base !== Type) {
-		(base.__classbasedmethods__ || []).forEach(function(name) {
+		;(base.__classbasedmethods__ || []).forEach(function(name) {
 			cls[name] = base[name];
+			cls.__classbasedmethods__.push(name);
 		});
 	}
 

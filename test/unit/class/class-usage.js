@@ -159,12 +159,14 @@ test('staticmethod/classmethod extend', function() {
 			return 2;
 		});
 	});
+	A._name = 'A';
 	A.c = function() {
 		return 3;
 	};
 
 	var B = new Class(A, function() {
 	});
+	B._name = 'B';
 
 	A.set('d', classmethod(function() {
 		return 4;
@@ -173,11 +175,22 @@ test('staticmethod/classmethod extend', function() {
 		return 5;
 	}));
 
+	var C = new Class(B, function() {
+	});
+	C._name = 'C';
+
+	// 一级继承
 	equal(B.a(), 1, 'classmethod extended.');
 	equal(B.b(), 2, 'staticmethod extended.');
 	ok(B.c == undefined, 'none-maintain method not extended.');
 	equal(B.d(), 4, 'classmethod extended.');
 	equal(B.e(), 5, 'staticmethod extended.');
+
+	// 两级继承
+	equal(C.a(), 1, 'classmethod extended.');
+	equal(C.b(), 2, 'staticmethod extended.');
+	equal(C.d(), 4, 'classmethod extended.');
+	equal(C.e(), 5, 'staticmethod extended.');
 });
 
 test('do not overwrite exists member in subclass', function() {
