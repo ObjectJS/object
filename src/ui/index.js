@@ -958,11 +958,11 @@ this.ComponentClass = new Class(Type, function() {
 			Type.__setattr__(cls, name.slice(1), events.fireevent(member));
 
 		}
-		else if (newMember = exports.subsubmethod(name)(member)) {
+		else if ((newMember = exports.subsubmethod(name)(member))) {
 			newMember.meta.addTo(meta);
 
 		}
-		else if (newMember = exports.submethod(name)(member)) {
+		else if ((newMember = exports.submethod(name)(member))) {
 			newMember.meta.addTo(meta);
 
 		}
