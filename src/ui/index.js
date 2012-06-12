@@ -10,6 +10,131 @@ var optionsmod = require('./options');
 var globalid = 0;
 
 /**
+ * 帮助定义一个生成组件间联系的方法
+ */
+function define(meta) {
+	function fget(self) {
+		var name = prop.__name__;
+		// select只处理查询，不处理放置到self。
+		// 这里不能直接meta.select，而是确保options中的meta信息存在，需要用getMeta
+		var meta = self.getMeta(name);
+		meta.select(self, name);
+		return self[name];
+	}
+	var prop = property(fget);
+	prop.meta = meta;
+	return prop;
+}
+
+/**
+ * 为一个Component定义一个components引用
+ * 用法：
+ * MyComponent = new Class(ui.Component, {
+ *	refname: ui.define('.css-selector', ui.menu.Menu, {
+ *		clickable: true
+ *	}, renderer)
+ * });
+ * 这样MyComponent实例的refname属性即为相对应selector获取到的节点引用
+ * @param {String|false} selector css选择器
+ * @param {Component|String} [type=Component] 构造类的引用或模块成员字符串
+ * @param {Object} [options] 默认配置
+ * @param {Function} [renderer] 渲染器
+ */
+this.define = function(selector, type, options, renderer) {
+	if (type && typeof type !== 'string' && !Class.instanceOf(type, Type)) {
+		renderer = options;
+		options = type;
+		type = null;
+	}
+	if (options && typeof options != 'object') {
+		renderer = options;
+		options = null;
+	}
+
+	if (!type) type = exports.Component;
+	return define(new ComponentsMeta(selector, type, options, renderer));
+};
+
+/**
+ * 同define，不过是定义唯一引用的component
+ * @param {String|false} selector css选择器
+ * @param {Component|String} [type=Component] 构造类的引用或模块成员字符串
+ * @param {Object} [options] 默认配置
+ * @param {Function} [renderer] 渲染器
+ */
+this.define1 = function(selector, type, options, renderer) {
+	if (type && typeof type !== 'string' && !Class.instanceOf(type, Type)) {
+		renderer = options;
+		options = type;
+		type = null;
+	}
+	if (options && typeof options != 'object') {
+		renderer = options;
+		options = null;
+	}
+
+	if (!type) type = exports.Component;
+	return define(new ComponentMeta(selector, type, options, renderer));
+};
+
+/**
+ * 定义父元素的引用，将在Component构造时遍历父节点直到找到相同类型的Component
+ * @param {Component} type
+ */
+this.parent = function(type, options) {
+	if (!type) {
+		throw new Error('arguments error.');
+	}
+
+	var meta = new ComponentMeta(null, type, options, null);
+	meta.parent = true;
+
+	return define(meta);
+};
+
+/**
+ * 声明一个option
+ * 用法：
+ * MyComponent = new Class(ui.Component, {
+ *	myConfig: ui.option(1)
+ * });
+ * 这样MyComponent实例的myConfig属性值即为默认值1，可通过 set 方法修改
+ */
+this.option = function(defaultValue, getter) {
+	var meta = new OptionMeta(defaultValue, getter);
+	function fget(self) {
+		var name = prop.__name__;
+		return self.getOption(name);
+	}
+	function fset(self, value) {
+		var name = prop.__name__;
+		return self.setOption(name, value);
+	}
+	var prop = property(fget, fset);
+	prop.meta = meta;
+	return prop;
+};
+
+/**
+ * 声明一个request，可为其注册事件
+ * @param url
+ * @param [method='get']
+ */
+this.request = function(url, method) {
+	var meta = new RequestMeta(url, method || 'get');
+	var prop = property(function(self) {
+		var name = prop.__name__;
+		return self.getRequest(name);
+	});
+	prop.meta = meta;
+	return prop;
+};
+
+var emptyDecorator = function(func) {
+	return null;
+};
+
+/**
  * 定义一个向子元素注册事件的方法
  * @decorator
  * @param name 一个函数名字
@@ -29,6 +154,17 @@ this.submethod = function(name) {
 		func.meta = new SubMethodMeta(sub, eventType, name);
 		return func;
 	};
+};
+
+this.eventmethod = function(name) {
+	if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
+		return function(func) {
+			func.meta = new EventMethodMeta();
+			return func;
+		};
+	} else {
+		return emptyDecorator;
+	}
 };
 
 this.subsubmethod = function(name) {
@@ -69,6 +205,8 @@ this.onevent = function(name) {
 		return func;
 	};
 };
+
+this.decorators = [exports.eventmethod, exports.subsubmethod, exports.submethod, exports.onevent];
 
 /**
  * 获取node节点已经被type包装过的实例
@@ -152,6 +290,13 @@ function ComponentMeta(selector, type, options, renderer) {
 		this.renderer = function(self, make) {
 			return make();
 		};
+	}
+}
+
+ComponentMeta.prototype.addTo = function(cls, name, member) {
+	var meta = cls.get('meta');
+	if (meta.addComponent(name)) {
+		Type.__setattr__(cls, '__render_' + name, member.meta.renderer);
 	}
 }
 
@@ -488,6 +633,11 @@ function OptionMeta(defaultValue, getter) {
 	this.getter = getter;
 }
 
+OptionMeta.prototype.addTo = function(cls, name, member) {
+	var meta = cls.get('meta');
+	meta.addOption(name);
+};
+
 /**
  * 将value转换成需要的type
  */
@@ -512,10 +662,18 @@ OptionMeta.prototype.bindEvents = function(self, name) {
 	});
 };
 
+function EventMethodMeta() {
+}
+
+EventMethodMeta.prototype.addTo = function(cls, name, member) {
+	Type.__setattr__(cls, name.slice(1), events.fireevent(member));
+};
+
 function AddonableMeta() {
 }
 
-AddonableMeta.prototype.addTo = function(meta) {
+AddonableMeta.prototype.addTo = function(cls) {
+	var meta = cls.get('meta');
 	if (!meta[this.storeKey].some(this.equal, this)) {
 		this.cls = meta.cls;
 		meta[this.storeKey].push(this);
@@ -641,132 +799,10 @@ function RequestMeta(url, method) {
 	};
 }
 
+RequestMeta.prototype.addTo = function() {
+};
+
 RequestMeta.prototype.bindEvents = ComponentMeta.prototype.bindEvents;
-
-/**
- * 帮助定义一个生成组件间联系的方法
- */
-function define(meta) {
-	function fget(self) {
-		var name = prop.__name__;
-		// select只处理查询，不处理放置到self。
-		// 这里不能直接meta.select，而是确保options中的meta信息存在，需要用getMeta
-		var meta = self.getMeta(name);
-		meta.select(self, name);
-		return self[name];
-	}
-	var prop = property(fget);
-	prop.meta = meta;
-	return prop;
-}
-
-/**
- * 为一个Component定义一个components引用
- * 用法：
- * MyComponent = new Class(ui.Component, {
- *	refname: ui.define('.css-selector', ui.menu.Menu, {
- *		clickable: true
- *	}, renderer)
- * });
- * 这样MyComponent实例的refname属性即为相对应selector获取到的节点引用
- * @param {String|false} selector css选择器
- * @param {Component|String} [type=Component] 构造类的引用或模块成员字符串
- * @param {Object} [options] 默认配置
- * @param {Function} [renderer] 渲染器
- */
-this.define = function(selector, type, options, renderer) {
-	if (type && typeof type !== 'string' && !Class.instanceOf(type, Type)) {
-		renderer = options;
-		options = type;
-		type = null;
-	}
-	if (options && typeof options != 'object') {
-		renderer = options;
-		options = null;
-	}
-
-	if (!type) type = exports.Component;
-	return define(new ComponentsMeta(selector, type, options, renderer));
-};
-
-/**
- * 同define，不过是定义唯一引用的component
- * @param {String|false} selector css选择器
- * @param {Component|String} [type=Component] 构造类的引用或模块成员字符串
- * @param {Object} [options] 默认配置
- * @param {Function} [renderer] 渲染器
- */
-this.define1 = function(selector, type, options, renderer) {
-	if (type && typeof type !== 'string' && !Class.instanceOf(type, Type)) {
-		renderer = options;
-		options = type;
-		type = null;
-	}
-	if (options && typeof options != 'object') {
-		renderer = options;
-		options = null;
-	}
-
-	if (!type) type = exports.Component;
-	return define(new ComponentMeta(selector, type, options, renderer));
-};
-
-/**
- * 定义父元素的引用，将在Component构造时遍历父节点直到找到相同类型的Component
- * @param {Component} type
- */
-this.parent = function(type, options) {
-	if (!type) {
-		throw new Error('arguments error.');
-	}
-
-	var meta = new ComponentMeta(null, type, options, null);
-	meta.parent = true;
-
-	return define(meta);
-};
-
-/**
- * 声明一个option
- * 用法：
- * MyComponent = new Class(ui.Component, {
- *	myConfig: ui.option(1)
- * });
- * 这样MyComponent实例的myConfig属性值即为默认值1，可通过 set 方法修改
- */
-this.option = function(defaultValue, getter) {
-	var meta = new OptionMeta(defaultValue, getter);
-	function fget(self) {
-		var name = prop.__name__;
-		return self.getOption(name);
-	}
-	function fset(self, value) {
-		var name = prop.__name__;
-		return self.setOption(name, value);
-	}
-	var prop = property(fget, fset);
-	prop.meta = meta;
-	return prop;
-};
-
-/**
- * 声明一个request，可为其注册事件
- * @param url
- * @param [method='get']
- */
-this.request = function(url, method) {
-	var meta = new RequestMeta(url, method || 'get');
-	var prop = property(function(self) {
-		var name = prop.__name__;
-		return self.getRequest(name);
-	});
-	prop.meta = meta;
-	return prop;
-};
-
-var emptyDecorator = function(func) {
-	return null;
-};
 
 this.OptionsClass = new Class(optionsmod.OptionsClass, function() {
 
@@ -945,30 +981,17 @@ this.ComponentClass = new Class(Type, function() {
 			return;
 
 		}
-		else if (member.__class__ == property && member.meta instanceof OptionMeta) {
-			meta.addOption(name);
+		else if (member.meta) {
+			member.meta.addTo(cls, name, member);
 
 		}
-		else if (member.__class__ == property && member.meta instanceof ComponentMeta) {
-			meta.addComponent(name);
-			Type.__setattr__(cls, '__render_' + name, member.meta.renderer);
-
-		}
-		else if (name.slice(0, 1) == '_' && name.slice(0, 2) != '__' && name != '_set') {
-			Type.__setattr__(cls, name.slice(1), events.fireevent(member));
-
-		}
-		else if ((newMember = exports.subsubmethod(name)(member))) {
-			newMember.meta.addTo(meta);
-
-		}
-		else if ((newMember = exports.submethod(name)(member))) {
-			newMember.meta.addTo(meta);
-
-		}
-		else if ((newMember = exports.onevent(name)(member))) {
-			newMember.meta.addTo(meta);
-
+		else {
+			exports.decorators.forEach(function(decorator) {
+				var newMember = decorator(name)(member);
+				if (newMember) {
+					newMember.meta.addTo(cls, name, member);
+				}
+			});
 		}
 	};
 
@@ -993,17 +1016,17 @@ this.ComponentClass = new Class(Type, function() {
 
 		// 合并onevent
 		oMeta.onEvents.forEach(function(onEventMeta) {
-			onEventMeta.addTo(meta);
+			onEventMeta.addTo(cls);
 		});
 
 		// 合并submethod
 		oMeta.subMethods.forEach(function(subMethodMeta) {
-			subMethodMeta.addTo(meta);
+			subMethodMeta.addTo(cls);
 		});
 
 		// 合并subsubmethod
 		oMeta.subSubMethods.forEach(function(subSubMethodMeta) {
-			subSubMethodMeta.addTo(meta);
+			subSubMethodMeta.addTo(cls);
 		});
 	};
 
