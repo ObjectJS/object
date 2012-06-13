@@ -973,7 +973,6 @@ this.ComponentClass = new Class(Type, function() {
 	this.setMember = function(cls, name, member) {
 		var meta = cls.get('meta');
 		var gid = cls.get('gid');
-		var newMember;
 
 		if (!member) {
 			return;
