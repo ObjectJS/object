@@ -266,7 +266,7 @@ test('addon\'s addon', function() {
 	var test = new Test(div);
 
 	// meta.addons
-	equal(test.meta.addons.length, 3, 'meta addons ok.');
+	equal(test.addons.length, 3, 'addons ok.');
 
 	test.test();
 	equal(onEventCalled, 1, 'on event called times ok.');

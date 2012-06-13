@@ -230,8 +230,6 @@ function getComponent(node, type) {
 function RuntimeMeta(cls) {
 	// 此meta所在的component
 	this.cls = cls;
-	// Addons
-	this.addons = [];
 	// 所有元素引用
 	this.components = [];
 	// 所有选项
@@ -242,17 +240,7 @@ function RuntimeMeta(cls) {
 	this.subMethods = [];
 	// 所有xxx_xxx_xxx形式方法
 	this.subSubMethods = [];
-	// 默认option
-	this.defaultOptions = {};
 }
-
-RuntimeMeta.prototype.addAddon = function(addon) {
-	if (this.addons.indexOf(addon) == -1) {
-		this.addons.push(addon);
-		return true;
-	}
-	return false;
-};
 
 RuntimeMeta.prototype.addComponent = function(name) {
 	if (this.components.indexOf(name) == -1) {
@@ -912,11 +900,14 @@ this.ComponentClass = new Class(Type, function() {
 
 	this.initialize = function(cls, name, base, dict) {
 		var gid = globalid++;
-		var meta = new RuntimeMeta(cls);
 		var memberSetter = cls.get('setMember');
+		var meta = new RuntimeMeta(cls);
+		var defaultOptions = {};
 
 		cls.set('gid', gid);
 		cls.set('meta', meta);
+		cls.set('addons', []);
+		cls.set('defaultOptions', defaultOptions);
 
 		// 处理定义的成员
 		Object.keys(dict).forEach(function(name) {
@@ -932,7 +923,7 @@ this.ComponentClass = new Class(Type, function() {
 			// 不需要在__setattr__中调用
 			if (memberMeta && memberMeta.defaultOptions) {
 				Object.keys(memberMeta.defaultOptions).forEach(function(key) {
-					meta.defaultOptions[name + '.' + key] = memberMeta.defaultOptions[key];
+					defaultOptions[name + '.' + key] = memberMeta.defaultOptions[key];
 				});
 			}
 
@@ -952,7 +943,7 @@ this.ComponentClass = new Class(Type, function() {
 				return;
 			}
 			// 自己的addon
-			if (meta.addAddon(mixin)) {
+			if (cls.addAddon(mixin)) {
 				// mixer 中 mix addon 的 addon
 				mixer(mixin);
 			}
@@ -999,11 +990,11 @@ this.ComponentClass = new Class(Type, function() {
 		var meta = cls.get('meta');
 		var oMeta = base.get('meta');
 
-		// 合并defaultOptions
-		extend(meta.defaultOptions, oMeta.defaultOptions, false);
-
 		// 合并addon
-		oMeta.addons.forEach(meta.addAddon, meta);
+		base.get('addons').forEach(cls.addAddon, cls);
+
+		// 合并defaultOptions
+		extend(cls.get('defaultOptions'), base.get('defaultOptions'), false);
 
 		// 合并components
 		oMeta.components.forEach(meta.addComponent, meta);
@@ -1031,11 +1022,11 @@ this.ComponentClass = new Class(Type, function() {
 		var meta = cls.get('meta');
 		var oMeta = addon.get('meta');
 
-		// 合并addon的defaultOptions
-		extend(meta.defaultOptions, oMeta.defaultOptions, false);
-
 		// 合并addon的addon
-		oMeta.addons.forEach(meta.addAddon, meta);
+		addon.get('addons').forEach(cls.addAddon, cls);
+
+		// 合并addon的defaultOptions
+		extend(cls.get('defaultOptions'), addon.get('defaultOptions'), false);
 
 		// 合并addon的components
 		oMeta.components.forEach(meta.addComponent, meta);
@@ -1227,7 +1218,7 @@ this.Component = new exports.ComponentClass(function() {
 			if (inited == self.meta.components.length) {
 				inited = -1; // reset
 				// 初始化addons
-				self.meta.addons.forEach(function(addon) {
+				self.addons.forEach(function(addon) {
 					addon.get('_init')(self);
 				}); 
 				self.init();
@@ -1263,7 +1254,7 @@ this.Component = new exports.ComponentClass(function() {
 		// 初始化options
 		self._options = {};
 		options = options || {};
-		extend(options, self.meta.defaultOptions, false);
+		extend(options, self.defaultOptions, false);
 		// 生成option在组件上的初始引用
 		self.meta.options.forEach(function(name) {
 			self.getOption(name);
@@ -1291,6 +1282,15 @@ this.Component = new exports.ComponentClass(function() {
 
 		checkInit();
 	};
+
+	this.addAddon = classmethod(function(cls, addon) {
+		var addons = cls.get('addons');
+		if (addons.indexOf(addon) == -1) {
+			addons.push(addon);
+			return true;
+		}
+		return false;
+	});
 
 	/**
 	 * 统一的aop注册入口
