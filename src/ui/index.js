@@ -1030,10 +1030,7 @@ this.ComponentClass = new Class(Type, function() {
 
 	this.mixAddon = function(cls, addon) {
 		var meta = cls.get('meta');
-		var gid = cls.get('gid');
 		var oMeta = addon.get('meta');
-		var oGid = addon.get('gid');
-		var surfix = '$' + oGid;
 
 		// 合并addon的defaultOptions
 		extend(meta.defaultOptions, oMeta.defaultOptions, false);
