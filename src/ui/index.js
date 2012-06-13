@@ -305,7 +305,9 @@ ComponentMeta.prototype.addTo = function(cls, name, member) {
  */
 ComponentMeta.prototype.getType = function(metaOptions, callback) {
 
-	if (!metaOptions) metaOptions = {};
+	if (!metaOptions) {
+		metaOptions = {};
+	}
 
 	var meta = this;
 	var type = metaOptions.type || this.type;
@@ -428,17 +430,15 @@ ComponentMeta.prototype.setComponent = function(self, name, comp, callback) {
  */
 ComponentMeta.prototype.select = function(self, name, made, callback) {
 
-	var metaOptions = self.getOption(name + '.meta') || {};
-	var selector = this.selector;
 	var meta = this;
 	var node;
-	var isParent = this.parent;
-	if (metaOptions.parent !== undefined) {
-		isParent = metaOptions.parent;
-	}
+	var metaOptions = self.getOption(name + '.meta') || {};
+	var selector = metaOptions.selector || this.selector;
+	var isParent = metaOptions.parent !== undefined? metaOptions.parent : this.parent;
+	var isAsync = metaOptions.async !== undefined? metaOptions.async : this.async;
 
 	// async
-	if (self[name] === undefined && metaOptions.async) {
+	if (self[name] === undefined && isAsync) {
 		meta.setComponent(self, name, null, callback);
 		return;
 	}
@@ -472,8 +472,6 @@ ComponentMeta.prototype.select = function(self, name, made, callback) {
 		}
 		// 重建引用，若render正常，刚刚创建的节点会被找到并包装
 		else {
-			selector = metaOptions.selector || selector;
-
 			if (typeof selector == 'function') {
 				node = dom.wrap(selector(self));
 			} else {
@@ -505,8 +503,8 @@ ComponentMeta.prototype.getTemplate = function(metaOptions, relativeModule, call
 
 	var sys = require('sys');
 	var urlparse = require('urlparse');
-	var templatemodule = metaOptions.templatemodule;
-	var template = metaOptions.template;
+	var templatemodule = metaOptions.templatemodule || this.templatemodule;
+	var template = metaOptions.template || this.template;
 
 	var base;
 	// 是相对路径 && 能找到此类的所在模块信息 && 在sys.modules中有这个模块
