@@ -298,7 +298,7 @@ ComponentMeta.prototype.addTo = function(cls, name, member) {
 	if (meta.addComponent(name)) {
 		Type.__setattr__(cls, '__render_' + name, member.meta.renderer);
 	}
-}
+};
 
 /**
  * 获取组件类
@@ -1050,17 +1050,17 @@ this.ComponentClass = new Class(Type, function() {
 		// 合并addond哦onEvents
 		oMeta.onEvents.forEach(function(onEventMeta) {
 			onEventMeta.addAddonTo(addon, meta);
-		}, meta);
+		});
 
 		// 合并addon的submethod
 		oMeta.subMethods.forEach(function(subMethodMeta) {
 			subMethodMeta.addAddonTo(addon, meta);
-		}, meta);
+		});
 
 		// 合并addon的subsubmethod
 		oMeta.subSubMethods.forEach(function(subSubMethodMeta) {
 			subSubMethodMeta.addAddonTo(addon, meta);
-		}, meta);
+		});
 
 	};
 
