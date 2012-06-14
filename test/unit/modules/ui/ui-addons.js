@@ -101,12 +101,12 @@ test('custom addons', function() {
 	});
 
 	var test = new TestComponent(document.createElement('div'), {
-		'test.meta.addons': 'test2.TestComponent',
+		'test.meta.addons': 'test2.TestComponent'
 	});
 
 	// 使用不同的addons
 	var test2 = new TestComponent(document.createElement('div'), {
-		'test.meta.addons': 'test2.TestComponent2',
+		'test.meta.addons': 'test2.TestComponent2'
 	});
 
 	test.render('test', function() {

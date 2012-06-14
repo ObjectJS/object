@@ -63,7 +63,7 @@ this.getComponent = function(node, type) {
 		}
 	});
 	return comp;
-}
+};
 
 /**
  * 用于存放每个Component的信息

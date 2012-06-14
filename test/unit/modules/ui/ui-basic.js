@@ -549,7 +549,7 @@ test('aop method', function() {
 				aroundCalled++;
 				var result = origin(value);
 				return result + 1;
-			}
+			};
 		};
 		this.a_b_before = function(self) {
 			strictEqual(self.value, 0, 'arguments ok in before.');
@@ -562,7 +562,7 @@ test('aop method', function() {
 	});
 
 	var div = document.createElement('div');
-	div.innerHTML = '<div class="a"></div>'
+	div.innerHTML = '<div class="a"></div>';
 	var test = new Test(div);
 	var a = test.a;
 	var result;
@@ -839,7 +839,7 @@ test('extend component', function() {
 			return function() {
 				aroundCaleld++;
 				return origin();
-			}
+			};
 		};
 		this.test_click = function(self) {
 			ok(true, 'parent called in sub event.');
@@ -860,7 +860,7 @@ test('extend component', function() {
 			return function() {
 				aroundCalled++;
 				return origin();
-			}
+			};
 		};
 		this.test_click = function(self) {
 			this.parent(self);
