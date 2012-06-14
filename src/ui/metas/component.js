@@ -6,7 +6,7 @@ var ui = require('ui');
 /**
  * 帮助定义一个生成组件间联系的方法
  */
-function define(meta) {
+function defineComponent(meta) {
 	function fget(self) {
 		var name = prop.__name__;
 		// select只处理查询，不处理放置到self。
@@ -34,7 +34,7 @@ function define(meta) {
  * @param {Object} [options] 默认配置
  * @param {Function} [renderer] 渲染器
  */
-this.define = function(selector, type, options, renderer) {
+function define(selector, type, options, renderer) {
 	if (type && typeof type !== 'string' && !Class.instanceOf(type, Type)) {
 		renderer = options;
 		options = type;
@@ -46,7 +46,7 @@ this.define = function(selector, type, options, renderer) {
 	}
 
 	if (!type) type = ui.Component;
-	return define(new ComponentsMeta(selector, type, options, renderer));
+	return defineComponent(new ComponentsMeta(selector, type, options, renderer));
 };
 
 /**
@@ -56,7 +56,7 @@ this.define = function(selector, type, options, renderer) {
  * @param {Object} [options] 默认配置
  * @param {Function} [renderer] 渲染器
  */
-this.define1 = function(selector, type, options, renderer) {
+function define1(selector, type, options, renderer) {
 	if (type && typeof type !== 'string' && !Class.instanceOf(type, Type)) {
 		renderer = options;
 		options = type;
@@ -68,14 +68,14 @@ this.define1 = function(selector, type, options, renderer) {
 	}
 
 	if (!type) type = ui.Component;
-	return define(new ComponentMeta(selector, type, options, renderer));
+	return defineComponent(new ComponentMeta(selector, type, options, renderer));
 };
 
 /**
  * 定义父元素的引用，将在Component构造时遍历父节点直到找到相同类型的Component
  * @param {Component} type
  */
-this.parent = function(type, options) {
+function parent(type, options) {
 	if (!type) {
 		throw new Error('arguments error.');
 	}
@@ -83,7 +83,7 @@ this.parent = function(type, options) {
 	var meta = new ComponentMeta(null, type, options, null);
 	meta.parent = true;
 
-	return define(meta);
+	return defineComponent(meta);
 };
 
 function ComponentMeta(selector, type, options, renderer) {
@@ -431,6 +431,12 @@ ComponentsMeta.prototype.select = function(self, name, made, callback) {
 		meta.setComponent(self, name, comps, callback);
 	}
 
+};
+
+this.exports = function(uiModule) {
+	uiModule.define1 = define1;
+	uiModule.define = define;
+	uiModule.parent = parent;
 };
 
 });

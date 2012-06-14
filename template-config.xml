@@ -32,7 +32,6 @@
 			<include path="ui/components.js" />
 			<include path="ui/addon.js" />
 			<include path="ui/page.js" />
-			<include path="ui/addonablemeta.js" />
 			<include path="ui/metas/component.js" />
 			<include path="ui/metas/option.js" />
 			<include path="ui/metas/request.js" />

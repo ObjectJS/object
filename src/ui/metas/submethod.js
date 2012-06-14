@@ -1,22 +1,18 @@
-object.define('ui/metas/submethod.js', '../addonablemeta', function(require, exports) {
-
-var addonablemeta = require('../addonablemeta');
-
-var emptyDecorator = function(func) {
-	return null;
-};
+object.define('ui/metas/submethod.js', function(require, exports) {
 
 /**
  * 定义一个向子元素注册事件的方法
  * @decorator
  * @param name 一个函数名字
  */
-this.submethod = function(name) {
+function submethod(name) {
 	// 名子要匹配带有$后缀
 	var match = name.match(/^([a-zA-Z1-9]+)_([a-zA-Z1-9]+)([\$0-9]*)$/);
 	if (!match) {
 		// 名字不匹配，返回的decorator返回空
-		return emptyDecorator;
+		return function() {
+			return null;
+		};
 	}
 	var sub = match[1];
 	var eventType = match[2];
@@ -34,13 +30,43 @@ function SubMethodMeta(sub1, sub2, fullname) {
 	this.fullname = fullname;
 }
 
-SubMethodMeta.prototype = new addonablemeta.AddonableMeta();
-
-SubMethodMeta.prototype.constructor = SubMethodMeta;
-
 SubMethodMeta.prototype.storeKey = 'subMethods';
 
-SubMethodMeta.prototype.decorator = exports.submethod;
+SubMethodMeta.prototype.decorator = submethod;
+
+SubMethodMeta.prototype.addTo = function(cls) {
+	var meta = cls.get('meta');
+	if (!meta[this.storeKey].some(this.equal, this)) {
+		this.cls = meta.cls;
+		meta[this.storeKey].push(this);
+	}
+};
+
+SubMethodMeta.prototype.addAddonTo = function(addon, meta) {
+	var func;
+	var fullname;
+	var newName;
+	var newMember;
+	var oGid = addon.get('gid');
+
+	if (!meta[this.storeKey].some(this.strictEqual, this)) {
+		fullname = this.fullname;
+		newName = fullname + '$' + oGid;
+		func = addon.get(fullname, false).im_func;
+		// 重新包装，避免名字不同导致warning
+		newMember = this.decorator(newName)(function() {
+			return func.apply(meta, arguments);
+		});
+		Type.__setattr__(meta.cls, newName, newMember);
+		newMember.meta.cls = this.cls;
+		// 传递重新生成的这个meta
+		meta[this.storeKey].push(newMember.meta);
+	}
+};
+
+SubMethodMeta.prototype.strictEqual = function(other) {
+	return this.equal(other) && this.cls === other.cls;
+};
 
 SubMethodMeta.prototype.equal = function(other) {
 	return this.sub1 == other.sub1 && this.sub2 == other.sub2;
@@ -53,6 +79,10 @@ SubMethodMeta.prototype.init = function(self, name) {
 		self.__subMethodsMap[sub1] = [];
 	}
 	self.__subMethodsMap[sub1].push(this);
+};
+
+this.exports = function(uiModule) {
+	uiModule.decorators.push(submethod);
 };
 
 });

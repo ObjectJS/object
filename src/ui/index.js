@@ -23,20 +23,26 @@ var events = require('events');
 var aop = require('./aop');
 var net = require('./net');
 var optionsmod = require('./options');
-var componentmeta = require('./metas/component');
 var componentsmod = require('./components');
+var componentmeta = require('./metas/component');
 
-this.define = componentmeta.define;
-this.define1 = componentmeta.define1;
-this.parent = componentmeta.parent;
-this.option = require('./metas/option').option;
-this.eventmethod = require('./metas/eventmethod').eventmethod;
-this.request = require('./metas/request').request;
-this.onmethod = require('./metas/onmethod').onmethod;
-this.submethod = require('./metas/submethod').submethod;
-this.subsubmethod = require('./metas/subsubmethod').subsubmethod;
+this.metas = [
+	require('./metas/component'),
+	require('./metas/option'),
+	require('./metas/request'),
+	require('./metas/eventmethod'),
+	require('./metas/onmethod'),
+	require('./metas/submethod'),
+	require('./metas/subsubmethod')
+];
 
-this.decorators = [exports.eventmethod, exports.subsubmethod, exports.submethod, exports.onmethod];
+this.decorators = [];
+
+this.metas.forEach(function(metaModule) {
+	if (metaModule.exports) {
+		metaModule.exports(exports);
+	}
+});
 
 var globalid = 0;
 
@@ -327,7 +333,6 @@ this.Component = new exports.ComponentClass(function() {
 		if (!self._node.components) {
 			self._node.components = [];
 		}
-		self._node.components.push(self);
 
 		// 做同继承链的检测
 		var lastType = self._node.componentType;
@@ -347,6 +352,7 @@ this.Component = new exports.ComponentClass(function() {
 			// onEvent（会为自己绑定事件）
 			self.__virtual = dom.wrap(document.createElement('div'));
 		}
+		self._node.components.push(self);
 
 		// 限定wrapper
 		if (self.allowTags && !self.allowTags.some(function(tag) {

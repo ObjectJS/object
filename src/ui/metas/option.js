@@ -8,7 +8,7 @@ object.define('ui/metas/option.js', function(require, exports) {
  * });
  * 这样MyComponent实例的myConfig属性值即为默认值1，可通过 set 方法修改
  */
-this.option = function(defaultValue, getter) {
+function option(defaultValue, getter) {
 	var meta = new OptionMeta(defaultValue, getter);
 	function fget(self) {
 		var name = prop.__name__;
@@ -55,6 +55,10 @@ OptionMeta.prototype.bindEvents = function(self, name) {
 		var fakeType = '__option_' + type + '_' + sub;
 		self.addEventTo(self, fakeType, self.get(fullname));
 	});
+};
+
+this.exports = function(uiModule) {
+	uiModule.option = option;
 };
 
 });

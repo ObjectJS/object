@@ -5,7 +5,7 @@ object.define('ui/metas/request.js', function(require, exports) {
  * @param url
  * @param [method='get']
  */
-this.request = function(url, method) {
+function request(url, method) {
 	var meta = new RequestMeta(url, method || 'get');
 	var prop = property(function(self) {
 		var name = prop.__name__;
@@ -55,6 +55,10 @@ RequestMeta.prototype.bindEvents = function(self, name, comp) {
 		});
 	});
 
+};
+
+this.exports = function(uiModule) {
+	uiModule.request = request;
 };
 
 });
