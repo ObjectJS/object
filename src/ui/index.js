@@ -6,7 +6,7 @@ object.define('ui/index.js', [
 		'./metas/option',
 		'./metas/request',
 		'./metas/eventmethod',
-		'./metas/onevent',
+		'./metas/onmethod',
 		'./metas/submethod',
 		'./metas/subsubmethod',
 		'./aop',
@@ -32,11 +32,11 @@ this.parent = componentmeta.parent;
 this.option = require('./metas/option').option;
 this.eventmethod = require('./metas/eventmethod').eventmethod;
 this.request = require('./metas/request').request;
-this.onevent = require('./metas/onevent').onevent;
+this.onmethod = require('./metas/onmethod').onmethod;
 this.submethod = require('./metas/submethod').submethod;
 this.subsubmethod = require('./metas/subsubmethod').subsubmethod;
 
-this.decorators = [exports.eventmethod, exports.subsubmethod, exports.submethod, exports.onevent];
+this.decorators = [exports.eventmethod, exports.subsubmethod, exports.submethod, exports.onmethod];
 
 var globalid = 0;
 
@@ -76,7 +76,7 @@ function RuntimeMeta(cls) {
 	// 所有选项
 	this.options = [];
 	// 所有onXxx形式注册事件方法
-	this.onEvents = [];
+	this.onMethods = [];
 	// 所有xxx_xxx形式方法
 	this.subMethods = [];
 	// 所有xxx_xxx_xxx形式方法
@@ -208,8 +208,8 @@ this.ComponentClass = new Class(Type, function() {
 		// 合并options
 		oMeta.options.forEach(meta.addOption, meta);
 
-		// 合并onevent
-		oMeta.onEvents.forEach(function(onEventMeta) {
+		// 合并onmethod
+		oMeta.onMethods.forEach(function(onEventMeta) {
 			onEventMeta.addTo(cls);
 		});
 
@@ -240,8 +240,8 @@ this.ComponentClass = new Class(Type, function() {
 		// 合并addon的options
 		oMeta.options.forEach(meta.addOption, meta);
 
-		// 合并addond哦onEvents
-		oMeta.onEvents.forEach(function(onEventMeta) {
+		// 合并addond哦onMethods
+		oMeta.onMethods.forEach(function(onEventMeta) {
 			onEventMeta.addAddonTo(addon, meta);
 		});
 
@@ -392,8 +392,8 @@ this.Component = new exports.ComponentClass(function() {
 				self.getMeta(name).bindEvents(self, name);
 			});
 
-			// 初始化onEvents
-			self.meta.onEvents.forEach(function(meta) {
+			// 初始化onMethods
+			self.meta.onMethods.forEach(function(meta) {
 				meta.bindEvents(self);
 			});
 		}

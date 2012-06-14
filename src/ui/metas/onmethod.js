@@ -1,4 +1,4 @@
-object.define('ui/metas/onevent.js', '../addonablemeta', function(require, exports) {
+object.define('ui/metas/onmethod.js', '../addonablemeta', function(require, exports) {
 
 var addonablemeta = require('../addonablemeta');
 
@@ -10,7 +10,7 @@ var emptyDecorator = function(func) {
  * 定义一个扩展向宿主元素定义事件的方法
  * @decorator
  */
-this.onevent = function(name) {
+this.onmethod = function(name) {
 	// 名子要匹配带有$后缀
 	var match = name.match(/^on([a-zA-Z1-9]+)([\$0-9]*)$/);
 	if (!match) {
@@ -22,29 +22,29 @@ this.onevent = function(name) {
 	var surfix = match[2];
 	eventType = eventType.slice(0, 1).toLowerCase() + eventType.slice(1);
 	return function(func) {
-		func.meta = new OnEventMeta(eventType, name);
+		func.meta = new OnMethodMeta(eventType, name);
 		return func;
 	};
 };
 
-function OnEventMeta(eventType, fullname) {
+function OnMethodMeta(eventType, fullname) {
 	this.eventType = eventType;
 	this.fullname = fullname;
 }
 
-OnEventMeta.prototype = new addonablemeta.AddonableMeta();
+OnMethodMeta.prototype = new addonablemeta.AddonableMeta();
 
-OnEventMeta.prototype.constructor = OnEventMeta;
+OnMethodMeta.prototype.constructor = OnMethodMeta;
 
-OnEventMeta.prototype.storeKey = 'onEvents';
+OnMethodMeta.prototype.storeKey = 'onMethods';
 
-OnEventMeta.prototype.decorator = exports.onevent;
+OnMethodMeta.prototype.decorator = exports.onmethod;
 
-OnEventMeta.prototype.equal = function(other) {
+OnMethodMeta.prototype.equal = function(other) {
 	return this.eventType == other.eventType;
 };
 
-OnEventMeta.prototype.bindEvents = function(self) {
+OnMethodMeta.prototype.bindEvents = function(self) {
 	var eventType = this.eventType;
 	var methodName = this.fullname;
 

@@ -37,7 +37,7 @@
 			<include path="ui/metas/option.js" />
 			<include path="ui/metas/request.js" />
 			<include path="ui/metas/eventmethod.js" />
-			<include path="ui/metas/onevent.js" />
+			<include path="ui/metas/onmethod.js" />
 			<include path="ui/metas/submethod.js" />
 			<include path="ui/metas/subsubmethod.js" />
 			<include path="ui/memberloader.js" />
