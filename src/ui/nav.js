@@ -1,4 +1,4 @@
-object.define('ui/nav.js', 'ui, ui.decorators', function(require, exports) {
+object.define('ui/nav.js', 'ui, ui/decorators', function(require, exports) {
 
 var ui = require('ui');
 var decorators = require('ui/decorators');
