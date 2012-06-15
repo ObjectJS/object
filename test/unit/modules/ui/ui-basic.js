@@ -7,7 +7,7 @@ var async_template_js = path + 'async-template.js';
 var request_txt = path + 'request.txt';
 var notexists = path + 'not-exists.txt';
 
-object.use('ui', function(ui) {
+object.use('ui2', function(ui) {
 	window.ui = ui;
 });
 
@@ -200,9 +200,9 @@ test('async load template', function() {
 	document.body.appendChild(script);
 	object._loader.buildFileLib();
 
-	object.define('test_ui/index.js', 'ui', function(require, exports) {
+	object.define('test_ui/index.js', 'ui2', function(require, exports) {
 
-		var ui = require('ui');
+		var ui = require('ui2');
 
 		exports.TestComponent = new Class(ui.Component, function() {
 			this.test = ui.define1('.test', function(self, make) {

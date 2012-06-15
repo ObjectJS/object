@@ -3,7 +3,7 @@ var path = transTestDir('modules/ui/');
 
 var async_module_js = path + 'async-module.js';
 
-object.use('ui', function(ui) {
+object.use('ui2', function(ui) {
 	window.ui = ui;
 });
 
@@ -54,8 +54,8 @@ test('custom addons', function() {
 	var addonInitCalled = 0;
 	var onEventCalled = 0;
 
-	object.define('test2', 'ui', function(require) {
-		var ui = require('ui');
+	object.define('test2', 'ui2', function(require) {
+		var ui = require('ui2');
 		this.TestComponent = new Class(ui.Component, function() {
 			this.test = 1;
 			this._init = function(self) {
