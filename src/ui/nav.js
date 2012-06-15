@@ -10,7 +10,9 @@ this.ForeNextControl = new Class(ui.Component, function() {
 	this.nextButton = ui.define('.nextbutton');
 	this.foreButton = ui.define('.forebutton');
 
-	this._init = function(self) {
+	this.initialize = function(self, node) {
+		ui.Component.initialize(self, node);
+
 		self.loop = false; // 是否循环
 		self.total = parseInt(self._node.getData('total'));
 		self.start = parseInt(self._node.getData('start')) || 0;
@@ -33,28 +35,30 @@ this.ForeNextControl = new Class(ui.Component, function() {
 		self.fore();
 	};
 
-	this._next = function(self) {
+	this.next = fireevent(function(self) {
 		self.position++;
 		self.change();
-	};
+	});
 
-	this.fore = function(self) {
+	this.fore = fireevent(function(self) {
 		self.position--;
 		self.change();
-	};
+	});
 
-	this._change = function(self) {
+	this.change = function(self) {
+		// TODO
+		self.fireEvent('change', {forenext: self});
 		self.updateTotal();
 		self.updatePosition();
 	};
 
-	this._updatePosition = function(self) {
+	this.updatePosition = fireevent(function(self) {
 		self._node.getElements('.current').set('innerHTML', self.position + 1); // position是从0开始滴～展示的时候+1
-	};
+	});
 
-	this._updateTotal = function(self) {
+	this.updateTotal = fireevent(function(self) {
 		self._node.getElements('.total').set('innerHTML', self.total);
-	};
+	});
 
 });
 
