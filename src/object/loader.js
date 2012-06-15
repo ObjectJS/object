@@ -399,6 +399,8 @@ CommonJSPackage.prototype.createRequire = function(name, context, deps, runtime)
 	}
 
 	require.async = function(dependencies, callback) {
+		// async可表示为一个新的入口，也需要刷新lib
+		runtime.loader.buildFileLib();
 		// 创建一个同目录package，保证相对依赖的正确
 		var id = parent.id + '~' + new Date().getTime() + Math.floor(Math.random() * 100);
 		runtime.loader.defineModule(CommonJSPackage, id, dependencies, function(require, exports, module) {
@@ -695,20 +697,20 @@ CommonJSDependency.prototype.execute = function(parentName, parentContext) {
 	var runtimeName;
 
 	if (this.type == 'top-level') {
-		// CommonJSDependency生成的name不能有.js后缀，以保持和ObjectDependency的name兼容
-		// 同时，统一标准才能保证使用不同方法依赖时缓存有效
-		// 比如依赖 ui.js 和 ui，若不删除扩展名会被当成两个模块导致缓存失效
-		if (this.name.slice(-3) == '.js') {
-			runtimeName = this.name.slice(0, -3);
-		} else {
-			runtimeName = this.name;
-		}
+		runtimeName = this.name;
 
 	} else if (this.type == 'relative') {
 		runtimeName = this.id.slice(parentContext.length);
 
 	} else {
 		runtimeName = this.id;
+	}
+
+	// CommonJSDependency生成的name不能有.js后缀，以保持和ObjectDependency的name兼容
+	// 同时，统一标准才能保证使用不同方法依赖时缓存有效
+	// 比如依赖 ui.js 和 ui，若不删除扩展名会被当成两个模块导致缓存失效
+	if (runtimeName.slice(-3) == '.js') {
+		runtimeName = runtimeName.slice(0, -3);
 	}
 
 	var exports = runtime.modules[runtimeName];
