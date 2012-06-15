@@ -206,8 +206,8 @@ this.Events = new Class(function() {
 	 */
 	function handle(self, type) {
 		var boss = self.__boss || self;
-		boss.attachEvent('on' + type, function(eventData) {
-			var event = arguments.length > 1? eventData : exports.wrapEvent(window.event);
+		boss.attachEvent('on' + type, function(event) {
+			event = exports.wrapEvent(event || window.event);
 			var funcs = self.__eventListeners? self.__eventListeners[type] : null;
 			if (funcs) {
 				funcs = funcs.slice(0);

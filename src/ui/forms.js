@@ -1,6 +1,11 @@
-object.add('ui/forms.js', 'dom, ui, ui.decorators, ua', function(exports, dom, ui, ua) {
+object.define('ui/forms.js', 'dom, ui, ui/decorators, ua', function(require, exports) {
 
-var fireevent = ui.decorators.fireevent;
+var dom = require('dom');
+var ui = require('ui');
+var decorators = require('ui/decorators');
+var ua = require('ua');
+
+var fireevent = decorators.fireevent;
 
 /**
  * SelectionInputValues

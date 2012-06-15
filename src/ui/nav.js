@@ -1,7 +1,9 @@
-object.define('ui/nav.js', 'ui, events', function(require, exports) {
+object.define('ui/nav.js', 'ui, ui/decorators', function(require, exports) {
 
 var ui = require('ui');
-var events = require('events');
+var decorators = require('ui/decorators');
+
+var fireevent = decorators.fireevent;
 
 this.ForeNextControl = new Class(ui.Component, function() {
 
