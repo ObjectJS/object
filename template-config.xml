@@ -28,6 +28,8 @@
 			<include path="dom/dd.js" />
 			<include path="net.js" />
 			<include path="mvc.js" />
+			<include path="ui/index.js" />
+			<include path="ui/decorators.js" />
 			<include module="ui2/index.js" />
 			<include module="ui2/components.js" />
 			<include module="ui2/addon.js" />
