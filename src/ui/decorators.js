@@ -1,9 +1,11 @@
-object.add('ui/decorators.js', 'events', function(exports, events) {
+object.define('ui/decorators.js', 'events', function(require, exports) {
 
-	/**
-	 * @deprecated
-	 * use events.fireevent instead
-	 */
-	this.fireevent = events.fireevent;
+var events = require('events');
+
+/**
+ * @deprecated
+ * use events.fireevent instead
+ */
+this.fireevent = events.fireevent;
 
 });

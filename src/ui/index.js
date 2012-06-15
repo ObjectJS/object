@@ -1,4 +1,9 @@
-object.add('ui/index.js', 'string, options, dom, events', function(exports, string, options, dom, events) {
+object.define('ui/index.js', 'string, options, dom, events', function(require, exports) {
+
+var string = require('string');
+var options = require('options');
+var dom = require('dom');
+var events = require('events');
 
 /**
  * Element
