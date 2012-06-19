@@ -177,7 +177,8 @@ var instancemethod = function(func, self) {
 
 	// 意味着不绑定，传参时需要手工传im_self进去
 	if (self === false) {
-		_instancemethod = function() {
+		_instancemethod = function(self) {
+			// TODO 检测self是否是正确的类型
 			return this.prototype[func.__name__].im_func.apply(this.__this__, arguments);
 		}
 	}
@@ -336,7 +337,10 @@ Object.__new__ = function(cls) {
 	return instance;
 };
 
-// this.type 为兼容处理
+/**
+ * 小写type为兼容处理
+ * @class
+ */
 var Type = this.Type = this.type = function() {
 };
 
@@ -928,3 +932,4 @@ ArrayClass.prototype.length = 0;
 StringClass = createNativeClass(String, ["charAt", "charCodeAt", "concat", "indexOf", "lastIndexOf", "match", "replace", "search", "slice", "split", "substr", "substring", "toLowerCase", "toUpperCase", "valueOf", "trim"]);
 StringClass.prototype.length = 0;
 })(object);
+

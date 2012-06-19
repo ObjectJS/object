@@ -1,5 +1,4 @@
 <package id="object" url="http://objectjs.org/object">
-
 	<publish dir="pub">
 	</publish>
 
@@ -30,6 +29,23 @@
 			<include path="mvc.js" />
 			<include path="ui/index.js" />
 			<include path="ui/decorators.js" />
+			<include module="ui2/index.js" />
+			<include module="ui2/components.js" />
+			<include module="ui2/addon.js" />
+			<include module="ui2/page.js" />
+			<include module="ui2/metas/component.js" />
+			<include module="ui2/metas/option.js" />
+			<include module="ui2/metas/request.js" />
+			<include module="ui2/metas/eventmethod.js" />
+			<include module="ui2/metas/onmethod.js" />
+			<include module="ui2/metas/submethod.js" />
+			<include module="ui2/metas/subsubmethod.js" />
+			<include module="ui2/memberloader.js" />
+			<include module="ui2/net.js" />
+			<include module="ui2/aop.js" />
+			<include module="ui2/optionsbase.js" />
+			<include module="ui2/options.js" />
+			<include module="ui2/decorators.js" />
 			<include path="urlparse.js" />
 			<include path="validator.js" />
 		</combine>

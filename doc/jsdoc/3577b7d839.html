@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>JSDoc: Class: Events</title>
+	
+	<script src="http://shjs.sourceforge.net/sh_main.min.js"> </script>
+    <script src="http://shjs.sourceforge.net/lang/sh_javascript.min.js"> </script>
+    
+    <link type="text/css" rel="stylesheet" href="styles/node-dark.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+    
+    <h1 class="page-title">Class: Events</h1>
+    
+    
+    
+    <section>
+     
+    <header>
+        <h2><span class="ancestors"><a href="d5c96ec0a1.html">events</a>#</span>Events</h2>
+        
+    </header>  
+    
+    <article>
+        <div class="container-overview">
+        <dt>
+    <h4 class="name" id="Events"><span class="type-signature"></span>new Events</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        事件系统
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js</a>, line 186</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+
+        </div>
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+            
+            <h3 class="subsection-title">Members</h3>
+            
+            <dl>
+<dt>
+    <h4 class="name" id="__eventListeners"><span class="type-signature">&lt;private> </span>__eventListeners<span class="type-signature"></span></h4>
+    
+    
+</dt>
+<dd>
+    
+    <p class="description">
+        用于存储事件处理函数的对象
+    </p>
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js</a>, line 396</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+</dd>
+</dl>
+            
+        
+        
+        
+            
+            <h3 class="subsection-title">Methods</h3>
+            
+            <dl><dt>
+    <h4 class="name" id="addOnHandlerAsEventListener"><span class="type-signature">&lt;inner> </span>addOnHandlerAsEventListener</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        不同浏览器对onhandler的执行顺序不一样
+	  IE：最先执行onhandler，其次再执行其他监听函数
+	  Firefox：如果添加多个onhandler，则第一次添加的位置为执行的位置
+	  Chrome ：如果添加多个onhandler，最后一次添加的位置为执行的位置
+
+Chrome的做法是符合标准的，因此在模拟事件执行时按照Chrome的顺序来进行
+
+保证onxxx监听函数的正常执行，并维持onxxx类型的事件监听函数的执行顺序
+    </p>
+    
+    
+    
+    
+    <h5>Parameters:</h5>
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>type</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">事件类型</td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js</a>, line 246</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="attachOnHandlerAsEventListener"><span class="type-signature">&lt;inner> </span>attachOnHandlerAsEventListener</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        IE下保证onxxx事件处理函数正常执行
+    </p>
+    
+    
+    
+    
+    <h5>Parameters:</h5>
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>type</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">事件类型</td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js</a>, line 273</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="handle"><span class="type-signature">&lt;inner> </span>handle</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        IE下处理事件执行顺序
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js</a>, line 207</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="handleEventErrorForIE"><span class="type-signature">&lt;inner> </span>handleEventErrorForIE</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        处理IE下事件处理函数中的错误，在有console.error的情况下将错误信息打印至控制台
+    </p>
+    
+    
+    
+    
+    <h5>Parameters:</h5>
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>e</code></td>
+            
+            
+            <td class="type">
+            Error
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">错误对象</td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js</a>, line 374</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="insertWrapPreventDefaultHandler"><span class="type-signature">&lt;inner> </span>insertWrapPreventDefaultHandler</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        在preventDefault方法不靠谱的情况下，如果事件由浏览器自动触发，则需要在第一个事件处理函数中将preventDefault覆盖
+
+此方法在事件列表最前面（在onxxx之前）添加一个专门处理preventDefault的事件监听函数
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js</a>, line 340</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="isNodeInDOMTree"><span class="type-signature">&lt;inner> </span>isNodeInDOMTree</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        判断节点是否是DOM树中的节点
+
+在IE下，如果不是DOM树中的节点，标准事件的onxxx监听不会触发
+因此在fireEvent时需要判断当前节点是否在DOM树中
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js</a>, line 320</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="moveNativeEventsToTail"><span class="type-signature">&lt;inner> </span>moveNativeEventsToTail</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        在标准浏览器中使用的是系统事件系统，无法保证nativeEvents在事件最后执行。
+需在每次addEvent时，都将nativeEvents的事件删除再添加，保证在事件队列最后，最后才执行。
+    </p>
+    
+    
+    
+    
+    <h5>Parameters:</h5>
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>type</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">事件类型</td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js</a>, line 194</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="addEvent"><span class="type-signature"></span>addEvent</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        添加事件
+    </p>
+    
+    
+    
+    
+    <h5>Parameters:</h5>
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>type</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">事件名</td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>func</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">事件回调</td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>cap</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">冒泡</td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js</a>, line 413</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="addNativeEvent"><span class="type-signature"></span>addNativeEvent</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        添加系统事件，保证事件这些事件会在注册事件调用最后被执行
+    </p>
+    
+    
+    
+    
+    <h5>Parameters:</h5>
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>type</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">事件名</td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>func</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">事件回调</td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js</a>, line 495</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="fireEvent"><span class="type-signature"></span>fireEvent</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        触发事件
+obj.fireEvent('name', {
+data: 'value'
+});
+    </p>
+    
+    
+    
+    
+    <h5>Parameters:</h5>
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>type</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">事件名</td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>eventData</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">扩展到event对象上的数据</td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js</a>, line 590</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="initialize"><span class="type-signature"></span>initialize</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        初始化方法，主要是初始化__eventListener和__nativeEvents以及__boss等属性
+    </p>
+    
+    
+    
+    
+    
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js</a>, line 391</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+<dt>
+    <h4 class="name" id="removeEvent"><span class="type-signature"></span>removeEvent</h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <p class="description">
+        移除事件
+    </p>
+    
+    
+    
+    
+    <h5>Parameters:</h5>
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>type</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">事件名</td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>func</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">事件回调</td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>cap</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last">冒泡</td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    <dl class="details">
+    
+        
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<dt class="tag-source">Source:</dt>
+	<dd class="tag-source"><ul class="dummy"><li><a href='http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js' target='_blank'/>http://fed.d.xiaonei.com/hg/objectjs.org/object/file/tip/src/events.js</a>, line 545</li></ul></dd>
+	
+    
+    
+	
+	
+	
+	
+</dl>
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+</dd>
+</dl>
+            
+        
+        
+        
+        
+        
+    </article>
+    
+    </section>  
+    
+</div>
+
+<nav>
+    <h3>Modules</h3><ul><li><a href="ffc9ad4cf8.html">loader</a></li><li><a href="e79101ab7d.html">window</a></li><li><a href="259a7dbe3b.html">dom/dd</a></li><li><a href="ccd79dc88a.html">dom/index</a></li><li><a href="d5c96ec0a1.html">events</a></li><li><a href="8b53967ac8.html">lunar</a></li><li><a href="a62b7722f2.html">mvc</a></li><li><a href="0444bea506.html">net</a></li><li><a href="123515d218.html">options</a></li><li><a href="bd44fc7f56.html">string</a></li><li><a href="023905e127.html">sys</a></li><li><a href="ffd5c88b80.html">ua/extra</a></li><li><a href="3a1c65c656.html">ua/flashdetect</a></li><li><a href="385bab1c34.html">ua/index</a></li><li><a href="adeb557778.html">ua/os</a></li><li><a href="0ff45dba60.html">ui/autocomplete</a></li><li><a href="08dac09661.html">ui/decorators</a></li><li><a href="804abf754b.html">ui/forms</a></li><li><a href="2c1d34ad2c.html">ui/index</a></li><li><a href="a0aba80f2d.html">ui/memberloader</a></li><li><a href="18a788c1e6.html">ui/nav</a></li><li><a href="ec5986e58c.html">ui/net</a></li><li><a href="5050362abd.html">ui/options</a></li><li><a href="89bca7482b.html">uiold</a></li><li><a href="bd3f7dca6b.html">urlparse</a></li><li><a href="7d862d307e.html">validator</a></li></ul><h3>Classes</h3><ul><li><a href="d04fc83d03.html">CommonJSPackage</a></li><li><a href="22f66f59df.html">CyclicDependencyError</a></li><li><a href="b88b311f2e.html">Module</a></li><li><a href="3e73d66ba6.html">ModuleRequiredError</a></li><li><a href="42d7a26a88.html">NoModuleError</a></li><li><a href="32e4a79c77.html">Type</a></li><li><a href="Array.html">Array</a></li><li><a href="Function.html">Function</a></li><li><a href="44d985dede.html">DragDrop</a></li><li><a href="f968a42523.html">Document</a></li><li><a href="37a5293436.html">Element</a></li><li><a href="9022149830.html">ElementClassList</a></li><li><a href="84f6d439bc.html">Elements</a></li><li><a href="9c0e341ba5.html">FormElement</a></li><li><a href="88b7a42f8f.html">FormItemElement</a></li><li><a href="951acc7459.html">ImageElement</a></li><li><a href="95bdcd407f.html">InputElement</a></li><li><a href="09067c86a9.html">TextAreaElement</a></li><li><a href="d15398a21e.html">TextBaseElement</a></li><li><a href="463d3cb7a3.html">Window</a></li><li><a href="3577b7d839.html">Events</a></li><li><a href="37d3b42848.html#__eventListeners">Action</a></li><li><a href="67b89394ea.html">Request</a></li><li><a href="d7dd04889c.html">Arguments</a></li><li><a href="770e992ceb.html">Options</a></li><li><a href="82b9242447.html">AutoComplete</a></li><li><a href="c20cbc31c1.html">AutoCompleteWrapper</a></li><li><a href="be5a16f2bd.html">SelectionInput</a></li><li><a href="170c6400d7.html">SelectionInputValues</a></li><li><a href="21a1b7edc7.html">AddonClass</a></li><li><a href="b9353bb783.html">AddonClassClass</a></li><li><a href="11ed42b868.html">Component</a></li><li><a href="9303a80c25.html">ComponentClass</a></li><li><a href="cc0f61f737.html">ComponentsClass</a></li><li><a href="810ee51405.html">Page</a></li><li><a href="e269e5726d.html">ForeNextControl</a></li><li><a href="3e92d93180.html">Request</a></li><li><a href="03b549ad9c.html">Options</a></li><li><a href="2a0644c546.html">Component</a></li><li><a href="ba4b0fe25c.html">ForeNextControl</a></li><li><a href="b80feaee05.html">TabControl</a></li><li><a href="self.classList.html">classList</a></li><li><a href="self.values.html">values</a></li><li><a href="String.html">String</a></li><li><a href="Type.html">Type</a></li></ul><h3>Namespaces</h3><ul><li><a href="Class.html">Class</a></li><li><a href="object.html">object</a></li></ul><h3>Global</h3><ul><li><a href="global.html#__mixins__">__mixins__</a></li></ul>
+</nav>
+
+<br clear="both">
+
+<footer>
+    Documentation generated by <a href="https://github.com/micmath/jsdoc">JSDoc 3</a> on Tue May 22 2012 17:06:37 GMT+0800 (CST)
+</footer>
+
+<script> sh_highlightDocument(); </script>
+</body>
+</html>
