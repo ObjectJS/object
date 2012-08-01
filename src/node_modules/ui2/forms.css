@@ -1,0 +1,35 @@
+.selectioninput {
+	padding: 4px;
+	margin: 0;
+	border: 1px solid #A0BEDC;
+	font-size: 28px;
+	line-height: 32px;
+}
+.selectioninputselection {
+	display: inline-block;
+	vertical-align: top;
+	overflow: hidden;
+	margin: 1px;
+	padding: 2px;
+	line-height: 1em;
+	border: 1px solid #A0BEDC;
+	background-color: #F3FAFF;
+	font-size: 12px;
+	border-radius: 2px;
+	-moz-border-radius: 2px;
+	-webkit-border-radius: 2px;
+	*display: inline;
+	*zoom: 1;
+}
+.selectioninputdelete {
+	display: inline-block;
+	vertical-align: middle;
+	font-size: 12px;
+	font-weight: bold;
+	cursor: pointer;
+	color: #A6B3CF;
+}
+.selectioninputwrapper {
+	position: absolute;
+	height: 0;
+}

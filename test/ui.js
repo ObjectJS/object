@@ -1,84 +1,75 @@
-object.use('dom, ui, events', function(exports, dom, ui, events) {
-
-var StatusPublisherAddon = new Class(ui.Component, function() {
-
-	this.status = ui.define1('#publisher-status-box');
-	this.statusTrigger = ui.define1('#publisher-status-trigger');
-
-	this.statusTrigger_click = function(self) {
-		self.open(self.status);
-	};
-
-});
-
-var SharePublisherAddon = new Class(ui.Component, function() {
-
-	this.share = ui.define1('#publisher-share-box');
-	this.shareTrigger = ui.define1('#publisher-share-trigger');
-
-	this.shareTrigger_click = function(self) {
-		self.open(self.share);
-	};
-
-});
-
-var PhotoPublisherAddon = new Class(ui.Component, function() {
-
-	this.photo = ui.define1('#publisher-photo-box');
-	this.photoTrigger = ui.define1('#publisher-photo-trigger');
-
-	this.photoTrigger_click = function(self) {
-		self.open(self.photo);
-	};
-
-	this.onopen = function(self, event) {
-		console.log(self.openedAddon._node.id);
-	};
-
-	this._test = function(self) {
-		console.log('test');
-	};
-
-});
+object.use('dom, ui/ui2, string', function(exports, dom, ui, string) {
 
 var Publisher = new Class(ui.Component, function() {
 
-	this.funcSelector = ui.define1('#publisher-func-selector');
-
 	this.closeButton = ui.define('.close-button');
 
+	this.closeButton_click = function(self) {
+	}
+
+	this._init = function(self) {
+		self.opendAddon = null;
+	};
+
 	this._open = function(self, addon) {
-		if (self.openedAddon) self.openedAddon.hide();
-		self.openedAddon = addon;
 		addon.show();
+	}
+
+});
+
+var PublisherAddonFactory = new Class(ui.AddonFactory, function() {
+
+	// 无法获取到$trigger
+	this.$trigger1 = '{{trigger}}1';
+	// 注意这里也有变量定义顺序哦
+	this.$trigger = '{{name}}Trigger';
+	// 可以获取到$trigger
+	this.$trigger2 = '{{trigger}}2';
+
+	this.onopen = function(cls, self, event, addon) {
+		var vars = cls.get('__vars');
+		if (addon != self[vars.name]) {
+			self[vars.name].hide();
+		}
 	};
 
-	this._close = function(self) {
-		self.openedAddon.hide();
-	};
-
-	this.closeButton_click = function(self, event) {
-		event.preventDefault();
-		self.close();
+	this['{{trigger}}_click'] = function(cls, self, event) {
+		self.open(self[cls.get('$name')]);
 	};
 
 });
 
-var StatusDefaultPublisher = new Class(Publisher, function() {
-	ui.addon(this, PhotoPublisherAddon);
-	ui.addon(this, StatusPublisherAddon);
-	ui.addon(this, SharePublisherAddon);
+var PublisherPhotoAddonFactory = new Class(PublisherAddonFactory, function() {
+	this.$name = 'photo';
+	this['{{name}}'] = ui.define1('#publisher-photo-box');
+	this['{{trigger}}'] = ui.define1('#publisher-photo-trigger');
+});
 
-	this._close = function(self) {
-		this.parent(self);
-		self.open(self.status);
-	};
+var PublisherShareAddonFactory = new Class(PublisherAddonFactory, function() {
+	this.$name = 'share';
+	this['{{name}}'] = ui.define1('#publisher-share-box');
+	this['{{trigger}}'] = ui.define1('#publisher-share-trigger');
+});
+
+var PublisherVideoAddonFactory = new Class(PublisherAddonFactory, function() {
+	this.$name = 'video';
+	this['{{name}}'] = ui.define1('#publisher-video-box');
+	this['{{trigger}}'] = ui.define1('#publisher-video-trigger');
+});
+
+var PublisherPhotoAddon = new PublisherPhotoAddonFactory(function() {
+});
+var PublisherVideoAddon = new PublisherVideoAddonFactory(function() {
+});
+var PublisherShareAddon = new PublisherShareAddonFactory(function() {
+});
+
+var DefaultPublisher = new Class(Publisher, function() {
+	this.__mixins__ = [PublisherShareAddon, PublisherVideoAddon, PublisherPhotoAddon];
 });
 
 dom.ready(function() {
-	var c = new StatusDefaultPublisher(dom.getElement('#publisher'));
-	c.open(c.status);
-	c.test()
+	var publisher = new DefaultPublisher(document.getElementById('publisher'));
 });
 
 });

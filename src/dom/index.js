@@ -1,4 +1,10 @@
-object.add('dom/index.js', 'ua, events, string, dom/dd, net', function(exports, ua, events, string, dd, net) {
+object.define('dom/index.js', 'ua, events, string, ./dd, net', function(require, exports, module) {
+
+var ua = require('ua');
+var events = require('events');
+var string = require('string');
+var dd = require('./dd');
+var net = require('net');
 
 window.UID = 1;
 var storage = {};
@@ -1146,9 +1152,10 @@ this.FormElement = new Class(exports.Element, function() {
 					self.submit();
 				}
 
-				// 傲游3的webkit内核在执行submit时是异步的，导致submit真正执行前，下面这段代码已经执行，action和target都被恢复回去了。
+				// 傲游3的webkit内核(534.12)在执行submit时是异步的，导致submit真正执行前，下面这段代码已经执行，action和target都被恢复回去了。
+                // 搜狗2.2的webkit内核是534.3，也会有这个问题，因此把版本号判断改为534.3
 				// 做一个兼容，maxthon3中用setTimeout进行恢复。
-				if (ua.ua.webkit <= 534.12) {
+				if (ua.ua.webkit <= 534.3) {
 					setTimeout(function() {
 						// 提交之后再恢复回来
 						self.action = oldAction;
@@ -1187,7 +1194,7 @@ this.FormElement = new Class(exports.Element, function() {
 		if (net) {
 			xhr = new net.Request(params);
 		} else {
-			throw new ModuleRequiredError('net');
+			throw new object.ModuleRequiredError('net', module);
 		}
 		return xhr;
 	};
