@@ -42,7 +42,7 @@
 			<include module="ui2/metas/subsubmethod.js" />
 			<include module="ui2/memberloader.js" />
 			<include module="ui2/net.js" />
-			<include module="ui2/aop.js" />
+			<include module="ui2/aspect.js" />
 			<include module="ui2/optionsbase.js" />
 			<include module="ui2/options.js" />
 			<include module="ui2/decorators.js" />
